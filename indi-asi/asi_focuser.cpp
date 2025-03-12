@@ -111,7 +111,7 @@ ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
 
     setDeviceName(name);
 
-    FocusAbsPosN[0].max = m_MaxSteps;
+    FocusAbsPosNP[0].setMax(m_MaxSteps);
 }
 
 bool ASIEAF::initProperties()
@@ -153,27 +153,27 @@ bool ASIEAF::initProperties()
     TempCNP[TEMPC_MEAN].fill("MEAN", "Celsius", "%.2f", -274, 100, 0.1, 0);
     TempCNP.fill(getDeviceName(), "TEMP_COMPENSATION", "Temperature compensation", TEMPC_TAB,
                  IP_RW, 0, IPS_IDLE);
-    FocusBacklashN[0].min = 0;
-    FocusBacklashN[0].max = 9999;
-    FocusBacklashN[0].step = 100;
-    FocusBacklashN[0].value = 0;
+    FocusBacklashNP[0].setMin(0);
+    FocusBacklashNP[0].setMax(9999);
+    FocusBacklashNP[0].setStep(100);
+    FocusBacklashNP[0].setValue(0);
 
-    FocusRelPosN[0].min   = 0.;
-    FocusRelPosN[0].max   = m_MaxSteps / 2.0;
-    FocusRelPosN[0].value = 0;
-    FocusRelPosN[0].step  = FocusRelPosN[0].max / 20;
+    FocusRelPosNP[0].setMin(0.);
+    FocusRelPosNP[0].setMax(m_MaxSteps / 2.0);
+    FocusRelPosNP[0].setValue(0);
+    FocusRelPosNP[0].setStep(FocusRelPosNP[0].getMax() / 20);
 
-    FocusAbsPosN[0].min   = 0.;
-    FocusAbsPosN[0].max   = m_MaxSteps;
-    FocusAbsPosN[0].value = 0;
-    FocusAbsPosN[0].step  = m_MaxSteps / 20.0;
+    FocusAbsPosNP[0].setMin(0.);
+    FocusAbsPosNP[0].setMax(m_MaxSteps);
+    FocusAbsPosNP[0].setValue(0);
+    FocusAbsPosNP[0].setStep(m_MaxSteps / 20.0);
 
-    PresetN[0].max = m_MaxSteps;
-    PresetN[0].step = m_MaxSteps / 20.0;
-    PresetN[1].max = m_MaxSteps;
-    PresetN[1].step = m_MaxSteps / 20.0;
-    PresetN[2].max = m_MaxSteps;
-    PresetN[2].step = m_MaxSteps / 20.0;
+    PresetNP[0].setMax(m_MaxSteps);
+    PresetNP[0].setStep(m_MaxSteps / 20.0);
+    PresetNP[1].setMax(m_MaxSteps);
+    PresetNP[1].setStep(m_MaxSteps / 20.0);
+    PresetNP[2].setMax(m_MaxSteps);
+    PresetNP[2].setStep(m_MaxSteps / 20.0);
 
     setDefaultPollingPeriod(500);
 
@@ -281,7 +281,7 @@ bool ASIEAF::readPosition()
         LOGF_ERROR("Failed to read position. Error: %d", rc);
         return false;
     }
-    FocusAbsPosN[0].value = step;
+    FocusAbsPosNP[0].setValue(step);
     return true;
 }
 
@@ -294,7 +294,7 @@ bool ASIEAF::readMaxPosition()
         LOGF_ERROR("Failed to read max step. Error: %d", rc);
         return false;
     }
-    FocusAbsPosN[0].max = max;
+    FocusAbsPosNP[0].setMax(max);
 
     int stepRange;
     rc = EAFStepRange(m_ID, &stepRange);
@@ -303,7 +303,7 @@ bool ASIEAF::readMaxPosition()
         LOGF_ERROR("Failed to read max step range. Error: %d", rc);
         return false;
     }
-    FocusMaxPosN[0].max = stepRange;
+    FocusMaxPosNP[0].setMax(stepRange);
 
     return true;
 }
@@ -329,9 +329,9 @@ bool ASIEAF::readReverse()
         return false;
     }
 
-    FocusReverseS[INDI_ENABLED].s  = reversed ? ISS_ON : ISS_OFF;
-    FocusReverseS[INDI_DISABLED].s = reversed ? ISS_OFF : ISS_ON;
-    FocusReverseSP.s = IPS_OK;
+    FocusReverseSP[INDI_ENABLED].setState(reversed ? ISS_ON : ISS_OFF);
+    FocusReverseSP[INDI_DISABLED].setState(reversed ? ISS_OFF : ISS_ON);
+    FocusReverseSP.setState(IPS_OK);
     return true;
 }
 
@@ -344,8 +344,8 @@ bool ASIEAF::readBacklash()
         LOGF_ERROR("Failed to read backlash. Error: %d", rc);
         return false;
     }
-    FocusBacklashN[0].value = backv;
-    FocusBacklashNP.s = IPS_OK;
+    FocusBacklashNP[0].setValue(backv);
+    FocusBacklashNP.setState(IPS_OK);
     return true;
 }
 
@@ -517,16 +517,16 @@ bool ASIEAF::ISNewNumber(const char * dev, const char * name, double values[], c
 void ASIEAF::GetFocusParams()
 {
     if (readPosition())
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP.apply();
 
     if (readReverse())
-        IDSetSwitch(&FocusReverseSP, nullptr);
+        FocusReverseSP.apply();
 
     if (readBeep())
         BeepSP.apply();
 
     if (readBacklash())
-        IDSetNumber(&FocusBacklashNP, nullptr);
+        FocusBacklashNP.apply();
 }
 
 IPState ASIEAF::MoveAbsFocuser(uint32_t targetTicks)
@@ -544,17 +544,17 @@ IPState ASIEAF::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
     int32_t newPosition = 0;
 
     if (dir == FOCUS_INWARD)
-        newPosition = FocusAbsPosN[0].value - ticks;
+        newPosition = FocusAbsPosNP[0].getValue() - ticks;
     else
-        newPosition = FocusAbsPosN[0].value + ticks;
+        newPosition = FocusAbsPosNP[0].getValue() + ticks;
 
     // Clamp
-    newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosN[0].max), newPosition));
+    newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosNP[0].getMax()), newPosition));
     if (!gotoAbsolute(newPosition))
         return IPS_ALERT;
 
-    FocusRelPosN[0].value = ticks;
-    FocusRelPosNP.s       = IPS_BUSY;
+    FocusRelPosNP[0].setValue(ticks);
+    FocusRelPosNP.setState(IPS_BUSY);
 
     return IPS_BUSY;
 }
@@ -570,10 +570,10 @@ void ASIEAF::TimerHit()
     bool rc = readPosition();
     if (rc)
     {
-        if (fabs(lastPos - FocusAbsPosN[0].value) > 5)
+        if (fabs(lastPos - FocusAbsPosNP[0].getValue()) > 5)
         {
-            IDSetNumber(&FocusAbsPosNP, nullptr);
-            lastPos = FocusAbsPosN[0].value;
+            FocusAbsPosNP.apply();
+            lastPos = FocusAbsPosNP[0].getValue();
         }
     }
 
@@ -590,15 +590,15 @@ void ASIEAF::TimerHit()
         }
     }
 
-    if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)
+    if (FocusAbsPosNP.getState() == IPS_BUSY || FocusRelPosNP.getState() == IPS_BUSY)
     {
         if (!isMoving())
         {
-            FocusAbsPosNP.s = IPS_OK;
-            FocusRelPosNP.s = IPS_OK;
-            IDSetNumber(&FocusAbsPosNP, nullptr);
-            IDSetNumber(&FocusRelPosNP, nullptr);
-            lastPos = FocusAbsPosN[0].value;
+            FocusAbsPosNP.setState(IPS_OK);
+            FocusRelPosNP.setState(IPS_OK);
+            FocusAbsPosNP.apply();
+            FocusRelPosNP.apply();
+            lastPos = FocusAbsPosNP[0].getValue();
             LOG_INFO("Focuser reached requested position.");
         }
     }

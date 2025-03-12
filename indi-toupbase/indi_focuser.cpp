@@ -89,9 +89,17 @@ bool ToupAAF::initProperties()
     BeepSP[BEEP_OFF].fill("OFF", "Off", ISS_OFF);
     BeepSP.fill(getDeviceName(), "FOCUS_BEEP", "Beep", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 	
-	FocusBacklashN[0].min = FocusRelPosN[0].min = FocusAbsPosN[0].min = 0.;
-	FocusBacklashN[0].value = FocusRelPosN[0].value = FocusAbsPosN[0].value = 0.;
-	FocusBacklashN[0].step = FocusRelPosN[0].step = FocusAbsPosN[0].step = 1.;	
+    FocusBacklashNP[0].setMin(0.);
+    FocusRelPosNP[0].setMin(0.);
+    FocusAbsPosNP[0].setMin(0.);
+
+    FocusBacklashNP[0].setValue(0.);
+    FocusRelPosNP[0].setValue(0.);
+    FocusAbsPosNP[0].setValue(0.);
+
+    FocusBacklashNP[0].setStep(1.);
+    FocusRelPosNP[0].setStep(1.);
+    FocusAbsPosNP[0].setStep(1.);
 	
     setDefaultPollingPeriod(500);
 
@@ -122,13 +130,13 @@ bool ToupAAF::updateProperties()
 		defineProperty(TemperatureNP);
 		
 	    if (readPosition())
-			IDSetNumber(&FocusAbsPosNP, nullptr);
+			FocusAbsPosNP.apply();
 		if (readReverse())
-			IDSetSwitch(&FocusReverseSP, nullptr);
+			FocusReverseSP.apply();
 		if (readBeep())
 			BeepSP.apply();
 		if (readBacklash())
-			IDSetNumber(&FocusBacklashNP, nullptr);
+			FocusBacklashNP.apply();
 
         SetTimer(getCurrentPollingPeriod());
     }
@@ -251,12 +259,12 @@ IPState ToupAAF::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
     int32_t newPosition = 0;
 
     if (dir == FOCUS_INWARD)
-        newPosition = FocusAbsPosN[0].value - ticks;
+        newPosition = FocusAbsPosNP[0].getValue() - ticks;
     else
-        newPosition = FocusAbsPosN[0].value + ticks;
+        newPosition = FocusAbsPosNP[0].getValue() + ticks;
 
     // Clamp
-    newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosN[0].max), newPosition));
+    newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosNP[0].getMax()), newPosition));
     HRESULT rc = FP(AAF(m_Handle, CP(AAF_SETPOSITION), newPosition, nullptr));
     if (FAILED(rc))
     {
@@ -264,8 +272,8 @@ IPState ToupAAF::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
         return IPS_ALERT;
     }
 
-    FocusRelPosN[0].value = ticks;
-    FocusRelPosNP.s       = IPS_BUSY;
+    FocusRelPosNP[0].setValue(ticks);
+    FocusRelPosNP.setState(IPS_BUSY);
 
     return IPS_BUSY;
 }
@@ -279,7 +287,7 @@ void ToupAAF::TimerHit()
     }
 
     if (readPosition())
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP.apply();
 
     if (TemperatureNP.getState() != IPS_IDLE)
     {
@@ -287,14 +295,14 @@ void ToupAAF::TimerHit()
             TemperatureNP.apply();
     }
 
-    if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)
+    if (FocusAbsPosNP.getState() == IPS_BUSY || FocusRelPosNP.getState() == IPS_BUSY)
     {
         if (!isMoving())
         {
-            FocusAbsPosNP.s = IPS_OK;
-            FocusRelPosNP.s = IPS_OK;
-            IDSetNumber(&FocusAbsPosNP, nullptr);
-            IDSetNumber(&FocusRelPosNP, nullptr);
+            FocusAbsPosNP.setState(IPS_OK);
+            FocusRelPosNP.setState(IPS_OK);
+            FocusAbsPosNP.apply();
+            FocusRelPosNP.apply();
         }
     }
 
@@ -321,7 +329,7 @@ bool ToupAAF::readPosition()
         LOGF_ERROR("readPosition failed. %s", errorCodes(rc).c_str());
         return false;
     }
-    FocusAbsPosN[0].value = val;
+    FocusAbsPosNP[0].setValue(val);
     return true;
 }
 
@@ -334,7 +342,7 @@ bool ToupAAF::readMaxPosition()
         LOGF_ERROR("get range max for maxstep failed. %s", errorCodes(rc).c_str());
         return false;
     }
-    FocusMaxPosN[0].max = val;
+    FocusMaxPosNP[0].setMax(val);
 	
     rc = FP(AAF(m_Handle, CP(AAF_GETMAXSTEP), 0, &val));
     if (FAILED(rc))
@@ -342,8 +350,9 @@ bool ToupAAF::readMaxPosition()
         LOGF_ERROR("get maxstep failed. %s", errorCodes(rc).c_str());
         return false;
     }
-    FocusAbsPosN[0].max = FocusMaxPosN[0].value = val;
-    FocusRelPosN[0].max = val / 2.0;
+    FocusMaxPosNP[0].setValue(val);         
+    FocusAbsPosNP[0].setMax(FocusMaxPosNP[0].getValue());
+    FocusRelPosNP[0].setMax(val / 2.0);
 	
     rc = FP(AAF(m_Handle, CP(AAF_RANGEMAX), CP(AAF_GETBACKLASH), &val));
     if (FAILED(rc))
@@ -351,7 +360,7 @@ bool ToupAAF::readMaxPosition()
         LOGF_ERROR("get range max for backlash failed. %s", errorCodes(rc).c_str());
         return false;
     }
-    FocusBacklashN[0].max = val;
+    FocusBacklashNP[0].setMax(val);
 
     return true;
 }
@@ -366,9 +375,9 @@ bool ToupAAF::readReverse()
         return false;
     }
 
-    FocusReverseS[INDI_ENABLED].s  = val ? ISS_ON : ISS_OFF;
-    FocusReverseS[INDI_DISABLED].s = val ? ISS_OFF : ISS_ON;
-    FocusReverseSP.s = IPS_OK;
+    FocusReverseSP[INDI_ENABLED].setState(val ? ISS_ON : ISS_OFF);
+    FocusReverseSP[INDI_DISABLED].setState(val ? ISS_OFF : ISS_ON);
+    FocusReverseSP.setState(IPS_OK);
     return true;
 }
 
@@ -381,8 +390,8 @@ bool ToupAAF::readBacklash()
         LOGF_ERROR("readBacklash failed. %s", errorCodes(rc).c_str());
         return false;
     }
-    FocusBacklashN[0].value = val;
-    FocusBacklashNP.s = IPS_OK;
+    FocusBacklashNP[0].setValue(val);
+    FocusBacklashNP.setState(IPS_OK);
     return true;
 }
 

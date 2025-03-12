@@ -269,10 +269,10 @@ bool Driver::initProperties()
     //
     // Default settings.  New settings will be grabbed once we connect
     // 
-    FocusAbsPosN[0].min = 0;
-    FocusAbsPosN[0].max = 50000;
-    FocusAbsPosN[0].value = 28200;
-    FocusAbsPosN[0].step = 1;
+    FocusAbsPosNP[0].setMin(0);
+    FocusAbsPosNP[0].setMax(50000);
+    FocusAbsPosNP[0].setValue(28200);
+    FocusAbsPosNP[0].setStep(1);
 
     //
     // TODO - is port 4999 reasonable
@@ -292,7 +292,7 @@ bool Driver::AbortFocuser()
   *Connection << "ABORT\n";
   if ( !Connection->Failed() )
   {
-    FocusAbsPosNP.s = IPS_IDLE;
+    FocusAbsPosNP.setState(IPS_IDLE);
     return true;
   }
   LOG_ERROR("Network Error while aborting");
@@ -379,16 +379,16 @@ void Driver::UpdateStatusInfo( const HardwareState& hwState )
         currentMode == "Moving" ? IPS_BUSY :
         IPS_OK;
 
-      if ( newPosState != FocusAbsPosNP.s )
+      if ( newPosState != FocusAbsPosNP.getState())
       {
-        FocusAbsPosNP.s = newPosState;
-        IDSetNumber(&FocusAbsPosNP, nullptr );
+        FocusAbsPosNP.setState(newPosState);
+        FocusAbsPosNP.apply();
       }
 
-      if ( newPosState != FocusRelPosNP.s )
+      if ( newPosState != FocusRelPosNP.getState())
       {
-        FocusRelPosNP.s = newPosState;
-        IDSetNumber(&FocusRelPosNP, nullptr );
+        FocusRelPosNP.setState(newPosState);
+        FocusRelPosNP.apply();
       }
     }
 
@@ -416,20 +416,20 @@ void Driver::UpdateStatusInfo( const HardwareState& hwState )
     Optional<unsigned int> position = hwState.getPosition();
     if ( position )
     {
-      if ( *position != FocusAbsPosN[0].value )
+      if ( *position != FocusAbsPosNP[0].getValue() )
       {
-        FocusAbsPosN[0].value = *position;
-        IDSetNumber(&FocusAbsPosNP, nullptr );
+        FocusAbsPosNP[0].setValue(*position);
+        FocusAbsPosNP.apply();
       }
     }
 
     Optional<unsigned int> maxAbsPos = hwState.getMaxAbsPos();
     if ( maxAbsPos )
     {
-      if ( *maxAbsPos != FocusMaxPosN[0].value )
+      if ( *maxAbsPos != FocusMaxPosNP[0].getValue() )
       {
-        FocusMaxPosN[0].value = *maxAbsPos;
-        IDSetNumber(&FocusMaxPosNP, nullptr );
+        FocusMaxPosNP[0].setValue(*maxAbsPos);
+        FocusMaxPosNP.apply();
       }
     }
 }
@@ -483,11 +483,11 @@ IPState Driver::MoveAbsFocuser(uint32_t targetTicks)
         return IPS_ALERT;
     }
 
-    if ( targetTicks > FocusMaxPosN[0].value )
+    if ( targetTicks > FocusMaxPosNP[0].getValue() )
     {
-      targetTicks = FocusMaxPosN[0].value;
+      targetTicks = FocusMaxPosNP[0].getValue();
       LOGF_WARN("Focuser will not move past maximum value of %d", 
-          (unsigned int ) FocusMaxPosN[0].value ); 
+(unsigned int ) FocusMaxPosNP[0].getValue() ); 
     }
     // targetTicks is unsigned, we can't go below 0.
 

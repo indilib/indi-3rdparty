@@ -80,25 +80,25 @@ bool OasisFocuser::initProperties()
     VersionSP[1].fill("VERSION_SDK", "SDK", "Unknown");
     VersionSP.fill(getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
 
-    FocusBacklashN[0].min = 0;
-    FocusBacklashN[0].max = 0x7fffffff;
-    FocusBacklashN[0].value = 0;
-    FocusBacklashN[0].step = 1;
+    FocusBacklashNP[0].setMin(0);
+    FocusBacklashNP[0].setMax(0x7fffffff);
+    FocusBacklashNP[0].setValue(0);
+    FocusBacklashNP[0].setStep(1);
 
-    FocusRelPosN[0].min   = 0.;
-    FocusRelPosN[0].max   = 0x7fffffff;
-    FocusRelPosN[0].value = 0;
-    FocusRelPosN[0].step  = 1;
+    FocusRelPosNP[0].setMin(0.);
+    FocusRelPosNP[0].setMax(0x7fffffff);
+    FocusRelPosNP[0].setValue(0);
+    FocusRelPosNP[0].setStep(1);
 
-    FocusAbsPosN[0].min   = 0.;
-    FocusAbsPosN[0].max   = 0x7fffffff;
-    FocusAbsPosN[0].value = 0;
-    FocusAbsPosN[0].step  = 1;
+    FocusAbsPosNP[0].setMin(0.);
+    FocusAbsPosNP[0].setMax(0x7fffffff);
+    FocusAbsPosNP[0].setValue(0);
+    FocusAbsPosNP[0].setStep(1);
 
-    FocusMaxPosN[0].min = 0;
-    FocusMaxPosN[0].max = 0x7fffffff;
-    FocusMaxPosN[0].value = 0x7fffffff;
-    FocusMaxPosN[0].step = 1;
+    FocusMaxPosNP[0].setMin(0);
+    FocusMaxPosNP[0].setMax(0x7fffffff);
+    FocusMaxPosNP[0].setValue(0x7fffffff);
+    FocusMaxPosNP[0].setStep(1);
 
     setDefaultPollingPeriod(500);
     addDebugControl();
@@ -141,9 +141,9 @@ bool OasisFocuser::updateProperties()
 
         defineProperty(VersionSP);
 
-        IDSetNumber(&FocusAbsPosNP, nullptr);
-        IDSetSwitch(&FocusReverseSP, nullptr);
-        IDSetNumber(&FocusBacklashNP, nullptr);
+        FocusAbsPosNP.apply();
+        FocusReverseSP.apply();
+        FocusBacklashNP.apply();
 
         LOG_INFO("Oasis Focuser parameters updated, focuser ready for use.");
 
@@ -249,17 +249,17 @@ bool OasisFocuser::GetConfig()
     }
 
     // Update reverse settings
-    FocusReverseS[INDI_ENABLED].s = config.reverseDirection ? ISS_ON : ISS_OFF;
-    FocusReverseS[INDI_DISABLED].s = config.reverseDirection ? ISS_OFF : ISS_ON;
-    FocusReverseSP.s = IPS_OK;
+    FocusReverseSP[INDI_ENABLED].setState(config.reverseDirection ? ISS_ON : ISS_OFF);
+    FocusReverseSP[INDI_DISABLED].setState(config.reverseDirection ? ISS_OFF : ISS_ON);
+    FocusReverseSP.setState(IPS_OK);
 
     // Update max step
-    FocusAbsPosN[0].max = config.maxStep;
-    FocusMaxPosN[0].value = config.maxStep;
+    FocusAbsPosNP[0].setMax(config.maxStep);
+    FocusMaxPosNP[0].setValue(config.maxStep);
 
     // Update backlash
-    FocusBacklashN[0].value = config.backlash;
-    FocusBacklashNP.s = IPS_OK;
+    FocusBacklashNP[0].setValue(config.backlash);
+    FocusBacklashNP.setState(IPS_OK);
 
     // Update backlash compensation direction settings
     BacklashDirSP[INDI_ENABLED].setState(config.backlashDirection ? ISS_OFF : ISS_ON);
@@ -286,7 +286,7 @@ bool OasisFocuser::GetStatus()
         return false;
     }
 
-    FocusAbsPosN[0].value = status.position;
+    FocusAbsPosNP[0].setValue(status.position);
     TemperatureBoardNP[0].setValue(status.temperatureInt / 100.0);
 
     if (!status.temperatureDetection || (status.temperatureExt == (int)TEMPERATURE_INVALID))
@@ -408,11 +408,11 @@ IPState OasisFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
     int32_t newPosition = 0;
 
     if (dir == FOCUS_INWARD)
-        newPosition = FocusAbsPosN[0].value - ticks;
+        newPosition = FocusAbsPosNP[0].getValue() - ticks;
     else
-        newPosition = FocusAbsPosN[0].value + ticks;
+        newPosition = FocusAbsPosNP[0].getValue() + ticks;
 
-    newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosN[0].max), newPosition));
+    newPosition = std::max(0, std::min(static_cast<int32_t>(FocusAbsPosNP[0].getMax()), newPosition));
 
     AOReturn ret = AOFocuserMoveTo(mID, newPosition);
 
@@ -422,8 +422,8 @@ IPState OasisFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
         return IPS_ALERT;
     }
 
-    FocusRelPosN[0].value = ticks;
-    FocusRelPosNP.s = IPS_BUSY;
+    FocusRelPosNP[0].setValue(ticks);
+    FocusRelPosNP.setState(IPS_BUSY);
 
     return IPS_BUSY;
 }
@@ -438,7 +438,7 @@ void OasisFocuser::TimerHit()
 
     if (GetStatus())
     {
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP.apply();
 
         if (TemperatureBoardNP.getState() != IPS_IDLE)
             TemperatureBoardNP.apply();
@@ -447,14 +447,14 @@ void OasisFocuser::TimerHit()
             TemperatureAmbientNP.apply();
     }
 
-    if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)
+    if (FocusAbsPosNP.getState() == IPS_BUSY || FocusRelPosNP.getState() == IPS_BUSY)
     {
         if (!isMoving())
         {
-            FocusAbsPosNP.s = IPS_OK;
-            FocusRelPosNP.s = IPS_OK;
-            IDSetNumber(&FocusAbsPosNP, nullptr);
-            IDSetNumber(&FocusRelPosNP, nullptr);
+            FocusAbsPosNP.setState(IPS_OK);
+            FocusRelPosNP.setState(IPS_OK);
+            FocusAbsPosNP.apply();
+            FocusRelPosNP.apply();
             LOG_INFO("Focuser reached requested position.");
         }
     }

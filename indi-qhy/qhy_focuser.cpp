@@ -91,17 +91,17 @@ bool QFocuser::initProperties()
     BOARDVersionNP.fill(getDeviceName(), "BOARD_VERSION", "Board", CONNECTION_TAB, IP_RO, 60, IPS_OK);
 
     // Configure the inherited FocusSpeedN property
-    FocusSpeedN[0].min   = 0;
-    FocusSpeedN[0].max   = 8;
-    FocusSpeedN[0].step  = 1;
-    FocusSpeedN[0].value = 0;
+    FocusSpeedNP[0].setMin(0);
+    FocusSpeedNP[0].setMax(8);
+    FocusSpeedNP[0].setStep(1);
+    FocusSpeedNP[0].setValue(0);
 
-    FocusAbsPosN[0].min   = -64000.;
-    FocusAbsPosN[0].max   = 64000.;
-    FocusAbsPosN[0].value = 0;
-    FocusAbsPosN[0].step  = 1000;
+    FocusAbsPosNP[0].setMin(-64000.);
+    FocusAbsPosNP[0].setMax(64000.);
+    FocusAbsPosNP[0].setValue(0);
+    FocusAbsPosNP[0].setStep(1000);
 
-    FocusMaxPosN[0].max = 2e6;
+    FocusMaxPosNP[0].setMax(2e6);
 
     return true;
 }
@@ -378,15 +378,15 @@ bool QFocuser::Handshake()
     double newPos = 0;
     if (getPosition(newPos))
     {
-        FocusAbsPosN[0].value = newPos;
+        FocusAbsPosNP[0].setValue(newPos);
         lastPosition = newPos;
         LOGF_INFO("QFocuser current Position: %f", newPos);
 
         // Initialize target position to current position
-        targetPos = FocusAbsPosN[0].value;
+        targetPos = FocusAbsPosNP[0].getValue();
 
         // Update client with initial position
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP.apply();
     }
 
     getTemperature();
@@ -418,34 +418,34 @@ void QFocuser::TimerHit()
     if (!isConnected())
         return;
 
-    double prevPos = FocusAbsPosN[0].value;
+    double prevPos = FocusAbsPosNP[0].getValue();
     double newPos  = 0;
-    IPState prevState = FocusAbsPosNP.s;
+    IPState prevState = FocusAbsPosNP.getState();
 
     if (getPosition(newPos))
     {
-        FocusAbsPosN[0].value = newPos;
+        FocusAbsPosNP[0].setValue(newPos);
     }
 
 
-    if (FocusAbsPosN[0].value == targetPos && FocusAbsPosNP.s == IPS_BUSY)
+    if (FocusAbsPosNP[0].getValue() == targetPos && FocusAbsPosNP.getState() == IPS_BUSY)
     {
-        FocusAbsPosNP.s = IPS_OK;
+        FocusAbsPosNP.setState(IPS_OK);
 
-        if (FocusRelPosNP.s == IPS_BUSY)
+        if (FocusRelPosNP.getState() == IPS_BUSY)
         {
-            FocusRelPosNP.s = IPS_OK;
-            IDSetNumber(&FocusRelPosNP, nullptr);
+            FocusRelPosNP.setState(IPS_OK);
+            FocusRelPosNP.apply();
         }
     }
 
     // Only update the client if position or state changed
-    if (prevPos != FocusAbsPosN[0].value || prevState != FocusAbsPosNP.s)
+    if (prevPos != FocusAbsPosNP[0].getValue() || prevState != FocusAbsPosNP.getState())
     {
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP.apply();
     }
 
-    if (FocusAbsPosNP.s != IPS_BUSY)
+    if (FocusAbsPosNP.getState() != IPS_BUSY)
         GetFocusParams();
 
     SetTimer(getCurrentPollingPeriod());
@@ -456,7 +456,7 @@ void QFocuser::TimerHit()
 /////////////////////////////////////////////////////////////////////////////
 IPState QFocuser::MoveAbsFocuser(uint32_t targetTicks)
 {
-    if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
+    if (targetTicks < FocusAbsPosNP[0].getMin() || targetTicks > FocusAbsPosNP[0].getMax())
     {
         LOG_DEBUG("Error, requested position is out of range.");
         return IPS_ALERT;
@@ -483,8 +483,8 @@ bool QFocuser::ReverseFocuser(bool enabled)
         return false;
     }
 
-    FocusReverseS[0].s = enabled ? ISS_ON : ISS_OFF;
-    IDSetSwitch(&FocusReverseSP, nullptr);
+    FocusReverseSP[0].setState(enabled ? ISS_ON : ISS_OFF);
+    FocusReverseSP.apply();
 
     return true;
 }
@@ -497,21 +497,21 @@ IPState QFocuser::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
     int32_t newPosition = 0;
 
     if (dir == FOCUS_INWARD)
-        newPosition = FocusAbsPosN[0].value - ticks;
+        newPosition = FocusAbsPosNP[0].getValue() - ticks;
     else
-        newPosition = FocusAbsPosN[0].value + ticks;
+        newPosition = FocusAbsPosNP[0].getValue() + ticks;
 
     // Clamp
-    newPosition = std::max(static_cast<int32_t>(FocusAbsPosN[0].min),
-                           std::min(static_cast<int32_t>(FocusAbsPosN[0].max), newPosition));
+    newPosition = std::max(static_cast<int32_t>(FocusAbsPosNP[0].getMin()),
+                           std::min(static_cast<int32_t>(FocusAbsPosNP[0].getMax()), newPosition));
 
     // Use MoveAbsFocuser to handle the absolute movement
     IPState result = MoveAbsFocuser(newPosition);
 
     if (result == IPS_BUSY)
     {
-        FocusRelPosN[0].value = ticks;
-        FocusRelPosNP.s = IPS_BUSY;
+        FocusRelPosNP[0].setValue(ticks);
+        FocusRelPosNP.setState(IPS_BUSY);
     }
 
     return result;
@@ -550,10 +550,10 @@ bool QFocuser::SetFocuserSpeed(int speed)
 bool QFocuser::SyncFocuser(uint32_t ticks)
 {
 
-    if (ticks < FocusAbsPosN[0].min || ticks > FocusAbsPosN[0].max)
+    if (ticks < FocusAbsPosNP[0].getMin() || ticks > FocusAbsPosNP[0].getMax())
     {
-        LOGF_ERROR("Error, requested ticks value is out of range(Max: %d, Min: %d).", FocusAbsPosN[0].max,
-                   FocusAbsPosN[0].min);
+        LOGF_ERROR("Error, requested ticks value is out of range(Max: %d, Min: %d).", FocusAbsPosNP[0].getMax(),
+                   FocusAbsPosNP[0].getMin());
         return false;
     }
 
@@ -665,7 +665,7 @@ bool QFocuser::getPosition(double &position)
 
     position = cmd_position;
 
-    FocusAbsPosN[0].value = cmd_position;
+    FocusAbsPosNP[0].setValue(cmd_position);
 
     return true;
 }
