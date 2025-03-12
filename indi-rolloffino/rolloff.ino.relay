@@ -12,7 +12,7 @@
  *
  * tg July 2024     Add additional Actions. Indicate to the driver during handshake
  *                  that they are supported and the driver can issue them. The driver needs 
- *                  to be more recent than INDI V2.1.0. 
+ *                  to be 2.1.3 or later
  */
 
 /*
@@ -197,7 +197,7 @@
  * This makes the use of abort problematic. Could add something like an encoder in the
  * install to check if the roof is still moving. Otherwise try to avoid using the abort.
  */
-#define ROOF_OPEN_MILLI 30000
+ #define  ABORT_MAX_SEC 30
 
 #define BAUD_RATE 38400
 
@@ -291,7 +291,7 @@ const char* ERROR12 = "Action directive incompatible with current state ";
 
 const char* version_id = VERSION_ID;
 
-unsigned long timeMove = 0;
+uint32_t timeMove = 0;
 const int cLen = 15;
 const int tLen = 15;
 const int vLen = MAX_RESPONSE;
@@ -472,7 +472,6 @@ void readUSB() {
       unsigned int hold;
       const char* error = ERROR8;
       char diag[MAX_MESSAGE];
-      timeMove = 0;
 
       // On initial connection return the version
       if (strcmp(command, "CON") == 0) {
@@ -497,7 +496,7 @@ void readUSB() {
             hold = relay_info[i].hold;
             activate = relay_info[i].activate;
             if (command_input == CMD_OPEN || command_input == CMD_CLOSE) {
-              timeMove = millis();
+              timeMove = millis()/1000;
             }
             break;
           }
@@ -569,8 +568,8 @@ void readUSB() {
 // routine where it will activate the requested relay.
 //
 bool isStopAllowed() {
-  unsigned long timeNow = millis();
-  unsigned long timeBegin = timeMove;
+  uint32_t timeNow = millis()/1000;
+  uint32_t timeBegin = timeMove;
   timeMove = 0;
 
   // If the roof is either fully opened or fully closed, ignore the request.
@@ -582,7 +581,7 @@ bool isStopAllowed() {
     return false;
 
   // If time since last open or closed is longer than time allowed return false
-  if ((timeNow - timeBegin) >= ROOF_OPEN_MILLI) {
+  if ((timeNow - timeBegin) >= ABORT_MAX_SEC) {
     return false;
   } else
 

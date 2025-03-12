@@ -22,8 +22,11 @@
 #include "indidome.h"
 #include "indicom.h"
 #include "termios.h"
+#include "indiinputinterface.h"
+#include "indioutputinterface.h"
+#include "inditimer.h"
 
-class RollOffIno : public INDI::Dome
+class RollOffIno : public INDI::Dome, public INDI::InputInterface, public INDI::OutputInterface
 {
 public:
     RollOffIno();
@@ -40,6 +43,10 @@ public:
     virtual bool ISSnoopDevice(XMLEle *root) override;
 
 protected:
+    virtual bool UpdateDigitalInputs() override;
+    virtual bool UpdateAnalogInputs() override;
+    virtual bool UpdateDigitalOutputs() override;
+    virtual bool CommandOutput(uint32_t, OutputState) override;
     virtual bool Connect() override;
     virtual bool Disconnect() override;
     virtual void TimerHit() override;
@@ -49,9 +56,8 @@ protected:
     virtual bool Abort() override;
 
 private:
-    bool Handshake();
+    bool Handshake() override;
     void updateRoofStatus();
-    void updateActionStatus();
     bool getRoofSwitch(const char *, bool *, ISState *);
     bool sendRoofCommand(const char *, bool, bool);
     bool initialContact();
@@ -60,11 +66,18 @@ private:
     bool readIno(char *);
     void msSleep(int);
     bool checkConditions();
-    float CalcTimeLeft(timeval);
-    bool actionStateUsed(const char*);
-    bool actionCmdUsed(const char*);
+    void roofTimerExpired();
+    //float CalcTimeLeft(timeval);
 
-// Roof controls
+#define ROLLOFF_DURATION 60          // Seconds until Roof is fully opened or closed
+#define MAX_CNTRL_COM_ERR 10         // Maximum consecutive errors communicating with Arduino
+#define MAXOUTBUF        64          // Sized to contain outgoing command requests
+#define MAXINPBUF        256         // Sized for maximum overall input
+#define MAXINOWAIT       3           // seconds
+#define MAX_ACTIONS 8
+#define POLLING_PERIOD    2000
+
+// Main tab Roof controls
 #define ROOF_OPENED_SWITCH "OPENED"
 #define ROOF_CLOSED_SWITCH "CLOSED"
 #define ROOF_LOCKED_SWITCH "LOCKED"
@@ -75,39 +88,33 @@ private:
 #define ROOF_LOCK_CMD     "LOCK"
 #define ROOF_AUX_CMD      "AUXSET"
 
-// Actions
-#define MAX_ACTIONS 8     // Maximum actions supported
-#define ACTION_ACT1_CMD   "ACT1SET"
-#define ACTION_ACT2_CMD   "ACT2SET"
-#define ACTION_ACT3_CMD   "ACT3SET"
-#define ACTION_ACT4_CMD   "ACT4SET"
-#define ACTION_ACT5_CMD   "ACT5SET"
-#define ACTION_ACT6_CMD   "ACT6SET"
-#define ACTION_ACT7_CMD   "ACT7SET"
-#define ACTION_ACT8_CMD   "ACT8SET"
+// Actions (digital outputs)
+const char* outRoRino[MAX_ACTIONS] = {
+        "(SET:ACT1SET:ON)",
+        "(SET:ACT2SET:ON)",
+        "(SET:ACT3SET:ON)",
+        "(SET:ACT4SET:ON)",
+        "(SET:ACT5SET:ON)",
+        "(SET:ACT6SET:ON)",
+        "(SET:ACT7SET:ON)",
+        "(SET:ACT8SET:ON)"
+};
 
-    // Action Labels.
-#define MAX_LABEL 32
-    const char* ACTION_LABEL_TAB = "Action Labels";
-    const char* action_labels[MAX_ACTIONS] = {"LABEL1", "LABEL2", "LABEL3", "LABEL4", "LABEL5", "LABEL6", "LABEL7", "LABEL8"};
-    const char* label_init[MAX_ACTIONS] = {"Action 1", "Action 2", "Action 3", "Action 4", "Action 5", "Action 6", "Action 7", "Action 8"};
-
-    // Actions
-    const char* ACTION_CONTROL_TAB = "Action Controls";
-    const char* act_cmd_used[MAX_ACTIONS] = {ACTION_ACT1_CMD, ACTION_ACT2_CMD, ACTION_ACT3_CMD, ACTION_ACT4_CMD, ACTION_ACT5_CMD, ACTION_ACT6_CMD, ACTION_ACT7_CMD, ACTION_ACT8_CMD};
-    const char* actionSwitchesText[MAX_ACTIONS] = {"Act1", "Act2", "Act3", "Act4", "Act5", "Act6", "Act7", "Act8"};
-
-    // Action responses, if any. All that is done is to set the action light indicating on status
-    const char* action_state_used[MAX_ACTIONS] = {"ACT1STATE", "ACT2STATE", "ACT3STATE", "ACT4STATE", "ACT5STATE", "ACT6STATE", "ACT7STATE", "ACT8STATE"};
-    ISState actionStatusState[MAX_ACTIONS] = {ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF, ISS_OFF};
+// Action responses (digital inputs)
+const char* inpRoRino[MAX_ACTIONS] = {
+        "(GET:ACT1STATE:0)",
+        "(GET:ACT2STATE:0)",
+        "(GET:ACT3STATE:0)",
+        "(GET:ACT4STATE:0)",
+        "GET:ACT5STATE:0)",
+        "(GET:ACT6STATE:0)",
+        "(GET:ACT7STATE:0)",
+        "(GET:ACT8STATE:0)"
+};
 
 //////////////////////////////////////
-// Properties
+// Switch
 //////////////////////////////////////
-
-/////////////////
-// Switches.
-
     // Roof Lock Switch
     INDI::PropertySwitch LockSP {2};
     enum {LOCK_ENABLE, LOCK_DISABLE};
@@ -116,57 +123,33 @@ private:
     INDI::PropertySwitch AuxSP {2};
     enum {AUX_ENABLE, AUX_DISABLE};
 
-    // Action Switches
-    INDI::PropertySwitch Act1SP {2};
-    INDI::PropertySwitch Act2SP {2};
-    INDI::PropertySwitch Act3SP {2};
-    INDI::PropertySwitch Act4SP {2};
-    INDI::PropertySwitch Act5SP {2};
-    INDI::PropertySwitch Act6SP {2};
-    INDI::PropertySwitch Act7SP {2};
-    INDI::PropertySwitch Act8SP {2};
-    enum {ACT_ENABLE, ACT_DISABLE};
-    INDI::PropertySwitch actionSwitches_sp [MAX_ACTIONS] = {Act1SP, Act2SP, Act3SP, Act4SP, Act5SP, Act6SP, Act7SP, Act8SP};
+//////////////////////////////////////
+// Text
+//////////////////////////////////////
 
-/////////////////
-// Texts.
-    // Action Labels
-    INDI::PropertyText Label1TP {1};
-    INDI::PropertyText Label2TP {1};
-    INDI::PropertyText Label3TP {1};
-    INDI::PropertyText Label4TP {1};
-    INDI::PropertyText Label5TP {1};
-    INDI::PropertyText Label6TP {1};
-    INDI::PropertyText Label7TP {1};
-    INDI::PropertyText Label8TP {1};
-    INDI::PropertyText actionLabels_tp [MAX_ACTIONS] = {Label1TP, Label2TP, Label3TP, Label4TP, Label5TP, Label6TP, Label7TP, Label8TP};
-
-/////////////////
-// Numbers
+//////////////////////////////////////
+// Number
+//////////////////////////////////////
     INDI::PropertyNumber RoofTimeoutNP {1};
-    enum {EXPIRED_CLEAR, EXPIRED_OPEN, EXPIRED_CLOSE };
 
-/////////////////
+//////////////////////////////////////
 // Lights.
+//////////////////////////////////////
     INDI::PropertyLight RoofStatusLP {5};
     enum {ROOF_STATUS_OPENED, ROOF_STATUS_CLOSED, ROOF_STATUS_MOVING, ROOF_STATUS_LOCKED, ROOF_STATUS_AUXSTATE};
-
     INDI::PropertyLight ActionStatusLP {MAX_ACTIONS};
 
-////////////////////////////////////////////////
-
-    double MotionRequest{0};
-    struct timeval MotionStart{0, 0};
+    static const char RORINO_STOP_CHAR {0x29};         // ')'
+    enum {EXPIRED_CLEAR, EXPIRED_OPEN, EXPIRED_CLOSE, EXPIRED_ABORT};
+    unsigned int roofTimedOut = EXPIRED_CLEAR;
+    INDI::Timer roofMoveTimer;
     bool contactEstablished = false;
     bool roofOpening = false;
     bool roofClosing = false;
-    unsigned int roofTimedOut = EXPIRED_CLEAR;
-    unsigned int communicationErrors = 0;
-    unsigned int actionCount = 0;                        // From remote connection
-    bool actionStatus[MAX_ACTIONS]{false};
+    unsigned int communicationErrors = 0; // Added for WiFi benefit
+    unsigned int actionCount = 0;         // # of optional input/output Actions set by Arduino
     ISState fullyOpenedLimitSwitch{ISS_OFF};
     ISState fullyClosedLimitSwitch{ISS_OFF};
     ISState roofLockedSwitch{ISS_OFF};
     ISState roofAuxiliarySwitch{ISS_OFF};
-
 };
