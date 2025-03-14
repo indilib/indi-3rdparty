@@ -1,25 +1,25 @@
 /**
-This file is part of the AAG Cloud Watcher INDI Driver.
-A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
+   This file is part of the AAG Cloud Watcher INDI Driver.
+   A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
 
-Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
-Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
+   Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
+   Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
 
-AAG Cloud Watcher INDI Driver is free software : you can redistribute it
-and / or modify it under the terms of the GNU General Public License as
-published by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
+   AAG Cloud Watcher INDI Driver is free software : you can redistribute it
+   and / or modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation, either version 3 of the License,
+   or (at your option) any later version.
 
-AAG Cloud Watcher INDI Driver is distributed in the hope that it will be
-useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   AAG Cloud Watcher INDI Driver is distributed in the hope that it will be
+   useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with AAG Cloud Watcher INDI Driver.  If not, see
-< http : //www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with AAG Cloud Watcher INDI Driver.  If not, see
+   < http : //www.gnu.org/licenses/>.
 
-Anemometer code contributed by Joao Bento.
+   Anemometer code contributed by Joao Bento.
 */
 
 #pragma once
@@ -44,6 +44,7 @@ struct CloudWatcherConstants
     float ambientResistanceAt25;
     float ambientPullUpResistance;
     int anemometerStatus; ///< The status of the anemometer
+    int sqmStatus; ///< If new light sensor is installed (and firmware >= 5.89)
 };
 
 /**
@@ -57,32 +58,48 @@ enum ANEMOMETER_TYPE
 };
 
 /**
+ *  Is CloudWatcher device generating the data or loading from files?
+ */
+
+enum DEVICE_TYPE
+{
+    SOURCE,
+    REPLICA
+};
+
+/**
  *  A struct  to group and send all AAG Cloud Watcher gathered data (RAW data,
  *  directly from the device)
  */
 
 struct CloudWatcherData
 {
-    int supply;  ///< Internal Supply Voltage
-    int sky;     ///< IR Sky Temperature
-    int sensor;  ///< IR Sensor Temperature
-    int ambient; ///< Ambient temperature. In newer models there is no ambient temperature sensor so -10000 is returned.
-    int rain;    ///< Rain frequency
-    int rainHeater; ///< PWM Duty Cycle
-    int rainTemperature; ///< Rain sensor temperature (used as ambient temperature in models where there is no ambient temperature sensor)
+    int supply;            ///< Internal Supply Voltage
+    int sky;               ///< IR Sky Temperature
+    int sensor;            ///< IR Sensor Temperature
+    float tempEst;         ///< Estimated ambient temperature, when available
+    float tempAct;         ///< Actual ambient temperature, when available
+    int rain;              ///< Rain frequency
+    int rainHeater;        ///< PWM Duty Cycle
+    int rainTemperature;   ///< Rain sensor temperature (used as ambient temperature in models where there is no ambient temperature sensor)
     int ldr;               ///< Ambient light sensor
-    int ldrFreq;            ///< Ambient light sensor in K
+    int lightFreq;         ///< light sensor frequency (used to compute SQM mpsas)
     float readCycle;       ///< Time used in the readings
+    int windSpeed;         ///< The wind speed measured by the anemometer
+    float humidity;        ///< The relative humidity
+    float pressure;        ///< raw pressure reading
+    float abspress;        ///< absolute pressure reading
+    float relpress;        ///< relative pressure reading
+
     int totalReadings;     ///< Total number of readings taken by the Cloud Watcher Controller
+
+    int switchStatus;      ///< The status of the internal switch
+
     int internalErrors;    ///< Total number of internal errors
     int firstByteErrors;   ///< First byte errors count
     int secondByteErrors;  ///< Second byte errors count
     int pecByteErrors;     ///< PEC byte errors count
     int commandByteErrors; ///< Command byte errors count
-    int switchStatus;      ///< The status of the internal switch
-    int windSpeed;         ///< The wind speed measured by the anemometer
-    int humidity;          ///< The relative humidity
-    int pressure;          ///< atmospheric pressure
 };
 
 /**
@@ -93,375 +110,408 @@ struct CloudWatcherData
 
 class CloudWatcherController
 {
-    public:
-        /**
-        * A constructor.
-        */
-        CloudWatcherController();
+public:
+    /**
+     * A constructor.
+     */
+    CloudWatcherController();
 
-        /**
-        * A constructor.
-        * @param verbose to specify if communication details have to be printed in the
-        * standar output. Do not use, just for testign pourposes.
-        */
-        CloudWatcherController(bool verbose);
+    /**
+     * A constructor.
+     * @param verbose to specify if communication details have to be printed in the
+     * standar output. Do not use, just for testign pourposes.
+     */
+    CloudWatcherController(bool verbose);
 
-        /**
-        * A destructor
-        */
-        virtual ~CloudWatcherController() = default;
+    /**
+     * A destructor
+     */
+    virtual ~CloudWatcherController() = default;
 
-        const char *getDeviceName();
+    const char *getDeviceName();
 
-        /**
-        * Sets the file descriptor to use for communication
-        * @param newPortFD The new file descriptor
-        */
-        void setPortFD(int newPortFD);
+    /**
+     * Sets elevation value
+     * @param elevation site elevation value
+     */
+    void setElevation(float elevation);
 
-        /**
-        * Sets the anemometer type (currently grey for old models, black on newer)
-        */
-        void setAnemometerType(enum ANEMOMETER_TYPE type);
+    /**
+     * Sets the file descriptor to use for communication
+     * @param newPortFD The new file descriptor
+     */
+    void setPortFD(int newPortFD);
 
-        /**
-        * Checks if the AAG Cloud Watcher is connected and accesible by requesting
-        * its device name.
-        * @return true if the AAG CLoud Watcher is connected and accesible. false
-        * otherwise.
-        */
-        bool checkCloudWatcher();
+    /**
+     * Sets the anemometer type (currently grey for old models, black on newer)
+     */
+    void setAnemometerType(enum ANEMOMETER_TYPE type);
 
-        /**
-        * Obtains the status of the internal Switch of the AAG CLoud Watcher.
-        * @param switchStatus where the switch status will be stored. 1 if open,
-        * 0 if closed.
-        * @return true if the status of the switch has been correctly determined.
-        * false otherwise.
-        */
-        bool getSwitchStatus(int *switchStatus);
+    /**
+     * Checks if the AAG Cloud Watcher is connected and accesible by requesting
+     * its device name.
+     * @return true if the AAG CLoud Watcher is connected and accesible. false
+     * otherwise.
+     */
+    bool checkCloudWatcher();
 
-        /**
-        * Gets all raw dynamic data from the AAG Cloud Watcher. It follows the
-        * procedure described in the AAG Documents (5 readings for some values). This
-        * function takes more than 2 seconds and less than 3 to complete.
-        * @param cwd where the dynamic data of the AAG Cloud Watcher will be stored.
-        * @return true if the data has been correctly gathered. false otherwise.
-        */
-        bool getAllData(CloudWatcherData * cwd);
+    /**
+     * Obtains the status of the internal Switch of the AAG CLoud Watcher.
+     * @param switchStatus where the switch status will be stored. 1 if open,
+     * 0 if closed.
+     * @return true if the status of the switch has been correctly determined.
+     * false otherwise.
+     */
+    bool getSwitchStatus(int *switchStatus);
 
-        /**
-        * Gets all constants from the AAG Cloud Watcher. Some of the constants are
-        * retrieved from the device (from firmware version >3.0)
-        * @param cwc where the constants of the AAG Cloud Watcher will be stored.
-        * @return true if the constants has been correctly gathered. false otherwise.
-        */
-        bool getConstants(CloudWatcherConstants * cwc);
+    /**
+     * Gets all raw dynamic data from the AAG Cloud Watcher. It follows the
+     * procedure described in the AAG Documents (5 readings for some values). This
+     * function takes more than 2 seconds and less than 3 to complete.
+     * @param cwd where the dynamic data of the AAG Cloud Watcher will be stored.
+     * @return true if the data has been correctly gathered. false otherwise.
+     */
+    bool getAllData(CloudWatcherData * cwd);
 
-        /**
-        * Closes the internal switch of the AAG Cloud Watcher
-        *
-        * @return true if the internal switch is closed. false otherwise.
-        */
-        bool closeSwitch();
+    /**
+     * Gets all constants from the AAG Cloud Watcher. Some of the constants are
+     * retrieved from the device (from firmware version >3.0)
+     * @param cwc where the constants of the AAG Cloud Watcher will be stored.
+     * @return true if the constants has been correctly gathered. false otherwise.
+     */
+    bool getConstants(CloudWatcherConstants * cwc);
 
-        /**
-        * Opens the internal switch of the AAG Cloud Watcher
-        *
-        * @return true if the internal switch is opened. false otherwise.
-        */
-        bool openSwitch();
+    /**
+     * Closes the internal switch of the AAG Cloud Watcher
+     *
+     * @return true if the internal switch is closed. false otherwise.
+     */
+    bool closeSwitch();
 
-        /**
-        * Sets the PWM Duty Cycle (heater control) of the AAG Cloud Watcher
-        * @param pwmDutyCycle The value of the PWM Duty Cycle
-        *        (min - 0 to max - 1023)
-        * @return true if the PWM Duty Cycle has been successfully setted.
-        *   false otherwise.
-        */
-        bool setPWMDutyCycle(int pwmDutyCycle);
+    /**
+     * Opens the internal switch of the AAG Cloud Watcher
+     *
+     * @return true if the internal switch is opened. false otherwise.
+     */
+    bool openSwitch();
 
-    private:
-        /**
-        * true if info verbose output should be shown. Just for debugging pourposes.
-        */
-        int verbose = false;
+    /**
+     * Sets the PWM Duty Cycle (heater control) of the AAG Cloud Watcher
+     * @param pwmDutyCycle The value of the PWM Duty Cycle
+     *        (min - 0 to max - 1023)
+     * @return true if the PWM Duty Cycle has been successfully setted.
+     *   false otherwise.
+     */
+    bool setPWMDutyCycle(int pwmDutyCycle);
 
-        /**
-        *  File descriptor for the serial or tcp connection
-        */
-        int PortFD = -1;
+private:
+    /**
+     * true if info verbose output should be shown. Just for debugging pourposes.
+     */
+    int verbose = false;
 
-        /**
-         *  Firmware Version
-         */
-        double m_FirmwareVersion = 0;
+    /**
+     *  File descriptor for the serial or tcp connection
+     */
+    int PortFD = -1;
 
-        /**
-        *  Anemometer type
-        */
-        enum ANEMOMETER_TYPE anemometerType = BLACK;
+    /**
+     *  Firmware Version
+     */
+    double m_FirmwareVersion = 0;
 
-        /**
-        * AAG CloudWatcher send information in 15 bytes blocks
-        */
-        const static int BLOCK_SIZE = 15;
+    /**
+     *  Anemometer Status (1 = anemometer detected; 0 otherwise)
+     */
+    int m_AnemometerStatus;
 
-        /**
-        * Number of reads to aggregate for the cloudwatcher data
-        */
-        const static int NUMBER_OF_READS = 5;
+    /**
+     * Site Elevation
+     */
+    float siteElevation = 0;
 
-        /**
-        * Hard coded constant. May be changed with internal device constants.
-        * @see getElectricalConstants()
-        */
-        float zenerConstant = 3.0;
+    /**
+     *  Anemometer type
+     */
+    enum ANEMOMETER_TYPE anemometerType = BLACK;
 
-        /**
-        * Hard coded constant.
-        */
-        float ambPullUpResistance = 9.9;
+    /**
+     * AAG CloudWatcher send information in 15 bytes blocks
+     */
+    const static int BLOCK_SIZE = 15;
 
-        /**
-        * Hard coded constant.
-        */
-        float ambResAt25 = 10;
+    /**
+     * Number of reads to aggregate for the cloudwatcher data
+     */
+    const static int NUMBER_OF_READS = 5;
 
-        /**
-        * Hard coded constant.
-        */
-        float ambBeta = 3811;
+    /**
+     * Hard coded constant. May be changed with internal device constants.
+     * @see getElectricalConstants()
+     */
+    float zenerConstant = 3.0;
 
-        /**
-        * Hard coded constant. May be changed with internal device constants.
-        * @see getElectricalConstants()
-        */
-        float LDRMaxResistance = 2000;
+    /**
+     * Hard coded constant.
+     */
+    float ambPullUpResistance = 9.9;
 
-        /**
-        * Hard coded constant. May be changed with internal device constants.
-        * @see getElectricalConstants()
-        */
-        float LDRPullUpResistance = 56;
+    /**
+     * Hard coded constant.
+     */
+    float ambResAt25 = 10;
 
-        /**
-        * Hard coded constant. May be changed with internal device constants.
-        * @see getElectricalConstants()
-        */
-        float rainPullUpResistance = 1;
+    /**
+     * Hard coded constant.
+     */
+    float ambBeta = 3811;
 
-        /**
-        * Hard coded constant. May be changed with internal device constants.
-        * @see getElectricalConstants()
-        */
-        float rainResAt25 = 1;
+    /**
+     * Hard coded constant. May be changed with internal device constants.
+     * @see getElectricalConstants()
+     */
+    float LDRMaxResistance = 2000;
 
-        /**
-        * Hard coded constant. May be changed with internal device constants.
-        * @see getElectricalConstants()
-        */
-        float rainBeta = 3450;
+    /**
+     * Hard coded constant. May be changed with internal device constants.
+     * @see getElectricalConstants()
+     */
+    float LDRPullUpResistance = 56;
 
-        /**
-        * The total number of readings performed by the controller
-        */
-        int totalReadings = 0;
+    /**
+     * Hard coded constant. May be changed with internal device constants.
+     * @see getElectricalConstants()
+     */
+    float rainPullUpResistance = 1;
+
+    /**
+     * Hard coded constant. May be changed with internal device constants.
+     * @see getElectricalConstants()
+     */
+    float rainResAt25 = 1;
+
+    /**
+     * Hard coded constant. May be changed with internal device constants.
+     * @see getElectricalConstants()
+     */
+    float rainBeta = 3450;
+
+    /**
+     * The total number of readings performed by the controller
+     */
+    int totalReadings = 0;
 
 
-        /**
-        * is SQM selector detected?
-        */
-        enum
-        {
-            SQM_UNKNOWN,
-            SQM_DETECTED,
-            SQM_UNDETECTED,
-        };
-        int sqmSensorStatus = SQM_UNKNOWN;
+    /**
+     * is SQM selector detected?
+     */
+    enum
+    {
+	SQM_UNKNOWN = -1,
+	SQM_DETECTED = 0,
+	SQM_UNDETECTED = 1,
+    };
+    int sqmSensorStatus = SQM_UNKNOWN;
 
 
-        /**
-        * Print a buffer of chars. Just for debugging
-        * @param buffer the buffer to be printed
-        * @param num the number of chars to be printed
-        */
-        void printBuffer(char *buffer, int num);
+    /**
+     * Print a buffer of chars. Just for debugging
+     * @param buffer the buffer to be printed
+     * @param num the number of chars to be printed
+     */
+    void printBuffer(char *buffer, int num);
 
-        /**
-        * Prints a printf like expression if verbose mode is enabled. Just for
-        * debugging
-        * @param fmt the pritnfexpression to be printed
-        * @see CloudWatcherController(char *serialP, bool verbose)
-        */
-        void printMessage(const char *fmt, ...);
+    /**
+     * Prints a printf like expression if verbose mode is enabled. Just for
+     * debugging
+     * @param fmt the pritnfexpression to be printed
+     * @see CloudWatcherController(char *serialP, bool verbose)
+     */
+    void printMessage(const char *fmt, ...);
 
-        /**
-        * Checks if the received message is a AAG CLoud Wathcer valid message.
-        * @param buffer the readed message
-        * @param nBlocks the number of expected blocks in the message
-        * @return true if it is a valid message. false otherwise
-        */
-        bool checkValidMessage(char *buffer, int nBlocks);
+    /**
+     * Checks if the received message is a AAG CLoud Wathcer valid message.
+     * @param buffer the readed message
+     * @param nBlocks the number of expected blocks in the message
+     * @param nBytes the number of bytes read from serial connection
+     * @param trim trim buffer before return (if valid)
+     * @return true if it is a valid message. false otherwise
+     */
+    bool checkValidMessage(char *buffer, int nBlocks, int bytes, bool trim = true);
 
-        /**
-         * @brief trimString Required since cloudwatcher apparently sends back a literal \0 (slash followed by zero)
-         * @param str buffer to trim
-         */
-        void trimString(char *str);
+    /**
+     * @brief trimString Required since cloudwatcher apparently sends back a literal \0 (slash followed by zero)
+     * @param str buffer to trim
+     */
+    void trimString(char *str);
 
-        /**
-        * Sends a command to the AAG Cloud Watcher.
-        * @param command a two byte array with the command to be sent
-        * @return true if successfully sent. false otherwise
-        */
-        bool sendCloudwatcherCommand(const char *command);
+    /**
+     * Sends a command to the AAG Cloud Watcher.
+     * @param command a two byte array with the command to be sent
+     * @return true if successfully sent. false otherwise
+     */
+    bool sendCloudwatcherCommand(const char *command);
 
-        /**
-        * Sends a command to the AAG Cloud Watcher.
-        * @param command a byte array with the command to be sent
-        * @param size the number of bytes of the command
-        * @return true if successfully sent. false otherwise
-        */
-        bool sendCloudwatcherCommand(const char *command, int size);
+    /**
+     * Sends a command to the AAG Cloud Watcher.
+     * @param command a byte array with the command to be sent
+     * @param size the number of bytes of the command
+     * @return true if successfully sent. false otherwise
+     */
+    bool sendCloudwatcherCommand(const char *command, int size);
 
-        /**
-        * Reads a AAG Cloud Watcher answer
-        * @param buffer where the answer will be stored. Should be big enough
-        * @param nBlocks number of blocks to be readed
-        */
-        bool getCloudWatcherAnswer(char *buffer, int nBlocks);
+    /**
+     * Reads a AAG Cloud Watcher answer
+     * @param buffer where the answer will be stored. Should be big enough
+     * @param nBlocks number of blocks to be readed
+     */
+    bool getCloudWatcherAnswer(char *buffer, int nBlocks);
 
-        /**
-        * Reads the firmware version of the AAG Cloud Watcher (if not previously
-        * read).
-        * @param version
-        * @return true if succesfully read. false otherwise.
-        * @see getFirmwareVersion()
-        */
-        bool getFirmwareVersion(double &version);
+    /**
+     * Reads the firmware version of the AAG Cloud Watcher (if not previously
+     * read).
+     * @param version
+     * @return true if succesfully read. false otherwise.
+     * @see getFirmwareVersion()
+     */
+    bool getFirmwareVersion(double &version);
 
-        /**
-        * Reads the serial number of the AAG Cloud Watcher
-        * @param serialNumber where the serial number will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getSerialNumber(int &serialNumber);
+    /**
+     * Reads the serial number of the AAG Cloud Watcher
+     * @param serialNumber where the serial number will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getSerialNumber(int &serialNumber);
 
-        /**
-        * Performs an aggregation of the values stored in a float array. It computes
-        * average and standard deviation of the array and averages only the values
-        * within [average - deviation, average + deviation]
-        * @param values the values to be aggregated
-        * @param numberOfValues the size of values
-        * @return the aggregated value
-        */
-        float aggregateFloats(float values[], int numberOfValues);
+    /**
+     * Performs an aggregation of the values stored in a float array. It computes
+     * average and standard deviation of the array and averages only the values
+     * within [average - deviation, average + deviation]
+     * @param values the values to be aggregated
+     * @param numberOfValues the size of values
+     * @return the aggregated value
+     */
+    float aggregateFloats(float values[], int numberOfValues);
 
-        /**
-        * Performs an aggregation of the values stored in a int array. It computes
-        * average and standard deviation of the array and averages only the values
-        * within [average - deviation, average + deviation]
-        * @param values the values to be aggregated
-        * @param numberOfValues the size of values
-        * @return the aggregated value
-        */
-        int aggregateInts(int values[], int numberOfValues);
+    /**
+     * Performs an aggregation of the values stored in a int array. It computes
+     * average and standard deviation of the array and averages only the values
+     * within [average - deviation, average + deviation]
+     * @param values the values to be aggregated
+     * @param numberOfValues the size of values
+     * @return the aggregated value
+     */
+    int aggregateInts(int values[], int numberOfValues);
 
-        /**
-        * Reads the current IR Sky Temperature value of the AAG Cloud Watcher
-        * @param temp where the sensor value will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getIRSkyTemperature(int &temp);
+    /**
+     * Reads the current IR Sky Temperature value of the AAG Cloud Watcher
+     * @param temp where the sensor value will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getIRSkyTemperature(int &temp);
 
-        /**
-        * Reads the current IR Sensor Temperature value of the AAG Cloud Watcher
-        * @param temp where the sensor value will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getIRSensorTemperature(int &temp);
+    /**
+     * Reads the current IR Sensor Temperature value of the AAG Cloud Watcher
+     * @param temp where the sensor value will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getIRSensorTemperature(int &temp);
 
-        /**
-        * Reads the current Rain Frequency value of the AAG Cloud Watcher
-        * @param rainFreq where the sensor value will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getRainFrequency(int &rainFreq);
+    /**
+     * Reads the current Rain Frequency value of the AAG Cloud Watcher
+     * @param rainFreq where the sensor value will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getRainFrequency(int &rainFreq);
 
-        /**
-        * Reads the current Internal Supply Voltage, Ambient Temperature, LDR Value
-        * and Rain Sensor Temperature values of the AAG Cloud Watcher
-        * @param internalSupplyVoltage where the sensor value will be stored
-        * @param ambientTemperature where the sensor value will be stored
-        * @param ldrValue where the sensor value will be
-        * @param ldrFreqValue where the sensor value in K will be stored, if Firmware >= 5.88
-        * @param rainSensorTemperature where the sensor value will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getValues(int *internalSupplyVoltage, int *ambientTemperature, int *ldrValue, int *ldrFreqValue, int *rainSensorTemperature);
+    /**
+     * Reads the current Internal Supply Voltage, Ambient Temperature, LDR Value
+     * and Rain Sensor Temperature values of the AAG Cloud Watcher
+     * @param internalSupplyVoltage where the sensor value will be stored
+     * @param ambientTemperature where the sensor value will be stored
+     * @param ldrValue where the sensor value will be
+     * @param ldrFreqValue where the sensor value in K will be stored, if Firmware >= 5.88
+     * @param rainSensorTemperature where the sensor value will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getValues(int *internalSupplyVoltage, float *ambientTemperature, int *ldrValue, int *ldrFreqValue, int *rainSensorTemperature);
 
-        /**
-        * Reads the current PWM Duty Cycle value of the AAG Cloud Watcher
-        * @param pwmDutyCycle where the sensor value will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getPWMDutyCycle(int &pwmDutyCycle);
 
-        /**
-        * Reads the current Error values of the AAG Cloud Watcher
-        * @param firstAddressByteErrors where the first byte error count will be stored
-        * @param commandByteErrors where the command byte error count will be stored
-        * @param secondAddressByteErrors where the second byte error count will be stored
-        * @param pecByteErrors where the PEC byte error count will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getIRErrors(int *firstAddressByteErrors, int *commandByteErrors, int *secondAddressByteErrors,
-                         int *pecByteErrors);
+    /**
+     * Reads the current PWM Duty Cycle value of the AAG Cloud Watcher
+     * @param pwmDutyCycle where the sensor value will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getPWMDutyCycle(int &pwmDutyCycle);
 
-        /**
-        * Reads the electrical constants from the AAG Cloud Watcher and stores them
-        * into the internal attributes
-        * @return true if succesfully read. false otherwise.
-        * @see zenerConstant
-        * @see LDRMaxResistance
-        * @see LDRPullUpResistance
-        * @see rainPullUpResistance
-        * @see rainResAt25
-        * @see rainBeta
-        */
-        bool getElectricalConstants();
+    /**
+     * Reads the current Error values of the AAG Cloud Watcher
+     * @param firstAddressByteErrors where the first byte error count will be stored
+     * @param commandByteErrors where the command byte error count will be stored
+     * @param secondAddressByteErrors where the second byte error count will be stored
+     * @param pecByteErrors where the PEC byte error count will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getIRErrors(int *firstAddressByteErrors, int *commandByteErrors, int *secondAddressByteErrors,
+		     int *pecByteErrors);
 
-        /**
-        * Reads the anemometer status of the AAG Cloud Watcher
-        * @param anemometerStatus where the anemometer status will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getAnemometerStatus(int &anemomterStatus);
+    /**
+     * Reads the electrical constants from the AAG Cloud Watcher and stores them
+     * into the internal attributes
+     * @return true if succesfully read. false otherwise.
+     * @see zenerConstant
+     * @see LDRMaxResistance
+     * @see LDRPullUpResistance
+     * @see rainPullUpResistance
+     * @see rainResAt25
+     * @see rainBeta
+     */
+    bool getElectricalConstants();
 
-        /**
-        * Reads the wind speed from the anemomter
-        * @param windSpeed where the wind speed will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getWindSpeed(int &windSpeed);
+    /**
+     * Reads the anemometer status of the AAG Cloud Watcher
+     * @param anemometerStatus where the anemometer status will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getAnemometerStatus(int &anemometerStatus);
 
-        /**
-        * Reads the humidity from external sensor
-        * @param humidity where the humidity will be stored
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getHumidity(int &humidity);
+    /**
+     * Checks if SQM is available
+     * @param sqmStatus where the SQM status (present = 1; not present = 0) will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getSqmStatus(int &sqmStatus);
 
-        /**
-        * Reads the pressure from external sensor
-        * @param pressure where the pressure will be stored. Unit is Pa
-        * @return true if succesfully read. false otherwise.
-        */
-        bool getPressure(int &pressure);
+    /**
+     * Reads the wind speed from the anemomter
+     * @param windSpeed where the wind speed will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getWindSpeed(float &windSpeed);
 
-        /**
-         * Use regex to extract the block value, skipping any space
-         */
-        bool matchBlock(const std::string &response, const std::string &prefix, int &value);
+    /**
+     * Reads the humidity from external sensor
+     * @param humidity where the humidity will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getHumidity(float &humidity);
+
+    /**
+     * Reads the temperature from external sensor.
+     * @param temperature where the temperature will be stored
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getTemperature(float &temperature);
+
+    /**
+     * Reads the pressure from external sensor
+     * @param pressure where the absolute pressure will be stored. Unit is hPa (a.k.a millibars) * 16
+     * @return true if succesfully read. false otherwise.
+     */
+    bool getPressure(float &pressure);
+
+    /**
+     * Use regex to extract the block value, skipping any space
+     */
+    bool matchBlock(const std::string &response, const std::string &prefix, int &value);
 };

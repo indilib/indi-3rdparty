@@ -10,14 +10,14 @@
   </defNumberVector>
   
   <defNumberVector device="AAG Cloud Watcher NG" name="sqmLimit" label="SQM Limit" group="Options" state="Idle" perm="rw" timeout="0">
-    <defNumber name="sqmLimit" label="SQM Limit" format="%.2f" min="0" max="30" step="0">19</defNumber>
+    <defNumber name="sqmLimit" label="SQM Limit" format="%.2f" min="0" max="30" step="0">19.6</defNumber>
   </defNumberVector>
   
   <defSwitchVector device="AAG Cloud Watcher NG" name="anemometerType" label="Anemometer Type" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
     <defSwitch name="GRAY"  label="Gray (old)">Off</defSwitch>
     <defSwitch name="BLACK" label="Black (new)">On</defSwitch>
   </defSwitchVector>
-
+  
   <defNumberVector device="AAG Cloud Watcher NG" name="sensors" label="Sensors" group="Sensors" state="Idle" perm="ro" timeout="0">
     <defNumber name="infraredSky" label="Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
     <defNumber name="correctedInfraredSky" label="Corrected Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
@@ -26,10 +26,12 @@
     <defNumber name="rainSensorTemperature" label="Rain Sensor Temperature (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>    
     <defNumber name="rainSensorHeater" label="Rain Sensor Heater (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
     <defNumber name="brightnessSensor" label="Brightness Sensor (K)" format="%.2f" min="0" max="1000000" step="0">0</defNumber> 
+    <defNumber name="sqmSensor" label="SQM Sensor (mpsas)" format="%.2f" min="0" max="25" step="0">0</defNumber> 
     <defNumber name="ambientTemperatureSensor" label="Ambient Temp. Sensor (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
     <defNumber name="windSpeed" label="Wind Speed (Km/H)" format="%.0f" min="0" max="1000" step="0">0</defNumber>
     <defNumber name="humidity" label="Relative Humidity (%)" format="%.1f" min="0" max="100" step="0">0</defNumber>
     <defNumber name="pressure" label="Pressure (Pa)" format="%.1f" min="100" max="2000" step="0">0</defNumber>
+    <defNumber name="relativePressure" label="Relative Pressure (Pa)" format="%.1f" min="100" max="2000" step="0">0</defNumber>
   </defNumberVector>
   
 
@@ -42,11 +44,11 @@
   <defNumberVector device="AAG Cloud Watcher NG" name="unitErrors" label="Errors" group="Errors" state="Idle" perm="ro" timeout="0">
     <defNumber name="internalErrors" label="Internal Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
     <defNumber name="firstAddressByteErrors" label="First Address Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
-    <defNumber name="commandByteErrors" label="Command Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
     <defNumber name="secondAddressByteErrors" label="Second Address Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
     <defNumber name="pecByteErrors" label="PEC Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="commandByteErrors" label="Command Byte Errors" format="%.0f" min="0" max="100000" step="0">0</defNumber>
   </defNumberVector>
- 
+  
 
   <defNumberVector device="AAG Cloud Watcher NG" name="heaterParameters" label="Parameters" group="Rain Heater" state="Idle" perm="rw" timeout="0">
     <defNumber name="tempLow" label="Temperature Low (ºC)" format="%.1f" min="-50" max="100" step="0">0</defNumber>
@@ -66,15 +68,16 @@
   </defSwitchVector>
 
   <defNumberVector device="AAG Cloud Watcher NG" name="readings" label="Readings" group="Device Raw Readings" state="Idle" perm="ro" timeout="0">
-    <defNumber name="supply" label="Supply" format="%.0f" min="0" max="1000" step="0">0</defNumber>
-    <defNumber name="sky" label="Sky" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
-    <defNumber name="sensor" label="Sensor" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
-    <defNumber name="ambient" label="Ambient" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
-    <defNumber name="rain" label="Rain" format="%.1f" min="0" max="100000" step="0">0</defNumber>
+    <defNumber name="supply" label="Voltage Supply" format="%.0f" min="0" max="1000" step="0">0</defNumber>
+    <defNumber name="sky" label="IR Sky Temp" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="sensor" label="IR Sensor" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="tempEst" label="Ambient Temp (Estimate)" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="tempAct" label="Ambient Temp (Actual)" format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
+    <defNumber name="rain" label="Rain Freq" format="%.1f" min="0" max="100000" step="0">0</defNumber>
     <defNumber name="rainHeater" label="Rain Heater" format="%f" min="-1" max="1023" step="0">0</defNumber>
     <defNumber name="rainTemp" label="Rain Temp." format="%.1f" min="-200000" max="200000" step="0">0</defNumber>
-    <defNumber name="LDR" label="LDR" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
-    <defNumber name="ldrFreq" label="LDR frequency" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
+    <defNumber name="LDR" label="PhotoRes Value (K Ohms)" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
+    <defNumber name="ldrFreq" label="Light Sensor Freq" format="%.1f" min="0" max="1000000" step="0">0</defNumber>
     <defNumber name="readCycle" label="Read Cycle (s)" format="%.3f" min="-200000" max="200000" step="0">0</defNumber>
     <defNumber name="windSpeed" label="Wind Speed" format="%.0f" min="0" max="20000000" step="0">0</defNumber>
     <defNumber name="humidity" label="Relative Humidity" format="%.1f" min="0" max="100" step="0">0</defNumber>
@@ -97,7 +100,8 @@
     <defNumber name="ambientBetaFactor" label="Ambient Beta Factor" format="%.0f" min="0" max="200000" step="0">0</defNumber>
     <defNumber name="ambientResistanceAt25" label="Ambient Resistance at 25º (K)" format="%.0f" min="0" max="200000" step="0">0</defNumber>
     <defNumber name="ambientPullUpResistance" label="Ambient PullUp Resistance (K)" format="%.1f" min="0" max="200000" step="0">0</defNumber>
-    <defNumber name="anemometerStatus" label="Anemometer Status" format="%.0f" min="0" max="1" step="0">0</defNumber>
+    <defNumber name="anemometerStatus" label="Anemometer Status" format="%.0f" min="-1" max="1" step="0">-1</defNumber>
+    <defNumber name="sqmStatus" label="SQM Status" format="%.0f" min="-1" max="1" step="0">-1</defNumber>
   </defNumberVector> 
   
 

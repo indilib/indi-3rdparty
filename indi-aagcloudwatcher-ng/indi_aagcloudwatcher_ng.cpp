@@ -1,26 +1,26 @@
 /**
-This file is part of the AAG Cloud Watcher INDI Driver.
-A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
+   This file is part of the AAG Cloud Watcher INDI Driver.
+   A driver for the AAG Cloud Watcher (AAGware - http : //www.aagware.eu/)
 
-Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
-Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
-Copyright (C) 2021 Jasem Mutlaq
+   Copyright (C) 2012 - 2015 Sergio Alonso (zerjioi@ugr.es)
+   Copyright (C) 2019 Adrián Pardini - Universidad Nacional de La Plata (github@tangopardo.com.ar)
+   Copyright (C) 2021 Jasem Mutlaq
 
-AAG Cloud Watcher INDI Driver is free software : you can redistribute it
-and / or modify it under the terms of the GNU General Public License as
-published by the Free Software Foundation, either version 3 of the License,
-or (at your option) any later version.
+   AAG Cloud Watcher INDI Driver is free software : you can redistribute it
+   and / or modify it under the terms of the GNU General Public License as
+   published by the Free Software Foundation, either version 3 of the License,
+   or (at your option) any later version.
 
-AAG Cloud Watcher INDI Driver is distributed in the hope that it will be
-useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU General Public License for more details.
+   AAG Cloud Watcher INDI Driver is distributed in the hope that it will be
+   useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+   MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+   GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License
-along with AAG Cloud Watcher INDI Driver.  If not, see
-< http : //www.gnu.org/licenses/>.
+   You should have received a copy of the GNU General Public License
+   along with AAG Cloud Watcher INDI Driver.  If not, see
+   < http : //www.gnu.org/licenses/>.
 
-Anemometer code contributed by Joao Bento.
+   Anemometer code contributed by Joao Bento.
 */
 
 #include "indi_aagcloudwatcher_ng.h"
@@ -52,6 +52,7 @@ AAGCloudWatcher::AAGCloudWatcher()
 
     desiredSensorTemperature = 0;
     globalRainSensorHeater   = -1;
+
 }
 
 AAGCloudWatcher::~AAGCloudWatcher()
@@ -62,11 +63,15 @@ AAGCloudWatcher::~AAGCloudWatcher()
 bool AAGCloudWatcher::Handshake()
 {
     cwc->setPortFD(PortFD);
+
+    // 2 sec delay added to support Pocket Cloudwatcher
+    (void) sleep(2);
+
     auto check = cwc->checkCloudWatcher();
 
     if (check)
     {
-        LOG_INFO("Connected to AAG Cloud Watcher");
+        LOG_INFO("Connected to AAG Cloud Watcher (Lunatico Astro)");
         sendConstants();
 
         if (m_FirmwareVersion >= 5.6)
@@ -76,6 +81,22 @@ bool AAGCloudWatcher::Handshake()
                 addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
                 setCriticalParameter("WEATHER_HUMIDITY");
             }
+	    if (m_FirmwareVersion >= 5.89)
+	    {
+		// add SQM parameter, if not already present
+		if (!ParametersNP.findWidgetByName("WEATHER_SQM")) {
+		    addParameter("WEATHER_SQM", "SQM (mpsas)", 18.50, 28.50, 10);
+		    setCriticalParameter("WEATHER_SQM");
+		}
+	    }
+	    else
+	    {
+		// add pseudo-SQM parameter, if not already present
+		if (!ParametersNP.findWidgetByName("WEATHER_SQM")) {
+		    addParameter("WEATHER_SQM", "Ambient light brightness (K)", 2100, 1000000, 20);
+		    setCriticalParameter("WEATHER_SQM");
+		}
+	    }
         }
 
         return true;
@@ -90,19 +111,17 @@ bool AAGCloudWatcher::Handshake()
 
 
 /**********************************************************************
-** Initialize all properties & set default values.
-**********************************************************************/
+ ** Initialize all properties & set default values.
+ **********************************************************************/
 bool AAGCloudWatcher::initProperties()
 {
     INDI::Weather::initProperties();
     buildSkeleton("indi_aagcloudwatcher_ng_sk.xml");
 
-    addParameter("WEATHER_BRIGHTNESS", "Ambient light brightness (K)", 2100, 1000000, 10);
-    addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 10);
+    addParameter("WEATHER_WIND_SPEED", "Wind speed (Km/H)", 0, 30, 50);
     addParameter("WEATHER_RAIN", "Rain (cycles)", 2000, 10000, 10);
-    addParameter("WEATHER_CLOUD", "Cloud (corrected infrared sky temperature °C)", -5, 10, 10);
+    addParameter("WEATHER_CLOUD", "Cloud (corrected infrared sky temperature °C)", -40, 60, 20, true);
 
-    setCriticalParameter("WEATHER_BRIGHTNESS");
     setCriticalParameter("WEATHER_WIND_SPEED");
     setCriticalParameter("WEATHER_RAIN");
     setCriticalParameter("WEATHER_CLOUD");
@@ -115,6 +134,8 @@ bool AAGCloudWatcher::initProperties()
 
 IPState AAGCloudWatcher::updateWeather()
 {
+    cwc->setElevation(LocationN[INDI::Weather::LOCATION_ELEVATION].value); // in case elevation updated as GPS gets a better fix
+
     if (!sendData())
     {
         LOG_ERROR("Can not get data from device");
@@ -367,6 +388,7 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
     return false;
 }
 
+
 float AAGCloudWatcher::getLastReadPeriod()
 {
     return lastReadPeriod;
@@ -595,12 +617,13 @@ bool AAGCloudWatcher::sendData()
     nvp[RAW_SENSOR_SUPPLY].setValue(data.supply);
     nvp[RAW_SENSOR_SKY].setValue(data.sky);
     nvp[RAW_SENSOR_SENSOR].setValue(data.sensor);
-    nvp[RAW_SENSOR_AMBIENT].setValue(data.ambient);
+    nvp[RAW_SENSOR_TEMP_EST].setValue(data.tempEst);
+    nvp[RAW_SENSOR_TEMP_ACT].setValue(data.tempAct);
     nvp[RAW_SENSOR_RAIN].setValue(data.rain);
     nvp[RAW_SENSOR_RAIN_HEATER].setValue(data.rainHeater);
     nvp[RAW_SENSOR_RAIN_TEMPERATURE].setValue(data.rainTemperature);
     nvp[RAW_SENSOR_LDR].setValue(data.ldr);
-    nvp[RAW_SENSOR_LDR_FREQ].setValue(data.ldrFreq);
+    nvp[RAW_SENSOR_LIGHT_FREQ].setValue(data.lightFreq);
     nvp[RAW_SENSOR_READ_CYCLES].setValue(data.readCycle);
     lastReadPeriod = data.readCycle;
     nvp[RAW_SENSOR_WIND_SPEED].setValue(data.windSpeed);
@@ -647,16 +670,34 @@ bool AAGCloudWatcher::sendData()
     rainSensorHeater       = 100.0 * rainSensorHeater / 1023.0;
     nvpS[SENSOR_RAIN_SENSOR_HEATER].setValue(rainSensorHeater);
 
+/*************
+    if (constants.sqmStatus < 0) {
+	LOG_DEBUG("send correct sqmStatus constant");
 
-    auto nvpSqmLimit = getNumber("sqmLimit");
-    float sqmLimit   = getNumberValueFromVector(nvpSqmLimit, "sqmLimit");
+        if (m_FirmwareVersion >= 5.89 && data.lightFreq > 0)
+	{
+	    constants.sqmStatus = 1;
+	}
+	else
+	{
+	    constants.sqmStatus = 0;
+	}
+        sendConstants();
+    }
+*************/
 
-    float ambientTemperature = data.ambient;
 
-    float ambientLight;
-    if( data.ldrFreq >= 0 )
+    float ambientTemperature = data.tempEst;
+    float ambientLight = data.ldr;
+
+    nvpS[SENSOR_BRIGHTNESS_SENSOR].setValue(ambientLight);
+
+    if( data.lightFreq > 0 )
     {
-        double sqm = ( 250000.0 / double(data.ldrFreq) );
+        double sqm = ( 250000.0 / double(data.lightFreq) );
+
+	auto nvpSqmLimit = getNumber("sqmLimit");
+	float sqmLimit   = getNumberValueFromVector(nvpSqmLimit, "sqmLimit");
 
         sqm = sqmLimit - 2.5 * log10( sqm );
 
@@ -675,10 +716,7 @@ bool AAGCloudWatcher::sendData()
         }
         ambientLight = constants.ldrPullUpResistance / ((1023.0 / ambientLight) - 1.0);
     }
-    nvpS[SENSOR_BRIGHTNESS_SENSOR].setValue(ambientLight);
-
-    setParameterValue("WEATHER_BRIGHTNESS", ambientLight);
-
+    nvpS[SENSOR_BRIGHTNESS_SQM].setValue(ambientLight);
 
     if (ambientTemperature == -10000)
     {
@@ -715,8 +753,9 @@ bool AAGCloudWatcher::sendData()
 
     nvpS[SENSOR_CORRECTED_INFRARED_SKY].setValue(correctedTemperature);
     nvpS[SENSOR_WIND_SPEED].setValue(data.windSpeed);
-    nvpS[SENSOR_HUMIDITY].setValue(data.humidity);
-    nvpS[SENSOR_PRESSURE].setValue(data.pressure);
+    nvpS[SENSOR_RELATIVE_HUMIDITY].setValue(data.humidity);
+    nvpS[SENSOR_PRESSURE].setValue(data.abspress);
+    nvpS[SENSOR_RELATIVE_PRESSURE].setValue(data.relpress);
     nvpS.setState(IPS_OK);
     nvpS.apply();
 
@@ -729,10 +768,7 @@ bool AAGCloudWatcher::sendData()
     setParameterValue("WEATHER_CLOUD", correctedTemperature);
     setParameterValue("WEATHER_RAIN", data.rain);
 
-    auto consts = getNumber("constants");
-    int anemometerStatus = getNumberValueFromVector(consts, "anemometerStatus");
-
-    if (anemometerStatus)
+    if (constants.anemometerStatus)
     {
         setParameterValue("WEATHER_WIND_SPEED", data.windSpeed);
     }
@@ -743,6 +779,8 @@ bool AAGCloudWatcher::sendData()
 
     if (data.humidity > 0)
         setParameterValue("WEATHER_HUMIDITY", data.humidity);
+    if (ambientLight > 0)
+	setParameterValue("WEATHER_SQM", ambientLight);
 
     return true;
 }
@@ -864,7 +902,7 @@ bool AAGCloudWatcher::resetData()
     namesS[5]  = const_cast<char *>("brightnessSensor");
     valuesS[5] = 0.0;
 
-    setParameterValue("WEATHER_BRIGHTNESS", 0);
+    setParameterValue("WEATHER_SQM", 0);
 
     namesS[6]  = const_cast<char *>("correctedInfraredSky");
     valuesS[6] = 0.0;
@@ -913,7 +951,7 @@ bool AAGCloudWatcher::sendConstants()
 
     m_FirmwareVersion = constants.firmwareVersion;
 
-    const int N_CONSTANTS = 11;
+    const int N_CONSTANTS = 12;
     double values[N_CONSTANTS];
     char *names[N_CONSTANTS];
 
@@ -950,6 +988,9 @@ bool AAGCloudWatcher::sendConstants()
     names[10]  = const_cast<char *>("anemometerStatus");
     values[10] = constants.anemometerStatus;
 
+    names[11]  = const_cast<char *>("sqmStatus");
+    values[11] = constants.sqmStatus;
+
     nvp.update(values, names, N_CONSTANTS);
     nvp.setState(IPS_OK);
     nvp.apply();
@@ -962,73 +1003,78 @@ bool AAGCloudWatcher::sendConstants()
     return true;
 }
 
-bool AAGCloudWatcher::resetConstants()
-{
-    auto nvp = getNumber("constants");
+/*
+  bool AAGCloudWatcher::resetConstants()
+  {
+  auto nvp = getNumber("constants");
 
-    auto tvp = getText("FW");
+  auto tvp = getText("FW");
 
-    CloudWatcherConstants constants;
+  CloudWatcherConstants constants;
 
-    int r = cwc->getConstants(&constants);
+  int r = cwc->getConstants(&constants);
 
-    if (!r)
-    {
-        return false;
-    }
+  if (!r)
+  {
+  return false;
+  }
 
-    const int N_CONSTANTS = 11;
-    double values[N_CONSTANTS];
-    char *names[N_CONSTANTS];
+  const int N_CONSTANTS = 12;
+  double values[N_CONSTANTS];
+  char *names[N_CONSTANTS];
 
-    names[0]  = const_cast<char *>("internalSerialNumber");
-    values[0] = 0;
+  names[0]  = const_cast<char *>("internalSerialNumber");
+  values[0] = 0;
 
-    names[1]  = const_cast<char *>("zenerVoltage");
-    values[1] = 0;
+  names[1]  = const_cast<char *>("zenerVoltage");
+  values[1] = 0;
 
-    names[2]  = const_cast<char *>("LDRMaxResistance");
-    values[2] = 0;
+  names[2]  = const_cast<char *>("LDRMaxResistance");
+  values[2] = 0;
 
-    names[3]  = const_cast<char *>("LDRPullUpResistance");
-    values[3] = 0;
+  names[3]  = const_cast<char *>("LDRPullUpResistance");
+  values[3] = 0;
 
-    names[4]  = const_cast<char *>("rainBetaFactor");
-    values[4] = 0;
+  names[4]  = const_cast<char *>("rainBetaFactor");
+  values[4] = 0;
 
-    names[5]  = const_cast<char *>("rainResistanceAt25");
-    values[5] = 0;
+  names[5]  = const_cast<char *>("rainResistanceAt25");
+  values[5] = 0;
 
-    names[6]  = const_cast<char *>("rainPullUpResistance");
-    values[6] = 0;
+  names[6]  = const_cast<char *>("rainPullUpResistance");
+  values[6] = 0;
 
-    names[7]  = const_cast<char *>("ambientBetaFactor");
-    values[7] = 0;
+  names[7]  = const_cast<char *>("ambientBetaFactor");
+  values[7] = 0;
 
-    names[8]  = const_cast<char *>("ambientResistanceAt25");
-    values[8] = 0;
+  names[8]  = const_cast<char *>("ambientResistanceAt25");
+  values[8] = 0;
 
-    names[9]  = const_cast<char *>("ambientPullUpResistance");
-    values[9] = 0;
+  names[9]  = const_cast<char *>("ambientPullUpResistance");
+  values[9] = 0;
 
-    names[10]  = const_cast<char *>("anemometerStatus");
-    values[10] = 0;
+  names[10]  = const_cast<char *>("anemometerStatus");
+  values[10] = 0;
 
-    nvp.update(values, names, N_CONSTANTS);
-    nvp.setState(IPS_IDLE);
-    nvp.apply();
+  names[11]  = const_cast<char *>("sqmStatus");
+  values[11] = 0;
 
-    char *valuesT[1];
-    char *namesT[1];
+  nvp.update(values, names, N_CONSTANTS);
+  nvp.setState(IPS_IDLE);
+  nvp.apply();
 
-    namesT[0]  = const_cast<char *>("firmwareVersion");
-    valuesT[0] = const_cast<char *>("-");
+  char *valuesT[1];
+  char *namesT[1];
 
-    tvp.update(valuesT, namesT, 1);
-    tvp.setState(IPS_IDLE);
-    tvp.apply();
-    return true;
-}
+  namesT[0]  = const_cast<char *>("firmwareVersion");
+  valuesT[0] = const_cast<char *>("-");
+
+  tvp.update(valuesT, namesT, 1);
+  tvp.setState(IPS_IDLE);
+  tvp.apply();
+  return true;
+  }
+*/
 
 const char *AAGCloudWatcher::getDefaultName()
 {
