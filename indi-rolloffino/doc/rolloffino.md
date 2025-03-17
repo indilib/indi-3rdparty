@@ -75,8 +75,15 @@ Example Arduino code is provided as a starting point. The Arduino code examples 
 ### rolloff.ino.standard
 General example as a starting point. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This is the Arduino code to use as a starting point. Its default pin assignments match the arduino.cc relay shield. Relay 1 to 4 being activated using pins 4, 7, 8, 12. If using a single button controller just relay 1 would need connection wiring. The default pins for the input switches is A0 through A3. The fully open switch connects to pin A0 and the fully closed switch is connected to pin A1. Another kind of controller might not provide the abiltiy to stop itself when end of travel is reached. In that case as well as sending the status back the driver would need to add activation of the stop. Includes potential support for Actions. No Actions are requested or implemented. An edit to the connection handshake will activate the requesting of Actions. 
 
-### rolloff.ino.relay
+### rolloff.ino.relay-action
 Like the standard but does indicate Actions accepted during the handshake with the driver. Uses both a relay shield and a four channel relay module. Provides two example Actions associated with the four channel relay module. The first Action sets a momentary relay (push button) and provide status feedback. The second action sets and holds a relay until manually released no status response provided.
+
+### rolloff.ino.relay-stop
+This example uses two relays one to open and one to close the roof. It monitors the 
+fully closed and fully open switches and when they do close it turns off the related 
+relay to stop the motion. It is for low power use, interfacing with a control
+switch or some other level of indirection protected from any solenoid surges. This sketch pin 
+selections match the Arduino.cc relay shield. A relay bank could be used instead.
 
 ### rolloff.ino.linear
 Use of a separate four channel relay module and no relay shield. Two Linear Actuators operating in unison activated by the roof open and close buttons. A LN298N motor controller is used to operate the linear actuators. The LN298N PWM option is used to compensate for differences in performance between the linear actuators. Uses one of the relays to apply power to the LN298N when movement activated. Shows example of Actions using the ones from rolloff.ino.relay.
