@@ -44,15 +44,11 @@
 // Input sensor definitions
 //////////////////////////////////////////////////////////
 
-
 // Input Switch definition, indicates when input sensor switch is open the voltage on the pin will be
 // HIGH indicating off. Changing to LOW requires installation of external pull-down resistors.
 #define OPEN_CONTACT HIGH
 
-
-// The driver uses software switches to initiate output commands. Here switches usually refer
-// to local status input indicators like a roof fully opened detector. Implementation could
-// be in the form of an actual switch or a sensor of some kind. 
+// Here switches refer to local status input indicators like a roof fully opened.
 // Note on the following Switch definitions
 // Define completion status like OPENED in terms of a sensor or switch name. In the normal
 // case if the response is to be used, set the switch name to the Arduino pin.
@@ -78,10 +74,10 @@
 // For the normal roof position switches
 // Indirection to define a functional state in terms of an input switch or sensor
 // Use 0 if a sensor or switch is not provided.
-#define SWITCH_OPENED SWITCH_1 // Fully opened roof is assigned to switch 3
-#define SWITCH_CLOSED SWITCH_2  // Fully closed roof is assigned to switch 1
-#define SWITCH_LOCKED SWITCH_3  // External lock
-#define SWITCH_AUX    SWITCH_4  // Auxiliary switch
+#define SWITCH_OPENED SWITCH_1  // Fully opened roof is assigned to switch 1
+#define SWITCH_CLOSED SWITCH_2  // Fully closed roof is assigned to switch 2
+#define SWITCH_LOCKED 0         // External lock
+#define SWITCH_AUX    0         // Auxiliary switch
 #define ACT1STATE 0
 #define ACT2STATE 0
 #define ACT3STATE SWITCH_5      // Action status switch
@@ -128,7 +124,6 @@
 #define FUNC_ABORT RELAY_1  // For a single button controller might map this also to RELAY_1
 #define FUNC_LOCK 0         // If automated roof lock is available.
 #define FUNC_AUX 0          // Relay to perform some unspecified function
-
 
 
 // Define the additional functions as action relays
