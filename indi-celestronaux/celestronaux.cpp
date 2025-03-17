@@ -340,19 +340,19 @@ bool CelestronAUX::initProperties()
     FI::initProperties(FOCUS_TAB);
 
     // override some default initialization values
-    FocusMaxPosN[0].max   = 60000;
-    FocusMaxPosN[0].min   = 0;
-    FocusMaxPosN[0].value = 0;
-    FocusMaxPosNP.p = IP_RO;
-    FocusMaxPosNP.timeout = 0;
-    FocusMaxPosNP.s = IPS_IDLE;
+    FocusMaxPosNP[0].setMax(60000);
+    FocusMaxPosNP[0].setMin(0);
+    FocusMaxPosNP[0].setValue(0);
+    FocusMaxPosNP.setPermission(IP_RO);
+    FocusMaxPosNP.setTimeout(0);
+    FocusMaxPosNP.setState(IPS_IDLE);
 
-    FocusAbsPosNP.s = IPS_IDLE;
+    FocusAbsPosNP.setState(IPS_IDLE);
 
-    FocusBacklashN[0].min = 0;
-    FocusBacklashN[0].max = 1000;
-    FocusBacklashN[0].step = 1;
-    FocusBacklashN[0].value = 0;
+    FocusBacklashNP[0].setMin(0);
+    FocusBacklashNP[0].setMax(1000);
+    FocusBacklashNP[0].setStep(1);
+    FocusBacklashNP[0].setValue(0);
 
 
     /////////////////////////////////////////////////////////////////////////////////////
@@ -587,19 +587,19 @@ bool CelestronAUX::updateProperties()
 
                 LOGF_DEBUG("Received focuser calibration limits: max %i, min %i", m_FocusLimitMax, m_FocusLimitMin);
 
-                FocusMaxPosN->value = m_FocusLimitMax - m_FocusLimitMin;
-                FocusMaxPosNP.s = IPS_OK;
+                FocusMaxPosNP[0].setValue(m_FocusLimitMax - m_FocusLimitMin);
+                FocusMaxPosNP.setState(IPS_OK);
 
-                FocusAbsPosN->max = FocusMaxPosN->value;
-                IUUpdateMinMax(&FocusAbsPosNP);
+                FocusAbsPosNP[0].setMax(FocusMaxPosNP[0].getValue());
+                FocusAbsPosNP.updateMinMax();
 
                 FI::SetCapability(FOCUSER_CAN_ABS_MOVE | FOCUSER_CAN_REL_MOVE | FOCUSER_CAN_ABORT );
                 setDriverInterface(getDriverInterface() | FOCUSER_INTERFACE);
                 syncDriverInfo();
 
                 getFocusPosition();
-                FocusAbsPosN->value = m_FocusLimitMax - m_FocusPosition;
-                FocusAbsPosNP.s = IPS_OK;
+                FocusAbsPosNP[0].setValue(m_FocusLimitMax - m_FocusPosition);
+                FocusAbsPosNP.setState(IPS_OK);
 
                 m_FocusEnabled = true;
                 LOG_INFO("AUX focuser enabled");
@@ -616,8 +616,8 @@ bool CelestronAUX::updateProperties()
                 // FocusMinPosNP.setState(IPS_ALERT);
                 // defineProperty(FocusMinPosNP);
 
-                FocusMaxPosN->value = FocusMaxPosN->max;
-                FocusMaxPosNP.s = IPS_ALERT;
+                FocusMaxPosNP[0].setValue(FocusMaxPosNP[0].getMax());
+                FocusMaxPosNP.setState(IPS_ALERT);
 
                 m_FocusEnabled = false;
                 LOG_INFO("AUX focuser disabled");
@@ -1316,7 +1316,7 @@ bool CelestronAUX::AbortFocuser()
 IPState CelestronAUX::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
 {
 
-    return MoveAbsFocuser(dir == FOCUS_OUTWARD ? FocusAbsPosN->value + ticks : FocusAbsPosN->value - ticks);
+    return MoveAbsFocuser(dir == FOCUS_OUTWARD ? FocusAbsPosNP[0].getValue() + ticks : FocusAbsPosNP[0].getValue() - ticks);
 
 }
 
@@ -2045,10 +2045,10 @@ void CelestronAUX::TimerHit()
 
         // update client only if changed to reduce traffic
         uint32_t newFocusAbsPos = m_FocusLimitMax - m_FocusPosition;
-        if (newFocusAbsPos != FocusAbsPosN->value)
+        if (newFocusAbsPos != FocusAbsPosNP[0].getValue())
         {
-            FocusAbsPosN->value = newFocusAbsPos;
-            IDSetNumber(&FocusAbsPosNP, nullptr);
+            FocusAbsPosNP[0].setValue(newFocusAbsPos);
+            FocusAbsPosNP.apply();
         }
 
         if(m_FocusStatus == SLEWING)
@@ -2058,16 +2058,16 @@ void CelestronAUX::TimerHit()
             if (m_FocusStatus == STOPPED)
             {
 
-                if (FocusAbsPosNP.s == IPS_BUSY)
+                if (FocusAbsPosNP.getState() == IPS_BUSY)
                 {
-                    FocusAbsPosNP.s = IPS_OK;
-                    IDSetNumber(&FocusAbsPosNP, nullptr);
+                    FocusAbsPosNP.setState(IPS_OK);
+                    FocusAbsPosNP.apply();
                 }
-                if (FocusRelPosNP.s == IPS_BUSY)
+                if (FocusRelPosNP.getState() == IPS_BUSY)
                 {
-                    FocusRelPosNP.s = IPS_OK;
-                    FocusRelPosN->value = 0;
-                    IDSetNumber(&FocusRelPosNP, nullptr);
+                    FocusRelPosNP.setState(IPS_OK);
+                    FocusRelPosNP[0].setValue(0);
+                    FocusRelPosNP.apply();
                 }
             }
         }

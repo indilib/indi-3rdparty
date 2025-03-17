@@ -421,10 +421,6 @@ bool POABase::initProperties()
     cap |= CCD_CAN_SUBFRAME;
     cap |= CCD_HAS_STREAMING;
 
-#ifdef HAVE_WEBSOCKET
-    cap |= CCD_HAS_WEB_SOCKET;
-#endif
-
     SetCCDCapability(cap);
 
     addAuxControls();
@@ -1519,7 +1515,7 @@ void POABase::createControls(int piNumberOfControls)
 #ifdef USE_POA_EXP
         if (cap.configID == POA_EXPOSURE)
             continue;
-            
+
         if (cap.configID == POA_EXP)
         {
             double minExp = cap.minValue.floatValue;

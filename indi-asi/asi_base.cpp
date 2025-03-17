@@ -460,10 +460,6 @@ bool ASIBase::initProperties()
     cap |= CCD_CAN_SUBFRAME;
     cap |= CCD_HAS_STREAMING;
 
-#ifdef HAVE_WEBSOCKET
-    cap |= CCD_HAS_WEB_SOCKET;
-#endif
-
     SetCCDCapability(cap);
 
     addAuxControls();

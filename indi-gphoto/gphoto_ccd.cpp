@@ -310,11 +310,7 @@ bool GPhotoCCD::initProperties()
     // Most cameras have this by default, so let's set it as default.
     BayerTP[2].setText("RGGB");
 
-#ifdef HAVE_WEBSOCKET
-    SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING | CCD_HAS_WEB_SOCKET);
-#else
     SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING);
-#endif
 
     Streamer->setStreamingExposureEnabled(false);
 
@@ -1862,31 +1858,31 @@ void GPhotoCCD::UpdateFocusMotionCallback()
     if (m_TargetLargeStep > 0)
     {
         m_TargetLargeStep--;
-        focusSpeed = IUFindOnSwitchIndex(&FocusMotionSP) == FOCUS_INWARD ? -3 : 3;
+        focusSpeed = FocusMotionSP.findOnSwitchIndex() == FOCUS_INWARD ? -3 : 3;
     }
     else if (m_TargetMedStep > 0)
     {
         m_TargetMedStep--;
-        focusSpeed = IUFindOnSwitchIndex(&FocusMotionSP) == FOCUS_INWARD ? -2 : 2;
+        focusSpeed = FocusMotionSP.findOnSwitchIndex() == FOCUS_INWARD ? -2 : 2;
     }
     else if (m_TargetLowStep > 0)
     {
         m_TargetLowStep--;
-        focusSpeed = IUFindOnSwitchIndex(&FocusMotionSP) == FOCUS_INWARD ? -1 : 1;
+        focusSpeed = FocusMotionSP.findOnSwitchIndex() == FOCUS_INWARD ? -1 : 1;
     }
 
     if (gphoto_manual_focus(gphotodrv, focusSpeed, errmsg) != GP_OK)
     {
         LOGF_ERROR("Focusing failed: %s", errmsg);
-        FocusRelPosNP.s = IPS_ALERT;
-        IDSetNumber(&FocusRelPosNP, nullptr);
+        FocusRelPosNP.setState(IPS_ALERT);
+        FocusRelPosNP.apply();
         return;
     }
 
     if (m_TargetLargeStep == 0 && m_TargetMedStep == 0 && m_TargetLowStep == 0)
     {
-        FocusRelPosNP.s = IPS_OK;
-        IDSetNumber(&FocusRelPosNP, nullptr);
+        FocusRelPosNP.setState(IPS_OK);
+        FocusRelPosNP.apply();
     }
     else
         m_FocusTimerID = IEAddTimer(FOCUS_TIMER, &GPhotoCCD::UpdateFocusMotionHelper, this);

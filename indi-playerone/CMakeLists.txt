@@ -26,14 +26,6 @@ include_directories( ${CFITSIO_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-if (INDI_WEBSOCKET)
-    find_package(websocketpp REQUIRED)
-    find_package(Boost COMPONENTS system thread)
-    include_directories (${Boost_INCLUDE_DIRS})
-    add_definitions(-DHAVE_WEBSOCKET)
-    SET(HAVE_WEBSOCKET 1)
-endif()
-
 ########### indi_playerone_ccd ###########
 set(indi_playerone_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_base.cpp
@@ -42,9 +34,6 @@ set(indi_playerone_SRCS
 
 add_executable(indi_playerone_ccd ${indi_playerone_SRCS})
 target_link_libraries(indi_playerone_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
-if (HAVE_WEBSOCKET)
-    target_link_libraries(indi_playerone_ccd ${Boost_LIBRARIES})
-endif()
 
 ########### indi_playerone_single_ccd ###########
 set(indi_playerone_single_SRCS
@@ -54,9 +43,6 @@ set(indi_playerone_single_SRCS
 
 add_executable(indi_playerone_single_ccd ${indi_playerone_single_SRCS})
 target_link_libraries(indi_playerone_single_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
-if (HAVE_WEBSOCKET)
-    target_link_libraries(indi_playerone_single_ccd ${Boost_LIBRARIES})
-endif()
 
 ########### indi_playerone_wheel ###########
 add_executable(indi_playerone_wheel ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel.cpp)
