@@ -1040,7 +1040,7 @@ bool RollOffIno::readIno(char* retBuf)
             msSleep(1000);
             continue;
         }
-        //LOGF_DEBUG("Read from roof controller: %s", retBuf);
+        LOGF_DEBUG("Read from roof controller: %s", retBuf);
         return true;
     }
     if (rc != TTY_OK)
@@ -1065,7 +1065,7 @@ bool RollOffIno::writeIno(const char* msg)
         LOG_ERROR("Roof controller command message too long");
         return false;
     }
-    //LOGF_DEBUG("Sent to roof controller: %s", msg);
+    LOGF_DEBUG("Sent to roof controller: %s", msg);
     tcflush(PortFD, TCIOFLUSH);
     status = tty_write_string(PortFD, msg, &retMsgLen);
     if (status != TTY_OK)

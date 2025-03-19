@@ -75,7 +75,7 @@ private:
 #define MAXINPBUF        256         // Sized for maximum overall input
 #define MAXINOWAIT       3           // seconds
 #define MAX_ACTIONS 8
-#define POLLING_PERIOD    2000
+#define POLLING_PERIOD    3000
 
 // Main tab Roof controls
 #define ROOF_OPENED_SWITCH "OPENED"
