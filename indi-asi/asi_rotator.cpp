@@ -230,7 +230,7 @@ bool ASICAA::Connect()
     float angle = 0;
     code = CAAGetDegree(m_ID, &angle);
     if (code == CAA_SUCCESS)
-        GotoRotatorN[0].value = angle;
+        GotoRotatorNP[0].setValue(angle);
 
     // Get current beep state
     bool beepEnabled = false;
@@ -250,12 +250,12 @@ bool ASICAA::Connect()
     code = CAAGetReverse(m_ID, &reverseEnabled);
     if (code == CAA_SUCCESS)
     {
-        ReverseRotatorS[INDI_ENABLED].s = reverseEnabled ? ISS_ON : ISS_OFF;
-        ReverseRotatorS[INDI_DISABLED].s = reverseEnabled ? ISS_OFF : ISS_ON;
-        ReverseRotatorSP.s = IPS_OK;
+        ReverseRotatorSP[INDI_ENABLED].setState(reverseEnabled ? ISS_ON : ISS_OFF);
+        ReverseRotatorSP[INDI_DISABLED].setState(reverseEnabled ? ISS_OFF : ISS_ON);
+        ReverseRotatorSP.setState(IPS_OK);
     }
     else
-        ReverseRotatorSP.s = IPS_ALERT;
+        ReverseRotatorSP.setState(IPS_ALERT);
 
     // Get max degree limit
     float maxDegree = 0;
@@ -340,7 +340,7 @@ IPState ASICAA::MoveRotator(double angle)
 {
     if (isSimulation())
     {
-        GotoRotatorN[0].value = angle;
+        GotoRotatorNP[0].setValue(angle);
         return IPS_OK;
     }
 
@@ -364,7 +364,7 @@ IPState ASICAA::MoveRotator(double angle)
     // If target is very close to current position, return immediately
     if (fabs(currentAngle - angle) <= THRESHOLD)
     {
-        GotoRotatorN[0].value = currentAngle;
+        GotoRotatorNP[0].setValue(currentAngle);
         return IPS_OK;
     }
 
@@ -397,7 +397,7 @@ bool ASICAA::SyncRotator(double angle)
 {
     if (isSimulation())
     {
-        GotoRotatorN[0].value = angle;
+        GotoRotatorNP[0].setValue(angle);
         return true;
     }
 
@@ -450,9 +450,9 @@ void ASICAA::TimerHit()
     if (!isSimulation() && CAAGetDegree(m_ID, &currentAngle) == CAA_SUCCESS)
     {
         // Update position if change is significant
-        if (fabs(currentAngle - GotoRotatorN[0].value) > THRESHOLD)
+        if (fabs(currentAngle - GotoRotatorNP[0].getValue()) > THRESHOLD)
         {
-            GotoRotatorN[0].value = currentAngle;
+            GotoRotatorNP[0].setValue(currentAngle);
             propertyUpdated = true;
         }
     }
@@ -465,21 +465,21 @@ void ASICAA::TimerHit()
         m_IsMoving = isMoving;
         m_IsHandControl = isHandControl;
 
-        if (m_IsMoving && GotoRotatorNP.s != IPS_BUSY)
+        if (m_IsMoving && GotoRotatorNP.getState() != IPS_BUSY)
         {
-            GotoRotatorNP.s = IPS_BUSY;
+            GotoRotatorNP.setState(IPS_BUSY);
             propertyUpdated = true;
         }
-        else if (!m_IsMoving && GotoRotatorNP.s == IPS_BUSY)
+        else if (!m_IsMoving && GotoRotatorNP.getState() == IPS_BUSY)
         {
-            GotoRotatorNP.s = IPS_OK;
+            GotoRotatorNP.setState(IPS_OK);
             propertyUpdated = true;
             LOG_INFO("Rotation complete.");
         }
     }
 
     if (propertyUpdated)
-        IDSetNumber(&GotoRotatorNP, nullptr);
+        GotoRotatorNP.apply();
 
     SetTimer(getCurrentPollingPeriod());
 }
