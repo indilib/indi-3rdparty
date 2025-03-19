@@ -27,24 +27,26 @@
  * to be prepared to accept a corresponding request for completion status.
  */
  
-// The standard example is for use with a single button sliding gate controller. A single
-// relay both opens and closes the roof. It depends on the gate controller to stop the motion. 
 // This relay example uses 2 relays one to open and one to close the roof. It monitors the 
 // fully closed and fully open switches and when they do close it turns off the related 
-// relay to stop the motion. It is assumed that it will for low power use, with a control
-// switch or some other level of indirection remote from solenoid activity. This sketch pin 
-// selections match the Arduino.cc relay shield. A relay bank cound be used instead.
+// relay to stop the motion. It is assumed that it will be used for low power switching.
+// Used on a control switch or some other level of indirection remote from solenoid activity. 
+// The pin selections match the Arduino.cc relay shield. A relay bank can be used instead.
 // Default roof open/close commands are directed to the relay shield relays 1 and 2.  
-// For the Abort command it will need to turn off the activate relay. Or it could activate a relay
-// to remove power from the control switch. The main difference from the standard example 
-// is that this sketch needs to turn off the motor when the roof is fully opened or fully closed. 
+// For the Abort command it turns off the activate relay depending on if it was opening or
+// closing. 
+// The main difference from the standard example is that this sketch needs to turn
+// off the motor when the roof is fully opened or fully closed. The standard example is 
+// for use with a single button sliding gate controller. Usually a single relay both 
+// opens and closes the roof. It is dependent on the gate controller to stop the motion.
 
 //////////////////////////////////////////////////////////
 // Start of Definitions
 //////////////////////////////////////////////////////////
 
-#define VERSION_ID "V1.3"        // Action relays not connected
-// #define VERSION_ID "V1.3 [ACT2]"  // Action relay driver support enable, example 2 actions
+//#define VERSION_ID "V1.3"        // Action relays not connected
+
+#define VERSION_ID "V1.3 [ACT2]"  // Action relay driver support enable, example 2 actions
 
 //////////////////////////////////////////////////////////
 // Input sensor definitions
@@ -291,7 +293,7 @@ const char* ERROR12 = " command incompatible with roof state ";
 #define MAX_MESSAGE 63
 
 enum roof_select : byte {
-  CLOSED = 1,
+  CLOSED = 0,
   OPENED,
   CLOSING,
   OPENING,
@@ -565,17 +567,7 @@ void readUSB() {
 // deny the request by returning false. If neither switch is on then if there is
 // a specific button (relay) assigned that can stop movement then return true
 // to allow it to do so.
-//
-// This implementation assumes a one button setup and one which does not know if
-// the roof is still moving or has hit something and already stopped. Before taking
-// action see how long it has been since movement was initiated. If it is longer
-// than the estimate to open or close the roof, assume motion has already stopped.
-// In that case avoid emulating the single button push because that would set the
-// roof moving again. If it seems that the roof could be moving then return true.
-//
-// Returning true will cause the Abort request to appear in the commandReceived
-// routine where it will activate the requested relay.
-//
+
 bool isStopAllowed() {
   uint32_t timeNow = millis()/1000;
   uint32_t timeBegin = timeMove;
@@ -700,15 +692,6 @@ void monitorRoofState() {
       setRelay(FUNC_CLOSE, FUNC_CLOSE_ACTIVE, FUNC_CLOSE_HOLD, turnOff);
       roof_state = CLOSED;
     }
-  }
-  // If roof state out of sync somehow, perhaps manually moved after an abort
-  if (isSwitchOn(SWITCH_OPENED) && roof_state != OPENED) {
-      setRelay(FUNC_OPEN, FUNC_OPEN_ACTIVE, FUNC_OPEN_HOLD, turnOff);
-      roof_state = OPENED;
-
-  } else if (isSwitchOn(SWITCH_CLOSED) && roof_state != CLOSED) {
-      setRelay(FUNC_CLOSE, FUNC_CLOSE_ACTIVE, FUNC_CLOSE_HOLD, turnOff);
-      roof_state = CLOSED;
   }
 }
 
