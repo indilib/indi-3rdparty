@@ -2,6 +2,7 @@
  Edited version of the Dome Simulator
  Copyright(c) 2014 Jasem Mutlaq. All rights reserved.
  Copyright(c) 2023 Jasem Mutlaq. All rights reserved.
+ Copyright(c) 2025 Jasem Mutlaq. All rights reserved.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
@@ -67,9 +68,7 @@ private:
     void msSleep(int);
     bool checkConditions();
     void roofTimerExpired();
-    //float CalcTimeLeft(timeval);
 
-#define ROLLOFF_DURATION 60          // Seconds until Roof is fully opened or closed
 #define MAX_CNTRL_COM_ERR 10         // Maximum consecutive errors communicating with Arduino
 #define MAXOUTBUF        64          // Sized to contain outgoing command requests
 #define MAXINPBUF        256         // Sized for maximum overall input

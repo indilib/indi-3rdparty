@@ -2,7 +2,7 @@
  Edited version of the Dome Simulator
  Copyright(c) 2014 Jasem Mutlaq. All rights reserved.
  Copyright(c) 2023 Jasem Mutlaq. All rights reserved.
- Copyright(c) 2024 Jasem Mutlaq. All rights reserved.
+ Copyright(c) 2025 Jasem Mutlaq. All rights reserved.
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Library General Public
