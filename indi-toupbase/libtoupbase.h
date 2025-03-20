@@ -84,6 +84,13 @@
 #define XP(x) Tscam##x
 #define THAND HTscam
 #define DNAME "Teleskop"
+#elif BUILD_SVBONYCAM
+#include <svbonycam.h>
+#define FP(x) Svbonycam_##x
+#define CP(x) SVBONYCAM_##x
+#define XP(x) Svbonycam##x
+#define THAND HSvbonycam
+#define DNAME "SVBONY2"
 #elif BUILD_MEADECAM
 #include <meadecam.h>
 #define FP(x) Toupcam_##x

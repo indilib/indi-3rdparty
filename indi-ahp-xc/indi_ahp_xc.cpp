@@ -180,31 +180,12 @@ void AHP_XC::sendFile(IBLOB* Blobs, IBLOBVectorProperty BlobP, unsigned int len)
 
     if (sendImage)
     {
-#ifdef HAVE_WEBSOCKET
-        if (HasWebSocket() && WebSocketS[WEBSOCKET_ENABLED].s == ISS_ON)
-        {
-            for(unsigned int x = 0; x < len; x++)
-            {
-                auto start = std::chrono::high_resolution_clock::now();
+        auto start = std::chrono::high_resolution_clock::now();
+        IDSetBLOB(&BlobP, nullptr);
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double> diff = end - start;
+        LOGF_DEBUG("BLOB transfer took %g seconds", diff.count());
 
-                // Send format/size/..etc first later
-                wsServer.send_text(std::string(Blobs[x].format));
-                wsServer.send_binary(Blobs[x].blob, Blobs[x].bloblen);
-
-                auto end = std::chrono::high_resolution_clock::now();
-                std::chrono::duration<double> diff = end - start;
-                LOGF_DEBUG("Websocket transfer took %g seconds", diff.count());
-            }
-        }
-        else
-#endif
-        {
-            auto start = std::chrono::high_resolution_clock::now();
-            IDSetBLOB(&BlobP, nullptr);
-            auto end = std::chrono::high_resolution_clock::now();
-            std::chrono::duration<double> diff = end - start;
-            LOGF_DEBUG("BLOB transfer took %g seconds", diff.count());
-        }
     }
 
     LOG_INFO( "Upload complete");
@@ -462,7 +443,8 @@ void AHP_XC::Callback()
                 {
                     if(HasDSP())
                     {
-                        DSP->processBLOB(static_cast<unsigned char*>(static_cast<void*>(plot_str[x]->buf)), static_cast<unsigned int>(plot_str[x]->dims), plot_str[x]->sizes, -64); //TODO
+                        DSP->processBLOB(static_cast<unsigned char*>(static_cast<void*>(plot_str[x]->buf)),
+                                         static_cast<unsigned int>(plot_str[x]->dims), plot_str[x]->sizes, -64); //TODO
                     }
                     size_t memsize = static_cast<unsigned int>(plot_str[x]->len) * sizeof(double);
                     void* fits = createFITS(-64, &memsize, plot_str[x]);
@@ -1163,7 +1145,7 @@ bool AHP_XC::Connect()
     if(serialConnection->port() == nullptr)
         return false;
 
-    if(0 != ahp_xc_connect(serialConnection->port(), false))
+    if(0 != ahp_xc_connect(serialConnection->port()))
     {
         ahp_xc_disconnect();
         return false;

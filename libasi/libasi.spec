@@ -1,7 +1,7 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 
 Name: libasi
-Version:2.0.7.git
+Version:2.1.0.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -18,11 +18,13 @@ Provides: libASICamera2.so
 Provides: libEAFFocuser.so
 Provides: libEFWFilter.so
 Provides: libUSB2ST4Conv.so
+Provides: libCAARotator.so
 
 Provides: libASICamera2.so()(64bit)
 Provides: libEAFFocuser.so()(64bit)
 Provides: libEFWFilter.so()(64bit)
 Provides: libUSB2ST4Conv.so()(64bit)
+Provides: libCAARotator.so()(64bit)
 
 
 BuildRequires: cmake
@@ -65,7 +67,7 @@ and scalable. It supports common DCS functions such as remote control,
 data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 
 
-%prep -v
+%prep
 %autosetup -v -p1 -n indi-3rdparty-master
 
 %build

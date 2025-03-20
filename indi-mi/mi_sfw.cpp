@@ -135,12 +135,13 @@ bool MISFW::initProperties()
 {
     INDI::FilterWheel::initProperties();
 
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = numFilters;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(numFilters);
 
     // Reinit FW
     IUFillSwitch(&ReinitS[0], "REINIT", "Reinit Filter Wheel", ISS_OFF);
-    IUFillSwitchVector(&ReinitSP, ReinitS, 1, getDeviceName(), "SFW_REINIT", "Commands", MAIN_CONTROL_TAB, IP_WO, ISR_ATMOST1, 0, IPS_IDLE);
+    IUFillSwitchVector(&ReinitSP, ReinitS, 1, getDeviceName(), "SFW_REINIT", "Commands", MAIN_CONTROL_TAB, IP_WO, ISR_ATMOST1,
+                       0, IPS_IDLE);
 
     IUFillText(&InfoT[0], "Model", "", "");
     IUFillText(&InfoT[1], "Firmware Rev.", "", "");
@@ -214,7 +215,8 @@ bool MISFW::Connect()
 bool MISFW::Disconnect()
 {
     LOGF_INFO("Disconnected from %s.", name);
-    if (!isSimulation()) {
+    if (!isSimulation())
+    {
         gxfw_release(wheelHandle);
         wheelHandle = nullptr;
     }
@@ -260,11 +262,13 @@ bool MISFW::ISNewSwitch(const char *dev, const char *name, ISState *states, char
                     gxfw_get_last_error(wheelHandle, errorStr, sizeof(errorStr));
                     LOGF_ERROR("Wheel reinit failed: %s.", errorStr);
                     ReinitSP.s = IPS_ALERT;
-                } else {
+                }
+                else
+                {
                     LOG_INFO("Done.");
                     ReinitSP.s = IPS_OK;
-                    FilterSlotN[0].value = 1;
-                    IDSetNumber(&FilterSlotNP, nullptr);
+                    FilterSlotNP[0].setValue(1);
+                    FilterSlotNP.apply();
                     updateFilterProperties();
                 }
             }
@@ -279,43 +283,40 @@ bool MISFW::ISNewSwitch(const char *dev, const char *name, ISState *states, char
 
 bool MISFW::updateFilterProperties()
 {
-    if (FilterNameTP->ntp != numFilters)
+    if (FilterNameTP.size() != static_cast<size_t>(numFilters))
     {
-        FilterSlotN[0].max = numFilters;
-        IUUpdateMinMax(&FilterSlotNP);
+        FilterSlotNP[0].setMax(numFilters);
 
-        m_defaultDevice->deleteProperty("FILTER_NAME");
+        m_defaultDevice->deleteProperty(FilterNameTP);
+        FilterNameTP.resize(0);
 
         char filterName[MAXINDINAME];
         char filterLabel[MAXINDILABEL];
-
-        if (FilterNameT != nullptr)
-        {
-            for (int i = 0; i < FilterNameTP->ntp; i++)
-                free(FilterNameT[i].text);
-            delete [] FilterNameT;
-        }
-
-        FilterNameT = new IText[numFilters];
-        memset(FilterNameT, 0, sizeof(IText) * numFilters);
 
         for (int i = 0; i < numFilters; i++)
         {
             snprintf(filterName, MAXINDINAME, "FILTER_SLOT_NAME_%d", i + 1);
             snprintf(filterLabel, MAXINDILABEL, "Filter#%d", i + 1);
-            IUFillText(&FilterNameT[i], filterName, filterLabel, filterLabel);
+
+            INDI::WidgetText oneText;
+            oneText.fill(filterName, filterLabel, filterLabel);
+            FilterNameTP.push(std::move(oneText));
         }
 
-        IUFillTextVector(FilterNameTP, FilterNameT, numFilters, m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter",
-                         FilterSlotNP.group, IP_RW, 0, IPS_IDLE);
+        FilterNameTP.fill(m_defaultDevice->getDeviceName(), "FILTER_NAME", "Filter",
+                          FilterSlotNP.getGroupName(), IP_RW, 0, IPS_IDLE);
+        FilterNameTP.shrink_to_fit();
         m_defaultDevice->defineProperty(FilterNameTP);
 
         // Try to load config filter labels
         for (int i = 0; i < numFilters; i++)
         {
             char oneFilter[MAXINDINAME] = {0};
-            if (IUGetConfigText(m_defaultDevice->getDeviceName(), FilterNameTP->name, FilterNameT[i].name, oneFilter, MAXINDINAME) == 0)
-                IUSaveText(&FilterNameT[i], oneFilter);
+            if (IUGetConfigText(m_defaultDevice->getDeviceName(), FilterNameTP.getName(), FilterNameTP[i].getName(), oneFilter,
+                                MAXINDINAME) == 0)
+            {
+                FilterNameTP[i].setText(oneFilter);
+            }
         }
 
         return true;

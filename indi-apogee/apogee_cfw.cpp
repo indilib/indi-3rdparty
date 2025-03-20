@@ -407,12 +407,12 @@ bool ApogeeCFW::Connect()
     }
 
     if (isSimulation())
-        FilterSlotN[0].max = 5;
+        FilterSlotNP[0].setMax(5);
     else
     {
         try
         {
-            FilterSlotN[0].max = ApgCFW->GetMaxPositions();
+            FilterSlotNP[0].setMax(ApgCFW->GetMaxPositions());
         }
         catch(std::runtime_error &err)
         {
@@ -465,8 +465,8 @@ int ApogeeCFW::QueryFilter()
     catch (std::runtime_error &err)
     {
         LOGF_ERROR("Failed to query filter: %s", err.what());
-        FilterSlotNP.s = IPS_ALERT;
-        IDSetNumber(&FilterSlotNP, nullptr);
+        FilterSlotNP.setState(IPS_ALERT);
+        FilterSlotNP.apply();
         return -1;
     }
 
@@ -482,8 +482,8 @@ bool ApogeeCFW::SelectFilter(int position)
     catch (std::runtime_error &err)
     {
         LOGF_ERROR("Failed to set filter: %s", err.what());
-        FilterSlotNP.s = IPS_ALERT;
-        IDSetNumber(&FilterSlotNP, nullptr);
+        FilterSlotNP.setState(IPS_ALERT);
+        FilterSlotNP.apply();
         return false;
     }
 
@@ -494,7 +494,7 @@ bool ApogeeCFW::SelectFilter(int position)
 void ApogeeCFW::TimerHit()
 {
 
-    if (FilterSlotNP.s == IPS_BUSY)
+    if (FilterSlotNP.getState() == IPS_BUSY)
     {
         try
         {
@@ -508,8 +508,8 @@ void ApogeeCFW::TimerHit()
         catch (std::runtime_error &err)
         {
             LOGF_ERROR("Failed to get CFW status: %s", err.what());
-            FilterSlotNP.s = IPS_ALERT;
-            IDSetNumber(&FilterSlotNP, nullptr);
+            FilterSlotNP.setState(IPS_ALERT);
+            FilterSlotNP.apply();
         }
     }
 

@@ -66,8 +66,7 @@ class GenericCCD : public INDI::CCD
         DEVICE device;
         char m_Name[MAXINDINAME];
 
-        ISwitchVectorProperty CrashSP;
-        ISwitch CrashS[1];
+        INDI::PropertySwitch CrashSP {1};
 
         INDI::ElapsedTimer m_ElapsedTimer;
         double ExposureRequest;
@@ -80,4 +79,3 @@ class GenericCCD : public INDI::CCD
 
 
 };
-

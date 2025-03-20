@@ -52,14 +52,6 @@ if (HAVE_LIBRAW_SENSOR_TEMPERATURE2)
   message(STATUS "Found SensorTemperature in libraw_metadata_common_t 'libraw/libraw_types.h'")
 endif ()
 
-if (INDI_WEBSOCKET)
-    find_package(websocketpp REQUIRED)
-    find_package(Boost COMPONENTS system thread)
-    include_directories (${Boost_INCLUDE_DIRS})
-    add_definitions(-DHAVE_WEBSOCKET)
-    SET(HAVE_WEBSOCKET 1)
-endif()
-
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_gphoto.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_gphoto.xml )
 
@@ -98,10 +90,6 @@ add_executable(indi_gphoto_ccd ${indigphoto_SRCS})
 
 target_link_libraries(indi_gphoto_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${GPHOTO2_LIBRARY} ${GPHOTO2_PORT_LIBRARY} ${CMAKE_THREAD_LIBS_INIT} ${JPEG_LIBRARIES} ${LibRaw_LIBRARIES} ${ZLIB_LIBRARIES})
 
-if (HAVE_WEBSOCKET)
-    target_link_libraries(indi_gphoto_ccd ${Boost_LIBRARIES})
-endif()
-
 install(TARGETS indi_gphoto_ccd RUNTIME DESTINATION bin )
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/make_gphoto_symlink.cmake
@@ -113,6 +101,25 @@ exec_program(\"${CMAKE_COMMAND}\" ARGS -E create_symlink indi_gphoto_ccd \$ENV{D
 set_target_properties(indi_gphoto_ccd PROPERTIES POST_INSTALL_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/make_gphoto_symlink.cmake)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_gphoto.xml DESTINATION ${INDI_DATA_DIR})
+
+# Build the camera test application
+add_executable(gphoto_camera_test
+    ${CMAKE_CURRENT_SOURCE_DIR}/gphoto_camera_test.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/gphoto_driver.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/dsusbdriver.cpp
+)
+
+target_link_libraries(gphoto_camera_test
+    ${GPHOTO2_LIBRARY}
+    ${GPHOTO2_PORT_LIBRARY}
+    ${CMAKE_THREAD_LIBS_INIT}
+    ${INDI_LIBRARIES}
+    ${JPEG_LIBRARIES}
+    ${LibRaw_LIBRARIES}
+    ${ZLIB_LIBRARIES}
+)
+
+install(TARGETS gphoto_camera_test DESTINATION bin)
 
 # Disable automount for DSLR cameras
 IF (UNIX AND NOT APPLE)

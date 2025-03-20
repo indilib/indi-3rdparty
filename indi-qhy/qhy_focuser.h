@@ -3,6 +3,8 @@
 
     Copyright (C) 2024 Chen Jiaqi (cjq@qhyccd.com)
 
+    Copyright (C) 2025 Jasem Mutlaq (mutlaqja@ikarustech.com)
+
     This library is free software; you can redistribute it and/or
     modify it under the terms of the GNU Lesser General Public
     License as published by the Free Software Foundation; either
@@ -33,70 +35,64 @@
 
 class QFocuser : public INDI::Focuser
 {
-public:
-    QFocuser();
-    virtual ~QFocuser() = default;
+    public:
+        QFocuser();
+        virtual ~QFocuser() = default;
 
-    virtual const char *getDefaultName() override;
-    
-    virtual bool initProperties() override;
-    virtual bool updateProperties() override;
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual void TimerHit() override;
+        virtual const char *getDefaultName() override;
 
-private:
-  int SendCommand(char *cmd_line);
-  int ReadResponse(char *buf);
-  void GetFocusParams();
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
+        virtual void TimerHit() override;
 
-  int updatePosition(double *value);
-  int updateTemperature();
-  int updatePositionRelativeInward(double value);
-  int updatePositionRelativeOutward(double value);
-  int updatePositionAbsolute(double value);
+    protected:
+        virtual bool Handshake() override;
+        virtual IPState MoveAbsFocuser(uint32_t targetTicks) override;
+        virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
+        virtual bool SetFocuserSpeed(int speed) override;
+        virtual bool SyncFocuser(uint32_t ticks) override;
+        virtual bool AbortFocuser() override;
+        virtual bool ReverseFocuser(bool enabled) override;
 
-  int updateSetPosition(int value);
+    private:
+        int SendCommand(char *cmd_line);
+        int ReadResponse(char *buf, int &cmd_id);
+        void GetFocusParams();
 
-  int updateSetReverse(int value);
+        bool getTemperature();
 
-  int updateSetSpeed(int value);
+        bool getPosition(double &position);
+        bool setAbsolutePosition(double position);
+        bool syncPosition(int position);
 
-  int timerID { -1 };
-  bool initTargetPos = true;
-  double targetPos{ 0 };
-  bool isReboot = false;
-  int RebootTimes = 0;
+        bool setReverseDirection(int enabled);
 
-  int FocusSpeedMin = 0;
-  int FocusSpeedMax = 8;
+        double targetPos{ 0 };
+        bool isReboot = false;
 
-  uint8_t buff[USB_CDC_RX_LEN];
+        uint8_t buff[USB_CDC_RX_LEN];
 
-  int32_t cmd_version;
-  int32_t cmd_version_board;
-  int32_t cmd_position;
-  int32_t cmd_out_temp;
-  int32_t cmd_chip_temp;
-  int32_t cmd_voltage;
+        int32_t cmd_version;
+        int32_t cmd_version_board;
+        int32_t cmd_position;
+        int32_t cmd_out_temp;
+        int32_t cmd_chip_temp;
+        int32_t cmd_voltage;
 
-  INDI::PropertyNumber TemperatureNP{1};
+        // Variables to track last values to avoid unnecessary updates
+        double lastPosition { 0 };
+        double lastOutTemp { 0 };
+        double lastChipTemp { 0 };
+        double lastVoltage { 0 };
 
-  INDI::PropertyNumber TemperatureChipNP{1};
+        INDI::PropertyNumber TemperatureNP{1};
 
-  INDI::PropertyNumber VoltageNP{1};
+        INDI::PropertyNumber TemperatureChipNP{1};
 
-  INDI::PropertyNumber FOCUSVersionNP{1};
+        INDI::PropertyNumber VoltageNP{1};
 
-  INDI::PropertyNumber BOARDVersionNP{1};
+        INDI::PropertyNumber FOCUSVersionNP{1};
 
-  INDI::PropertyNumber FocusSpeedNP{1};
+        INDI::PropertyNumber BOARDVersionNP{1};
 
-protected:
-    virtual bool Handshake() override;
-    virtual IPState MoveAbsFocuser(uint32_t targetTicks) override;
-    virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
-    virtual bool SetFocuserSpeed(int speed) override;
-    virtual bool SyncFocuser(uint32_t ticks) override;
-    virtual bool AbortFocuser() override;
-    virtual bool ReverseFocuser(bool enabled) override;
 };

@@ -1,3 +1,10 @@
+libasi (1.370) jammy; urgency=medium
+
+  * ASI Rotator CAA SDK 1.0 release
+  * ASI Camera SDK 1.37 release
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Thu, 9 Jan 2024 17:00:00 +0300
+
 libasi (1.360) jammy; urgency=medium
 
   * ASI Camera SDK 1.36 release

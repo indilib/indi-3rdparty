@@ -38,8 +38,8 @@ std::unique_ptr<SXWHEEL> sxwheel(new SXWHEEL());
 
 SXWHEEL::SXWHEEL()
 {
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = -1;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(-1);
     CurrentFilter      = 1;
     handle             = 0;
     //setDeviceName(getDefaultName());
@@ -114,7 +114,7 @@ int SXWHEEL::SendWheelMessage(int a, int b)
         LOGF_DEBUG("simulation: command %d %d", a, b);
         if (a >= 0x80)
             CurrentFilter = a - 0x80;
-        FilterSlotN[0].max = 5;
+        FilterSlotNP[0].setMax(5);
         return 0;
     }
     if (!handle)
@@ -139,7 +139,7 @@ int SXWHEEL::SendWheelMessage(int a, int b)
         return -1;
     }
     CurrentFilter      = buf[0];
-    FilterSlotN[0].max = buf[1];
+    FilterSlotNP[0].setMax(buf[1]);
     return 0;
 }
 

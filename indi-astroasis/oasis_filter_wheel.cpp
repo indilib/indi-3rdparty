@@ -44,11 +44,11 @@ bool OasisFilterWheel::initProperties()
 {
     INDI::FilterWheel::initProperties();
 
-    // Mode
-    IUFillSwitch(&ModeS[0], "MODE_0", "Fast", ISS_OFF);
-    IUFillSwitch(&ModeS[1], "MODE_1", "Normal", ISS_OFF);
-    IUFillSwitch(&ModeS[2], "MODE_2", "Slow", ISS_OFF);
-    IUFillSwitchVector(&ModeSP, ModeS, 3, getDeviceName(), "MODE", "Mode",
+    // Speed
+    IUFillSwitch(&SpeedS[0], "SPEED_FAST", "Fast", ISS_OFF);
+    IUFillSwitch(&SpeedS[1], "SPEED_NORMAL", "Normal", ISS_OFF);
+    IUFillSwitch(&SpeedS[2], "SPEED_SLOW", "Slow", ISS_OFF);
+    IUFillSwitchVector(&SpeedSP, SpeedS, 3, getDeviceName(), "SPEED", "Speed",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
     // Auto run on power up
@@ -87,23 +87,23 @@ bool OasisFilterWheel::updateProperties()
             AutoRunS[INDI_ENABLED].s = config.autorun ? ISS_ON : ISS_OFF;
             AutoRunS[INDI_DISABLED].s = config.autorun ? ISS_OFF : ISS_ON;
 
-            ModeS[0].s = (config.mode == 0) ? ISS_ON : ISS_OFF;
-            ModeS[1].s = (config.mode == 1) ? ISS_ON : ISS_OFF;
-            ModeS[2].s = (config.mode == 2) ? ISS_ON : ISS_OFF;
+            SpeedS[0].s = (config.speed == 0) ? ISS_ON : ISS_OFF;
+            SpeedS[1].s = (config.speed == 1) ? ISS_ON : ISS_OFF;
+            SpeedS[2].s = (config.speed == 2) ? ISS_ON : ISS_OFF;
         }
         else
         {
             AutoRunSP.s = IPS_ALERT;
         }
 
-        defineProperty(&ModeSP);
+        defineProperty(&SpeedSP);
         defineProperty(&AutoRunSP);
         defineProperty(&FactoryResetSP);
         defineProperty(&CalibrateSP);
     }
     else
     {
-        deleteProperty(ModeSP.name);
+        deleteProperty(SpeedSP.name);
         deleteProperty(AutoRunSP.name);
         deleteProperty(FactoryResetSP.name);
         deleteProperty(CalibrateSP.name);
@@ -150,8 +150,8 @@ bool OasisFilterWheel::Connect()
         return false;
     }
 
-    FilterSlotN[0].min = 1;
-    FilterSlotN[0].max = number;
+    FilterSlotNP[0].setMin(1);
+    FilterSlotNP[0].setMax(number);
 
     LOGF_INFO("Oasis filter wheel connected, %d slots\n", number);
 
@@ -169,20 +169,11 @@ bool OasisFilterWheel::GetFilterNames()
 {
     char filterName[MAXINDINAME];
     char filterLabel[MAXINDILABEL];
-    int MaxFilter = FilterSlotN[0].max;
+    int MaxFilter = FilterSlotNP[0].getMax();
     IPState state = IPS_IDLE;
 
-    FilterNameTP->s = IPS_BUSY;
-
-    if (FilterNameT != nullptr)
-    {
-        for (int i = 0; i < FilterNameTP->ntp; i++)
-            free(FilterNameT[i].text);
-        delete [] FilterNameT;
-    }
-
-    FilterNameT = new IText[MaxFilter];
-    memset(FilterNameT, 0, sizeof(IText) * MaxFilter);
+    FilterNameTP.setState(IPS_BUSY);
+    FilterNameTP.resize(0);
 
     for (int i = 0; i < MaxFilter; i++)
     {
@@ -191,7 +182,10 @@ bool OasisFilterWheel::GetFilterNames()
 
         snprintf(filterName, MAXINDINAME, "FILTER_SLOT_NAME_%d", i + 1);
         snprintf(filterLabel, MAXINDILABEL, "Filter#%d", i + 1);
-        IUFillText(&FilterNameT[i], filterName, filterLabel, (ret == AO_SUCCESS) ? name : filterLabel);
+
+        INDI::WidgetText oneText;
+        oneText.fill(filterName, filterLabel, (ret == AO_SUCCESS) ? name : filterLabel);
+        FilterNameTP.push(std::move(oneText));
 
         if (ret != AO_SUCCESS)
         {
@@ -200,8 +194,9 @@ bool OasisFilterWheel::GetFilterNames()
         }
     }
 
-    IUFillTextVector(FilterNameTP, FilterNameT, MaxFilter, getDeviceName(), "FILTER_NAME", "Filter",
-                     FilterSlotNP.group, IP_RW, 0, state);
+    FilterNameTP.fill(getDeviceName(), "FILTER_NAME", "Filter",
+                      FilterSlotNP.getGroupName(), IP_RW, 0, state);
+    FilterNameTP.shrink_to_fit();
 
     return true;
 }
@@ -211,9 +206,9 @@ bool OasisFilterWheel::SetFilterNames()
     // Verify allowed filter names
     std::regex rx("^[A-Za-z0-9=.#/_%[:space:]-]{1,32}$");
 
-    for (int i = 0; i < FilterSlotN[0].max; i++)
+    for (int i = 0; i < FilterSlotNP[0].getMax(); i++)
     {
-        if (!std::regex_match(FilterNameT[i].text, rx))
+        if (!std::regex_match(FilterNameTP[i].getText(), rx))
         {
             LOGF_ERROR("Filter #%d: the filter name is not valid. It should not have more than 32 chars", i + 1);
             LOGF_ERROR("Filter #%d: and the valid chars are A to Z, a to z, 0 to 9 = . # / - _ percent or space", i + 1);
@@ -222,9 +217,13 @@ bool OasisFilterWheel::SetFilterNames()
         }
     }
 
-    for (int i = 0; i < FilterSlotN[0].max; i++)
+    for (int i = 0; i < FilterSlotNP[0].getMax(); i++)
     {
-        AOReturn ret = OFWSetSlotName(mID, i + 1, FilterNameT[i].text);
+        // Create a non-const copy of the string since OFWSetSlotName expects char*
+        char name[MAXINDINAME];
+        strncpy(name, FilterNameTP[i].getText(), MAXINDINAME - 1);
+        name[MAXINDINAME - 1] = '\0'; // Ensure null termination
+        AOReturn ret = OFWSetSlotName(mID, i + 1, name);
 
         if (ret != AO_SUCCESS)
         {
@@ -240,38 +239,38 @@ bool OasisFilterWheel::ISNewSwitch(const char *dev, const char *name, ISState *s
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, ModeSP.name))
+        if (!strcmp(name, SpeedSP.name))
         {
             OFWConfig config;
             AOReturn ret;
             int prev, target;
 
-            prev = IUFindOnSwitchIndex(&ModeSP);
-            IUUpdateSwitch(&ModeSP, states, names, n);
-            target = IUFindOnSwitchIndex(&ModeSP);
+            prev = IUFindOnSwitchIndex(&SpeedSP);
+            IUUpdateSwitch(&SpeedSP, states, names, n);
+            target = IUFindOnSwitchIndex(&SpeedSP);
 
-            config.mask = MASK_MODE;
-            config.mode = target;
+            config.mask = MASK_SPEED;
+            config.speed = target;
 
             ret = OFWSetConfig(mID, &config);
 
             if (ret == AO_SUCCESS)
             {
-                ModeSP.s = IPS_OK;
+                SpeedSP.s = IPS_OK;
             }
             else
             {
-                LOGF_ERROR("Failed to set Oasis filter wheel mode, ret = %d\n", ret);
+                LOGF_ERROR("Failed to set Oasis filter wheel speed, ret = %d\n", ret);
 
-                IUResetSwitch(&ModeSP);
+                IUResetSwitch(&SpeedSP);
 
                 if ((prev >= 0) && (prev < 3))
-                    ModeS[prev].s = ISS_ON;
+                    SpeedS[prev].s = ISS_ON;
 
-                ModeSP.s = IPS_ALERT;
+                SpeedSP.s = IPS_ALERT;
             }
 
-            IDSetSwitch(&ModeSP, nullptr);
+            IDSetSwitch(&SpeedSP, nullptr);
 
             return true;
         }

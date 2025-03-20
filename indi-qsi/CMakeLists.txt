@@ -27,14 +27,6 @@ include_directories( ${QSI_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-if (INDI_WEBSOCKET)
-    find_package(websocketpp REQUIRED)
-    find_package(Boost COMPONENTS system thread)
-    include_directories (${Boost_INCLUDE_DIRS})
-    add_definitions(-DHAVE_WEBSOCKET)
-    SET(HAVE_WEBSOCKET 1)
-endif()
-
 ########### QSI ###########
 set(indiqsi_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/qsi_ccd.cpp
@@ -43,10 +35,6 @@ set(indiqsi_SRCS
 add_executable(indi_qsi_ccd ${indiqsi_SRCS})
 
 target_link_libraries(indi_qsi_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${QSI_LIBRARIES})
-
-if (HAVE_WEBSOCKET)
-    target_link_libraries(indi_qsi_ccd ${Boost_LIBRARIES})
-endif()
 
 install(TARGETS indi_qsi_ccd RUNTIME DESTINATION bin )
 

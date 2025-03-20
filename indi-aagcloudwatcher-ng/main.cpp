@@ -91,23 +91,28 @@ int main(int /*argc*/, char ** /*argv*/)
 
     if (check)
     {
+        std::cout << "Supply: " << cwd.supply << "\n";
         std::cout << "Sky: " << cwd.sky << "\n";
         std::cout << "Sensor: " << cwd.sensor << "\n";
+        std::cout << "TempEstimate: " << cwd.tempEst << "\n";
+        std::cout << "TempActual: " << cwd.tempAct << "\n";
         std::cout << "Rain: " << cwd.rain << "\n";
-        std::cout << "Supply: " << cwd.supply << "\n";
-        std::cout << "Ambient: " << cwd.ambient << "\n";
-        std::cout << "LDR: " << cwd.ldr << "\n";
-        std::cout << "LDR Freq: " << cwd.ldrFreq << "\n";
+        std::cout << "Rain Heater: " << cwd.rainHeater << "\n";
         std::cout << "Rain Temperature: " << cwd.rainTemperature << "\n";
+        std::cout << "LDR: " << cwd.ldr << "\n";
+        std::cout << "Light Freq: " << cwd.lightFreq << "\n";
         std::cout << "Read Cycle: " << cwd.readCycle << "\n";
         std::cout << "Wind Speed: " << cwd.windSpeed << "\n";
+        std::cout << "Humidity: " << cwd.humidity << "\n";
+        std::cout << "Pressure: " << cwd.pressure << "\n";
+
         std::cout << "Total Readings: " << cwd.totalReadings << "\n";
+
         std::cout << "Internal Errors: " << cwd.internalErrors << "\n";
         std::cout << "First Byte Errors: " << cwd.firstByteErrors << "\n";
         std::cout << "Second Byte Errors: " << cwd.secondByteErrors << "\n";
-        std::cout << "Command Byte Errors: " << cwd.commandByteErrors << "\n";
         std::cout << "PEC Byte Errors: " << cwd.pecByteErrors << "\n";
-        std::cout << "Rain Heater: " << cwd.rainHeater << "\n";
+        std::cout << "Command Byte Errors: " << cwd.commandByteErrors << "\n";
     }
     else
     {

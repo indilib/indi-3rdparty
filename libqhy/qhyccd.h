@@ -7,6 +7,8 @@
 #if __CPP_MODE__
 #include <functional>
 #include <string>
+#include <algorithm>
+#include <array>
 #endif
 
 
@@ -21,9 +23,13 @@
 
 typedef void qhyccd_handle;
 
+void ImgProcRotationMirror(uint32_t* width, uint32_t* height, uint32_t* depth, uint32_t* channels, uint8_t* inbuf, uint8_t* outbuf, uint8_t flag);
+
 EXPORTC void STDCALL OutputQHYCCDDebug(char *strOutput);
 
 EXPORTC void STDCALL SetQHYCCDAutoDetectCamera(bool enable);
+
+EXPORTC void STDCALL SetQHYCCDLogPath(char* path);
 
 EXPORTC void STDCALL SetQHYCCDLogLevel(uint8_t logLevel);
 
@@ -54,6 +60,8 @@ EXPORTC uint32_t STDCALL SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t t
 
 
 EXPORTC const char* STDCALL GetTimeStamp();
+
+EXPORTC uint32_t STDCALL CheckQHYCCDDeviceDriverIO(uint32_t series);
 
 /** \fn uint32_t InitQHYCCDResource()
       \brief initialize QHYCCD SDK resource
@@ -489,8 +497,7 @@ EXPORTC uint32_t STDCALL OSXInitQHYCCDFirmwareArray();
 
 
 
-EXPORTC uint32_t STDCALL OSXInitQHYCCDAndroidFirmwareArray(int idVendor,int idProduct,
-    qhyccd_handle *handle);
+EXPORTC uint32_t STDCALL OSXInitQHYCCDAndroidFirmwareArray(int idVendor,int idProduct, int fileDescriptor);
 
 
 
@@ -1087,3 +1094,5 @@ EXPORTFUNC uint32_t STDCALL QHYCCD_GainValueToDbGain(qhyccd_handle *h,double gai
 EXPORTFUNC uint32_t STDCALL QHYCCD_curveSystemGain(qhyccd_handle *handle,double gainV,double *systemgain);
 EXPORTFUNC uint32_t STDCALL QHYCCD_curveFullWell(qhyccd_handle *handle,double gainV,double *fullwell);
 EXPORTFUNC uint32_t STDCALL QHYCCD_curveReadoutNoise(qhyccd_handle *handle,double gainV,double *readoutnoise);
+
+EXPORTC uint32_t STDCALL GetQHYCCDFPGATemp(qhyccd_handle* handle, uint16_t* temp);

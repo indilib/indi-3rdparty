@@ -1,3 +1,23 @@
+libsvbony (1.13.4) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.13.4 :
+  * *** Note: The following changes are from 1.13.3 to 1.13.4 ***
+  * Fixed the issue of long exposure image capture timeout for SV305CPRO camera
+  * Fixed the problem that SV305MPRO cannot be opened normally in v1.13.0 and later versions
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Fri, 7 Feb 2025 14:00:00 +0900
+
+libsvbony (1.13.2) bionic; urgency=low
+
+  * Upgraded to upstream SVBONY SDK vers. 1.13.2 :
+  * *** Note: The following changes are from 1.13.0 to 1.13.2 ***
+  * Support new camera SV905C2, SV305C Pro
+  * Fixup ASCOM software to support SV905C2 and SV305C Pro cameras
+  * Fixup exposure time of SV905C2
+  * Optimize gain settings of SV905C2
+
+ -- Tetsuya Kakura <jcpgm@outlook.jp>  Mon, 30 Dec 2024 14:00:00 +0900
+
 libsvbony (1.12.8) bionic; urgency=low
 
   * Upgraded to upstream SVBONY SDK vers. 1.12.8 :

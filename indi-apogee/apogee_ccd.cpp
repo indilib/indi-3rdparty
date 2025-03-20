@@ -453,11 +453,9 @@ bool ApogeeCCD::ISNewText(const char *dev, const char *name, char *texts[], char
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
-        if (!strcmp(name, FilterNameTP->name))
-        {
-            INDI::FilterInterface::processText(dev, name, texts, names, n);
+        if (INDI::FilterInterface::processText(dev, name, texts, names, n))
             return true;
-        }
+
 
         if (!strcmp(NetworkInfoTP.name, name))
         {
@@ -495,11 +493,9 @@ bool ApogeeCCD::ISNewNumber(const char *dev, const char *name, double values[], 
 {
     if(!strcmp(dev, getDeviceName()))
     {
-        if (!strcmp(name, FilterSlotNP.name))
-        {
-            INDI::FilterInterface::processNumber(dev, name, values, names, n);
+        if (INDI::FilterInterface::processNumber(dev, name, values, names, n))
             return true;
-        }
+
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -1169,12 +1165,12 @@ bool ApogeeCCD::Connect()
     }
 
     if (isSimulation())
-        FilterSlotN[0].max = 5;
+        FilterSlotNP[0].setMax(5);
     else
     {
         try
         {
-            FilterSlotN[0].max = ApgCFW->GetMaxPositions();
+            FilterSlotNP[0].setMax(ApgCFW->GetMaxPositions());
         }
         catch(std::runtime_error &err)
         {
@@ -1417,7 +1413,7 @@ void ApogeeCCD::TimerHit()
             break;
     }
 
-    if (FilterSlotNP.s == IPS_BUSY)
+    if (FilterSlotNP.getState() == IPS_BUSY)
     {
         try
         {
@@ -1431,8 +1427,8 @@ void ApogeeCCD::TimerHit()
         catch (std::runtime_error &err)
         {
             LOGF_ERROR("Failed to get CFW status: %s", err.what());
-            FilterSlotNP.s = IPS_ALERT;
-            IDSetNumber(&FilterSlotNP, nullptr);
+            FilterSlotNP.setState(IPS_ALERT);
+            FilterSlotNP.apply();
         }
     }
 
@@ -1473,8 +1469,8 @@ int ApogeeCCD::QueryFilter()
     catch (std::runtime_error &err)
     {
         LOGF_ERROR("Failed to query filter: %s", err.what());
-        FilterSlotNP.s = IPS_ALERT;
-        IDSetNumber(&FilterSlotNP, nullptr);
+        FilterSlotNP.setState(IPS_ALERT);
+        FilterSlotNP.apply();
         return -1;
     }
 
@@ -1490,8 +1486,8 @@ bool ApogeeCCD::SelectFilter(int position)
     catch (std::runtime_error &err)
     {
         LOGF_ERROR("Failed to set filter: %s", err.what());
-        FilterSlotNP.s = IPS_ALERT;
-        IDSetNumber(&FilterSlotNP, nullptr);
+        FilterSlotNP.setState(IPS_ALERT);
+        FilterSlotNP.apply();
         return false;
     }
 

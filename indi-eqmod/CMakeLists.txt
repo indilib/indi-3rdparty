@@ -22,7 +22,7 @@ endif(CYGWIN)
 option(WITH_ALIGN "Enable Alignment Subsystem" ON)
 option(WITH_ALIGN_GEEHALEL "Enable EQMod Alignment" ON)
 option(WITH_SCOPE_LIMITS "Enable Scope limits" ON)
-option(WITH_AHP_GT "Install AHP GT Controllers Driver" ON)
+option(WITH_AHP_GT "Install AHP GT Controllers Driver" OFF)
 
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_AHP_GT OFF)

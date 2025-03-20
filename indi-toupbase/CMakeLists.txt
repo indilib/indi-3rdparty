@@ -21,9 +21,10 @@ find_package(OGMACAM REQUIRED)
 find_package(OMEGONPROCAM REQUIRED)
 find_package(STARSHOOTG REQUIRED)
 find_package(TSCAM REQUIRED)
+find_package(SVBONYCAM REQUIRED)
 
 set(TOUPBASE_VERSION_MAJOR 2)
-set(TOUPBASE_VERSION_MINOR 1)
+set(TOUPBASE_VERSION_MINOR 2)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_toupbase.xml)
@@ -42,6 +43,7 @@ include_directories( ${OMEGONPROCAM_INCLUDE_DIR})
 include_directories( ${BRESSERCAM_INCLUDE_DIR})
 include_directories( ${OGMACAM_INCLUDE_DIR})
 include_directories( ${TSCAM_INCLUDE_DIR})
+include_directories( ${SVBONYCAM_INCLUDE_DIR})
 
 include(CMakeCommon)
 
@@ -148,6 +150,17 @@ add_executable(indi_tscam_focuser ${indi_focuser_SRCS})
 target_compile_definitions(indi_tscam_focuser PRIVATE "-DBUILD_TSCAM")
 target_link_libraries(indi_tscam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${TSCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
+########### indi_svbonycam_* ###########
+add_executable(indi_svbonycam_ccd ${indi_toupbase_SRCS})
+target_compile_definitions(indi_svbonycam_ccd PRIVATE "-DBUILD_SVBONYCAM")
+target_link_libraries(indi_svbonycam_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${SVBONYCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_svbonycam_wheel ${indi_wheel_SRCS})
+target_compile_definitions(indi_svbonycam_wheel PRIVATE "-DBUILD_SVBONYCAM")
+target_link_libraries(indi_svbonycam_wheel ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${SVBONYCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+add_executable(indi_svbonycam_focuser ${indi_focuser_SRCS})
+target_compile_definitions(indi_svbonycam_focuser PRIVATE "-DBUILD_SVBONYCAM")
+target_link_libraries(indi_svbonycam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${SVBONYCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
 ########### indi_meadecam_* ###########
 add_executable(indi_meadecam_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_meadecam_ccd PRIVATE "-DBUILD_MEADECAM")
@@ -171,6 +184,7 @@ target_link_libraries(indi_ogmacam_ccd rt)
 target_link_libraries(indi_omegonprocam_ccd rt)
 target_link_libraries(indi_starshootg_ccd rt)
 target_link_libraries(indi_tscam_ccd rt)
+target_link_libraries(indi_svbonycam_ccd rt)
 target_link_libraries(indi_meadecam_ccd rt)
 target_link_libraries(indi_toupcam_wheel rt)
 target_link_libraries(indi_altair_wheel rt)
@@ -181,6 +195,7 @@ target_link_libraries(indi_ogmacam_wheel rt)
 target_link_libraries(indi_omegonprocam_wheel rt)
 target_link_libraries(indi_starshootg_wheel rt)
 target_link_libraries(indi_tscam_wheel rt)
+target_link_libraries(indi_svbonycam_wheel rt)
 target_link_libraries(indi_meadecam_wheel rt)
 target_link_libraries(indi_toupcam_focuser rt)
 target_link_libraries(indi_altair_focuser rt)
@@ -191,6 +206,7 @@ target_link_libraries(indi_ogmacam_focuser rt)
 target_link_libraries(indi_omegonprocam_focuser rt)
 target_link_libraries(indi_starshootg_focuser rt)
 target_link_libraries(indi_tscam_focuser rt)
+target_link_libraries(indi_svbonycam_focuser rt)
 target_link_libraries(indi_meadecam_focuser rt)
 endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
@@ -204,6 +220,7 @@ install(TARGETS
     indi_omegonprocam_ccd
     indi_starshootg_ccd
     indi_tscam_ccd
+    indi_svbonycam_ccd
     indi_meadecam_ccd
     indi_toupcam_wheel
     indi_altair_wheel
@@ -214,6 +231,7 @@ install(TARGETS
     indi_omegonprocam_wheel
     indi_starshootg_wheel
     indi_tscam_wheel
+    indi_svbonycam_wheel
     indi_meadecam_wheel
     indi_toupcam_focuser
     indi_altair_focuser
@@ -224,6 +242,7 @@ install(TARGETS
     indi_omegonprocam_focuser
     indi_starshootg_focuser
     indi_tscam_focuser
+    indi_svbonycam_focuser
     indi_meadecam_focuser
     RUNTIME DESTINATION bin)
 

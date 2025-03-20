@@ -89,8 +89,8 @@ bool FLIPDF::updateProperties()
 
     if (isConnected())
     {
-        defineProperty(&FocusAbsPosNP);
-        defineProperty(&FocusRelPosNP);
+        defineProperty(FocusAbsPosNP);
+        defineProperty(FocusRelPosNP);
         defineProperty(&HomeSP);
         defineProperty(&FocusInfoTP);
         setupParams();
@@ -99,8 +99,8 @@ bool FLIPDF::updateProperties()
     }
     else
     {
-        deleteProperty(FocusAbsPosNP.name);
-        deleteProperty(FocusRelPosNP.name);
+        deleteProperty(FocusAbsPosNP);
+        deleteProperty(FocusRelPosNP);
         deleteProperty(HomeSP.name);
         deleteProperty(FocusInfoTP.name);
 
@@ -263,25 +263,25 @@ bool FLIPDF::setupParams()
         return false;
     }
 
-    FocusAbsPosN[0].min   = 1;
-    FocusAbsPosN[0].max   = FLIFocus.max_pos;
-    FocusAbsPosN[0].value = FLIFocus.current_pos;
+    FocusAbsPosNP[0].setMin(1);
+    FocusAbsPosNP[0].setMax(FLIFocus.max_pos);
+    FocusAbsPosNP[0].setValue(FLIFocus.current_pos);
 
-    IUUpdateMinMax(&FocusAbsPosNP);
-    IDSetNumber(&FocusAbsPosNP, "Setting initial absolute position");
+    FocusAbsPosNP.updateMinMax();
+    LOG_INFO("Setting initial absolute position");
 
-    FocusRelPosN[0].min   = 1.;
-    FocusRelPosN[0].max   = FLIFocus.max_pos;
-    FocusRelPosN[0].value = 0.;
+    FocusRelPosNP[0].setMin(1.);
+    FocusRelPosNP[0].setMax(FLIFocus.max_pos);
+    FocusRelPosNP[0].setValue(0.);
 
-    IUUpdateMinMax(&FocusRelPosNP);
-    IDSetNumber(&FocusRelPosNP, "Setting initial relative position");
+    FocusRelPosNP.updateMinMax();
+    LOG_INFO("Setting initial relative position");
 
     /////////////////////////////////////////
     // 6. Focuser speed is set to 100 tick/sec
     //////////////////////////////////////////
-    FocusSpeedN[0].value = 100;
-    IDSetNumber(&FocusSpeedNP, "Setting initial speed");
+    FocusSpeedNP[0].setValue(100);
+    LOG_INFO("Setting initial speed");
 
     return true;
 }
@@ -336,11 +336,11 @@ void FLIPDF::TimerHit()
         if (!FLIFocus.steps_remaing)
         {
             InStep          = false;
-            FocusAbsPosNP.s = IPS_OK;
-            if (FocusRelPosNP.s == IPS_BUSY)
+            FocusAbsPosNP.setState(IPS_OK);
+            if (FocusRelPosNP.getState() == IPS_BUSY)
             {
-                FocusRelPosNP.s = IPS_OK;
-                IDSetNumber(&FocusRelPosNP, nullptr);
+                FocusRelPosNP.setState(IPS_OK);
+                FocusRelPosNP.apply();
             }
         }
 
@@ -350,8 +350,8 @@ void FLIPDF::TimerHit()
             SetTimer(getCurrentPollingPeriod());
             return;
         }
-        FocusAbsPosN[0].value = FLIFocus.current_pos;
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP[0].setValue(FLIFocus.current_pos);
+        FocusAbsPosNP.apply();
     }
     else // we need to display the current position after move finished
     {
@@ -360,8 +360,8 @@ void FLIPDF::TimerHit()
             LOGF_ERROR("FLIGetStepperPosition() failed. %s.", strerror((int) - err));
             return;
         }
-        FocusAbsPosN[0].value = FLIFocus.current_pos;
-        IDSetNumber(&FocusAbsPosNP, nullptr);
+        FocusAbsPosNP[0].setValue(FLIFocus.current_pos);
+        FocusAbsPosNP.apply();
     }
 
     if (timerID == -1)
@@ -373,7 +373,7 @@ IPState FLIPDF::MoveAbsFocuser(uint32_t targetTicks)
 {
     int err = 0;
 
-    if (targetTicks < FocusAbsPosN[0].min || targetTicks > FocusAbsPosN[0].max)
+    if (targetTicks < FocusAbsPosNP[0].getMin() || targetTicks > FocusAbsPosNP[0].getMax())
     {
         LOG_ERROR("Error, requested absolute position is out of range.");
         return IPS_ALERT;

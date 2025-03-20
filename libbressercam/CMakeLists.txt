@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libbressercam)
 
-set (LIBBRESSERCAM_VERSION "57.26598")
+set (LIBBRESSERCAM_VERSION "57.27591")
 set (LIBBRESSERCAM_SOVERSION "57")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")

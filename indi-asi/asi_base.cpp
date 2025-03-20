@@ -22,6 +22,7 @@
 
 #include "asi_base.h"
 #include "asi_helpers.h"
+#include "usb_utils.h"
 
 #include "config.h"
 
@@ -33,8 +34,10 @@
 #include <vector>
 #include <map>
 #include <unistd.h>
+#include <cstring>
+#include <errno.h>
 
-#define MAX_EXP_RETRIES         3
+#define MAX_EXP_RETRIES         2
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
 #define TEMP_THRESHOLD          .25  /* Differential temperature threshold (C)*/
@@ -271,9 +274,58 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
                 return;
             }
 
-            LOGF_ERROR("Exposure failed after %d attempts.", mExposureRetry);
+            LOGF_WARN("Exposure failed after %d attempts. Attempting USB reset...", mExposureRetry);
             ASIStopExposure(mCameraInfo.CameraID);
-            PrimaryCCD.setExposureFailed();
+            ASICloseCamera(mCameraInfo.CameraID);
+
+            LOGF_INFO("Attempting USB reset for device %s...", mCameraInfo.Name);
+            resetUSBDevice();
+
+            LOG_INFO("Reopening camera after reset...");
+            ASI_ERROR_CODE ret = ASIOpenCamera(mCameraInfo.CameraID);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to reopen camera after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            LOG_INFO("Reinitializing camera...");
+            ret = ASIInitCamera(mCameraInfo.CameraID);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to reinitialize camera after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            // Restore previous settings
+            ASI_IMG_TYPE currentType = getImageType();
+            ret = ASISetROIFormat(mCameraInfo.CameraID,
+                                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
+                                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
+                                  PrimaryCCD.getBinX(), currentType);
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to restore ROI format after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            ret = ASISetStartPos(mCameraInfo.CameraID,
+                                 PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
+                                 PrimaryCCD.getSubY() / PrimaryCCD.getBinY());
+            if (ret != ASI_SUCCESS)
+            {
+                LOGF_ERROR("Failed to restore start position after USB reset (%s)", Helpers::toString(ret));
+                PrimaryCCD.setExposureFailed();
+                return;
+            }
+
+            // Try one more time after reset
+            LOG_INFO("Attempting exposure again after USB reset...");
+            ASIStopExposure(mCameraInfo.CameraID);
+            workerExposure(isAboutToQuit, duration);
             return;
         }
     }
@@ -407,10 +459,6 @@ bool ASIBase::initProperties()
     cap |= CCD_CAN_ABORT;
     cap |= CCD_CAN_SUBFRAME;
     cap |= CCD_HAS_STREAMING;
-
-#ifdef HAVE_WEBSOCKET
-    cap |= CCD_HAS_WEB_SOCKET;
-#endif
 
     SetCCDCapability(cap);
 
@@ -1073,6 +1121,15 @@ bool ASIBase::StartStreaming()
 
 bool ASIBase::StopStreaming()
 {
+    // First stop video capture
+    ASI_ERROR_CODE ret = ASIStopVideoCapture(mCameraInfo.CameraID);
+    if (ret != ASI_SUCCESS)
+    {
+        LOGF_ERROR("Failed to stop video capture (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    // Then stop the worker thread
     mWorker.quit();
     return true;
 }
@@ -1569,6 +1626,22 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
         {
             fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
         }
+    }
+}
+
+void ASIBase::resetUSBDevice()
+{
+    LOGF_INFO("Finding USB port for device %s...", mCameraInfo.Name);
+
+    // Use shorter delays for camera reset to minimize downtime
+    // 500ms unbind wait, 1s suspend, 2s rediscover
+    if (USBUtils::resetDevice(0x03c3, mCameraInfo.Name, getDeviceName(), 500000, 1000000, 2000000))
+    {
+        LOG_INFO("USB port power cycle complete");
+    }
+    else
+    {
+        LOG_ERROR("Failed to reset USB device");
     }
 }
 

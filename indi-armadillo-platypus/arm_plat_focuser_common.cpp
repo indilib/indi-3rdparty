@@ -110,10 +110,10 @@ bool ArmPlat::initProperties()
 //    // Backlash Value
 //    IUFillNumber(&BacklashN[0], "Value", "", "%.f", 0, 200, 1., 0.);
 //    IUFillNumberVector(&BacklashNP, BacklashN, 1, getDeviceName(), "Backlash", "", FOCUS_SETTINGS_TAB, IP_RW, 0, IPS_IDLE);
-    FocusBacklashN[0].min = 0;
-    FocusBacklashN[0].max = 200;
-    FocusBacklashN[0].step = 10;
-    FocusBacklashN[0].value = 0;
+    FocusBacklashNP[0].setMin(0);
+    FocusBacklashNP[0].setMax(200);
+    FocusBacklashNP[0].setStep(10);
+    FocusBacklashNP[0].setValue(0);
 
     // Motor Types
     IUFillSwitch(&MotorTypeS[MOTOR_UNIPOLAR], "Unipolar", "", ISS_ON);
@@ -128,15 +128,15 @@ bool ArmPlat::initProperties()
 
 
     // Relative and absolute movement
-    FocusRelPosN[0].min   = 0.;
-    FocusRelPosN[0].max   = 5000.;
-    FocusRelPosN[0].value = 0;
-    FocusRelPosN[0].step  = 100;
+    FocusRelPosNP[0].setMin(0.);
+    FocusRelPosNP[0].setMax(5000.);
+    FocusRelPosNP[0].setValue(0);
+    FocusRelPosNP[0].setStep(100);
 
-    FocusAbsPosN[0].min   = 0.;
-    FocusAbsPosN[0].max   = 100000.;
-    FocusAbsPosN[0].value = 50000;
-    FocusAbsPosN[0].step  = 5000;
+    FocusAbsPosNP[0].setMin(0.);
+    FocusAbsPosNP[0].setMax(100000.);
+    FocusAbsPosNP[0].setValue(50000);
+    FocusAbsPosNP[0].setStep(5000);
 
     // Focus Sync
 //    IUFillNumber(&SyncN[0], "SYNC", "Ticks", "%.f", 0, 100000., 0., 0.);
@@ -375,11 +375,11 @@ bool ArmPlat::ISNewNumber(const char *dev, const char *name, double values[], ch
         /////////////////////////////////////////////
         // Relative goto
         /////////////////////////////////////////////
-        if (strcmp(name, FocusRelPosNP.name) == 0)
+        if (FocusRelPosNP.isNameMatch(name))
         {
-            IUUpdateNumber(&FocusRelPosNP, values, names, n);
-            IDSetNumber(&FocusRelPosNP, nullptr);
-            MoveRelFocuser( FocusMotionS[ 0 ].s == ISS_ON ? FOCUS_INWARD : FOCUS_OUTWARD, (uint32_t)values[ 0 ] );
+            FocusRelPosNP.update(values, names, n);
+            FocusRelPosNP.apply();
+            MoveRelFocuser( FocusMotionSP[0].getState() == ISS_ON ? FOCUS_INWARD : FOCUS_OUTWARD, (uint32_t)values[ 0 ] );
             return true;
         }
         /////////////////////////////////////////////
@@ -616,7 +616,7 @@ IPState ArmPlat::MoveAbsFocuser(uint32_t targetTicks)
         if ( rc == 0 )
         {
                 isMoving = true;
-                FocusAbsPosNP.s = IPS_BUSY;
+                FocusAbsPosNP.setState(IPS_BUSY);
                 return IPS_BUSY;
         }
     }
@@ -647,8 +647,8 @@ IPState ArmPlat::MoveRelFocuser(FocusDirection dir, uint32_t ticks)
         if ( rc == 0 )
         {
             isMoving = true;
-            FocusRelPosN[0].value = ticks;
-            FocusRelPosNP.s       = IPS_BUSY;
+            FocusRelPosNP[0].setValue(ticks);
+            FocusRelPosNP.setState(IPS_BUSY);
 
             return IPS_BUSY;
         }
@@ -683,22 +683,22 @@ void ArmPlat::TimerHit()
 
     if (rc)
     {
-        if ( data != FocusAbsPosN[0].value )
+        if ( data != FocusAbsPosNP[0].getValue() )
         {
-                FocusAbsPosN[0].value = data;
-                IDSetNumber(&FocusAbsPosNP, nullptr);
+                FocusAbsPosNP[0].setValue(data);
+                FocusAbsPosNP.apply();
         }
         else
                 isMoving = false;
 
-        if (FocusAbsPosNP.s == IPS_BUSY || FocusRelPosNP.s == IPS_BUSY)
+        if (FocusAbsPosNP.getState() == IPS_BUSY || FocusRelPosNP.getState() == IPS_BUSY)
         {
             if (isMoving == false)
             {
-                FocusAbsPosNP.s = IPS_OK;
-                FocusRelPosNP.s = IPS_OK;
-                IDSetNumber(&FocusRelPosNP, nullptr);
-                IDSetNumber(&FocusAbsPosNP, nullptr);
+                FocusAbsPosNP.setState(IPS_OK);
+                FocusRelPosNP.setState(IPS_OK);
+                FocusRelPosNP.apply();
+                FocusAbsPosNP.apply();
                 LOG_INFO("Focuser reached requested position.");
             }
         }
@@ -736,10 +736,10 @@ bool ArmPlat::AbortFocuser()
     {
         if ( rc == 0 )
         {
-                FocusAbsPosNP.s = IPS_IDLE;
-                FocusRelPosNP.s = IPS_IDLE;
-                IDSetNumber(&FocusAbsPosNP, nullptr);
-                IDSetNumber(&FocusRelPosNP, nullptr);
+                FocusAbsPosNP.setState(IPS_IDLE);
+                FocusRelPosNP.setState(IPS_IDLE);
+                FocusAbsPosNP.apply();
+                FocusRelPosNP.apply();
                 return true;
         }
     }

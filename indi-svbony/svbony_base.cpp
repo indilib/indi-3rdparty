@@ -526,7 +526,7 @@ bool SVBONYBase::updateProperties()
 
 bool SVBONYBase::Connect()
 {
-    LOGF_DEBUG("Attempting to open %s...", mCameraName.c_str());
+    LOGF_DEBUG("Attempting to open %s (CameraID=%d)...", mCameraName.c_str(), mCameraInfo.CameraID);
 
     auto ret = SVBOpenCamera(mCameraInfo.CameraID);
 
@@ -537,12 +537,14 @@ bool SVBONYBase::Connect()
     }
 
     // Restore settings
+    LOGF_DEBUG("Initializing the CCD: SVBRestoreDefaultParam(%d).", mCameraInfo.CameraID);
     ret = SVBRestoreDefaultParam(mCameraInfo.CameraID);
     if (ret != SVB_SUCCESS)
     {
         LOGF_WARN("Error Initializing the CCD (%s).", Helpers::toString(ret));
     }
 
+    LOGF_DEBUG("Initializing the CCD: SVBSetAutoSaveParam(%d, SVB_FALSE).", mCameraInfo.CameraID);
     ret = SVBSetAutoSaveParam(mCameraInfo.CameraID, SVB_FALSE);
     if (ret != SVB_SUCCESS)
     {
@@ -550,6 +552,7 @@ bool SVBONYBase::Connect()
     }
 
     // Get Camera Property
+    LOGF_DEBUG("Initializing the CCD: SVBGetCameraProperty(%d, &mCameraProperty).", mCameraInfo.CameraID);
     ret = SVBGetCameraProperty(mCameraInfo.CameraID, &mCameraProperty);
     if (ret != SVB_SUCCESS)
     {
@@ -557,6 +560,7 @@ bool SVBONYBase::Connect()
         return false;
     }
 
+    LOGF_DEBUG("Initializing the CCD: SVBGetCameraPropertyEx(%d, &mCameraPropertyExtended).", mCameraInfo.CameraID);
     ret = SVBGetCameraPropertyEx(mCameraInfo.CameraID, &mCameraPropertyExtended);
     if (ret != SVB_SUCCESS)
     {
@@ -631,10 +635,6 @@ bool SVBONYBase::Connect()
     cap |= CCD_CAN_SUBFRAME;
     cap |= CCD_HAS_STREAMING;
 
-#ifdef HAVE_WEBSOCKET
-    cap |= CCD_HAS_WEB_SOCKET;
-#endif
-
     SetCCDCapability(cap);
 
     if (mCameraPropertyExtended.bSupportControlTemp)
@@ -675,7 +675,8 @@ bool SVBONYBase::Disconnect()
     if (isSimulation() == false)
     {
         SVBStopVideoCapture(mCameraInfo.CameraID);
-        if (HasCooler()) {
+        if (HasCooler())
+        {
             activateCooler(false);
         }
         SVBCloseCamera(mCameraInfo.CameraID);
@@ -1158,7 +1159,7 @@ void SVBONYBase::sendImage(SVB_IMG_TYPE type, float duration)
         SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
         auto bayerString = getBayerString();
         // Send if different
-        if (BayerTP[2].isNameMatch(bayerString))
+        if (!(BayerTP[2].isNameMatch(bayerString)))
         {
             BayerTP[2].setText(bayerString);
             BayerTP.apply();

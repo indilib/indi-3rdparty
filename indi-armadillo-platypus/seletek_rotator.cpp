@@ -289,8 +289,8 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
 
             if (SettingN[PARAM_STEPS_DEGREE].value != prevValue[PARAM_STEPS_DEGREE])
             {
-                GotoRotatorN[0].value = calculateAngle(RotatorAbsPosN[0].value);
-                IDSetNumber(&GotoRotatorNP, nullptr);
+                GotoRotatorNP[0].setValue(calculateAngle(RotatorAbsPosN[0].value));
+                GotoRotatorNP.apply();
             }
 
             if (!rc)
@@ -312,9 +312,9 @@ bool SeletekRotator::ISNewNumber(const char *dev, const char *name, double value
             if (gotoTarget(target))
             {
                 RotatorAbsPosNP.s = IPS_BUSY;
-                GotoRotatorNP.s = IPS_BUSY;
+                GotoRotatorNP.setState(IPS_BUSY);
                 LOGF_INFO("Moving to %d steps.", target);
-                IDSetNumber(&GotoRotatorNP, nullptr);
+                GotoRotatorNP.apply();
             }
             else
             {
@@ -342,7 +342,7 @@ IPState SeletekRotator::MoveRotator(double angle)
     int sign = (angle >= 0 && angle <= 180) ? 1 : -1;
 
     r *= sign;
-    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
+    r *= ReverseRotatorSP.findOnSwitchIndex() == INDI_ENABLED ? -1 : 1;
 
     double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + m_ZeroPosition;
 
@@ -364,7 +364,7 @@ bool SeletekRotator::SyncRotator(double angle)
     int sign = (angle >= 0 && angle <= 180) ? 1 : -1;
 
     r *= sign;
-    r *= IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1;
+    r *= ReverseRotatorSP.findOnSwitchIndex() == INDI_ENABLED ? -1 : 1;
     double newTarget = r * SettingN[PARAM_STEPS_DEGREE].value + m_ZeroPosition;
 
     return setParam("setpos", newTarget);
@@ -377,8 +377,8 @@ bool SeletekRotator::gotoTarget(uint32_t position)
 {
     char cmd[DRIVER_LEN] = {0};
     int32_t res = 0;
-    uint32_t backlash = (IUFindOnSwitchIndex(&RotatorBacklashSP) == INDI_ENABLED) ? static_cast<uint32_t>
-                        (RotatorBacklashN[0].value) : 0;
+    uint32_t backlash = (RotatorBacklashSP.findOnSwitchIndex() == INDI_ENABLED) ? static_cast<uint32_t>
+                        (RotatorBacklashNP[0].getValue()) : 0;
     snprintf(cmd, DRIVER_LEN, "!step goto %d %u %u#", IUFindOnSwitchIndex(&PerPortSP), position, backlash);
     if (sendCommand(cmd, res))
         m_IsMoving = (res == 0);
@@ -490,19 +490,19 @@ void SeletekRotator::TimerHit()
 
         double newPosition = calculateAngle(res);
 
-        if (fabs(GotoRotatorN[0].value - newPosition) > 0)
+        if (fabs(GotoRotatorNP[0].getValue() - newPosition) > 0)
         {
-            GotoRotatorN[0].value = newPosition;
-            IDSetNumber(&GotoRotatorNP, nullptr);
+            GotoRotatorNP[0].setValue(newPosition);
+            GotoRotatorNP.apply();
         }
     }
 
-    if (m_IsMoving == false && (GotoRotatorNP.s == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
+    if (m_IsMoving == false && (GotoRotatorNP.getState() == IPS_BUSY || RotatorAbsPosNP.s == IPS_BUSY))
     {
-        if (GotoRotatorNP.s == IPS_BUSY)
+        if (GotoRotatorNP.getState() == IPS_BUSY)
         {
-            GotoRotatorNP.s = IPS_OK;
-            IDSetNumber(&GotoRotatorNP, nullptr);
+            GotoRotatorNP.setState(IPS_OK);
+            GotoRotatorNP.apply();
         }
 
         if (RotatorAbsPosNP.s == IPS_BUSY)
@@ -539,7 +539,7 @@ bool SeletekRotator::AbortRotator()
 double SeletekRotator::calculateAngle(uint32_t steps)
 {
     int diff = (static_cast<int32_t>(steps) - m_ZeroPosition) *
-               (IUFindOnSwitchIndex(&ReverseRotatorSP) == INDI_ENABLED ? -1 : 1);
+               (ReverseRotatorSP.findOnSwitchIndex() == INDI_ENABLED ? -1 : 1);
     return range360(diff / SettingN[PARAM_STEPS_DEGREE].value);
 }
 
