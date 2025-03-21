@@ -10,7 +10,7 @@ It is the Arduino that provides the appropriate code to match the hardware that 
 ```
 Driver:       RollOff ino
 Executable:   indi_rolloffino
-Minimum INDI: 2.0.1
+Minimum INDI: 2.1.3
 ```
 
 ### Installation

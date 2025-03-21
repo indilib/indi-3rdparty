@@ -1,42 +1,35 @@
-/*
- * Setup for a Arduino Due.   
- * Aleko AR1450 gate opener example for roof motor control from the INDI rolloffino roof driver.   
+ /*
+ * A controller example for roof motor controller from the INDI rolloffino roof driver.   
  * 
  * tg August 2018  Original
  * tg February 2020 Generalize to make less installation specific
  *                  Add unspecified usage AUX switch and relay
  *                  Communication protocol in terms of function not switches/relays
  *                  ~ 15KB 2% of Due, 50% of Nano
- * tg November 2021 Break out commandReceived and requestReceived to make alernate actions more obvious/accessible
+ * tg November 2021 Break out commandReceived and requestReceived to make alernate actions more 
+ *                  obvious/accessible, Remove Due specific code.
  */
 
 /*
- * This version of rolloff.ino is modified to work with an Aleko 1450 gate opener.
- * The Aleko controller includes a single push button motor control connection.
- * 
- * If using Arduino Due or perhaps others with 2 USB ports. Connect to INDI host via Programming Port. 
- * Under Tools both Board and Port should select Programmers Port. Use SerialUSB() to communicate with host.
- * If a second USB cable is connected to the Native port the monitor console can then be used for degug messages 
- * using Serial() connection. 
- * If not using an Arduino Due, change SerialUSB() calls to Serial(). 
- *
+ * This version of the rolloff.ino is a generic example, intended as a starting place.
+ * Review additions to the other Arduino samples to see if they are a more appropriate base.
  * The auxiliary button and light in the remote driver are of unspecified purpose. 
 */
 
 #define BAUD_RATE 38400
 
-# define OPEN_CONTACT LOW    // Switch definition, Change to LOW if pull-down resistors are used.
+# define OPEN_CONTACT HIGH    // Switch definition, Change to LOW if pull-down resistors are used.
 
 // Define name to pin assignments
-#define SWITCH_1 31
-#define SWITCH_2 32
-#define SWITCH_3 33
-#define SWITCH_4 34            
+#define SWITCH_1 A0
+#define SWITCH_2 A1
+#define SWITCH_3 A2
+#define SWITCH_4 A3
 
-#define RELAY_1 41             
-#define RELAY_2 42
-#define RELAY_3 43
-#define RELAY_4 44
+#define RELAY_1 4
+#define RELAY_2 7
+#define RELAY_3 8
+#define RELAY_4 12
 
 // Indirection to define a functional name in terms of a switch
 // Use 0 if switch not implemented
@@ -46,8 +39,8 @@
 #define SWITCH_AUX    SWITCH_4         // Auxiliary switch
 
 // Indirection to define a functional name in terms of a relay
-// Use 0 if function not supported
-#define FUNC_OPEN RELAY_1
+// Use 0 if function not supportd
+#define FUNC_OPEN  RELAY_1
 #define FUNC_CLOSE RELAY_1    // For a single button controller might map this also to RELAY_1
 #define FUNC_STOP RELAY_1     // For a single button controller might map this also to RELAY_1
 #define FUNC_LOCK  0          // If automated roof lock is available.
@@ -78,9 +71,9 @@
 /*
  * Abort (stop) request is only meaningful if roof is in motion.
  *
- * On Abort for the Aleko AR1450, we only want to activate relay and pulse the controller if
+ * On Abort for a single button controller, only want to activate relay and pulse the controller if
  * the roof is still moving, then it would stop. If it has already reached the end of its
- * travel, a pulse would set it off again in the opposite direction.
+ * travel, a pulse could set it off again in the opposite direction.
  *
  * In case the end of run switches are not reached, some way to know if it is moving
  * would be helpful. Short of that estimate how long it takes the roof to open or close
@@ -135,8 +128,8 @@ void sendAck(char* val)
     strcat(response, ":");
     strcat(response, val);
     strcat(response, ")");
-    SerialUSB.println(response);
-    SerialUSB.flush();
+    Serial.println(response);
+    Serial.flush();
   }
 }
 
@@ -152,8 +145,8 @@ void sendNak(const char* errorMsg)
     strcat(buffer, ":");
     strcat(buffer, errorMsg);
     strcat(buffer, ")");
-    SerialUSB.println(buffer);
-    SerialUSB.flush();
+    Serial.println(buffer);
+    Serial.flush();
   }
 }
 
@@ -172,27 +165,27 @@ void setRelay(int id, int hold, char* value)
 {
   if (strcmp(value, "ON") == 0)
   {
-    digitalWrite(id, HIGH);           // Would normally already be in this condition (openit)
+    digitalWrite(id, LOW);            // NO RELAY would normally already be in this condition (open)
     delay(RELAY_PRIOR_DELAY);
-    digitalWrite(id, LOW);            // Activate the relay (close it) 
+    digitalWrite(id, HIGH);           // Activate the NO relay (close it) 
     if (hold == 0)
     {  
       delay(RELAY_ON_DELAY);
-      digitalWrite(id, HIGH);         // Turn relay off (open it)
+      digitalWrite(id, LOW);          // Turn NO relay off
     }
   }
   else
   {
-    digitalWrite(id, HIGH);           // Turn relay off (open it) 
+    digitalWrite(id, LOW);            // Turn NO relay off 
   }
   delay(RELAY_POST_DELAY);
 } 
 
 /*
  * Get switch value
- * Expect a NO switch configured with a pull down resistor.
- * NO switch: Inactive 0V input to the pin with to pull down resistor, logical 0 input. 
- * When switch closes The positve voltage logical 1 is applied to the input pin. 
+ * Expect a NO switch configured with a pull up resistor.
+ * NO switch: Inactive HIGH input to the pin with pull up resistor, logical 0 input. 
+ * When switch closes The LOW voltage logical 1 is applied to the input pin. 
  * The off or on value is to be sent to the host in the ACK response
  */
 void getSwitch(int id, char* value)
@@ -233,10 +226,10 @@ bool parseCommand()           // (command:target:value)
     
   while (!eof && (wait < 20))
   {
-    if (SerialUSB.available() > 0)
+    if (Serial.available() > 0)
     {
-      SerialUSB.setTimeout(1000);
-      recv_count = SerialUSB.readBytes((inpBuf + offset), 1);
+      Serial.setTimeout(1000);
+      recv_count = Serial.readBytes((inpBuf + offset), 1);
       if (recv_count == 1)
       {
         offset++;
@@ -298,7 +291,7 @@ bool parseCommand()           // (command:target:value)
 void readUSB()
 {
   // Confirm there is input available, read and parse it.
-  if (SerialUSB && (SerialUSB.available() > 0))
+  if (Serial && (Serial.available() > 0))
   {
     if (parseCommand())
     {
@@ -308,12 +301,6 @@ void readUSB()
       int sw = -1;      //      "                 "                    "
       bool connecting = false;
       const char* error = ERROR8;
-
- //     Serial.print(command);
- //     Serial.print(":");
- //     Serial.print(target);
- //     Serial.print(":");
- //     Serial.println(value);
 
       // On initial connection return the version
       if (strcmp(command, "CON") == 0)
@@ -424,7 +411,7 @@ void readUSB()
         }
       } // end !connecting
     }   // end command parsed
-  }     // end SerialUSB input found  
+  }     // end Serial input found  
 }
 
 
@@ -512,10 +499,10 @@ void requestReceived(int sw)
 void setup() 
 {
   // Initialize the input switches
-  pinMode(SWITCH_1, INPUT); 
-  pinMode(SWITCH_2, INPUT); 
-  pinMode(SWITCH_3, INPUT); 
-  pinMode(SWITCH_4, INPUT);
+  pinMode(SWITCH_1, INPUT_PULLUP); 
+  pinMode(SWITCH_2, INPUT_PULLUP); 
+  pinMode(SWITCH_3, INPUT_PULLUP); 
+  pinMode(SWITCH_4, INPUT_PULLUP);
 
   // Initialize the relays
   //Pin Setups
@@ -525,31 +512,27 @@ void setup()
   pinMode(RELAY_4, OUTPUT); 
 
   //Turn Off the relays.
-  digitalWrite(RELAY_1, HIGH);
-  digitalWrite(RELAY_2, HIGH);
-  digitalWrite(RELAY_3, HIGH);
-  digitalWrite(RELAY_4, HIGH);
+  digitalWrite(RELAY_1, LOW);
+  digitalWrite(RELAY_2, LOW);
+  digitalWrite(RELAY_3, LOW);
+  digitalWrite(RELAY_4, LOW);
 
-   // Establish Programmer's USB port and wait for it to open
-  SerialUSB.begin(BAUD_RATE);    // Baud rate to match that in the driver
-  while (!SerialUSB) 
-  {
-    delay(1000);       // wait for serial port to be established
-  }
+
+  // Establish USB port.
+  Serial.begin(BAUD_RATE);    // Baud rate to match that in the driver
 }
 
 // Wait here for command or switch request from host
 void loop() 
 {   
-  // While there is still a SerialUSB wait for input from the host
-  while (SerialUSB && (SerialUSB.available() <= 0)) 
+  while (Serial.available() <= 0) 
   {
     for (int cnt=0; cnt < 60; cnt++)
     {
-      if (SerialUSB.available() > 0)
+      if (Serial.available() > 0)
         break;
       else
-        delay(250);
+        delay(100);
     }
   }
   readUSB();

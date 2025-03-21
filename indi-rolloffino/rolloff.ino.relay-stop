@@ -27,29 +27,34 @@
  * to be prepared to accept a corresponding request for completion status.
  */
  
-// Standard example of Arduino with extra Actions replaces the previous rolloff.ino.standard. 
-// Can use the extra actions but does not predefine or request them. This sketch is compatible with using a 
-// gate opener controller and the Arduino.cc relay shield wihout needing any code edits. Default roof  
-// open/close directed to a relay shield or to a four channel relay module wired to those same 
-// pins. The example rolloff.ino.relay is similar but does request the driver send Actions and 
-// includes a couple of Action examples using a relay shield plus a four channel relay module. 
+// This relay example uses 2 relays one to open and one to close the roof. It monitors the 
+// fully closed and fully open switches and when they do close it turns off the related 
+// relay to stop the motion. It is assumed that it will be used for low power switching.
+// Used on a control switch or some other level of indirection remote from solenoid activity. 
+// The pin selections match the Arduino.cc relay shield. A relay bank can be used instead.
+// Default roof open/close commands are directed to the relay shield relays 1 and 2.  
+// For the Abort command it turns off the activate relay depending on if it was opening or
+// closing. 
+// The main difference from the standard example is that this sketch needs to turn
+// off the motor when the roof is fully opened or fully closed. The standard example is 
+// for use with a single button sliding gate controller. Usually a single relay both 
+// opens and closes the roof. It is dependent on the gate controller to stop the motion.
 
 //////////////////////////////////////////////////////////
 // Start of Definitions
 //////////////////////////////////////////////////////////
 
-#define VERSION_ID "V1.3"        // Action relays not connected
-// #define VERSION_ID "V1.3 [ACT4]"  // Action relay driver support enable
+//#define VERSION_ID "V1.3"        // Action relays not connected
+
+#define VERSION_ID "V1.3 [ACT2]"  // Action relay driver support enable, example 2 actions
 
 //////////////////////////////////////////////////////////
 // Input sensor definitions
 //////////////////////////////////////////////////////////
 
-
 // Input Switch definition, indicates when input sensor switch is open the voltage on the pin will be
 // HIGH indicating off. Changing to LOW requires installation of external pull-down resistors.
 #define OPEN_CONTACT HIGH
-
 
 // The driver uses software switches to initiate output commands. Here switches usually refer
 // to local status input indicators like a roof fully opened detector. Implementation could
@@ -79,10 +84,10 @@
 // Use 0 if a sensor or switch is not provided.
 #define SWITCH_OPENED SWITCH_1  // Fully opened is assigned to switch 1
 #define SWITCH_CLOSED SWITCH_2  // Fully closed is assigned to switch 2
-#define SWITCH_LOCKED SWITCH_3  // External lock
-#define SWITCH_AUX    SWITCH_4  // Auxiliary switch
-#define ACT1STATE 0
-#define ACT2STATE 0
+#define SWITCH_LOCKED 0         // External lock
+#define SWITCH_AUX    0         // Auxiliary switch
+#define ACT1STATE     0
+#define ACT2STATE     0
 #define ACT3STATE 0       
 #define ACT4STATE 0 
 #define ACT5STATE 0
@@ -119,12 +124,13 @@
 // There are 5 functions here, by default only 4 relays are allocated. Some
 // functions might map to the same relay. If open, close and stop all require
 // their own relay, then choose between use of AUX or LOCK. Or extend the relay definitions.
-// Use 0 if function not supported.  Set to 100 if there is special code added to handle it.
+// Use 0 if function not supported.  Set to 100 if not a relay and there is special code 
+// added to handle it.
 //
 
 #define FUNC_OPEN RELAY_1
-#define FUNC_CLOSE RELAY_1  // For a single button controller might map this also to RELAY_1
-#define FUNC_ABORT RELAY_1  // For a single button controller might map this also to RELAY_1
+#define FUNC_CLOSE RELAY_2  // For a single button controller might map this also to RELAY_1
+#define FUNC_ABORT 100      // For a single button controller might map this also to RELAY_1
 #define FUNC_LOCK 0         // If automated roof lock is available.
 #define FUNC_AUX 0          // Relay to perform some unspecified function
 
@@ -150,8 +156,8 @@
 // If HOLD is 0 then the relay will be activated for RELAY_DELAY milliseconds, then released.
 // If the relay is simulating a button push/release to the motor controller HOLD would be 0.
 //
-#define FUNC_OPEN_HOLD 0
-#define FUNC_CLOSE_HOLD 0
+#define FUNC_OPEN_HOLD 1
+#define FUNC_CLOSE_HOLD 1
 #define FUNC_ABORT_HOLD 0
 #define FUNC_LOCK_HOLD 1
 #define FUNC_AUX_HOLD 1
@@ -162,7 +168,8 @@
 #define FUNC_ACT5_HOLD 1
 #define FUNC_ACT6_HOLD 1
 #define FUNC_ACT7_HOLD 1
-#define FUNC_ACT8_HOLD 1
+#define FUNC_ACT8_HOLD 1 
+
 
 // For the relays define whether a HIGH or a LOW activates the relay.
 #define FUNC_OPEN_ACTIVE HIGH
@@ -276,15 +283,23 @@ const char* ERROR6 = "Invalid command syntax, no end token found";
 const char* ERROR7 = "Roof controller unable to parse command";
 const char* ERROR8 = "Command must map to either set a relay or get a switch";
 const char* ERROR9 = "Request not implemented in controller";
-const char* ERROR10 = "Abort ignored, roof already stationary, or time expired";
+const char* ERROR10 = "Abort ignored, roof already stationary.";
 const char* ERROR11 = "Unknown input, ";
-const char* ERROR12 = "Action directive incompatible with current state ";
-
+const char* ERROR12 = " command incompatible with roof state ";
 
 // Buffer limits must match those in the driver
 #define MAX_INPUT 45
 #define MAX_RESPONSE 127
 #define MAX_MESSAGE 63
+
+enum roof_select : byte {
+  CLOSED = 0,
+  OPENED,
+  CLOSING,
+  OPENING,
+  PARTIALLY_OPEN  // Stationary
+} roof_state;
+const char* roof_text[] = {"Closed", "Opened", "Closing", "Opening", "Partially open"};
 
 const char* version_id = VERSION_ID;
 
@@ -552,17 +567,7 @@ void readUSB() {
 // deny the request by returning false. If neither switch is on then if there is
 // a specific button (relay) assigned that can stop movement then return true
 // to allow it to do so.
-//
-// This implementation assumes a one button setup and one which does not know if
-// the roof is still moving or has hit something and already stopped. Before taking
-// action see how long it has been since movement was initiated. If it is longer
-// than the estimate to open or close the roof, assume motion has already stopped.
-// In that case avoid emulating the single button push because that would set the
-// roof moving again. If it seems that the roof could be moving then return true.
-//
-// Returning true will cause the Abort request to appear in the commandReceived
-// routine where it will activate the requested relay.
-//
+
 bool isStopAllowed() {
   uint32_t timeNow = millis()/1000;
   uint32_t timeBegin = timeMove;
@@ -572,6 +577,7 @@ bool isStopAllowed() {
   if (isSwitchOn(SWITCH_OPENED) || isSwitchOn(SWITCH_CLOSED)) {
     return false;
   }
+  return true;  // no time limit
 
   if (timeBegin == 0)
     return false;
@@ -585,6 +591,24 @@ bool isStopAllowed() {
   {
     return true;
   }
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Here after pin associations resolved and request known
+// Request to obtain state of a switch
+// The default is to read the associated switch and return result to the host
+// target is the name associated with the switch "OPENED", "CLOSED" etc and will
+// be used when sending the acknowledgement to the host. Find out if a certain request is being processed using
+// if (strcmp(target, "OPENED") == 0) {do something}
+//
+// sw:     The switch's pin identifier.
+// value   getSwitch will read the pin and set this to "ON" or "OFF"
+void requestReceived(int sw) {
+  // Intervene here
+  
+  getSwitch(sw, value);
+  sendAck(value);  // Send result of reading pin associated with "target"
 }
 
 
@@ -605,48 +629,96 @@ bool isStopAllowed() {
 //
 //
 void commandReceived(int relay, int activate, int hold, char* value) {
-  // Intervene here
-  setRelay(relay, activate, hold, value);
-  sendAck(value);  // Send acknowledgement that relay pin associated with "target" was activated to value requested
+  char msg [MAX_MESSAGE];
+  const char* roofText = roof_text[roof_state];
+  bool status = true;
+  char turnOff[8];
+  strcpy(turnOff, "OFF");
+
+  if (command_input == CMD_ABORT) {
+      if (roof_state == OPENING) {
+        roof_state = PARTIALLY_OPEN;
+        setRelay(FUNC_OPEN, FUNC_OPEN_ACTIVE, FUNC_OPEN_HOLD, turnOff);
+        sendAck(value); 
+        return;
+      } 
+      else if (roof_state == CLOSING) {
+        roof_state = PARTIALLY_OPEN;
+        setRelay(FUNC_CLOSE, FUNC_CLOSE_ACTIVE, FUNC_CLOSE_HOLD, turnOff);
+        sendAck(value); 
+        return;
+      }
+      else
+        status = false;
+  }
+  else if (command_input == CMD_OPEN) {
+    if (roof_state == CLOSED || roof_state == PARTIALLY_OPEN)
+      roof_state = OPENING;
+    else 
+      status = false;
+  } 
+  else if (command_input == CMD_CLOSE) {
+    if(roof_state == OPENED || roof_state == PARTIALLY_OPEN)
+      roof_state = CLOSING;
+    else
+      status = false;
+  }
+  if (status) {
+    setRelay(relay, activate, hold, value);  // Send success for roof move commands & other Actions 
+    sendAck(value);
+  }
+  else {
+    strcpy(msg, target);
+    strcat(msg, ERROR12);
+    strcat(msg, roofText);
+    sendNak(msg);    
+  }
 }
 
 ////////////////////////////////////////////////////////////////////////////////
-
-// Here after pin associations resolved and request known
-// Request to obtain state of a switch
-// The default is to read the associated switch and return result to the host
-// target is the name associated with the switch "OPENED", "CLOSED" etc and will
-// be used when sending the acknowledgement to the host. Find out if a certain request is being processed using
-// if (strcmp(target, "OPENED") == 0) {do something}
+// See if need to stop any roof movement
 //
-// sw:     The switch's pin identifier.
-// value   getSwitch will read the pin and set this to "ON" or "OFF"
-void requestReceived(int sw) {
-  // Intervene here
-  
-  getSwitch(sw, value);
-  sendAck(value);  // Send result of reading pin associated with "target"
+void monitorRoofState() {
+  char turnOff[8];
+  strcpy(turnOff, "OFF");
+
+  if (roof_state == OPENING) {
+    if (isSwitchOn(SWITCH_OPENED)) {
+      setRelay(FUNC_OPEN, FUNC_OPEN_ACTIVE, FUNC_OPEN_HOLD, turnOff);
+      roof_state = OPENED;
+    }
+  } else if (roof_state == CLOSING) {
+    if (isSwitchOn(SWITCH_CLOSED)) {
+      setRelay(FUNC_CLOSE, FUNC_CLOSE_ACTIVE, FUNC_CLOSE_HOLD, turnOff);
+      roof_state = CLOSED;
+    }
+  }
 }
 
-
+////////////////////////////////////////////////////////////////////////////////
 // One time initialization
+//
 void setup() {
   // Establish USB port.
   Serial.begin(BAUD_RATE);  // Baud rate to match that in the driver
 
-  //////////////////////////
   // Initialize the input sensors/switches
-  //
   for (int i = 0; i < switch_count; i++) {
     initInput(switch_info[i].source);
   }
 
-  ////////////////////////
   // Initialize the relays
-  //
   for (int i = 1; i < cmd_len; i++) {
     initRelay(relay_info[i].relay, relay_info[i].activate);
   }
+
+  // Initialize the roof state
+  if (isSwitchOn(SWITCH_OPENED))
+    roof_state = OPENED;
+  else if (isSwitchOn(SWITCH_CLOSED))
+    roof_state = CLOSED;
+   else 
+    roof_state = PARTIALLY_OPEN;
 }
 
 void initInput(int pin) {
@@ -670,14 +742,15 @@ void initRelay(unsigned int pin, unsigned int activate) {
   }
 }
 
+////////////////////////////////////////////////////////////////////////////////
 // Wait here for command or switch request from host
 void loop() {
   while (Serial.available() <= 0) {
-
     for (int cnt = 0; cnt < 60; cnt++) {
       if (Serial.available() > 0)
         break;
       else {
+        monitorRoofState();
         delay(100);
       }  
     } 

@@ -1,0 +1,1180 @@
+/*
+ * A controller example for roof motor controller from the INDI rolloffino roof driver.   
+ * 
+ * tg August 2018  Original
+ * tg February 2020 Generalize to make less installation specific
+ *                  Add unspecified usage AUX switch and relay
+ *                  Communication protocol in terms of function not switches/relays
+ *                  ~ 15KB 2% of Due, 50% of Nano
+ *
+ * tg November 2021 Break out commandReceived and requestReceived to make alternate actions more 
+ *                  obvious/accessible, Remove Due specific code.
+ *
+ * tg November 2023 Rework to use sensors and SyRen 50A in place of switches and SyRen25.
+ *                  Also changed to use Arduino Mega with 5V I/O connections.
+ *
+ * tg July 2024     Add additional Actions. Indicate to the driver during handshake
+ *                  that they are supported and the driver can issue them. The driver needs 
+ *                  to be 2.1.3 or later
+ */
+
+/*
+ * The driver can support up to 8 extra actions. The Arduino sketch indicates it can accept 
+ * actions and how many during the initial connection. It does so in the following manner.
+ *     Use version_id like "V1.3" which indicates the extra actions not supported.
+ *     Use version_id like "V1.3 [ACT2]" if extra actions are supported.
+ * Additional actions will typically be used to set extra relays. But this depends on the
+ * Arduino implementation. Only indicate support for the number of additional actions the 
+ * sketch can recognise and support. For each additional action the Arduino requests it needs
+ * to be prepared to accept a corresponding request for completion status.
+ */
+
+/*
+ * An example of SyRen50A roof motor simplified serial control for the INDI rolloffino roof driver. 
+ * The controller works with a DC motor. In this test used a 5541095 Direct Drive Tarp 
+ * Gear Motor 12V DC 600 Watts. Need to monitor roof position sensors to detect when to stop the motor.
+ * Vary power to control speed. Reverse polarity at motor to change direction.  
+ */
+
+
+//////////////////////////////////////////////////////////
+// Start of Definitions
+//////////////////////////////////////////////////////////
+
+#define VERSION_ID "V1.3"  // Action relays not connected
+// #define VERSION_ID "V1.3 [ACT4]"  // Action relay driver support enable
+
+// Note on the following Switch definitions
+// Define completion status like OPENED in terms of a sensor or switch name. In the normal
+// case if the response is to be used, set the definition to the corresponding pin name.
+// If there is no assigned switch, set the definition to 0. Then  any related driver
+// requests will be ignored.
+// There are times when you might not want a status request to be automatically handled by a
+// status switch. Before responding with a status switch the switch info will be passed to
+// "requestReceived" routine for any special handling. For example a generic example does
+// not knowif what the Actions will be used for. So no provision for any specific operational
+// differences.
+//
+// This example expects a Arduino Mega 2560 AVR board be selected under tools. If not the pin assignments
+// will need changing.
+
+// Define pin assignments for switches. Will be using sensors, but switches might still be
+// used for Aux and Lock. Also using the original fully opened/closed switches as backup for the sensors.
+#define SWITCH_1 30
+#define SWITCH_2 32
+#define SWITCH_3 34
+#define SWITCH_4 35
+#define SWITCH_5 0
+#define SWITCH_6 0
+
+// Define pin assignments for local mechanical buttons. Implemented using RF remotely activated relays.
+#define BUTTON_OPEN A10   // Default A0
+#define BUTTON_CLOSE A11  //         A1
+#define BUTTON_STOP A12   //         A2
+
+// For the normal roof position switches
+// Indirection to define a functional state in terms of an input switch or sensor
+// Use 0 if a sensor or switch is not provided.
+#define SWITCH_OPENED SWITCH_1  // Fully opened is assigned to switch 1
+#define SWITCH_CLOSED SWITCH_2  // Fully closed is assigned to switch 2
+#define SWITCH_LOCKED SWITCH_3  // External lock
+#define SWITCH_AUX SWITCH_4     // Auxiliary switch
+#define ACT1STATE 0
+#define ACT2STATE 0
+#define ACT3STATE 0
+#define ACT4STATE 0
+#define ACT5STATE 0
+#define ACT6STATE 0
+#define ACT7STATE 0
+#define ACT8STATE 0
+
+// Output pin assignment are defaults from Uno relay shield. Will be using SyRen but relays might stll be
+// used for Aux and Lock functions.
+#define RELAY_1 4
+#define RELAY_2 7
+#define RELAY_3 8
+#define RELAY_4 12
+#define RELAY_5 5
+#define RELAY_6 6
+#define RELAY_7 9
+#define RELAY_8 10
+
+// Note on the following FUNC definitions
+// Define commands like OPEN an terms of a relay. In the normal case if the command
+// is to be used, set the definition to the  corresponding relay pin name. If the
+// function is not being used, set the definition to 0. Then any related driver
+// requests will be ignored. There are times when you might not want a command to
+// be handled by a relay. If a command such as open does not use a relay set its
+// definition to 100. That will prevent attempts to initialize it like relay control
+// pin. It will pass through the dispatch code and you can pick it up in the breakout
+// routines "commandReceived" for speial handling.
+
+// Indirection to define a functional name in terms of a relay
+// There are 5 functions here, by default only 4 relays are allocated. Some
+// functions might map to the same relay. If open, close and stop all require
+// their own relay, then choose between use of AUX or LOCK. Or extend the relay definitions.
+// Use 0 if function not supportd.  Set to 100 if there is special code added to handle it.
+// Open, Close, Stop are supported using SyRen.
+
+#define FUNC_OPEN 100
+#define FUNC_CLOSE 100  // For a single button controller might map this also to RELAY_1
+#define FUNC_ABORT 100   // For a single button controller might map this also to RELAY_1
+#define FUNC_LOCK 0     // If automated roof LOCK is available.
+#define FUNC_AUX 0      // Relay for AUXSET unspecified function
+
+// Define the additional functions as action relays
+// Use 0 if function not supported.  Set to 100 if there is special code added to handle it.
+#define FUNC_ACT1 0
+#define FUNC_ACT2 0
+#define FUNC_ACT3 0
+#define FUNC_ACT4 0
+#define FUNC_ACT5 0
+#define FUNC_ACT6 0
+#define FUNC_ACT7 0
+#define FUNC_ACT8 0
+
+// For the relay that a function is mapped to, indicate if that relay is to be momentarily closed
+// or held in a closed position. If HOLD is 0 then the relay will be activated for RELAY_DELAY
+// milliseconds, then released. If the relay is simulating a button push/release to the motor
+// controller HOLD would be 0. If relay is intended to provide power to a motor
+// the need might be to keep it closed until a relay off is received. If a function such as OPEN
+// is held on, it will be up to local code in the Arduino to determne when and how to turn it off.
+// The host driver sends open and close requests but expects the roof to brings itself to a stop
+// when complete.
+
+#define FUNC_OPEN_HOLD 0
+#define FUNC_CLOSE_HOLD 0
+#define FUNC_ABORT_HOLD 0
+#define FUNC_LOCK_HOLD 1
+#define FUNC_AUX_HOLD 1
+#define FUNC_ACT1_HOLD 1
+#define FUNC_ACT2_HOLD 1
+#define FUNC_ACT3_HOLD 1
+#define FUNC_ACT4_HOLD 1
+#define FUNC_ACT5_HOLD 1
+#define FUNC_ACT6_HOLD 1
+#define FUNC_ACT7_HOLD 1
+#define FUNC_ACT8_HOLD 1
+
+// For the relays define whether a HIGH or a LOW activates the relay.
+#define FUNC_OPEN_ACTIVE HIGH
+#define FUNC_CLOSE_ACTIVE HIGH
+#define FUNC_ABORT_ACTIVE HIGH
+#define FUNC_LOCK_ACTIVE HIGH
+#define FUNC_AUX_ACTIVE HIGH
+#define FUNC_ACT1_ACTIVE LOW
+#define FUNC_ACT2_ACTIVE LOW
+#define FUNC_ACT3_ACTIVE LOW
+#define FUNC_ACT4_ACTIVE LOW
+#define FUNC_ACT5_ACTIVE LOW
+#define FUNC_ACT6_ACTIVE LOW
+#define FUNC_ACT7_ACTIVE LOW
+#define FUNC_ACT8_ACTIVE LOW
+
+// These delay settings normally work as is
+#define RELAY_PRIOR_DELAY 50
+#define RELAY_ON_DELAY 500
+#define RELAY_POST_DELAY 50
+
+// Buttons and switches are treated the same, they should be consistent either all pullup
+// or all pulldown. Switch definition, indicates when switch is open the voltage on the  pin will
+// be HIGH indicating off. Changing to LOW requires installation of external pull-down resistors.
+#define OPEN_CONTACT HIGH
+
+#define ABORT_MAX_SEC 30
+#define BAUD_RATE 38400
+
+// Turned on when roof moving, turned off when sensor detects end of travel.
+// If the backup switch stops travel the LED is not turned off to indicate the
+// sensor position needs adjusting relative to the switch.
+#define LED_MOVE 42  // Pin long round anode >| short flat cathode  GND
+
+//#define INCH_MOTOR  1  // When defined the RF remote open/close buttons will just nudge motor. Used to align shaft
+//#define LOCAL_TEST 0
+
+//////////////////////////////////////////////////////////
+// SyRen Definitions
+//////////////////////////////////////////////////////////
+
+#include <SyRenSimplified.h>
+#include <SoftwareSerial.h>
+#include <math.h>
+
+/*
+ *   Arduino Mega 2560 R3                                                                 $ 49
+ *   Dimension Engineering SyRen 50A regen motor driver                                   $120
+ *   5-1719  DC Tarp gear motor 40 RPM, 12 VDC 600 watt RA 33-50 Amps, 0.53HP, Reversable $157 
+ *
+ * For SyRen download:
+ * https://www.dimensionengineering.com/software/SabertoothArduinoLibraries.zip
+ * Unzip and copy directories into ~/Arduino/libraries as explained in the unzipped 
+ * install.txt directions.
+ *
+ * SyRen device connections to make:
+ *    Arduino SR_PIN ->  SyRen S1 
+ *    Arduino GND    ->  SyRen 0V
+ *
+ * The switch settings on the SyRen to use Mode 3  
+ * 1 on    Simplified Serial
+ * 2 off       "       "
+ * 3 on    Lithium Cutoff  off only If using Lithium battery
+ * 4 off   Baud Rate 9600
+ * 5 on     "    "    "
+ * 6 on    Standard Simplified Serial
+ * 
+ * Standard Simplified Serial wthout Lithium battery at 9600 baud = 53 octal.
+ *       1   2   3   4   5   6
+ *       on  off on off on  on
+ *
+ * The SyRen motor driver provides an interface for controlling a DC motor direction
+ * and speed.  With these motor drivers, select a model that can provide the current 
+ * needed under load to operate the selected motor. They advise operating with a suitable 
+ * battery in parallel if a power supply is used, to deal with start up and stall loads.
+ * A gear DC motor that can be reversed and suitably sized to provide the needed torque 
+ * and power. The gearbox should approximate the maximum speed of the roof. 
+ * It is possible to somewhat limit damage if boundry limits are exceeded, or there is an 
+ * obstruction of some kind. Adjust the blue potentiometer to limit the maximum current. 
+ * Could also experiment with a fused supply or amp metered circuit to only allow enough 
+ * current to accomplish normal roof action. 
+ * Consider if or how to release the drive track or chain to allow manual movement if that is
+ * needed. Manual operation using local buttons or provide an independent wireless control.
+ * Use the motor's connection to the drive chain or track and the polarity of the wires to 
+ * the motor with the sofware "#define FORWARD true" to set the roof direction. 
+ * 
+ * Intend to have four sensors two for end of travel and two to indicate speed transition points.  
+ *
+ *             1  =>           A       B
+ *                             C       D          <=  2
+ *
+ *     1   Metal Strip for closed
+ *     2   Metal Srip for opened
+ *     =>  Roof direction when closing
+ *     <=  Roof direction when opening
+ *     A   SENSOR_NEAR_CLOSED           Closing:Slow down   Opening:Speed up                   
+ *     B   SENSOR_CLOSED                Stop
+ *     C   SENSOR_OPENED                Stop
+ *     D   SENSOR_NEAR_OPENED           Opening:Slow down   Closing:Speed up
+ *
+ */
+
+// The pin to use for the SyRen serial interface's Signal pin. Do not treat it like a normal output pin.
+#define SR_PIN 40  // Default 11
+
+SoftwareSerial SWSerial(NOT_A_PIN, SR_PIN);  // RX on no pin (unused), TX on SR_PIN to SyRen S1
+SyRenSimplified SR(SWSerial);                // Use SWSerial as the serial port.
+
+// Define sensor pins
+#define SENSOR_NEAR_CLOSED 22  // Transition. Closing: full to slow.    Opening: slow to full.
+#define SENSOR_CLOSED 24       // Roof is closed
+#define SENSOR_OPENED 26       // Roof is opened
+#define SENSOR_NEAR_OPENED 28  // Transition  Opening: full to slow.    Closing: slow to full.
+
+#define SENSOR_OFF HIGH  // What value does sensor provide when off
+#define SENSOR_ON LOW    // What value does sensor provide when on
+
+#define FORWARD true            // true Open = Forward, false Open = Reverse. Or switch polarity of motor connections
+#define ROOF_SPEED_STOPPED 0    // Stopped
+#define ROOF_SPEED_STARTING 20  // Start at a slow speed
+#define ROOF_SPEED_STOPPING 20  // Stop at a slow speed
+#define ROOF_SPEED_FULL 64      // 127 is SyRen maximum.
+#define ROOF_SPEED_RAMP 5       // Changing speed increment, how abrupt is the transition
+#define ROOF_SPEED_CONV 0.044   // Estimate distance inches moved for 1 SyRen unit of power
+
+// During a bench test. For an early model Uno, 19200 was highest working rate obtained to the driver.
+#define BAUD_RATE 38400    // USB baud rate, match that selected in the INDI driver.  19200
+#define SR_BAUD_RATE 9600  // SyRen Baud rate matching SyRen Dip switches (53 or 43)
+
+//////////////////////////////////////////////////////////
+// End of Custom Definitions
+//////////////////////////////////////////////////////////
+
+struct switch_control {
+  const char* function;
+  unsigned int source;
+};
+
+const int switch_count = 12;
+switch_control switch_info[switch_count] = {
+  { "OPENED", SWITCH_OPENED },
+  { "CLOSED", SWITCH_CLOSED },
+  { "LOCKED", SWITCH_LOCKED },
+  { "AUXSTATE", SWITCH_AUX },
+  { "ACT1STATE", ACT1STATE },
+  { "ACT2STATE", ACT2STATE },
+  { "ACT3STATE", ACT3STATE },
+  { "ACT4STATE", ACT4STATE },
+  { "ACT5STATE", ACT5STATE },
+  { "ACT6STATE", ACT6STATE },
+  { "ACT7STATE", ACT7STATE },
+  { "ACT8STATE", ACT8STATE }
+};
+
+enum cmd_input {
+  CMD_NONE,
+  CMD_OPEN,
+  CMD_CLOSE,
+  CMD_ABORT,
+  CMD_LOCK,
+  CMD_AUXSET,
+  CMD_ACT1SET,
+  CMD_ACT2SET,
+  CMD_ACT3SET,
+  CMD_ACT4SET,
+  CMD_ACT5SET,
+  CMD_ACT6SET,
+  CMD_ACT7SET,
+  CMD_ACT8SET
+} command_input = CMD_NONE;
+const int cmd_len = CMD_ACT8SET + 1;
+
+struct relay_control {
+  cmd_input cmd;
+  const char* function;
+  unsigned int relay;
+  unsigned int hold;
+  unsigned int activate;
+};
+
+relay_control relay_info[cmd_len] = {
+  { CMD_NONE, "None", 0, 0, FUNC_OPEN_ACTIVE },
+  { CMD_OPEN, "OPEN", FUNC_OPEN, FUNC_OPEN_HOLD, FUNC_OPEN_ACTIVE },
+  { CMD_CLOSE, "CLOSE", FUNC_CLOSE, FUNC_CLOSE_HOLD, FUNC_CLOSE_ACTIVE },
+  { CMD_ABORT, "ABORT", FUNC_ABORT, FUNC_ABORT_HOLD, FUNC_ABORT_ACTIVE },
+  { CMD_LOCK, "LOCK", FUNC_LOCK, FUNC_LOCK_HOLD, FUNC_LOCK_ACTIVE },
+  { CMD_AUXSET, "AUXSET", FUNC_AUX, FUNC_AUX_HOLD, FUNC_AUX_ACTIVE },
+  { CMD_ACT1SET, "ACT1SET", FUNC_ACT1, FUNC_ACT1_HOLD, FUNC_ACT1_ACTIVE },
+  { CMD_ACT2SET, "ACT2SET", FUNC_ACT2, FUNC_ACT2_HOLD, FUNC_ACT2_ACTIVE },
+  { CMD_ACT3SET, "ACT3SET", FUNC_ACT3, FUNC_ACT3_HOLD, FUNC_ACT3_ACTIVE },
+  { CMD_ACT4SET, "ACT4SET", FUNC_ACT4, FUNC_ACT4_HOLD, FUNC_ACT4_ACTIVE },
+  { CMD_ACT5SET, "ACT5SET", FUNC_ACT5, FUNC_ACT5_HOLD, FUNC_ACT5_ACTIVE },
+  { CMD_ACT6SET, "ACT6SET", FUNC_ACT6, FUNC_ACT6_HOLD, FUNC_ACT6_ACTIVE },
+  { CMD_ACT7SET, "ACT7SET", FUNC_ACT7, FUNC_ACT7_HOLD, FUNC_ACT7_ACTIVE },
+  { CMD_ACT8SET, "ACT8SET", FUNC_ACT8, FUNC_ACT8_HOLD, FUNC_ACT8_ACTIVE }
+};
+
+// Buffer limits leave as is to match INDI driver
+#define MAX_INPUT 45
+#define MAX_RESPONSE 127
+#define MAX_MESSAGE 63
+
+const char* version_id = VERSION_ID;
+
+////////////////////////////////////////////////////////////
+
+enum roof_select : byte {
+  CLOSED = 1,
+  OPENED,
+  CLOSING,
+  OPENING,
+  PARTIALLY_OPEN  // Stationary
+} roof_state;
+
+int request_input;
+int start_roof = CMD_NONE;
+int requested_speed = 0;
+int motor_speed = 0;
+int active_sensor_id;
+uint32_t timeMove = 0;
+
+const int cLen = 15;
+const int tLen = 15;
+const int vLen = MAX_RESPONSE;
+char command[cLen + 1];
+char target[tLen + 1];
+char value[vLen + 1];
+
+//  Maximum length of messages = 63                                               *|
+const char* ERROR1 = "The controller response message was too long";
+const char* ERROR2 = "The controller failure message was too long";
+const char* ERROR3 = "Command input request is too long";
+const char* ERROR4 = "Invalid command syntax, both start and end tokens missing";
+const char* ERROR5 = "Invalid command syntax, no start token found";
+const char* ERROR6 = "Invalid command syntax, no end token found";
+const char* ERROR7 = "Roof controller unable to parse command";
+const char* ERROR8 = "Command must map to a supported function in the controller";
+const char* ERROR9 = "Request known but not implemented in this controller";
+const char* ERROR10 = "Abort ignored, roof already stationary or time expired";
+const char* ERROR11 = "Unknown input, ";
+const char* ERROR12 = "Action directive incompatible with current state ";
+const char* ERROR13 = "Close command ignored, roof already closed";
+const char* ERROR14 = "Close command ignored, roof is in motion";
+const char* ERROR15 = "Command ignored, roof is locked";
+const char* ERROR16 = "The fully opened sensor or switch incorrect";
+const char* ERROR17 = "The fully closed sensor or switch incorrect";
+const char* ERROR18 = "Open command ignored, roof already opened";
+const char* ERROR19 = "Open command ignored, roof is in motion";
+
+void sendAck(char* val) {
+  char response[MAX_RESPONSE];
+  if (strlen(val) > MAX_MESSAGE)
+    sendNak(ERROR1);
+  else {
+    strcpy(response, "(ACK:");
+    strcat(response, target);
+    strcat(response, ":");
+    strcat(response, val);
+    strcat(response, ")");
+    Serial.println(response);
+    Serial.flush();
+  }
+}
+
+void sendNak(const char* errorMsg) {
+  char buffer[MAX_RESPONSE];
+  if (strlen(errorMsg) > MAX_MESSAGE)
+    sendNak(ERROR2);
+  else {
+    strcpy(buffer, "(NAK:");
+    strcat(buffer, target);
+    strcat(buffer, ":");
+    strcat(buffer, errorMsg);
+    strcat(buffer, ")");
+    Serial.println(buffer);
+    Serial.flush();
+  }
+}
+
+/*
+ * The standard relay shield uses a HIGH to activate the relays.
+ *
+ * In contrast a relay module might use a LOW signal.
+ * Using a SainSmart 4 channel, 5V relay module. The relay module's JD-VCC jumper 
+ * is removed. A separate 5V supply powers the relay module using the GND and 
+ * JD-VCC pins where the jumper was removed. The Arduino is powered  separately. 
+ * No common ground between the Arduino and the relay module so pull the ground 
+ * connector to the relay module. The ground for the input pins is provided back 
+ * at the Arduino. The relay output uses the NO and common connectors. The relay 
+ * requires a LOW on the signal pin to activate. This is provided when a ON 
+ * command is received. Default input is HIGH = inactive relay, open contact.
+ *
+ * id           Relay pin number
+ * activate     HIGH or LOW to activate
+ * hold         1 indicates to hold relay closed until a relay OFF is received.
+ *              0 indicates a momentary close is wanted
+ * value        "ON" or "OFF" Turn relay on or off
+ */
+void setRelay(int id, int activate, int hold, char* value) {
+  int deactivate = LOW;
+  if (activate != HIGH)
+    deactivate = HIGH;
+
+  if (strcmp(value, "ON") == 0) {
+    digitalWrite(id, deactivate);  // NO RELAY would normally already be deactivated
+    delay(RELAY_PRIOR_DELAY);
+    digitalWrite(id, activate);  // Activate the NO relay (close it)
+    if (hold == 0) {
+      delay(RELAY_ON_DELAY);
+      digitalWrite(id, deactivate);  // Turn NO relay off
+    }
+  } else {
+    digitalWrite(id, deactivate);  // Turn NO relay off
+  }
+  delay(RELAY_POST_DELAY);
+}
+
+/*
+ * Get switch value
+ * Expect a NO switch configured with a pull up resistor.
+ * NO switch: Inactive HIGH input to the pin with pull up resistor, logical 0 input. 
+ * When switch closes The LOW voltage logical 1 is applied to the input pin. 
+ * The off or on value is to be sent to the host in the ACK response
+ */
+void getSwitch(int id, char* value) {
+  if (digitalRead(id) == OPEN_CONTACT)
+    strcpy(value, "OFF");
+  else
+    strcpy(value, "ON");
+}
+
+bool isSwitchOn(int id) {
+  char switch_value[16 + 1];
+  getSwitch(id, switch_value);
+  if (strcmp(switch_value, "ON") == 0) {
+    return true;
+  }
+  return false;
+}
+
+void getSensor(int id, char* value) {
+  if (digitalRead(id) == OPEN_CONTACT)
+    strcpy(value, "OFF");
+  else
+    strcpy(value, "ON");
+}
+
+bool isSensorOn(int id) {
+  char sensorValue[16 + 1];
+  getSensor(id, sensorValue);
+  if (strcmp(sensorValue, "ON") == 0) {
+    return true;
+  }
+  return false;
+}
+
+bool parseCommand()  // (command:target:value)
+{
+  bool start = false;
+  bool eof = false;
+  int recv_count = 0;
+  int wait = 0;
+  int offset = 0;
+  char startToken = '(';
+  char endToken = ')';
+  const int bLen = MAX_INPUT;
+  char inpBuf[bLen + 1];
+
+  memset(inpBuf, 0, sizeof(inpBuf));
+  memset(command, 0, sizeof(command));
+  memset(target, 0, sizeof(target));
+  memset(value, 0, sizeof(value));
+
+  while (!eof && (wait < 20)) {
+    if (Serial.available() > 0) {
+      Serial.setTimeout(1000);
+      recv_count = Serial.readBytes((inpBuf + offset), 1);
+      if (recv_count == 1) {
+        offset++;
+        if (offset >= MAX_INPUT) {
+          sendNak(ERROR3);
+          return false;
+        }
+        if (inpBuf[offset - 1] == startToken) {
+          start = true;
+        }
+        if (inpBuf[offset - 1] == endToken) {
+          eof = true;
+          inpBuf[offset] = '\0';
+        }
+        continue;
+      }
+    }
+    wait++;
+    delay(100);
+  }
+
+  if (!start || !eof) {
+    if (!start && !eof)
+      sendNak(ERROR4);
+    else if (!start)
+      sendNak(ERROR5);
+    else if (!eof)
+      sendNak(ERROR6);
+    return false;
+  } else {
+    strcpy(command, strtok(inpBuf, "(:"));
+    strcpy(target, strtok(NULL, ":"));
+    strcpy(value, strtok(NULL, ")"));
+    if ((strlen(command) >= 3) && (strlen(target) >= 1) && (strlen(value) >= 1)) {
+      return true;
+    } else {
+      sendNak(ERROR7);
+      return false;
+    }
+  }
+}
+
+/*
+ * Use the parseCommand routine to decode message
+ * Determine associated action in the message. Resolve the relay or switch associated 
+ * pin with the target identity. Acknowledge any initial connection request. Return 
+ * negative acknowledgement with message for any errors found.  Dispatch to commandReceived
+ * or requestReceived routines to activate the command or get the requested switch state
+ */
+void readUSB() {
+  // Confirm there is input available, read and parse it.
+  if (Serial && (Serial.available() > 0)) {
+    if (parseCommand()) {
+      command_input = CMD_NONE;
+      int relay = -1;  // -1 = not found, 0 = not implemented, pin number = supported
+      int sw = -1;     //      "                 "                    "
+      bool connecting = false;
+      unsigned int activate = HIGH;
+      unsigned int hold;
+      const char* error = ERROR8;
+      char diag[MAX_MESSAGE];
+
+      // On initial connection return the version
+      if (strcmp(command, "CON") == 0) {
+        connecting = true;
+        strcpy(value, version_id);  // Can be seen on host to confirm what is running
+        sendAck(value);
+      }
+
+      // Handle command to set relay or perform local breakout functionality
+      // SET: OPEN, CLOSE, ABORT, LOCK, AUXSET, ACTn
+      else if (strcmp(command, "SET") == 0) {
+        for (int i = 0; i < cmd_len; i++) {
+          if (strcmp(target, relay_info[i].function) == 0) {
+            command_input = relay_info[i].cmd;
+            if (command_input == CMD_ABORT) {
+              if (!isStopAllowed()) {
+                sendNak(ERROR10);
+                return;
+              }
+            }
+            relay = relay_info[i].relay;
+            hold = relay_info[i].hold;
+            activate = relay_info[i].activate;
+            if (command_input == CMD_OPEN || command_input == CMD_CLOSE) {
+              timeMove = millis()/1000;
+            }
+            break;
+          }
+        }
+      }
+
+      // Handle requests to obtain the status of switches
+      // GET: OPENED, CLOSED, LOCKED, AUXSTATE ACT1 - ACT4
+      else if (strcmp(command, "GET") == 0) {
+        for (int i = 0; i < switch_count; i++) {
+          if (strcmp(target, switch_info[i].function) == 0) {
+            sw = switch_info[i].source;
+            break;
+          }
+        }
+      }
+      /*
+       * See if there was a valid command or request 
+       */
+      if (!connecting) {
+        if ((relay == -1) && (sw == -1)) {
+          strcpy(diag, ERROR11);
+          strcat(diag, target);
+          sendNak(diag);  // Unknown input
+        }
+
+        // Command or Request not implemented
+        else if ((relay == 0 || relay == -1) && (sw == 0 || sw == -1)) {
+          strcpy(value, "OFF");  // Request Not implemented
+          sendAck(value);
+        }
+
+        // Valid input received
+
+        // A command was received
+        // Set the relay associated with the command and send acknowlege to host
+        else if (relay > 0)  // Set Relay response
+        {
+          commandReceived(relay, activate, hold, value);
+        }
+
+        // A get state request was received
+        else if (sw > 0)  // Get switch response
+        {
+          requestReceived(sw);
+        }
+      }  // end !connecting
+    }    // end command parsed
+  }      // end Serial input found
+}
+
+
+////////////////////////////////////////////////////////////////////////////////
+// Abort movement command received, test to see if abort is allowed.
+// If not return false and an error message will be returned to the host. If yes
+// then return true. If either fully open or fully closed switches are on then
+// deny the request by returning false. If neither switch is on then if there is
+// a specific button (relay) assigned that can stop movement then return true
+// to allow it to do so.
+//
+// This implementation assumes a one button setup and one which does not know if
+// the roof is still moving or has hit something and already stopped. Before taking
+// action see how long it has been since movement was initiated. If it is longer
+// than the estimate to open or close the roof, assume motion has already stopped.
+// In that case avoid emulating the single button push because that would set the
+// roof moving again. If it seems that the roof could be moving then return true.
+//
+// Returning true will cause the Abort request to appear in the commandReceived
+// routine where it will activate the requested relay.
+//
+bool isStopAllowed() {
+  uint32_t timeNow = millis()/1000;
+  uint32_t timeBegin = timeMove;
+  timeMove = 0;
+
+  // If the roof is either fully opened or fully closed, ignore the request.
+  if (isSwitchOn(SWITCH_OPENED) || isSwitchOn(SWITCH_CLOSED)) {
+    return false;
+  }
+
+  if (timeBegin == 0)
+    return false;
+
+  // If time since last open or closed is longer than time allowed return false
+  if ((timeNow - timeBegin) >= ABORT_MAX_SEC) {
+    return false;
+  } else
+
+  // Stop will be attempted
+  {
+    return true;
+  }
+}
+
+/*
+ * GET status request received
+ *
+ * Here after pin associations resolved and request action known
+ * Request to obtain state of a switch
+ * Default action is to read the associated switch and return result to the host
+ * target is the name associated with the switch "OPENED", "CLOSED" etc and will
+ * be used when sending the acknowledgement to the host. Find out if a certain 
+ * request is being processed using if (strcmp(target, "OPENED") == 0) {do something}
+ *
+ * sw:     The pin identifier.
+ * value   getSwitch will read the pin and set this to "ON" or "OFF" 
+ *
+ * Modify as needed if default action unsuitable.
+ *
+ * This version is using sensors to determine if roof opened or closed.
+ * To provide requested opened/closed information use the maintained roof state.
+ *
+ */
+void requestReceived(int sw) {
+  const char* error = "";
+
+  if ((strcmp(target, "OPENED") != 0) && (strcmp(target, "CLOSED") != 0)) {
+    getSwitch(sw, value);
+    sendAck(value);  // Send result of reading pin associated with "target"
+  } else {
+    // Modified to use sensor pin for determining if turned off or on.
+    if (requestProcess(sw, &error)) {
+      sendAck(value);  // Sends "OFF" or "ON" result of reading sensor associated with "target".
+    } else {
+      sendNak(error);  // Return error message to driver
+    }
+  }
+}
+
+// Process INDI driver requests to determine if roof fully opened or fully closed
+bool requestProcess(int pin, const char** error) {
+  if (strcmp(target, "OPENED") == 0) {
+    if ((roof_state == OPENED) || (isSensorOn(SENSOR_OPENED)))
+      strcpy(value, "ON");
+    else
+      strcpy(value, "OFF");
+    return true;
+  } else if (strcmp(target, "CLOSED") == 0) {
+    if ((roof_state == CLOSED) || (isSensorOn(SENSOR_CLOSED)))
+      strcpy(value, "ON");
+    else
+      strcpy(value, "OFF");
+    return true;
+  }
+  *error = ERROR9;
+  return false;
+}
+
+/*
+ * Command received
+ *
+ * Here after pin associations resolved and request action known
+ * Default action is to set the associated relay to the requested state "ON" or "OFF" and
+ * send acknowledgement to the host. 
+ * target is the name associated with the relay "OPEN", "CLOSE", "ABORT", "LOCK", "AUXSET", "ACTn".
+ * It will be used when  sending the acknowledgement to the host. Find out if a particular 
+ * command is being processed using if (strcmp(target, "OPEN") == 0) {do something}
+ *
+ * relay: pin id of the relay
+
+ * hold:  whether relay is to be set permanently =0, or temporarily =1
+ * value: How to set the relay "ON" or "OFF" 
+ * activate HIGH or LOW to activate relay
+ * Modify as needed if default action unsuitable.
+ * This example will use SyRen for open and close commands.
+ *
+ */
+void commandReceived(int relay, int activate, int hold, char* value) {
+  const char* error = "";
+  // If not a movement command just return status
+  if ((command_input != CMD_OPEN) && (command_input != CMD_CLOSE) && (command_input != CMD_ABORT)) {
+    setRelay(relay, activate, hold, value);
+    sendAck(value);  // Send acknowledgement that command has been activate
+  } else {
+    if (commandProcess(command_input, false, &error)) {
+      sendAck(value);  // Send acknowledgement that command has been activated.
+    } else {
+      sendNak(error);  // Return error message to driver
+    }
+  }
+}
+
+/*
+ * Motor related command received, OPEN, CLOSE, or ABORT 
+ * The input can be from the host driver or from local/remote buttons.
+ * If open or close, delay action and return results back through readUSB to the 
+ * rolloffino driver if input was via USB. This avoids the driver being timed  out
+ * if ramp definitions are set to be so slow.
+ * If input was from local buttons, or sensors, returns control back to local loop.
+ */
+bool commandProcess(int cmd, bool button, const char** error) {
+
+  // INDI driver prevents movement commands when roof is locked. But for
+  // local button use or some other kind of scipt input, check that roof is
+  // not locked.
+  if ((SWITCH_LOCKED != 0) && (digitalRead(SWITCH_LOCKED) != OPEN_CONTACT)) {
+    *error = ERROR15;
+    return false;
+  }
+
+  // If OPEN or CLOSE command received from local buttons when roof is already
+  // in motion, treat it as a stop request. This done to accommodate a RF remote
+  // with just 2 buttons A & B.
+  // button true indicates a local command either buttons, RF remote or touch screen.
+  // If the command received from INDI return to acknowledge receipt within INDI
+  // time limit, delaying action until back in the idle loop.
+  switch (cmd) {
+    case CMD_OPEN:
+      {
+        if (roof_state == CLOSED || roof_state == PARTIALLY_OPEN) {
+          roof_state = OPENING;
+          if (button)
+            rampUp(true, ROOF_SPEED_STARTING);
+          else
+            start_roof = CMD_OPEN;
+        } else {
+          if (button && ((roof_state == OPENING) || (roof_state == CLOSING))) {
+            roof_state = PARTIALLY_OPEN;
+            rampDown(false, ROOF_SPEED_STOPPED);
+            *error = ERROR19;
+          } else {
+            *error = ERROR18;
+          }
+          return false;
+        }
+        break;
+      }
+    case CMD_CLOSE:
+      {
+        if (roof_state == OPENED || roof_state == PARTIALLY_OPEN) {
+          roof_state = CLOSING;
+          if (button)
+            rampUp(false, ROOF_SPEED_STARTING);
+          else
+            start_roof = CMD_CLOSE;
+        } else {
+          if (button && ((roof_state == OPENING) || (roof_state == CLOSING))) {
+            roof_state = PARTIALLY_OPEN;
+            rampDown(false, ROOF_SPEED_STOPPED);
+            *error = ERROR14;
+          } else {
+            *error = ERROR13;
+          }
+          return false;
+        }
+        break;
+      }
+    case CMD_ABORT:
+      {
+        if (roof_state == OPENING || roof_state == CLOSING) {
+          if (roof_state == OPENING) {
+            rampDown(true, ROOF_SPEED_STOPPED);
+          } else {
+            rampDown(false, ROOF_SPEED_STOPPED);
+          }
+          roof_state = PARTIALLY_OPEN;
+        } else {
+          *error = ERROR10;
+          return false;
+        }
+        break;
+      }
+    default:
+      {
+        *error = ERROR8;
+        return false;
+      }
+  }
+  return true;
+}
+
+/*
+ * Increase roof speed.
+ * Set the new roofState before calling this routine.
+ */
+void rampUp(bool opening, int speed) {
+  requested_speed = speed;
+  if (motor_speed * 2 <= speed) {
+    while (motor_speed < speed) {
+      motor_speed = motor_speed + ROOF_SPEED_RAMP;
+      if (motor_speed >= speed)
+        break;
+      motorControl(opening, motor_speed);
+      delay(100);
+    }
+  }
+  motor_speed = speed;
+  motorControl(opening, motor_speed);
+  return;
+}
+
+/*
+ * Decrease roof speed.
+ * Set the new roofState before calling this routine.
+ */
+void rampDown(bool opening, int speed) {
+  requested_speed = speed;
+  if (motor_speed >= speed * 2) {
+    while (motor_speed > speed) {
+      motor_speed = motor_speed - ROOF_SPEED_RAMP;
+      if (motor_speed <= speed)
+        break;
+      motorControl(opening, motor_speed);
+      delay(100);
+    }
+  }
+  motor_speed = speed;
+  motorControl(opening, motor_speed);
+  return;
+}
+
+/*
+ * Roof state that is to be in effect has already been set.
+ */
+void motorControl(bool opening, int speed) {
+  int power = 0;
+  bool forward = FORWARD;
+
+  if (opening) {
+    if (forward)
+      power = speed;
+    else
+      power = -speed;
+  } else {
+    if (forward)
+      power = -speed;
+    else
+      power = speed;
+  }
+  SR.motor(power);
+  delay(20);
+}
+
+void inchMotor() {
+  if (isSwitchOn(BUTTON_OPEN)) {
+    motorControl(true, 5);
+  } else if (isSwitchOn(BUTTON_CLOSE)) {
+    motorControl(true, 3);
+  }
+  delay(100);
+  motorControl(true, 0);
+}
+
+int getActiveSensor() {
+  if (isSensorOn(SENSOR_OPENED))
+    return SENSOR_OPENED;
+  else if (isSensorOn(SENSOR_CLOSED))
+    return SENSOR_CLOSED;
+  else if ((SENSOR_NEAR_OPENED != 0) && isSensorOn(SENSOR_NEAR_OPENED))
+    return SENSOR_NEAR_OPENED;
+  else if ((SENSOR_NEAR_CLOSED != 0) && isSensorOn(SENSOR_NEAR_CLOSED))
+    return SENSOR_NEAR_CLOSED;
+  return 0;
+}
+
+void monitorRoofSensors() {
+  int activeSensor = getActiveSensor();
+
+  // If a new active sensor is detected
+  if (activeSensor != 0 && activeSensor != active_sensor_id) {
+    active_sensor_id = activeSensor;
+    if (roof_state == OPENING) {
+      if (activeSensor == SENSOR_NEAR_CLOSED)  // Transition from slow to full
+      {
+        rampUp(true, ROOF_SPEED_FULL);
+      } else if (activeSensor == SENSOR_NEAR_OPENED)  // Transition from full to slow
+      {
+        rampDown(true, ROOF_SPEED_STOPPING);
+      } else if (activeSensor == SENSOR_OPENED)  // Transition from slow to stop
+      {
+        roof_state = OPENED;
+        if (LED_MOVE != 0)
+          digitalWrite(LED_MOVE, LOW);
+        rampDown(true, ROOF_SPEED_STOPPED);
+      }
+    } else if (roof_state == CLOSING) {
+      if (activeSensor == SENSOR_NEAR_OPENED)  // Transition from slow to full
+      {
+        rampUp(false, ROOF_SPEED_FULL);
+      } else if (activeSensor == SENSOR_NEAR_CLOSED)  // Transition from full to slow
+      {
+        rampDown(false, ROOF_SPEED_STOPPING);
+      } else if (activeSensor == SENSOR_CLOSED)  // Transition from slow to stop
+      {
+        roof_state = CLOSED;
+        if (LED_MOVE != 0)
+          digitalWrite(LED_MOVE, LOW);
+        rampDown(false, ROOF_SPEED_STOPPED);
+      }
+    }
+    // This would be after a manual move of the roof
+    else  // if (roof_state == PARTIALLY_OPEN)
+    {
+      if (activeSensor == SENSOR_CLOSED)
+        roof_state = CLOSED;
+      else if (activeSensor == SENSOR_OPENED)
+        roof_state = OPENED;
+    }
+  }
+
+  // If there is not a newly active sensor and the roof is opening or closing.
+  // See if a physical switch has been closed. This is mostly for initial installation
+  // to assist in positioning the sensors. Also can act as a sensor backup/failure to stop motion.
+  // If this code is reached and used to stop motion, do not turn off the LED_MOVE. It can help
+  // draw attention to the sensors not stopping motion.
+  else {
+    if (roof_state == OPENING && (SWITCH_OPENED != 0) && (digitalRead(SWITCH_OPENED) != OPEN_CONTACT)) {
+      roof_state = OPENED;
+      rampDown(true, ROOF_SPEED_STOPPED);
+    } else if (roof_state == CLOSING && (SWITCH_CLOSED != 0) && (digitalRead(SWITCH_CLOSED) != OPEN_CONTACT)) {
+      roof_state = CLOSED;
+      rampDown(false, ROOF_SPEED_STOPPED);
+    }
+  }
+  return;
+}
+
+/*
+ * If local buttons are used consider it to be at a time when not using the interface in the 
+ * remote INDI driver. Not to be concerned with delays or conficting commands.
+ * Actual implementation: a RF remote closing relays on the input pins.
+ */
+bool localButtons() {
+  int cmdLocal;
+  const char* error = "";
+#ifdef INCH_MOTOR
+  inchMotor();
+  return true;
+#else
+  if (isSwitchOn(BUTTON_OPEN)) {
+    cmdLocal = CMD_OPEN;
+  } else if (isSwitchOn(BUTTON_CLOSE)) {
+    cmdLocal = CMD_CLOSE;
+  } else if (isSwitchOn(BUTTON_STOP)) {
+    cmdLocal = CMD_ABORT;
+  } else {
+    return false;
+  }
+  if (commandProcess(cmdLocal, true, &error))
+    return true;
+  localError(error);
+  return false;
+#endif
+}
+
+// Assumes USB INDI not connected & free to use Serial Monitor
+void localError(const char* error) {
+#ifdef LOCAL_TEST
+  Serial.println();
+  Serial.println(error);
+  Serial.println();
+#endif
+
+  return;
+}
+
+/* 
+ * ********************************************************
+ * Wait here for request from INDI driver host, local button  
+ * use, swtiches/sensors being closed or touch screen input.
+ * No high speed requirements so just poll for roof activity.
+ * *********************************************************
+ */
+
+void loop() {
+  for (int cnt = 0; cnt < 10; cnt++) {
+    if (Serial.available() > 0)  // If there is USB input, read & respond
+      break;
+    monitorRoofSensors();  // Check for activated position sensors
+    if (localButtons())    // Handle any local button activation
+    {
+      delay(1000);  // If used, delay to allow time for button to be released
+      break;
+    }
+    if ((roof_state == OPENING || roof_state == CLOSING) && LED_MOVE != 0)
+      digitalWrite(LED_MOVE, HIGH);
+    delay(100);  // for loop delay
+  }              // End for loop
+
+  readUSB();                   // Read USB for any INDI input
+  if (start_roof == CMD_OPEN)  // See if there was a request to start roof moving
+    rampUp(true, ROOF_SPEED_STARTING);
+  else if (start_roof == CMD_CLOSE)
+    rampUp(false, ROOF_SPEED_STARTING);
+  start_roof = CMD_NONE;
+}  // End loop
+
+
+/*
+ * *********************************************
+ * One time initialization
+ * Leave alone the pins that are not being used
+ * *********************************************
+ */
+void setup() {
+  Serial.begin(BAUD_RATE);       // Baud rate to match that in the INDI driver
+  SWSerial.begin(SR_BAUD_RATE);  // Baud rate to match SyRen50 chosen with the DIP switches.
+
+  initInput(BUTTON_OPEN);  // Initialize the local input buttons
+  initInput(BUTTON_CLOSE);
+  initInput(BUTTON_STOP);
+  initInput(SENSOR_OPENED);  // Sensor pins
+  initInput(SENSOR_CLOSED);
+  initInput(SENSOR_NEAR_OPENED);
+  initInput(SENSOR_NEAR_CLOSED);
+
+    // Initialize the input switch pins
+  for (int i = 0; i < switch_count; i++) {
+    initInput(switch_info[i].source);
+  }
+
+  // Initialize the relay pins
+  for (int i = 1; i < cmd_len; i++) {
+    initRelay(relay_info[i].relay, relay_info[i].activate);
+  }
+
+  initOutput(LED_MOVE);  // If LED used when roof is moving
+
+  if (isSensorOn(SENSOR_OPENED))  // Initialize the roof_state
+  {
+    roof_state = OPENED;
+    active_sensor_id = SENSOR_OPENED;
+  } else if (isSensorOn(SENSOR_CLOSED)) {
+    roof_state = CLOSED;
+    active_sensor_id = SENSOR_CLOSED;
+  } else {
+    roof_state = PARTIALLY_OPEN;
+    active_sensor_id = 0;
+  }
+
+  // Set motor power off
+  motor_speed = 0;
+  motorControl(true, motor_speed);
+}  // End setup
+
+void initInput(int pin) {
+  if (pin > 0) {
+    if (OPEN_CONTACT == HIGH)
+      pinMode(pin, INPUT_PULLUP);
+    else
+      pinMode(pin, INPUT);
+  }
+}
+
+void initOutput(int pin) {
+  if (pin != 0) {
+    pinMode(pin, OUTPUT);
+    digitalWrite(pin, LOW);
+  }
+}
+
+// Receive what activates & sets the opposite
+void initRelay(unsigned int pin, unsigned int activate) {
+  if (pin > 0 && pin != 100) {
+    pinMode(pin, OUTPUT);
+    if (activate == HIGH)
+      digitalWrite(pin, LOW);
+    else
+      digitalWrite(pin, HIGH);
+  }
+}
