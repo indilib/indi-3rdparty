@@ -96,69 +96,69 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
     for (int i = 0; i < NUMBER_OF_READS; i++)
     {
-	check = getIRSkyTemperature(skyTemperature[i]);
+        check = getIRSkyTemperature(skyTemperature[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getIRSkyTemperature" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getIRSkyTemperature" );
+            return false;
+        }
 
-	check = getIRSensorTemperature(sensorTemperature[i]);
+        check = getIRSensorTemperature(sensorTemperature[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getIRSensorTemperature" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getIRSensorTemperature" );
+            return false;
+        }
 
-	check = getRainFrequency(rainFrequency[i]);
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getIRSensorTemperature" );
-	    return false;
-	}
+        check = getRainFrequency(rainFrequency[i]);
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getIRSensorTemperature" );
+            return false;
+        }
 
-	check = getValues(&internalSupplyVoltage[i], &tempEstimate[i], &ldrValue[i], &lightFreq[i],
-			  &rainSensorTemperature[i]);
+        check = getValues(&internalSupplyVoltage[i], &tempEstimate[i], &ldrValue[i], &lightFreq[i],
+                          &rainSensorTemperature[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getValues" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getValues" );
+            return false;
+        }
 
-	check = getWindSpeed(wind[i]);
+        check = getWindSpeed(wind[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getWindSpeed" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getWindSpeed" );
+            return false;
+        }
 
-	check = getTemperature(temperature[i]);
+        check = getTemperature(temperature[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getTemperature" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getTemperature" );
+            return false;
+        }
 
-	check = getHumidity(humidity[i]);
+        check = getHumidity(humidity[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getHumidity" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getHumidity" );
+            return false;
+        }
 
-	check = getPressure(pressure[i]);
+        check = getPressure(pressure[i]);
 
-	if (!check)
-	{
-	    LOG_ERROR( "ERROR in getPressure" );
-	    return false;
-	}
+        if (!check)
+        {
+            LOG_ERROR( "ERROR in getPressure" );
+            return false;
+        }
     }
 
     cwd->sky             = aggregateInts(skyTemperature, NUMBER_OF_READS);
@@ -178,48 +178,48 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
     if (m_FirmwareVersion >= 5.8)
     {
-	float press = cwd->pressure; // raw pressure
+        float press = cwd->pressure; // raw pressure
 
-	if (press > 0)
-	{
-	    press /= 16;
+        if (press > 0)
+        {
+            press /= 16;
 
-	    cwd->abspress = press;
+            cwd->abspress = press;
 
-	    float temp = cwd->tempAct; // in Celsius
-	    float elev = siteElevation;
-	    float relpress;
+            float temp = cwd->tempAct; // in Celsius
+            float elev = siteElevation;
+            float relpress;
 
-	    if (temp < -999 || temp > 999)
-	    {
-		relpress = 0;
-	    }
-	    else
-	    {
-		elev *= 0.0065;
-		relpress = press * powf((1 - (elev / (temp + elev + 273.15))), -5.275); // unit is hPa (hectopascal) or millbars
-	    }
+            if (temp < -999 || temp > 999)
+            {
+                relpress = 0;
+            }
+            else
+            {
+                elev *= 0.0065;
+                relpress = press * powf((1 - (elev / (temp + elev + 273.15))), -5.275); // unit is hPa (hectopascal) or millbars
+            }
 
-	    cwd->relpress = relpress;
-	}
-	else
-	{
-	    cwd->abspress = 0;
-	    cwd->relpress = 0;
-	}
+            cwd->relpress = relpress;
+        }
+        else
+        {
+            cwd->abspress = 0;
+            cwd->relpress = 0;
+        }
     }
     else
     {
-	cwd->abspress = 0;
-	cwd->relpress = 0;
+        cwd->abspress = 0;
+        cwd->relpress = 0;
     }
 
     check = getIRErrors(&cwd->firstByteErrors, &cwd->commandByteErrors, &cwd->secondByteErrors, &cwd->pecByteErrors);
 
     if (!check)
     {
-	LOG_DEBUG( "ERROR in getIRErrors" );
-	return false;
+        LOG_DEBUG( "ERROR in getIRErrors" );
+        return false;
     }
 
     cwd->internalErrors = cwd->firstByteErrors + cwd->commandByteErrors + cwd->secondByteErrors + cwd->pecByteErrors;
@@ -228,16 +228,16 @@ bool CloudWatcherController::getAllData(CloudWatcherData *cwd)
 
     if (!check)
     {
-	LOG_DEBUG( "ERROR in getPWMDutyCycle" );
-	return false;
+        LOG_DEBUG( "ERROR in getPWMDutyCycle" );
+        return false;
     }
 
     check = getSwitchStatus(&cwd->switchStatus);
 
     if (!check)
     {
-	LOG_DEBUG( "ERROR in getSwitchStatus" );
-	return false;
+        LOG_DEBUG( "ERROR in getSwitchStatus" );
+        return false;
     }
 
     timeval end;
@@ -268,7 +268,7 @@ bool CloudWatcherController::getConstants(CloudWatcherConstants *cwc)
 
     if (!r)
     {
-	LOG_DEBUG( "could not get internal serial number");
+        LOG_DEBUG( "could not get internal serial number");
         return false;
     }
 
@@ -278,7 +278,7 @@ bool CloudWatcherController::getConstants(CloudWatcherConstants *cwc)
 
         if (!r)
         {
-	    LOG_DEBUG( "could not get electrical constants");
+            LOG_DEBUG( "could not get electrical constants");
             return false;
         }
     }
@@ -335,7 +335,7 @@ bool CloudWatcherController::checkCloudWatcher() // CW Internal Name Cmd: A! (pu
     std::string internalNameBlock = "!N CloudWatcher!";
     std::string pocketNameBlock = "!N PocketCW!";
     std::string detectedName = std::string(inputBuffer);
-    LOGF_DEBUG( "detected name is %s", detectedName);
+    LOGF_DEBUG( "Detected name is %s", detectedName.c_str());
 
     return (detectedName == internalNameBlock || detectedName == pocketNameBlock);
 }
@@ -362,7 +362,7 @@ bool CloudWatcherController::getFirmwareVersion(double &version) // CW Firmware 
 
         if (res != 1)
         {
-	    LOGF_DEBUG("firmware answer did not scan: '%s'", inputBuffer);
+            LOGF_DEBUG("firmware answer did not scan: '%s'", inputBuffer);
             return false;
         }
 
@@ -373,7 +373,7 @@ bool CloudWatcherController::getFirmwareVersion(double &version) // CW Firmware 
         }
         catch (...)
         {
-	    LOGF_DEBUG("firmware std::stod conversion error: '%s'", fw);
+            LOGF_DEBUG("firmware std::stod conversion error: '%s'", fw);
             return false;
         }
     }
@@ -401,94 +401,101 @@ bool CloudWatcherController::getValues(int *internalSupplyVoltage, float *tempEs
 
 retry:
     {
-	char inputBuffer[BLOCK_SIZE * MAX_GV_BLOCKS] = {0};
-	int  blocks = 0;
-	
-	int rc = -1;
-	int n = 0;
-	int nb = 0;
+        char inputBuffer[BLOCK_SIZE * MAX_GV_BLOCKS] = {0};
+        int  blocks = 0;
 
-	for (int i = 0, j = 0;  j < MAX_GV_BLOCKS; i += BLOCK_SIZE, j++, nb = 0) {
-	    if ((rc = tty_read(PortFD, &inputBuffer[i], BLOCK_SIZE, READ_TIMEOUT, &nb)) != TTY_OK || nb != BLOCK_SIZE)
-	    {
-		if (rc == TTY_OK)
-		{
-		    LOGF_ERROR("%s read error[%i]: byte count != block size (%i != %i)", __FUNCTION__, rc, nb, BLOCK_SIZE);
-		}
-		else
-		{
-		    char errstr[MAXRBUF];
-		    tty_error_msg(rc, errstr, MAXRBUF);
-		    LOGF_ERROR("%s read error[%i]: %s", __FUNCTION__, rc, errstr);
-		}
-		return false;
-	    }
-	    n += nb;
-	    if (checkValidMessage(&inputBuffer[i], 1, nb, false)) {
-		break;
-	    }
-	}
+        int rc = -1;
+        int n = 0;
+        int nb = 0;
 
-	if( inputBuffer[0] == '!' && ( inputBuffer[1] == 'f' || inputBuffer[1] == 'd' ) )
-	{
-	    LOGF_DEBUG( "skip answer %s %i", inputBuffer, n );
-	    goto retry;
-	}
+        for (int i = 0, j = 0;  j < MAX_GV_BLOCKS; i += BLOCK_SIZE, j++, nb = 0)
+        {
+            if ((rc = tty_read(PortFD, &inputBuffer[i], BLOCK_SIZE, READ_TIMEOUT, &nb)) != TTY_OK || nb != BLOCK_SIZE)
+            {
+                if (rc == TTY_OK)
+                {
+                    LOGF_ERROR("%s read error[%i]: byte count != block size (%i != %i)", __FUNCTION__, rc, nb, BLOCK_SIZE);
+                }
+                else
+                {
+                    char errstr[MAXRBUF];
+                    tty_error_msg(rc, errstr, MAXRBUF);
+                    LOGF_ERROR("%s read error[%i]: %s", __FUNCTION__, rc, errstr);
+                }
+                return false;
+            }
+            n += nb;
+            if (checkValidMessage(&inputBuffer[i], 1, nb, false))
+            {
+                break;
+            }
+        }
 
-	// n is bytes read and in this case is always a multiple of BLOCK_SIZE (if valid)
-	if (n > 0 && n % BLOCK_SIZE == 0) {
-	    blocks = n / BLOCK_SIZE;
-	    auto valid = checkValidMessage(inputBuffer, blocks, n, false);
-	    LOGF_DEBUG( "getValues: [%s,%i] = %s", inputBuffer, blocks, valid ? "valid" : "invalid" );
+        if( inputBuffer[0] == '!' && ( inputBuffer[1] == 'f' || inputBuffer[1] == 'd' ) )
+        {
+            LOGF_DEBUG( "skip answer %s %i", inputBuffer, n );
+            goto retry;
+        }
 
-	    if (!valid)
-		return false;
-	}
-	else
-	{
-	    LOGF_DEBUG( "getValues: [%s,%i] = incomplete", inputBuffer, n);
+        // n is bytes read and in this case is always a multiple of BLOCK_SIZE (if valid)
+        if (n > 0 && n % BLOCK_SIZE == 0)
+        {
+            blocks = n / BLOCK_SIZE;
+            auto valid = checkValidMessage(inputBuffer, blocks, n, false);
+            LOGF_DEBUG( "getValues: [%s,%i] = %s", inputBuffer, blocks, valid ? "valid" : "invalid" );
 
-	    return false;
-	}
+            if (!valid)
+                return false;
+        }
+        else
+        {
+            LOGF_DEBUG( "getValues: [%s,%i] = incomplete", inputBuffer, n);
 
-	for (int i = 0;  i < n; i += BLOCK_SIZE) {
-	    if (inputBuffer[i] == '!') {
-		switch(inputBuffer[i+1]) {
-		case '3': // ambient temperature
-		    estTemp = std::stof(&inputBuffer[i+2]);
-		    break;
-		case '4': // LDR (light-dependent resistor) voltage
-		    ldrRes = std::stoi(&inputBuffer[i+2]);
-		    break;
-		case '5': // rain sensor temperature
-		    rainSensTemp = std::stoi(&inputBuffer[i+2]);
-		    break;
-		case '6': // zener voltage
-		    zenerV = std::stoi(&inputBuffer[i+2]);
-		    break;
-		case '8': // raw frequency obtained by light sensor
-		    ltFreq = std::stoi(&inputBuffer[i+2]);
-		    break;
-		case '\x11': // handshake
-		    inputBuffer[i+1] = '\0'; // trimString equivalent
-		    i = n;
-		    break;
-		default: // unexpected character
-		    LOGF_DEBUG( "getValues: [%X,%i] = syntax", inputBuffer[i+1], i);
+            return false;
+        }
 
-		    return false;
-		}
-	    }
-	    else
-	    {
-		LOGF_DEBUG( "getValues: [%s,%i] = format", &inputBuffer[i], i);
-	    }
-	}
+        for (int i = 0;  i < n; i += BLOCK_SIZE)
+        {
+            if (inputBuffer[i] == '!')
+            {
+                switch(inputBuffer[i + 1])
+                {
+                    case '3': // ambient temperature
+                        estTemp = std::stof(&inputBuffer[i + 2]);
+                        break;
+                    case '4': // LDR (light-dependent resistor) voltage
+                        ldrRes = std::stoi(&inputBuffer[i + 2]);
+                        break;
+                    case '5': // rain sensor temperature
+                        rainSensTemp = std::stoi(&inputBuffer[i + 2]);
+                        break;
+                    case '6': // zener voltage
+                        zenerV = std::stoi(&inputBuffer[i + 2]);
+                        break;
+                    case '8': // raw frequency obtained by light sensor
+                        ltFreq = std::stoi(&inputBuffer[i + 2]);
+                        break;
+                    case '\x11': // handshake
+                        inputBuffer[i + 1] = '\0'; // trimString equivalent
+                        i = n;
+                        break;
+                    default: // unexpected character
+                        LOGF_DEBUG( "getValues: [%X,%i] = syntax", inputBuffer[i + 1], i);
+
+                        return false;
+                }
+            }
+            else
+            {
+                LOGF_DEBUG( "getValues: [%s,%i] = format", &inputBuffer[i], i);
+            }
+        }
     }
 
-    if (sqmSensorStatus == SQM_UNKNOWN) {
-	// If SQM Light sensor is installed, then ltFreq is greater than zero
-	sqmSensorStatus = (ltFreq > 0) ? SQM_DETECTED : SQM_UNDETECTED;
+    if (sqmSensorStatus == SQM_UNKNOWN)
+    {
+        // If SQM Light sensor is installed, then ltFreq is greater than zero
+        sqmSensorStatus = (ltFreq > 0) ? SQM_DETECTED : SQM_UNDETECTED;
     }
 
 
@@ -501,7 +508,8 @@ retry:
     return true;
 }
 
-bool CloudWatcherController::getSqmStatus(int &sqmStatus) // reduced version of getValues just meant to check if SQM available
+bool CloudWatcherController::getSqmStatus(int
+        &sqmStatus) // reduced version of getValues just meant to check if SQM available
 {
     sendCloudwatcherCommand("C!");
 
@@ -514,92 +522,98 @@ bool CloudWatcherController::getSqmStatus(int &sqmStatus) // reduced version of 
 
 retry:
     {
-	char inputBuffer[BLOCK_SIZE * MAX_GV_BLOCKS] = {0};
-	int  blocks = 0;
-	
-	int rc = -1;
-	int n = 0;
-	int nb = 0;
+        char inputBuffer[BLOCK_SIZE * MAX_GV_BLOCKS] = {0};
+        int  blocks = 0;
 
-	for (int i = 0, j = 0;  j < MAX_GV_BLOCKS; i += BLOCK_SIZE, j++, nb = 0) {
-	    if ((rc = tty_read(PortFD, &inputBuffer[i], BLOCK_SIZE, READ_TIMEOUT, &nb)) != TTY_OK || nb != BLOCK_SIZE)
-	    {
-		if (rc == TTY_OK)
-		{
-		    LOGF_ERROR("%s read error[%i] in getSqmStatus: byte count != block size (%i != %i)", __FUNCTION__, rc, nb, BLOCK_SIZE);
-		}
-		else
-		{
-		    char errstr[MAXRBUF];
-		    tty_error_msg(rc, errstr, MAXRBUF);
-		    LOGF_ERROR("%s read error[%i] in getSqmStatus: %s", __FUNCTION__, rc, errstr);
-		}
-		return false;
-	    }
-	    n += nb;
-	    if (checkValidMessage(&inputBuffer[i], 1, nb, false)) {
-		break;
-	    }
-	}
+        int rc = -1;
+        int n = 0;
+        int nb = 0;
 
-	if( inputBuffer[0] == '!' && ( inputBuffer[1] == 'f' || inputBuffer[1] == 'd' ) )
-	{
-	    LOGF_DEBUG( "skip answer %s %i", inputBuffer, n );
-	    goto retry;
-	}
+        for (int i = 0, j = 0;  j < MAX_GV_BLOCKS; i += BLOCK_SIZE, j++, nb = 0)
+        {
+            if ((rc = tty_read(PortFD, &inputBuffer[i], BLOCK_SIZE, READ_TIMEOUT, &nb)) != TTY_OK || nb != BLOCK_SIZE)
+            {
+                if (rc == TTY_OK)
+                {
+                    LOGF_ERROR("%s read error[%i] in getSqmStatus: byte count != block size (%i != %i)", __FUNCTION__, rc, nb, BLOCK_SIZE);
+                }
+                else
+                {
+                    char errstr[MAXRBUF];
+                    tty_error_msg(rc, errstr, MAXRBUF);
+                    LOGF_ERROR("%s read error[%i] in getSqmStatus: %s", __FUNCTION__, rc, errstr);
+                }
+                return false;
+            }
+            n += nb;
+            if (checkValidMessage(&inputBuffer[i], 1, nb, false))
+            {
+                break;
+            }
+        }
 
-	// n is bytes read and in this case is always a multiple of BLOCK_SIZE (if valid)
-	if (n > 0 && n % BLOCK_SIZE == 0) {
-	    blocks = n / BLOCK_SIZE;
-	    auto valid = checkValidMessage(inputBuffer, blocks, n, false);
-	    LOGF_DEBUG( "getSqmStatus: [%s,%i] = %s", inputBuffer, blocks, valid ? "valid" : "invalid" );
+        if( inputBuffer[0] == '!' && ( inputBuffer[1] == 'f' || inputBuffer[1] == 'd' ) )
+        {
+            LOGF_DEBUG( "skip answer %s %i", inputBuffer, n );
+            goto retry;
+        }
 
-	    if (!valid)
-		return false;
-	}
-	else
-	{
-	    LOGF_DEBUG( "getSqmStatus: [%s,%i] = incomplete", inputBuffer, n);
+        // n is bytes read and in this case is always a multiple of BLOCK_SIZE (if valid)
+        if (n > 0 && n % BLOCK_SIZE == 0)
+        {
+            blocks = n / BLOCK_SIZE;
+            auto valid = checkValidMessage(inputBuffer, blocks, n, false);
+            LOGF_DEBUG( "getSqmStatus: [%s,%i] = %s", inputBuffer, blocks, valid ? "valid" : "invalid" );
 
-	    return false;
-	}
+            if (!valid)
+                return false;
+        }
+        else
+        {
+            LOGF_DEBUG( "getSqmStatus: [%s,%i] = incomplete", inputBuffer, n);
 
-	for (int i = 0;  i < n; i += BLOCK_SIZE) {
-	    if (inputBuffer[i] == '!') {
-		switch(inputBuffer[i+1]) {
-		case '3': // ambient temperature
-		    break;
-		case '4': // LDR voltage
-		    break;
-		case '5': // rain sensor temperature
-		    break;
-		case '6': // zener voltage
-		    break;
-		case '8': // raw period obtained by light sensor
-		    sqmStatus = 1;
-		    break;
-		case '\x11': // handshake
-		    inputBuffer[i+1] = '\0'; // trimString equivalent
-		    i = n;
-		    break;
-		default: // unexpected character
-		    LOGF_DEBUG( "getSqmStatus: [%X,%i] = syntax", inputBuffer[i+1], i);
+            return false;
+        }
 
-		    return false;
-		}
-	    }
-	    else
-	    {
-		LOGF_DEBUG( "getSqmStatus: [%s,%i] = format", &inputBuffer[i], i);
-	    }
-	}
+        for (int i = 0;  i < n; i += BLOCK_SIZE)
+        {
+            if (inputBuffer[i] == '!')
+            {
+                switch(inputBuffer[i + 1])
+                {
+                    case '3': // ambient temperature
+                        break;
+                    case '4': // LDR voltage
+                        break;
+                    case '5': // rain sensor temperature
+                        break;
+                    case '6': // zener voltage
+                        break;
+                    case '8': // raw period obtained by light sensor
+                        sqmStatus = 1;
+                        break;
+                    case '\x11': // handshake
+                        inputBuffer[i + 1] = '\0'; // trimString equivalent
+                        i = n;
+                        break;
+                    default: // unexpected character
+                        LOGF_DEBUG( "getSqmStatus: [%X,%i] = syntax", inputBuffer[i + 1], i);
+
+                        return false;
+                }
+            }
+            else
+            {
+                LOGF_DEBUG( "getSqmStatus: [%s,%i] = format", &inputBuffer[i], i);
+            }
+        }
     }
 
     return true;
 }
 
 bool CloudWatcherController::getIRErrors(int *firstAddressByteErrors, int *commandByteErrors,
-					 int *secondAddressByteErrors, int *pecByteErrors) // CW Cmd: D! (private)
+        int *secondAddressByteErrors, int *pecByteErrors) // CW Cmd: D! (private)
 {
     sendCloudwatcherCommand("D!");
 
@@ -616,7 +630,7 @@ bool CloudWatcherController::getIRErrors(int *firstAddressByteErrors, int *comma
                      commandByteErrors, secondAddressByteErrors, pecByteErrors);
     if (res != 4)
     {
-	LOGF_DEBUG("internal errors answer did not scan: '%s'", inputBuffer);
+        LOGF_DEBUG("internal errors answer did not scan: '%s'", inputBuffer);
         return false;
     }
 
@@ -658,7 +672,7 @@ bool CloudWatcherController::getSwitchStatus(int *switchStatus) // CW Get Switch
     }
     else
     {
-	LOGF_DEBUG("switch status not X or Y, was '%c'", inputBuffer[1]);
+        LOGF_DEBUG("switch status not X or Y, was '%c'", inputBuffer[1]);
         return false;
     }
 
@@ -680,7 +694,7 @@ bool CloudWatcherController::openSwitch() // CW Set Switch Open CMD: G! (public)
 
     if (inputBuffer[1] != 'X')
     {
-	LOGF_WARN("switch open action not confirmed by response (%c)", inputBuffer[1]);
+        LOGF_WARN("switch open action not confirmed by response (%c)", inputBuffer[1]);
         return false;
     }
 
@@ -702,7 +716,7 @@ bool CloudWatcherController::closeSwitch() // CW Set Switch Closed Cmd: H! (publ
 
     if (inputBuffer[1] != 'Y')
     {
-	LOGF_WARN("switch close action not confirmed by response (%c)", inputBuffer[1]);
+        LOGF_WARN("switch close action not confirmed by response (%c)", inputBuffer[1]);
         return false;
     }
 
@@ -759,7 +773,7 @@ bool CloudWatcherController::setPWMDutyCycle(int pwmDutyCycle) // CW Set PWM Cmd
 
     if (newPWM != pwmDutyCycle)
     {
-	LOGF_WARN("PWM set value (%d) did not match request value (%d)", pwmDutyCycle, newPWM);
+        LOGF_WARN("PWM set value (%d) did not match request value (%d)", pwmDutyCycle, newPWM);
         return false;
     }
 
@@ -778,7 +792,8 @@ bool CloudWatcherController::getPWMDutyCycle(int &pwmDutyCycle) // CW Get PWM Va
     return matchBlock(inputBuffer, "!Q", pwmDutyCycle);
 }
 
-bool CloudWatcherController::getIRSkyTemperature(int &temp) // CW Get IR Sky Temp Cmd: S! (private); response in hundredths of a degree Celsius
+bool CloudWatcherController::getIRSkyTemperature(int
+        &temp) // CW Get IR Sky Temp Cmd: S! (private); response in hundredths of a degree Celsius
 {
     sendCloudwatcherCommand("S!");
 
@@ -790,7 +805,8 @@ bool CloudWatcherController::getIRSkyTemperature(int &temp) // CW Get IR Sky Tem
     return matchBlock(inputBuffer, "!1", temp);
 }
 
-bool CloudWatcherController::getIRSensorTemperature(int &temp) // CW Get IR Sensor Temp Cmd: T! (private); response in hundredths of a degree Celsius
+bool CloudWatcherController::getIRSensorTemperature(int
+        &temp) // CW Get IR Sensor Temp Cmd: T! (private); response in hundredths of a degree Celsius
 {
     sendCloudwatcherCommand("T!");
 
@@ -843,23 +859,23 @@ bool CloudWatcherController::getElectricalConstants() // CW Get Electrical Const
 
     if (inputBuffer[1] != 'M' || inputBuffer[BLOCK_SIZE] != '!')
     {
-	LOGF_DEBUG("syntax problem in electrical: %c%c[%i][%i][%i][%i][%i][%i][%i][%i][%i][%i][%i][%i] %c",
-		   inputBuffer[0],
-		   inputBuffer[1],
-		   (int)inputBuffer[2],
-		   (int)inputBuffer[3],
-		   (int)inputBuffer[4],
-		   (int)inputBuffer[5],
-		   (int)inputBuffer[6],
-		   (int)inputBuffer[7],
-		   (int)inputBuffer[8],
-		   (int)inputBuffer[9],
-		   (int)inputBuffer[10],
-		   (int)inputBuffer[11],
-		   (int)inputBuffer[12],
-		   (int)inputBuffer[13],
-		   inputBuffer[15]
-	    );
+        LOGF_DEBUG("syntax problem in electrical: %c%c[%i][%i][%i][%i][%i][%i][%i][%i][%i][%i][%i][%i] %c",
+                   inputBuffer[0],
+                   inputBuffer[1],
+                   (int)inputBuffer[2],
+                   (int)inputBuffer[3],
+                   (int)inputBuffer[4],
+                   (int)inputBuffer[5],
+                   (int)inputBuffer[6],
+                   (int)inputBuffer[7],
+                   (int)inputBuffer[8],
+                   (int)inputBuffer[9],
+                   (int)inputBuffer[10],
+                   (int)inputBuffer[11],
+                   (int)inputBuffer[12],
+                   (int)inputBuffer[13],
+                   inputBuffer[15]
+                  );
         return false;
     }
 
@@ -879,10 +895,10 @@ bool CloudWatcherController::getElectricalConstants() // CW Get Electrical Const
 bool CloudWatcherController::getAnemometerStatus(int &anemometerStatus) // CW Check for Anemometer Cmd: v! (private)
 {
     m_AnemometerStatus = 0; // used in getWindSpeed
-    
+
     if (m_FirmwareVersion >= 5)
     {
-	LOG_DEBUG("sending anemometer check cmd");
+        LOG_DEBUG("sending anemometer check cmd");
         sendCloudwatcherCommand("v!");
 
         char inputBuffer[BLOCK_SIZE * 2] = {0};
@@ -891,7 +907,7 @@ bool CloudWatcherController::getAnemometerStatus(int &anemometerStatus) // CW Ch
             return false;
 
         m_AnemometerStatus = matchBlock(inputBuffer, "!v", anemometerStatus);
-	LOGF_DEBUG("anemometer status is %i", m_AnemometerStatus);
+        LOGF_DEBUG("anemometer status is %i", m_AnemometerStatus);
     }
 
     anemometerStatus = m_AnemometerStatus;
@@ -911,30 +927,30 @@ bool CloudWatcherController::getWindSpeed(float &windSpeed) // CW Get Wind Speed
         if (!getCloudWatcherAnswer(inputBuffer, 2))
             return false;
 
-	int   ispeed = 0;
+        int   ispeed = 0;
 
         if (!matchBlock(inputBuffer, "!w", ispeed))
             return false;
 
         float speed = ispeed;
 
-	LOGF_DEBUG( "raw wind speed is %i for anemometer type %s", speed, (anemometerType == BLACK ? "black" : "grey"));
+        LOGF_DEBUG( "raw wind speed is %i for anemometer type %s", speed, (anemometerType == BLACK ? "black" : "grey"));
 
-	switch (anemometerType)
-	{
-	case BLACK:
-	    if (speed != 0)
-	    {
-		speed = speed * 0.84 + 3;
-	    }
-	    break;
+        switch (anemometerType)
+        {
+            case BLACK:
+                if (speed != 0)
+                {
+                    speed = speed * 0.84 + 3;
+                }
+                break;
 
-	case GRAY:
-	default:
-	    break;
-	}
+            case GRAY:
+            default:
+                break;
+        }
 
-	windSpeed = speed;
+        windSpeed = speed;
     }
     else
     {
@@ -965,38 +981,39 @@ bool CloudWatcherController::getHumidity(float &humidity) // CW Get Relative Hum
         if (matchBlock(inputBuffer, "!h", h))
         {
             // Sensor error
-            if (h == 100) {
-		LOG_WARN("relative humidity sensor error detected");
+            if (h == 100)
+            {
+                LOG_WARN("relative humidity sensor error detected");
                 return false;
-	    }
+            }
 
             humidity = h * 120. / 100. - 6.;
 
-	    if (humidity < 0)
-		humidity = 0;
-	    else if (humidity > 100)
-		humidity = 100;
+            if (humidity < 0)
+                humidity = 0;
+            else if (humidity > 100)
+                humidity = 100;
 
-	    return true;
+            return true;
         }
         else if (matchBlock(inputBuffer, "!hh", h))
         {
             if( h == 65535 )
             {
                 humidity = 0;
-		LOG_DEBUG("invalid humidity returned");
+                LOG_DEBUG("invalid humidity returned");
             }
             else
             {
                 humidity = h * 125. / 65536. - 6.;
             }
 
-	    if (humidity < 0)
-		humidity = 0;
-	    else if (humidity > 100)
-		humidity = 100;
+            if (humidity < 0)
+                humidity = 0;
+            else if (humidity > 100)
+                humidity = 100;
 
-	    return true;
+            return true;
         }
     }
     else
@@ -1017,7 +1034,7 @@ bool CloudWatcherController::getTemperature(float &temperature) // CW Get Ambien
 
         char inputBuffer[BLOCK_SIZE * 2] = {0};
         int t = 0;
-	float tp;
+        float tp;
 
         if (!getCloudWatcherAnswer(inputBuffer, 2))
             return false;
@@ -1025,46 +1042,47 @@ bool CloudWatcherController::getTemperature(float &temperature) // CW Get Ambien
         if (matchBlock(inputBuffer, "!t", t))
         {
             // Sensor error
-            if (t == 100) {
-		LOG_WARN("temperature sensor error detected");
+            if (t == 100)
+            {
+                LOG_WARN("temperature sensor error detected");
                 return false;
-	    }
+            }
 
-	    // extra steps to make compiler happy (odd?!?)
-	    tp = t;
+            // extra steps to make compiler happy (odd?!?)
+            tp = t;
             tp = tp * 1.7572;
-	    tp -= 46.85;
-	    temperature = tp;
+            tp -= 46.85;
+            temperature = tp;
 
-	    if (temperature < -70)
-		temperature = -1000; // indicates something is broken
-	    else if (temperature > 70)
-		temperature = 1000; // indicates something is broken
+            if (temperature < -70)
+                temperature = -1000; // indicates something is broken
+            else if (temperature > 70)
+                temperature = 1000; // indicates something is broken
 
-	    return true;
+            return true;
         }
         else if (matchBlock(inputBuffer, "!th", t))
         {
             if( t == 65535 )
             {
                 temperature = -1000;
-		LOG_DEBUG("invalid temperature returned");
+                LOG_DEBUG("invalid temperature returned");
             }
             else
             {
-		// extra steps to make compiler happy (odd?!?)
-		tp = t;
+                // extra steps to make compiler happy (odd?!?)
+                tp = t;
                 tp = tp * 175.72 / 65536.;
-		tp -= 46.85;
-		temperature = tp;
+                tp -= 46.85;
+                temperature = tp;
             }
 
-	    if (temperature < -70)
-		temperature = -1000; // indicates something is broken
-	    else if (temperature > 70)
-		temperature = 1000; // indicates something is broken
+            if (temperature < -70)
+                temperature = -1000; // indicates something is broken
+            else if (temperature > 70)
+                temperature = 1000; // indicates something is broken
 
-	    return true;
+            return true;
         }
     }
     else
@@ -1097,17 +1115,17 @@ bool CloudWatcherController::getPressure(float &pressure) // CW Get Atmospheric 
             if( p == 65535 )
             {
                 pressure = 0;
-		LOG_DEBUG("invalid pressure returned");
+                LOG_DEBUG("invalid pressure returned");
             }
             else
             {
                 pressure = p; // raw reading
             }
         }
-	else
-	{
-	    pressure = 0;
-	}
+        else
+        {
+            pressure = 0;
+        }
     }
     else
     {
@@ -1210,9 +1228,10 @@ bool CloudWatcherController::checkValidMessage(char *buffer, int nBlocks, int nB
 {
     int length = nBlocks * BLOCK_SIZE;
 
-    if (length != nBytes) {
-	LOGF_DEBUG("message block bytes / read bytes mismatch (%d != %d)", length, nBytes);
-	return false;
+    if (length != nBytes)
+    {
+        LOGF_DEBUG("message block bytes / read bytes mismatch (%d != %d)", length, nBytes);
+        return false;
     }
 
     const char *handshakingBlock = "\x21\x11\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x20\x30";
@@ -1226,7 +1245,7 @@ bool CloudWatcherController::checkValidMessage(char *buffer, int nBlocks, int nB
     }
 
     if (trim)
-	trimString(buffer);
+        trimString(buffer);
 
     return true;
 }
@@ -1317,12 +1336,12 @@ bool CloudWatcherController::matchBlock(const std::string &response, const std::
         }
         catch (...)
         {
-	    LOGF_DEBUG("matchBlock std::stoi conversion error: '%s'", match.str(1));
+            LOGF_DEBUG("matchBlock std::stoi conversion error: %s", match.str(1).c_str());
             return false;
         }
     }
 
-    LOGF_DEBUG("matchBlock could not match an integer in response: '%s'", response);
+    LOGF_DEBUG("matchBlock could not match an integer in response: %s", response.c_str());
 
     return false;
 }
