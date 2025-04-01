@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libatik)
 
-# Built with SDK API 2023.07.14.1456
-set (ATIK_VERSION "2.2.11")
+# Built with SDK API 2024.11.26_2038
+set (ATIK_VERSION "2.2.22")
 set (ATIK_SOVERSION "2")
 
 set (FLYCAPTURE_VERSION "2.13.3.31")
