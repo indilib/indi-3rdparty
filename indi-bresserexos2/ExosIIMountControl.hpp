@@ -21,7 +21,7 @@
  *
  */
 
-#pragma once
+ #pragma once
 
 #include <cstdint>
 #include <vector>
@@ -135,6 +135,7 @@ class ExosIIMountControl :
     public IStateNotification<TelescopeMountState, TelescopeSignals>
 {
     public:
+
         //create a exos controller using a reference of a particular serial implementation.
         ExosIIMountControl(InterfaceType &interfaceImplementation) :
             SerialDeviceControl::SerialCommandTransceiver<InterfaceType, TelescopeMountControl::ExosIIMountControl<InterfaceType>>
@@ -148,6 +149,9 @@ class ExosIIMountControl :
             initialCoordinates.Declination    = std::numeric_limits<float>::quiet_NaN();
 
             mCurrentPointingCoordinates.Set(initialCoordinates);
+
+            ResetCurrentCoordinatesSyncCorrection();
+
             mSiteLocationCoordinates.Set(initialCoordinates);
 
             MotionState initialState;
@@ -281,6 +285,20 @@ class ExosIIMountControl :
             return rc;
         }
 
+        void ResetCurrentCoordinatesSyncCorrection()
+        {
+            SerialDeviceControl::EquatorialCoordinates initialSyncCorrCoordinates;
+            initialSyncCorrCoordinates.RightAscension = 0.;
+            initialSyncCorrCoordinates.Declination = 0.;
+            mCurrentPointingCoordinatesSyncCorrection.Set(initialSyncCorrCoordinates);
+            
+            SerialDeviceControl::EquatorialCoordinates initialSyncBaseCoordinates;
+            initialSyncBaseCoordinates.RightAscension = std::numeric_limits<float>::quiet_NaN();
+            initialSyncBaseCoordinates.Declination    = std::numeric_limits<float>::quiet_NaN();            
+            mCurrentPointingCoordinatesSyncBase.Set(initialSyncBaseCoordinates);
+        }
+
+
         bool StartMotionToDirection(
             SerialDeviceControl::SerialCommandID direction,
             uint16_t commandsPerSecond
@@ -390,6 +408,17 @@ class ExosIIMountControl :
             float declination
             )
         {
+
+            SerialDeviceControl::EquatorialCoordinates tmpSyncCorrCoordinates;
+            tmpSyncCorrCoordinates = mCurrentPointingCoordinatesSyncCorrection.Get();
+            rightAscension = rightAscension - tmpSyncCorrCoordinates.RightAscension;
+            declination = declination - tmpSyncCorrCoordinates.Declination;
+
+            SerialDeviceControl::EquatorialCoordinates tmpSyncBaseCoordinates;
+            tmpSyncBaseCoordinates.RightAscension = rightAscension;
+            tmpSyncBaseCoordinates.Declination    = declination;              
+            mCurrentPointingCoordinatesSyncBase.Set(tmpSyncBaseCoordinates);            
+
             std::vector<uint8_t> messageBuffer;
             if(SerialDeviceControl::SerialCommand::GetGotoCommandMessage(messageBuffer, rightAscension, declination))
             {
@@ -414,11 +443,34 @@ class ExosIIMountControl :
         {
             std::vector<uint8_t> messageBuffer;
             if(SerialDeviceControl::SerialCommand::GetSyncCommandMessage(messageBuffer, rightAscension, declination))
-            {
-                std::cerr << "Sent Sync command!" << std::endl;
-                return SerialDeviceControl::SerialCommandTransceiver<InterfaceType, TelescopeMountControl::ExosIIMountControl<InterfaceType>>::SendMessageBuffer(
-                           &messageBuffer[0], 0, messageBuffer.size());
-                //return rc && mMountStateMachine.DoTransition(TelescopeSignals::GoTo);
+            {                
+
+                    // Talking to coordinates correction inside driver without talking to mount
+                    std::cerr << "Sent Sync command to coordinates correction!" << std::endl;   
+                    SerialDeviceControl::EquatorialCoordinates tmpSyncBaseCoordinates;
+                    SerialDeviceControl::EquatorialCoordinates tmpSyncCorrCoordinates;
+                    tmpSyncBaseCoordinates = mCurrentPointingCoordinatesSyncBase.Get();
+                    if (std::isnan(tmpSyncBaseCoordinates.RightAscension)) {
+                        tmpSyncCorrCoordinates.RightAscension =0. ;
+                    }   
+                    else {
+                        tmpSyncCorrCoordinates.RightAscension = rightAscension - tmpSyncBaseCoordinates.RightAscension;    
+                    } 
+                    if (std::isnan(tmpSyncBaseCoordinates.Declination)) {
+                        tmpSyncCorrCoordinates.Declination = 0.;
+                    }
+                    else {
+                        tmpSyncCorrCoordinates.Declination = declination - tmpSyncBaseCoordinates.Declination;
+                    }
+                    mCurrentPointingCoordinatesSyncCorrection.Set(tmpSyncCorrCoordinates);
+                    return true;
+
+                    // // Talking to mount
+                    // std::cerr << "Sent Sync command to mount!" << std::endl;       
+                    // return SerialDeviceControl::SerialCommandTransceiver<InterfaceType, TelescopeMountControl::ExosIIMountControl<InterfaceType>>::SendMessageBuffer(
+                    //         &messageBuffer[0], 0, messageBuffer.size());
+                    // //return rc && mMountStateMachine.DoTransition(TelescopeSignals::GoTo);
+
             }
             else
             {
@@ -577,8 +629,13 @@ class ExosIIMountControl :
             SerialDeviceControl::EquatorialCoordinates lastCoordinates = GetPointingCoordinates();
 
             SerialDeviceControl::EquatorialCoordinates coordinatesReceived;
-            coordinatesReceived.RightAscension = right_ascension;
-            coordinatesReceived.Declination = declination;
+
+            SerialDeviceControl::EquatorialCoordinates tmpSyncCorrCoordinates;
+            tmpSyncCorrCoordinates = mCurrentPointingCoordinatesSyncCorrection.Get();
+            coordinatesReceived.RightAscension = right_ascension + tmpSyncCorrCoordinates.RightAscension;
+            coordinatesReceived.Declination = declination + tmpSyncCorrCoordinates.Declination;
+
+            
 
             bool coordinatesNotNan = !std::isnan(right_ascension) && !std::isnan(declination);
 
@@ -661,6 +718,12 @@ class ExosIIMountControl :
                         }
                         else
                         {
+                            // align Sync Base while tracking: motions occurred, mount tracking not perfect, guiding motions
+                            SerialDeviceControl::EquatorialCoordinates tmpSyncBaseCoordinates;                            
+                            tmpSyncBaseCoordinates.RightAscension = right_ascension;
+                            tmpSyncBaseCoordinates.Declination = declination;
+                            mCurrentPointingCoordinatesSyncBase.Set(tmpSyncBaseCoordinates);
+
                             signal = TelescopeSignals::Track;
                         }
                     }
@@ -728,7 +791,7 @@ class ExosIIMountControl :
             TelescopeSignals signal
             )
         {
-            std::cerr << "Reached Error/Fail Safe State: most likly an undefined transition occurred!" << std::endl;
+            std::cerr << "Reached Error/Fail Safe State: most likely an undefined transition occurred!" << std::endl;
             std::cerr << "Transition : (" << StateToString(fromState) << "," << SignalToString(signal) << ") -> ??? tripped this error!"
                       << std::endl;
         }
@@ -754,6 +817,12 @@ class ExosIIMountControl :
     private:
         //mutex protected container for the current coordinates the telescope is pointing at.
         SerialDeviceControl::CriticalData<SerialDeviceControl::EquatorialCoordinates> mCurrentPointingCoordinates;
+
+        // mutex protected container for correction for coordinates used by Sync function 
+        SerialDeviceControl::CriticalData<SerialDeviceControl::EquatorialCoordinates> mCurrentPointingCoordinatesSyncCorrection;
+        
+        // mutex protected container for the correction base used by Sync function
+        SerialDeviceControl::CriticalData<SerialDeviceControl::EquatorialCoordinates> mCurrentPointingCoordinatesSyncBase;        
 
         //mutex protected container for the current site location set in the telescope.
         SerialDeviceControl::CriticalData<SerialDeviceControl::EquatorialCoordinates> mSiteLocationCoordinates;
