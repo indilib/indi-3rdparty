@@ -157,6 +157,33 @@ int main(int, char **)
         return 1;
     }
 
+    // Check if filter wheel is connected
+    retVal = IsQHYCCDCFWPlugged(pCamHandle);
+    if (retVal == QHYCCD_SUCCESS)
+    {
+        printf("Filter wheel is connected.\n");
+        int filterCount = GetQHYCCDParam(pCamHandle, CONTROL_CFWSLOTSNUM);
+        if (filterCount > 0 && filterCount <= 16)
+        {
+            printf("Filter wheel has %d positions.\n", filterCount);
+
+            char currentPos[64] = {0};
+            if (GetQHYCCDCFWStatus(pCamHandle, currentPos) == QHYCCD_SUCCESS)
+            {
+                int position = strtol(currentPos, nullptr, 16) + 1;
+                printf("Current filter position: %d\n", position);
+            }
+        }
+        else
+        {
+            printf("Filter wheel reports invalid number of positions: %d\n", filterCount);
+        }
+    }
+    else
+    {
+        printf("No filter wheel detected.\n");
+    }
+
     // get overscan area
     retVal = GetQHYCCDOverScanArea(pCamHandle, &overscanStartX, &overscanStartY, &overscanSizeX, &overscanSizeY);
     if (QHYCCD_SUCCESS == retVal)
