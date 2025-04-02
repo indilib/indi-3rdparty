@@ -284,6 +284,7 @@ enum CONTROL_ID
 /*90*/  CONTROL_AUTOEXPSampleArea,   //!<auto exposure Sample Area
 /*91*/  CONTROL_AUTOEXPexpMaxMS,        //!<auto exposure max exp(ms)
 /*92*/  CONTROL_AUTOEXPgainMax,         //!<auto exposure max gain
+/*93*/	CONTROL_Error_Led,  // 992s 411s Error Led
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
 /*Last One */  CONTROL_MAX_ID,
