@@ -1,3 +1,9 @@
+libtscam (57.28165.20250401) jammy; urgency=medium
+
+  * Upstream release
+
+ -- teleskop <teleskop@teleskop.com>  Wed, 02 Apr 2025 13:20:17 +0800
+
 libtscam (57.27591.20250122) jammy; urgency=medium
 
   * Upstream release
