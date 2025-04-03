@@ -64,9 +64,10 @@ The serial protocol was reverse engineered using serial port sniffing tools, dev
 ## Known Issues and Limitations
 - Tracking modes can not be set, only Sidereal Tracking is working right now.
 - More a Hint than an issue: Sync only works when tracking an object. This behaviour is implemented on the handbox and can not be changed.
-- The sync function only works if you changed the pointing with your hand box not via the EKOS pointing control
+- From version 253, the sync function only works via the EKOS pointing control, after a first slew so that the mount is in tracking mode
 - you can not perform the meridian flip from afar, since the handbox does not allow it.
-- Software Sky Coordinates may differ from Handbox Coordinates
+- Software Sky Coordinates may differ from Handbox Coordinates, in particular after sync from version 253
+- From version 253, this driver works also with x86/x64 architectures, not only ARM ones
 
 ---
 

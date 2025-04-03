@@ -113,6 +113,8 @@ bool BresserExosIIDriver::Connect()
     //this message reports back the site location, also starts position reports, without changing anything on the scope.
     mMountControl.RequestSiteLocation();
 
+    mMountControl.ResetCurrentCoordinatesSyncCorrection();
+    
     IEAddTimer(DRIVER_WATCHDOG_TIMEOUT, DriverWatchDog, this);
 
     return rc;

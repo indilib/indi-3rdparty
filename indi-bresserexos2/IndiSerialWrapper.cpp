@@ -78,7 +78,15 @@ int16_t IndiSerialWrapper::ReadByte()
         if(result == TTY_OK)
         {
             //std::cerr << "Read OK: FD " << std::dec << mTtyFd << " data: " << std::hex << dataByte << std::dec << std::endl;
-            return dataByte;
+           
+            //return dataByte;
+
+            /*
+            GCC defaults to signed char on x86 (which has 8-bit registers) and unsigned char on ARM which only has 32-bit registers and cannot easily do 8 bit signed arithmetic.
+            Use -funsigned-char or -fsigned-char to set your own default.             
+            */
+            return (uint8_t)dataByte; // safe cast to avoid negative values when -fsigned-char is used
+ 
         }
         /*else
         {

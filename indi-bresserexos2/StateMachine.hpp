@@ -126,7 +126,7 @@ class StateMachine
             return false;
         }
 
-        //submit a signal to the state machine and do a transistion.
+        //submit a signal to the state machine and do a transition.
         //the notify interface gets called when a transition or indefined transition occurred.
         bool DoTransition(SignalType signal)
         {
