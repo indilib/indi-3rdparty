@@ -1,13 +1,13 @@
 cmake_minimum_required(VERSION 3.16)
 project (libplayerone)
 
-# Using PlayerOne Camera SDK Version 3.8.0 updated on 2025-2-19
-# Using PlayerOne EFW    SDK Version 1.2.1 updated on 2024-10-12
+# Using PlayerOne Camera SDK Version 3.8.1 updated on 2025-3-28
+# Using PlayerOne EFW    SDK Version 1.2.2 updated on 2025-3-12
 
-set (POACAM_VERSION "3.8.0")
+set (POACAM_VERSION "3.8.1")
 set (POACAM_SOVERSION "3")
 
-set (POAEFW_VERSION "1.2.1")
+set (POAEFW_VERSION "1.2.2")
 set (POAEFW_SOVERSION "1")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
