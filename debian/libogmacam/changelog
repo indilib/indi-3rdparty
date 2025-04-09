@@ -1,3 +1,9 @@
+libogmacam (57.28200.20250408) jammy; urgency=medium
+
+  * Upstream release
+
+ -- ogmavision <ogmavision@ogmavision.com>  Wed, 09 Apr 2025 10:05:13 +0800
+
 libogmacam (57.27591.20250122) jammy; urgency=medium
 
   * Upstream release
