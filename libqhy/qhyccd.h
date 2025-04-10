@@ -1009,6 +1009,8 @@ EXPORTC uint32_t STDCALL QHYCCDOpenEMMCMode(qhyccd_handle* handle, bool open);
 EXPORTC uint32_t STDCALL QHYCCDReadEMMC(qhyccd_handle* handle, uint32_t address, uint32_t length, unsigned char* buffer);
 EXPORTC uint32_t STDCALL QHYCCDWriteEMMC(qhyccd_handle* handle, uint32_t address, uint32_t length, unsigned char* buffer);
 
+EXPORTC uint32_t RedirectCommand(qhyccd_handle* handle, const char* command, char* response);
+
 #if 0//PCIE_MODE_TEST
 
 #include "riffa.h"
