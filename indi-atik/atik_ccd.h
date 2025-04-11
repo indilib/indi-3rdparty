@@ -164,6 +164,14 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
             COOLER_OFF,
         };
 
+        // Gain Control
+        INumberVectorProperty GainNP;
+        INumber GainN[1];
+
+        // Offset Control
+        INumberVectorProperty OffsetNP;
+        INumber OffsetN[1];
+
         // Gain & Offset Custom Properties
         INumber ControlN[2];
         INumberVectorProperty ControlNP;
