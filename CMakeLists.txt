@@ -245,6 +245,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         SET(WITH_TOUPBASE Off)
         SET(WITH_QHY Off)
         SET(WITH_SVBONY Off)
+        SET(WITH_ASTROASIS Off)
     endif()
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
