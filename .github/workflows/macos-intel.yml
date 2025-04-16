@@ -20,7 +20,7 @@ jobs:
         with:
           repo: indilib/indi
           branch: master
-          workflow: macos-intel.yml
+          workflow: macos.yml
           name: indi-core-package-macos
           path: ./packages/
 
