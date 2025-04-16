@@ -15,7 +15,12 @@ OS=$(uname -s)
 
 case "$OS" in
     Darwin)
-        brew install --overwrite \
+        BREW="/usr/local/bin/brew"
+        if [[ $(uname -m) == "arm64" ]]
+        then
+            BREW="/opt/homebrew/bin/brew"
+        fi
+        $BREW install --overwrite \
             git \
             cfitsio libnova libusb curl \
             gsl jpeg fftw \
