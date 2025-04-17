@@ -159,7 +159,7 @@ bool ATIKCCD::initProperties()
     // Gain/Offset Controls
     IUFillNumber(&ControlN[CONTROL_GAIN], "CONTROL_GAIN", "Gain", "%.f", 0, 60, 5, 30);
     IUFillNumber(&ControlN[CONTROL_OFFSET], "CONTROL_OFFSET", "Offset", "%.f", 0, 511, 10, 0);
-    IUFillNumberVector(&ControlNP, ControlN, 4, getDeviceName(), "CCD_CONTROLS", "GO Controls", CONTROLS_TAB,
+    IUFillNumberVector(&ControlNP, ControlN, 2, getDeviceName(), "CCD_CONTROLS", "GO Controls", CONTROLS_TAB,
                        IP_RW, 60, IPS_IDLE);
 
     // Pad data from 12 to 16 bits
