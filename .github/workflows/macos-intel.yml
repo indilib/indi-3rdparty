@@ -20,8 +20,8 @@ jobs:
         with:
           repo: indilib/indi
           branch: master
-          workflow: macos.yml
-          name: indi-core-package-macos
+          workflow: macos-intel.yml
+          name: indi-core-package-macos-intel
           path: ./packages/
 
       - name: Install INDI Core
