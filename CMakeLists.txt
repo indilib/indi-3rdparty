@@ -12,8 +12,10 @@ include(GNUInstallDirs)
 ## <libnova/ln_types.h> is resolved. But on Mac it its not already in the path and has to be explicitly added.
 
 if (APPLE)
-    ##This one is needed for homebrew
+    ##This one is needed for x86_64 homebrew
 include_directories( "/usr/local/include")
+    ##This one is needed for arm64 homebrew
+include_directories( "/opt/homebrew/include")
     ## This one is needed for Craft
 include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
