@@ -19,7 +19,6 @@ BuildRequires: gphoto2-devel
 BuildRequires: LibRaw-devel
 BuildRequires: indi-libs
 BuildRequires: indi-devel
-BuildRequires: libahp-gt >= 1.7.3
 BuildRequires: libtiff-devel
 BuildRequires: cfitsio-devel
 BuildRequires: zlib-devel
