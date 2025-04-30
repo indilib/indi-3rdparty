@@ -1,3 +1,9 @@
+indi-ocs (1.1) nobel; urgency=medium
+
+  * New release - updates and bugfixes
+
+ -- Ed Lee <ed@thefamilee.co.uk>  Sun, 09 Mar 2025 12:00:00 +0000
+
 indi-ocs (1.0) jammy; urgency=low
 
   * Initial Release.
