@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0.2)
+cmake_minimum_required (VERSION 3.12)
 project (libpktriggercord C)
 
 set (PK_VERSION 0.85.03)
