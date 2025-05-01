@@ -9,7 +9,7 @@ Install additional build dependency:
 sudo apt-get install libboost-program-options1.74-dev
 ```
 
-Go to the directory where  you unpacked indi_asi sources and do:
+Go to the directory where  you unpacked indi-libcamera sources and do:
 
 ```
 mkdir build
