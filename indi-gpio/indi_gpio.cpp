@@ -187,18 +187,20 @@ bool INDIGPIO::Connect()
     }
 
     // Get all lines
-    auto lines = m_GPIO->get_all_lines();
+    int lines = m_GPIO->get_info().num_lines();
 
     m_InputOffsets.clear();
     m_OutputOffsets.clear();
+
     // Iterate through all lines
-    for (const auto &line : lines)
+    for (int i=1; i<=lines; i++)
     {
+        auto line = m_GPIO->get_line_info(i);
         // Get line direction
         auto name = line.name();
 
         // Skip lines that are used or not GPIO
-        if (line.is_used() || name.find("GPIO") == std::string::npos)
+        if (line.used() || name.find("GPIO") == std::string::npos)
             continue;
 
         // Skip GPIOs configured for PWM
@@ -213,16 +215,14 @@ bool INDIGPIO::Connect()
         auto direction = line.direction();
 
         // Check if line is input or output and add to corresponding vector
-        if (direction == gpiod::line::DIRECTION_INPUT)
+        if (direction == gpiod::line::direction::INPUT)
         {
             m_InputOffsets.push_back(line.offset());
         }
-        else if (direction == gpiod::line::DIRECTION_OUTPUT)
+        else if (direction == gpiod::line::direction::OUTPUT)
         {
             m_OutputOffsets.push_back(line.offset());
         }
-
-        line.release();
     }
 
     // Initialize Inputs. We do not support Analog inputs
@@ -273,7 +273,7 @@ bool INDIGPIO::Disconnect()
         }
     }
 
-    m_GPIO->reset();
+    m_GPIO->close();
     return true;
 }
 
@@ -310,14 +310,18 @@ bool INDIGPIO::UpdateDigitalInputs()
         for (size_t i = 0; i < m_InputOffsets.size(); i++)
         {
             auto oldState = DigitalInputsSP[i].findOnSwitchIndex();
-            auto line = m_GPIO->get_line(m_InputOffsets[i]);
+            auto line = m_GPIO->get_line_info(m_InputOffsets[i]);
 
-            gpiod::line_request config;
-            config.consumer = "indi-gpio";
-            config.request_type = gpiod::line_request::DIRECTION_INPUT;
-            line.request(config);
-            auto newState = line.get_value();
-            line.release();
+            auto request = m_GPIO->prepare_request()
+			       .set_consumer("indi-gpio")
+			       .add_line_settings(
+				       m_InputOffsets[i],
+				       ::gpiod::line_settings().set_direction(
+					       ::gpiod::line::direction::INPUT))
+			       .do_request();
+
+            auto newState = request.get_value(m_InputOffsets[i]) == gpiod::line::value::ACTIVE ? 1 : 0;
+
             if (oldState != newState)
             {
                 DigitalInputsSP[i].reset();
@@ -365,13 +369,15 @@ bool INDIGPIO::CommandOutput(uint32_t index, OutputState command)
     try
     {
         auto offset = m_OutputOffsets[index];
-        auto line = m_GPIO->get_line(offset);
-        gpiod::line_request config;
-        config.consumer = "indi-gpio";
-        config.request_type = gpiod::line_request::DIRECTION_OUTPUT;
-        line.request(config);
-        line.set_value(command);
-        line.release();
+        auto request = m_GPIO->prepare_request()
+			.set_consumer("indi-gpio")
+			.add_line_settings(
+				offset,
+				::gpiod::line_settings().set_direction(
+					::gpiod::line::direction::OUTPUT))
+			.do_request();
+        gpiod::line::value set_val = command == INDI::OutputInterface::OutputState::Off ? gpiod::line::value::INACTIVE : gpiod::line::value::ACTIVE;
+        request.set_value(offset, set_val);
     }
     catch (const std::exception &e)
     {
