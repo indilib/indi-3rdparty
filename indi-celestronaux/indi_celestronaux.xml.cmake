@@ -17,6 +17,10 @@
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
    </device>
+   <device label="Celestron CPC Wired" manufacturer="Celestron">
+      <driver name="Celestron AUX">indi_celestron_aux</driver>
+      <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
+   </device>
    <device label="Celestron CGEM II Wired" manufacturer="Celestron">
       <driver name="Celestron AUX">indi_celestron_aux</driver>
       <version>@CAUX_VERSION_MAJOR@.@CAUX_VERSION_MINOR@</version>
