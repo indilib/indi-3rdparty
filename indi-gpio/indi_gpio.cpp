@@ -65,8 +65,8 @@ const char *INDIGPIO::getDefaultName()
 const gpiod::line::direction INPUT = gpiod::line::direction::INPUT;
 const gpiod::line::direction OUTPUT = gpiod::line::direction::OUTPUT;
 #else
-const gpiod::line INPUT = gpiod::line::DIRECTION_INPUT;
-const gpiod::line OUTPUT = gpiod::line::DIRECTION_OUTPUT;
+const auto INPUT = gpiod::line::DIRECTION_INPUT;
+const auto OUTPUT = gpiod::line::DIRECTION_OUTPUT;
 #endif
 
 ////////////////////////////////////////////////////////////////////////////////////////
