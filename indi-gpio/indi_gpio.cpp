@@ -248,7 +248,7 @@ bool INDIGPIO::Connect()
         }
 
         #ifndef HAVE_LIBGPIOD_V2
-        line.release()
+        line.release();
         #endif
     }
 
