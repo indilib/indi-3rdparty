@@ -40,6 +40,7 @@
 #include <termios.h>
 
 #include "auxproto.h"
+#include "adaptive_tuner.h"
 
 class CelestronAUX :
     public INDI::Telescope,
@@ -92,7 +93,8 @@ class CelestronAUX :
             Series_GT         = 0x1283,
             AVX               = 0x1485,
             Evolution_Nexstar = 0x1687,
-            CGX               = 0x1788
+            CGX               = 0x1788,
+            Advanced_GT       = 0x0682
         };
 
         // Previous motion direction
@@ -347,7 +349,7 @@ class CelestronAUX :
         uint32_t m_FocusLimitMax {0};
         uint32_t m_FocusLimitMin {0xffffffff};
         AxisStatus m_FocusStatus {STOPPED};
-        
+
 
         // Manual Slewing NSWE
         bool m_ManualMotionActive { false };
@@ -419,8 +421,8 @@ class CelestronAUX :
 
         int32_t m_LastTrackRate[2] = {-1, -1};
         double m_TrackStartSteps[2] = {0, 0};
-        double m_LastOffset[2] = {0, 0};
-        uint8_t m_OffsetSwitchSettle[2] = {0, 0};
+        int32_t m_LastOffset[2] = {0, 0};
+        int m_OffsetSwitchSettle[2] = {0, 0};
 
         // PID controllers
         INDI::PropertyNumber Axis1PIDNP {3};
@@ -433,6 +435,8 @@ class CelestronAUX :
         };
 
         std::unique_ptr<PID> m_Controllers[2];
+        std::unique_ptr<AdaptivePIDTuner> m_az_pid_tuner; // For Azimuth axis adaptive tuning
+        std::unique_ptr<AdaptivePIDTuner> m_al_pid_tuner; // For Altitude axis adaptive tuning
 
         INDI::PropertySwitch PortTypeSP {2};
         enum
@@ -445,12 +449,17 @@ class CelestronAUX :
 
         // Home/Level
         INDI::PropertySwitch HomeSP {3};
+
         enum
         {
             HOME_AXIS1,
             HOME_AXIS2,
             HOME_ALL
         };
+
+        // Adaptive PID Tuning Toggles
+        INDI::PropertySwitch AdaptiveTuningAzSP {2}; // For Azimuth Axis
+        INDI::PropertySwitch AdaptiveTuningAlSP {2}; // For Altitude Axis
 
         typedef enum { ALT_AZ, EQ_FORK, EQ_GEM } MountType;
         MountType m_MountType {ALT_AZ};

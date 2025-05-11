@@ -27,7 +27,7 @@ include_directories( ${EV_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-add_executable(indi_celestron_aux auxproto.cpp celestronaux.cpp)
+add_executable(indi_celestron_aux auxproto.cpp celestronaux.cpp adaptive_tuner.cpp)
 target_link_libraries(indi_celestron_aux ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${GSL_LIBRARIES})
 install(TARGETS indi_celestron_aux RUNTIME DESTINATION bin)
 
