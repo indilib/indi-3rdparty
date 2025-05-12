@@ -427,7 +427,7 @@ bool MICCD::setupParams()
     minExpTime = expTime / 1000000.0; // convert to seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExpTime, 3600, 1, true);
 
-    if (!sim && maxGainValue == 0)
+    if (!sim && maxGainValue <= 0)
     {
         float gain = 0;
         if (gxccd_get_value(cameraHandle, GV_ADC_GAIN, &gain) < 0)

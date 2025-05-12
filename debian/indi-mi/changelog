@@ -1,3 +1,9 @@
+indi-mi (2.2) buster; urgency=low
+
+  * Fix small bug where some cameras did not correctly update gain
+
+ -- Jakub Smutny <linux@gxccd.com>  Mon, 12 May 2025 08:00:00 +0100
+
 indi-mi (2.1) buster; urgency=low
 
   * Add new properties to Standalone Filter Wheel driver
