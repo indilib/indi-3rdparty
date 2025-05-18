@@ -1423,6 +1423,13 @@ bool ToupBase::activateCooler(bool enable)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::StartExposure(float duration)
 {
+    // Abort any running exposure before starting a new one
+    if (InExposure)
+    {
+        LOG_WARN("Exposure already in progress. Aborting previous exposure before starting a new one.");
+        AbortExposure();
+    }
+
     PrimaryCCD.setExposureDuration(static_cast<double>(duration));
 
     HRESULT rc = 0;
