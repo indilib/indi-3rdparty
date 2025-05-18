@@ -1571,6 +1571,7 @@ void ToupBase::TimerHit()
     if (isConnected() == false)
         return;
 
+    // Exposure timeout logic
     if (InExposure)
     {
         timeval curtime, diff;
@@ -1580,6 +1581,34 @@ void ToupBase::TimerHit()
         if (timeleft < 0)
             timeleft = 0;
         PrimaryCCD.setExposureLeft(timeleft);
+
+        // Timeout check
+        // Calculate allowed timeout using m_TimeoutFactorN
+        double timeout_factor = m_TimeoutFactorN.value;
+        timeval allowed_end = m_ExposureEnd;
+        if (timeout_factor > 1.0)
+        {
+            // Add extra time to m_ExposureEnd
+            double extra = (timeout_factor - 1.0) * m_ExposureRequest;
+            long extra_sec = static_cast<long>(extra);
+            long extra_usec = static_cast<long>((extra - extra_sec) * 1e6);
+            allowed_end.tv_sec += extra_sec;
+            allowed_end.tv_usec += extra_usec;
+            if (allowed_end.tv_usec >= 1000000)
+            {
+                allowed_end.tv_sec += allowed_end.tv_usec / 1000000;
+                allowed_end.tv_usec = allowed_end.tv_usec % 1000000;
+            }
+        }
+
+        timeval now;
+        gettimeofday(&now, nullptr);
+        if (timercmp(&now, &allowed_end, >))
+        {
+            LOG_ERROR("Exposure timed out waiting for image frame.");
+            InExposure = false;
+            PrimaryCCD.setExposureFailed();
+        }
     }
 
     if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
