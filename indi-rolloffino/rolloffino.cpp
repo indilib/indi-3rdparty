@@ -86,7 +86,7 @@ bool RollOffIno::initProperties()
     RoofStatusLP[2].fill("ROOF_MOVING", "Moving", IPS_IDLE);
     RoofStatusLP[3].fill("ROOF_LOCK",   "Roof Lock", IPS_IDLE);
     RoofStatusLP[4].fill("ROOF_AUXILIARY", "Roof Auxiliary", IPS_IDLE);
-    RoofStatusLP.fill(getDeviceName(), "ROOF STATUS","Roof Status", MAIN_CONTROL_TAB, IPS_OK);
+    RoofStatusLP.fill(getDeviceName(), "ROOF STATUS", "Roof Status", MAIN_CONTROL_TAB, IPS_OK);
 
     RoofTimeoutNP[0].fill("ROOF_TIMEOUT", "Timeout in Seconds", "%3.0f", 1, 300, 1, 120);
     RoofTimeoutNP.fill(getDeviceName(), "ROOF_MOVEMENT", "Roof Movement", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
@@ -302,18 +302,18 @@ void RollOffIno::roofTimerExpired()
     setDomeState(DOME_IDLE);
     SetParked(false);
 
-   if (roofOpening)
-   {
-       LOG_ERROR("Time allowed for opening the roof has expired");
-       roofOpening = false;
-       roofTimedOut = EXPIRED_OPEN;
-   }
-   else if (roofClosing)
-   {
-       LOG_ERROR("Time allowed for closing the roof has expired");
-       roofClosing = false;
-       roofTimedOut = EXPIRED_CLOSE;
-   }
+    if (roofOpening)
+    {
+        LOG_ERROR("Time allowed for opening the roof has expired");
+        roofOpening = false;
+        roofTimedOut = EXPIRED_OPEN;
+    }
+    else if (roofClosing)
+    {
+        LOG_ERROR("Time allowed for closing the roof has expired");
+        roofClosing = false;
+        roofTimedOut = EXPIRED_CLOSE;
+    }
     LOG_INFO("Does the Timeout setting in the Options tab need extending?");
 }
 
@@ -527,7 +527,7 @@ IPState RollOffIno::Move(DomeDirection dir, DomeMotionCommand operation)
         // Roof is moving
         roofTimedOut = EXPIRED_CLEAR;
         auto timeOut = (int)RoofTimeoutNP[0].getValue();
-        roofMoveTimer.start(timeOut* 1000);
+        roofMoveTimer.start(timeOut * 1000);
         LOGF_DEBUG("Roof motion timeout setting: %d", (int)timeOut);
         return IPS_BUSY;
     }
@@ -671,8 +671,8 @@ void RollOffIno::updateRoofStatus()
             RoofStatusLP.setState(IPS_OK);
         }
 
-            // An actual roof lock would not be expected unless roof was closed.
-            // However the controller might be using it to prevent motion for some other reason.
+        // An actual roof lock would not be expected unless roof was closed.
+        // However the controller might be using it to prevent motion for some other reason.
         else if (openedStatus)
         {
             RoofStatusLP[ROOF_STATUS_OPENED].setState(IPS_OK);         // Possible, rely on open/close lights to indicate situation
@@ -714,7 +714,7 @@ void RollOffIno::updateRoofStatus()
             RoofStatusLP.setState(IPS_BUSY);
         }
 
-            // Roof is stationary, neither opened or closed
+        // Roof is stationary, neither opened or closed
         else
         {
             if (roofTimedOut == EXPIRED_OPEN)
@@ -876,14 +876,44 @@ bool RollOffIno::initialContact()
     std::string s_response = readBuffer;
     std::string ack = "ACK";
     // If successful response, See if it is from updated client supporting Actions.
-    if (s_response.find(ack))
+    if (s_response.find(ack) != std::string::npos)
     {
-        std::regex regexp("[[ACT(\\d)]]");
-        std::smatch match;
-        if (std::regex_search(s_response, match, regexp))
+        try
         {
-            std::string result = match.str();
-            actionCount = std::stoi(result);
+            // Regex to find patterns like [ACT5] or [ACT12]
+            std::regex regexp("\\[ACT(\\d+)\\]");
+            std::smatch match;
+            if (std::regex_search(s_response, match, regexp))
+            {
+                if (match.size() > 1) // match[0] is the whole match, match[1] is the first capture group
+                {
+                    std::string digits_str = match[1].str();
+                    try
+                    {
+                        actionCount = std::stoi(digits_str);
+                    }
+                    catch (const std::invalid_argument &ia)
+                    {
+                        LOGF_WARN("Invalid argument for stoi converting action count: '%s' from response '%s'. Error: %s", digits_str.c_str(),
+                                  s_response.c_str(), ia.what());
+                        actionCount = 0; // Default or error value
+                    }
+                    catch (const std::out_of_range &oor)
+                    {
+                        LOGF_WARN("Out of range for stoi converting action count: '%s' from response '%s'. Error: %s", digits_str.c_str(),
+                                  s_response.c_str(), oor.what());
+                        actionCount = 0; // Default or error value
+                    }
+                }
+                else
+                {
+                    LOGF_WARN("Regex for action count matched but no capture group in response: '%s'", s_response.c_str());
+                }
+            }
+        }
+        catch (const std::regex_error& e)
+        {
+            LOGF_ERROR("Regex error during initial contact: %s. Regex pattern: \\[ACT(\\d+)\\]", e.what());
         }
         contactEstablished = true;
         //DEBUGF(INDI::Logger::DBG_SESSION, "Initial contact response: %s", readBuffer);
@@ -909,7 +939,7 @@ bool RollOffIno::UpdateDigitalInputs()
         if (i < actionCount)
         {
             auto state = ISS_OFF;
-            strncpy(get, inpRoRino[i], MAXOUTBUF-1);
+            strncpy(get, inpRoRino[i], MAXOUTBUF - 1);
             if (strlen(get) == 0)
                 continue;
             if (!writeIno(get))
@@ -977,7 +1007,7 @@ bool RollOffIno::CommandOutput(uint32_t index, OutputState command)
     // Do not send Action command beyond what controller indicates it will support
     if (index >= actionCount)
         return true;
-    snprintf(cmd, MAXOUTBUF-1, "%s", s_cmd.c_str());
+    snprintf(cmd, MAXOUTBUF - 1, "%s", s_cmd.c_str());
     if (enabled == 0)
     {
         if (pos == std::string::npos)
@@ -986,7 +1016,7 @@ bool RollOffIno::CommandOutput(uint32_t index, OutputState command)
             return false;
         }
         s_cmd.replace(pos, on.length(), off);
-        strncpy(cmd, s_cmd.c_str(), MAXOUTBUF-1);
+        strncpy(cmd, s_cmd.c_str(), MAXOUTBUF - 1);
     }
     if (!writeIno(cmd))
     {
@@ -1002,21 +1032,35 @@ bool RollOffIno::CommandOutput(uint32_t index, OutputState command)
     std::string s_response = response;
     std::string ack = "ACK";
     // successful response, confirm its match.
-    if (s_response.find(ack))
+    if (s_response.find(ack) != std::string::npos)
     {
-        std::regex regexp(":([(A-Z])+(\\d)*([(A-Z])*:");
-        std::smatch match;
-        if (std::regex_search(s_response, match, regexp))
+        try
         {
-            std::string result = match.str();;
-            pos = s_cmd.find(result);
-            if (pos != std::string::npos)
-                return true;
+            std::regex regexp(":([(A-Z])+(\\d)*([(A-Z])*:");
+            std::smatch match;
+            if (std::regex_search(s_response, match, regexp))
+            {
+                std::string result = match.str();
+                pos = s_cmd.find(result); // s_cmd is the original command string sent
+                if (pos != std::string::npos) // Check if the matched part of response is in the command sent
+                    return true;
+                else
+                {
+                    LOGF_WARN("Command %s confirmation matching failed. Matched '%s' in response '%s', but not found in original command.", cmd,
+                              result.c_str(), response);
+                    return false;
+                }
+            }
             else
             {
-                LOGF_WARN("Command %s confirmation matching failed %s", cmd, response);
+                LOGF_WARN("Command %s received ACK, but expected pattern not found in response '%s'", cmd, response);
                 return false;
             }
+        }
+        catch (const std::regex_error& e)
+        {
+            LOGF_ERROR("Regex error during command output: %s. Regex pattern: :([(A-Z])+(\\d)*([(A-Z])*:", e.what());
+            return false;
         }
     }
     LOGF_WARN("Command %s negative acknowledgement returned %s", cmd, response);
@@ -1032,9 +1076,9 @@ bool RollOffIno::readIno(char* retBuf)
     int nbytes_read = 0;
     int rc = TTY_OK;
 
-    for (int i= 0; i < 2; i++)
+    for (int i = 0; i < 2; i++)
     {
-        rc = tty_nread_section(PortFD, retBuf, MAXINPBUF-1, stop_char, MAXINOWAIT, &nbytes_read);
+        rc = tty_nread_section(PortFD, retBuf, MAXINPBUF - 1, stop_char, MAXINOWAIT, &nbytes_read);
         if (rc != TTY_OK)
         {
             msSleep(1000);
@@ -1046,7 +1090,7 @@ bool RollOffIno::readIno(char* retBuf)
     if (rc != TTY_OK)
     {
         char errstr[MAXRBUF] = {0};
-        tty_error_msg(rc, errstr, MAXRBUF-1);
+        tty_error_msg(rc, errstr, MAXRBUF - 1);
         LOGF_ERROR("Arduino connection read error: %s.", errstr);
     }
     return false;
@@ -1060,7 +1104,7 @@ bool RollOffIno::writeIno(const char* msg)
     int retMsgLen = 0;
     int status;
 
-    if (strlen(msg) >= MAXOUTBUF-1)
+    if (strlen(msg) >= MAXOUTBUF - 1)
     {
         LOG_ERROR("Roof controller command message too long");
         return false;
@@ -1077,5 +1121,3 @@ bool RollOffIno::writeIno(const char* msg)
     }
     return true;
 }
-
-
