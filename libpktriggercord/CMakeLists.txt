@@ -60,7 +60,7 @@ add_custom_command (
 add_custom_target (udev_rules ALL DEPENDS 95-pentax.rules 95-samsung.rules)
 
 # Install udev rules
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND INDI_INSTALL_UDEV_RULES)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/95-pentax.rules ${CMAKE_CURRENT_BINARY_DIR}/95-samsung.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
   install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/pentax_settings.json DESTINATION ${PK_DATADIR})
 endif()

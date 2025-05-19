@@ -22,7 +22,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libqhyccd" "libqhyccd.dylib" "QHY")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   set (QHY_FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
 
@@ -46,11 +46,13 @@ endif ()
 install (FILES qhyccd.h qhyccderr.h qhyccdcamdef.h qhyccdstruct.h DESTINATION include/libqhy)
 
 # Install firmware
-install (
-   CODE "
-   file(GLOB QHY_FIRMWARE ${CMAKE_CURRENT_SOURCE_DIR}/firmware/*) \n
-   file(INSTALL DESTINATION ${QHY_FIRMWARE_INSTALL_DIR} TYPE FILE FILES \${QHY_FIRMWARE})"
-)
+IF (INDI_INSTALL_FIRMWARE)
+  install (
+    CODE "
+    file(GLOB QHY_FIRMWARE ${CMAKE_CURRENT_SOURCE_DIR}/firmware/*) \n
+    file(INSTALL DESTINATION ${QHY_FIRMWARE_INSTALL_DIR} TYPE FILE FILES \${QHY_FIRMWARE})"
+  )
+endif()
 
 # Install library
 install_imported (TARGETS qhyccd DESTINATION ${CMAKE_INSTALL_LIBDIR})

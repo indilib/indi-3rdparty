@@ -145,6 +145,9 @@ ENDIF ()
 # It is a good idea to run with this option before the 3rd Party build so all the libraries are built first.
 option(BUILD_LIBS "Build 3rd Party Libraries, not 3rd Party Drivers" Off)
 
+option(INDI_INSTALL_FIRMWARE "Install Firmwares" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 # Fix MacOS libraries linking
 # Do not ENABLE on production! Should be enabled by INDI core developers only
 # to fix the affected libraries and push a fix to the repo after a binary update.

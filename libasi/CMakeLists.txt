@@ -53,7 +53,7 @@ if (APPLE)
   FIX_MACOS_LIBRARIES("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
   FIX_MACOS_LIBRARIES("libCAARotator" "mac/libCAARotator.bin" "ASI/ZWO")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "armv6/libASICamera2.bin")

@@ -19,7 +19,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libomegonprocam" "mac/libomegonprocam.bin" "OMEGON")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET omegonprocam PROPERTY IMPORTED_LOCATION "armhf/libomegonprocam.bin")

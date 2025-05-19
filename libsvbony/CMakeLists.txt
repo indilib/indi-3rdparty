@@ -23,7 +23,7 @@ elseif (APPLE)
 
     FIX_MACOS_LIBRARIES("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
 
-elseif (UNIX)
+elseif (UNIX AND INDI_INSTALL_UDEV_RULES)
 
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
         set_property (TARGET SVBCameraSDK PROPERTY IMPORTED_LOCATION "libSVBCameraSDK_armv6.bin")

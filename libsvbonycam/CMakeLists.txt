@@ -19,7 +19,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libsvbonycam" "mac/libsvbonycam.bin" "SVBONYCAM")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET svbonycam PROPERTY IMPORTED_LOCATION "armhf/libsvbonycam.bin")

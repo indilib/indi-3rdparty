@@ -13,7 +13,7 @@ add_library (inovasdk SHARED IMPORTED)
 
 set_target_properties (inovasdk PROPERTIES VERSION 1.3.6 SOVERSION 1)
 
-if (UNIX AND NOT WIN32 AND NOT APPLE)
+if (UNIX AND NOT WIN32 AND NOT APPLE AND INDI_INSTALL_UDEV_RULES)
 
    if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
       set_property (TARGET inovasdk PROPERTY IMPORTED_LOCATION "libinovasdk.so.armv6")

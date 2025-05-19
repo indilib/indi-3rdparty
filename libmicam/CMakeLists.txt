@@ -22,7 +22,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libgxccd" "libgxccdmac.bin" "Moravian/GXCCD")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdarmv7.bin")

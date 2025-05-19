@@ -19,7 +19,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libogmacam" "mac/libogmacam.bin" "OGMACAM")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "armhf/libogmacam.bin")

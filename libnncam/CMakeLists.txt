@@ -19,7 +19,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libnncam" "mac/libnncam.bin" "NNCAM")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET nncam PROPERTY IMPORTED_LOCATION "armhf/libnncam.bin")

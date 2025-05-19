@@ -21,7 +21,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libsbig" "SBIGUDrvOSX.bin" "SBIG")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
 
   set (FIRMWARE_INSTALL_DIR "/lib/firmware" CACHE STRING "sbig firmware installation directory")
 
@@ -43,7 +43,9 @@ endif ()
 install (FILES sbigudrv.h DESTINATION include/libsbig)
 
 # Install firmware
-install (FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
+IF (INDI_INSTALL_FIRMWARE)
+  install (FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
+ENDIF()
 
 # Install library
 install_imported (TARGETS sbig DESTINATION ${CMAKE_INSTALL_LIBDIR})

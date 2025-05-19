@@ -26,7 +26,7 @@ if (APPLE)
   FIX_MACOS_LIBRARIES("liboasisfocuser"     "mac/liboasisfocuser.bin" "ASTROASIS")
   FIX_MACOS_LIBRARIES("liboasisfilterwheel" "mac/liboasisfilterwheel.bin" "ASTROASIS")
 
-elseif (UNIX AND NOT WIN32)
+elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET oasisfocuser     PROPERTY IMPORTED_LOCATION "armhf/liboasisfocuser.bin")
     set_property (TARGET oasisfilterwheel PROPERTY IMPORTED_LOCATION "armhf/liboasisfilterwheel.bin")
