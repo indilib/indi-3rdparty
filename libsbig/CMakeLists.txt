@@ -4,6 +4,8 @@ project (libsbig)
 set (SBIG_VERSION "4.9.9")
 set (SBIG_SOVERSION "4")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -21,7 +23,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libsbig" "SBIGUDrvOSX.bin" "SBIG")
 
-elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX AND NOT WIN32)
 
   set (FIRMWARE_INSTALL_DIR "/lib/firmware" CACHE STRING "sbig firmware installation directory")
 
@@ -34,8 +36,10 @@ elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 51-sbig-debian.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 51-sbig-debian.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 

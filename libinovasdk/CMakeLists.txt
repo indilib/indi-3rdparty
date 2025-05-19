@@ -4,6 +4,8 @@ project (libinovasdk)
 set (INOVASDK_VERSION "1.3.6")
 set (INOVASDK_SOVERSION "1")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -13,7 +15,7 @@ add_library (inovasdk SHARED IMPORTED)
 
 set_target_properties (inovasdk PROPERTIES VERSION 1.3.6 SOVERSION 1)
 
-if (UNIX AND NOT WIN32 AND NOT APPLE AND INDI_INSTALL_UDEV_RULES)
+if (UNIX AND NOT WIN32 AND NOT APPLE)
 
    if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
       set_property (TARGET inovasdk PROPERTY IMPORTED_LOCATION "libinovasdk.so.armv6")
@@ -28,8 +30,10 @@ if (UNIX AND NOT WIN32 AND NOT APPLE AND INDI_INSTALL_UDEV_RULES)
    endif ()
 
    # Install udev rules
-   set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-   install (FILES 99-inovaplx.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+   if (INDI_INSTALL_UDEV_RULES)
+      set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+      install (FILES 99-inovaplx.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+   endif ()
 
 endif ()
 

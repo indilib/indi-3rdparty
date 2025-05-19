@@ -5,6 +5,8 @@ set (MICAM_VERSION "0.12.0")
 set (MICAM_VERSION_MAC "0.11.0")
 set (MICAM_SOVERSION "0")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -22,7 +24,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libgxccd" "libgxccdmac.bin" "Moravian/GXCCD")
 
-elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET gxccd PROPERTY IMPORTED_LOCATION "libgxccdarmv7.bin")
@@ -35,8 +37,10 @@ elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 99-miccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 99-miccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 

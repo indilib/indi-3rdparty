@@ -5,6 +5,8 @@ project (libqhy)
 set (LIBQHY_VERSION "25.04.02")
 set (LIBQHY_SOVERSION "20")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -22,7 +24,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libqhyccd" "libqhyccd.dylib" "QHY")
 
-elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX AND NOT WIN32)
 
   set (QHY_FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
 
@@ -37,8 +39,10 @@ elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 85-qhyccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 85-qhyccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 

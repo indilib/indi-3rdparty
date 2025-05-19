@@ -9,6 +9,8 @@ list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
 include (InstallImported)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 add_library (altaircam SHARED IMPORTED)
 
 set_target_properties (altaircam PROPERTIES VERSION ${LIBALTAIRCAM_VERSION} SOVERSION ${LIBALTAIRCAM_SOVERSION})
@@ -19,7 +21,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libaltaircam" "mac/libaltaircam.bin" "ALTAIR")
 
-elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET altaircam PROPERTY IMPORTED_LOCATION "armhf/libaltaircam.bin")
@@ -32,8 +34,10 @@ elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 99-altaircam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  IF (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 99-altaircam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  ENDIF()
 
 endif ()
 

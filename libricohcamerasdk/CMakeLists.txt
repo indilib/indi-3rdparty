@@ -6,6 +6,8 @@ set (LIBPENTAX_SOVERSION "1")
 set (LIBMTP_VERSION "9.3.0")
 set (LIBMTP_SOVERSION "9")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -17,7 +19,7 @@ add_library (mtpricoh          SHARED IMPORTED)
 set_target_properties (RicohCameraSDKCpp PROPERTIES VERSION ${LIBPENTAX_VERSION} SOVERSION ${LIBPENTAX_SOVERSION})
 set_target_properties (mtpricoh          PROPERTIES VERSION ${LIBMTP_VERSION} SOVERSION ${LIBMTP_SOVERSION})
 
-if (UNIX AND NOT WIN32 AND NOT APPLE AND INDI_INSTALL_UDEV_RULES)
+if (UNIX AND NOT WIN32 AND NOT APPLE)
 
   if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)")
     set_property (TARGET RicohCameraSDKCpp PROPERTY IMPORTED_LOCATION "lib/x64/libRicohCameraSDKCpp.bin")
@@ -33,8 +35,10 @@ if (UNIX AND NOT WIN32 AND NOT APPLE AND INDI_INSTALL_UDEV_RULES)
   endif()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 

@@ -6,6 +6,8 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 set(RULES_INSTALL_DIR "/lib/udev/rules.d/")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 SET(CMAKE_CXX_STANDARD 11)
 set (VERSION_MAJOR 1)
 set (VERSION_MINOR 15)

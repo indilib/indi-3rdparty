@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libbressercam)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 set (LIBBRESSERCAM_VERSION "57.28200")
 set (LIBBRESSERCAM_SOVERSION "57")
 
@@ -19,7 +21,7 @@ if (APPLE)
 
   FIX_MACOS_LIBRARIES("libbressercam" "mac/libbressercam.bin" "BRESSERCAM")
 
-elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX AND NOT WIN32)
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET bressercam PROPERTY IMPORTED_LOCATION "armhf/libbressercam.bin")
@@ -32,8 +34,10 @@ elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-bressercam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-bressercam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif()
 
 endif ()
 

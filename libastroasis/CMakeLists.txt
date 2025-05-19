@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libastroasis)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 set (OASIS_FOCUSER_VERSION "2.0.2")
 set (OASIS_FOCUSER_SOVERSION "2")
 
@@ -26,7 +28,7 @@ if (APPLE)
   FIX_MACOS_LIBRARIES("liboasisfocuser"     "mac/liboasisfocuser.bin" "ASTROASIS")
   FIX_MACOS_LIBRARIES("liboasisfilterwheel" "mac/liboasisfilterwheel.bin" "ASTROASIS")
 
-elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX AND NOT WIN32)
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET oasisfocuser     PROPERTY IMPORTED_LOCATION "armhf/liboasisfocuser.bin")
     set_property (TARGET oasisfilterwheel PROPERTY IMPORTED_LOCATION "armhf/liboasisfilterwheel.bin")
@@ -41,8 +43,10 @@ elseif (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 99-astroasis.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 99-astroasis.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 

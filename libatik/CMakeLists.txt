@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libatik)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 # Built with SDK API 2024.11.26_2038
 set (ATIK_VERSION "2.2.22")
 set (ATIK_SOVERSION "2")

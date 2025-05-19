@@ -4,6 +4,8 @@ project (libsvbony)
 set (SVBCAMERASDK_VERSION "1.13.4")
 set (SVBCAMERASDK_SOVERSION "1")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -23,7 +25,7 @@ elseif (APPLE)
 
     FIX_MACOS_LIBRARIES("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")
 
-elseif (UNIX AND INDI_INSTALL_UDEV_RULES)
+elseif (UNIX)
 
     if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
         set_property (TARGET SVBCameraSDK PROPERTY IMPORTED_LOCATION "libSVBCameraSDK_armv6.bin")
@@ -36,8 +38,10 @@ elseif (UNIX AND INDI_INSTALL_UDEV_RULES)
     endif ()
 
     # Install udev rules
-    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-    install (FILES 90-svbonyusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+    if (INDI_INSTALL_UDEV_RULES)
+        set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+        install (FILES 90-svbonyusb.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+    endif()
 
 endif ()
 
