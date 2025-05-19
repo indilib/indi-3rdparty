@@ -122,6 +122,6 @@ target_link_libraries(gphoto_camera_test
 install(TARGETS gphoto_camera_test DESTINATION bin)
 
 # Disable automount for DSLR cameras
-IF (UNIX AND NOT APPLE)
+IF (UNIX AND NOT APPLE AND INDI_INSTALL_UDEV_RULES)
     install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/85-disable-dslr-automout.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 ENDIF ()

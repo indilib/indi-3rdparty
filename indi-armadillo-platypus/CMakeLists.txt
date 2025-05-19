@@ -79,6 +79,6 @@ install(TARGETS indi_platypus_focus RUNTIME DESTINATION bin )
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_lunatico.xml DESTINATION ${INDI_DATA_DIR})
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND INDI_INSTALL_UDEV_RULES)
 install(FILES 99-armadilloplatypus.rules DESTINATION ${RULES_INSTALL_DIR})
 endif()
