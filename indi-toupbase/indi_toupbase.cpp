@@ -250,7 +250,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.2f", 1, 1.2, 0.01, 1.02);
+    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.2f", 1, 1.3, 0.01, 1.2);
     IUFillNumberVector(&m_TimeoutFactorNP, &m_TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB,
                        IP_RW, 60, IPS_IDLE);
 
