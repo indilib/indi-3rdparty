@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libbressercam)
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 set (LIBBRESSERCAM_VERSION "57.28200")
 set (LIBBRESSERCAM_SOVERSION "57")

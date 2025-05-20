@@ -8,7 +8,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
 SET(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")

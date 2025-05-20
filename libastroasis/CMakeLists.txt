@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libastroasis)
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 set (OASIS_FOCUSER_VERSION "2.0.2")
 set (OASIS_FOCUSER_SOVERSION "2")

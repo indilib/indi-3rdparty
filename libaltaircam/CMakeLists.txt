@@ -9,7 +9,7 @@ list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
 include (InstallImported)
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 add_library (altaircam SHARED IMPORTED)
 

@@ -6,7 +6,7 @@ set (LIBPENTAX_SOVERSION "1")
 set (LIBMTP_VERSION "9.3.0")
 set (LIBMTP_SOVERSION "9")
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")

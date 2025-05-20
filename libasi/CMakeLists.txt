@@ -7,7 +7,7 @@ project (libasi)
 # Using ASI EAF SDK Version 1.6 updated on 2023-03-16
 # Using ASI CAA SDK Version 1.0 updated on 2025-01-09
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 set (ASICAM_VERSION "1.37")
 set (ASICAM_SOVERSION "1")

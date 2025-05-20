@@ -7,7 +7,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 find_package(INDI REQUIRED)
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" on)
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 option(INDI_INSTALL_FIRMWARE "Install Firmware" on)
 
 include_directories( ${INDI_INCLUDE_DIR})
