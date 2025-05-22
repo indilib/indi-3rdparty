@@ -4,6 +4,8 @@ project (libsbig)
 set (SBIG_VERSION "4.9.9")
 set (SBIG_SOVERSION "4")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -34,8 +36,10 @@ elseif (UNIX AND NOT WIN32)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 51-sbig-debian.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 51-sbig-debian.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 
@@ -43,7 +47,9 @@ endif ()
 install (FILES sbigudrv.h DESTINATION include/libsbig)
 
 # Install firmware
-install (FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
+IF (INDI_INSTALL_FIRMWARE)
+  install (FILES sbigucam.hex sbiglcam.hex sbigfcam.hex sbigpcam.hex stfga.bin DESTINATION ${FIRMWARE_INSTALL_DIR})
+ENDIF()
 
 # Install library
 install_imported (TARGETS sbig DESTINATION ${CMAKE_INSTALL_LIBDIR})
