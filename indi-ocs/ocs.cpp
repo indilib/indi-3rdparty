@@ -1527,9 +1527,14 @@ IPState OCS::ControlShutter(ShutterOperation operation)
         sendOCSCommandBlind(OCS_roof_open);
     }
     else if (operation == SHUTTER_CLOSE) {
-        // Sending roof/shutter commands clears any OCS roof errors so we need to do the same here
-        indi_strlcpy(last_shutter_error, "", RB_MAX_LEN);
-        sendOCSCommandBlind(OCS_roof_close);
+        if (INDI::Dome::isLocked()) {
+            LOG_WARN("Cannot close shutter, Dome is locked by unparked mount");
+            return IPS_ALERT;
+        } else {
+            // Sending roof/shutter commands clears any OCS roof errors so we need to do the same here
+            indi_strlcpy(last_shutter_error, "", RB_MAX_LEN);
+            sendOCSCommandBlind(OCS_roof_close);
+        }
     }
 
     // We have to delay the polling timer to account for the delays built
@@ -1551,6 +1556,11 @@ IPState OCS::ControlShutter(ShutterOperation operation)
  * **********************************/
 IPState OCS::Park()
 {
+    if (HasShutter() && ShutterParkPolicySP[SHUTTER_CLOSE_ON_PARK].getState() == ISS_ON)
+    {
+        LOG_INFO("Closing shutter on parking...");
+        ControlShutter(ShutterOperation::SHUTTER_CLOSE);
+    }
     if (sendOCSCommand(OCS_dome_park)) {
         setDomeState(DOME_PARKING);
         return IPS_BUSY;
@@ -1567,6 +1577,11 @@ IPState OCS::UnPark()
 {
     if (sendOCSCommand(OCS_restore_dome_park)) {
         setDomeState(DOME_UNPARKING);
+        if (HasShutter() && ShutterParkPolicySP[SHUTTER_OPEN_ON_UNPARK].getState() == ISS_ON)
+        {
+            LOG_INFO("Opening shutter on unparking...");
+            ControlShutter(ShutterOperation::SHUTTER_OPEN);
+        }
         return IPS_OK;
     } else {
         setDomeState(DOME_ERROR);
