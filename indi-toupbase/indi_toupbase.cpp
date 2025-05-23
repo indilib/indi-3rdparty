@@ -1450,6 +1450,8 @@ bool ToupBase::StartExposure(float duration)
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
 
+    m_ExposureTimer.start();
+
     timeval current_time, exposure_time;
     exposure_time.tv_sec = uSecs / 1000000;
     exposure_time.tv_usec = uSecs % 1000000;
@@ -1574,36 +1576,12 @@ void ToupBase::TimerHit()
     // Exposure timeout logic
     if (InExposure)
     {
-        timeval curtime, diff;
-        gettimeofday(&curtime, nullptr);
-        timersub(&m_ExposureEnd, &curtime, &diff);
-        double timeleft = diff.tv_sec + diff.tv_usec / 1e6;
-        if (timeleft < 0)
-            timeleft = 0;
-        PrimaryCCD.setExposureLeft(timeleft);
+        double const elapsed = m_ExposureTimer.elapsed() / 1000.0;
+        double remaining = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
+        PrimaryCCD.setExposureLeft(remaining);
 
         // Timeout check
-        // Calculate allowed timeout using m_TimeoutFactorN
-        double timeout_factor = m_TimeoutFactorN.value;
-        timeval allowed_end = m_ExposureEnd;
-        if (timeout_factor > 1.0)
-        {
-            // Add extra time to m_ExposureEnd
-            double extra = (timeout_factor - 1.0) * m_ExposureRequest;
-            long extra_sec = static_cast<long>(extra);
-            long extra_usec = static_cast<long>((extra - extra_sec) * 1e6);
-            allowed_end.tv_sec += extra_sec;
-            allowed_end.tv_usec += extra_usec;
-            if (allowed_end.tv_usec >= 1000000)
-            {
-                allowed_end.tv_sec += allowed_end.tv_usec / 1000000;
-                allowed_end.tv_usec = allowed_end.tv_usec % 1000000;
-            }
-        }
-
-        timeval now;
-        gettimeofday(&now, nullptr);
-        if (timercmp(&now, &allowed_end, >))
+        if (elapsed > m_ExposureRequest * m_TimeoutFactorN.value)
         {
             LOG_ERROR("Exposure timed out waiting for image frame.");
             InExposure = false;

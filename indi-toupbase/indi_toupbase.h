@@ -23,6 +23,7 @@
 
 #include <indiccd.h>
 #include <inditimer.h>
+#include <indielapsedtimer.h>
 #include "libtoupbase.h"
 
 class ToupBase : public INDI::CCD
@@ -296,4 +297,6 @@ class ToupBase : public INDI::CCD
         int32_t m_rgbBufferSize { 0 };
 
         int m_ConfigResolutionIndex {-1};
+
+        INDI::ElapsedTimer m_ExposureTimer;
 };
