@@ -250,7 +250,7 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.2f", 1, 1.2, 0.01, 1.02);
+    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.2f", 1, 1.3, 0.01, 1.2);
     IUFillNumberVector(&m_TimeoutFactorNP, &m_TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB,
                        IP_RW, 60, IPS_IDLE);
 
@@ -861,6 +861,8 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_ControlNP.name))
         {
+            double const old_framerate_limit = m_ControlN[TC_FRAMERATE_LIMIT].value;
+
             if (IUUpdateNumber(&m_ControlNP, values, names, n) < 0)
             {
                 m_ControlNP.s = IPS_ALERT;
@@ -903,10 +905,13 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
 
                     case TC_FRAMERATE_LIMIT:
                         FP(put_Option(m_Handle, CP(OPTION_FRAMERATE), value));
-                        if (value == 0)
-                            LOG_INFO("FPS rate limit is set to unlimited");
-                        else
-                            LOGF_INFO("Limiting frame rate to %d FPS", value);
+                        if (value != old_framerate_limit)
+                        {
+                            if (value == 0)
+                                LOG_INFO("FPS rate limit is set to unlimited");
+                            else
+                                LOGF_INFO("Limiting frame rate to %d FPS", value);
+                        }
                         break;
 
                     default:
@@ -1423,6 +1428,13 @@ bool ToupBase::activateCooler(bool enable)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::StartExposure(float duration)
 {
+    // Abort any running exposure before starting a new one
+    if (InExposure)
+    {
+        LOG_WARN("Exposure already in progress. Aborting previous exposure before starting a new one.");
+        AbortExposure();
+    }
+
     PrimaryCCD.setExposureDuration(static_cast<double>(duration));
 
     HRESULT rc = 0;
@@ -1442,6 +1454,8 @@ bool ToupBase::StartExposure(float duration)
             LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
         m_CurrentTriggerMode = TRIGGER_SOFTWARE;
     }
+
+    m_ExposureTimer.start();
 
     timeval current_time, exposure_time;
     exposure_time.tv_sec = uSecs / 1000000;
@@ -1564,15 +1578,20 @@ void ToupBase::TimerHit()
     if (isConnected() == false)
         return;
 
+    // Exposure timeout logic
     if (InExposure)
     {
-        timeval curtime, diff;
-        gettimeofday(&curtime, nullptr);
-        timersub(&m_ExposureEnd, &curtime, &diff);
-        double timeleft = diff.tv_sec + diff.tv_usec / 1e6;
-        if (timeleft < 0)
-            timeleft = 0;
-        PrimaryCCD.setExposureLeft(timeleft);
+        double const elapsed = m_ExposureTimer.elapsed() / 1000.0;
+        double remaining = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
+        PrimaryCCD.setExposureLeft(remaining);
+
+        // Timeout check
+        if (elapsed > m_ExposureRequest * m_TimeoutFactorN.value)
+        {
+            LOG_ERROR("Exposure timed out waiting for image frame.");
+            InExposure = false;
+            PrimaryCCD.setExposureFailed();
+        }
     }
 
     if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
