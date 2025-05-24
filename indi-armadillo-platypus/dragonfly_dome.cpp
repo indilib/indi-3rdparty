@@ -36,58 +36,9 @@
 
 static std::unique_ptr<DragonFlyDome> dome(new DragonFlyDome());
 
-Relay::Relay(uint8_t id, const std::string &device, const std::string &group)
-{
-    m_ID = id;
-    char name[MAXINDINAME] = {0}, label[MAXINDILABEL] = {0};
+// Relay class methods are removed as the class itself is removed from .h
 
-    snprintf(name, MAXINDINAME, "RELAY_%d", id + 1);
-    m_Name = name;
-    snprintf(label, MAXINDILABEL, "Relay #%d", id + 1);
-
-    IUFillSwitch(&RelayS[DD::INDI_ENABLED], "INDI_ENABLED", "On", ISS_OFF);
-    IUFillSwitch(&RelayS[DD::INDI_DISABLED], "INDI_DISABLED", "Off", ISS_ON);
-    IUFillSwitchVector(&RelaySP, RelayS, 2, device.c_str(), name, label, group.c_str(), IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-}
-
-void Relay::define(DD *parent)
-{
-    parent->defineProperty(&RelaySP);
-}
-
-void Relay::remove(DD *parent)
-{
-    parent->deleteProperty(RelaySP.name);
-}
-
-bool Relay::update(ISState *states, char *names[], int n)
-{
-    return IUUpdateSwitch(&RelaySP, states, names, n) == 0;
-}
-
-bool Relay::isEnabled() const
-{
-    return IUFindOnSwitchIndex(&RelaySP) == DD::INDI_ENABLED;
-}
-
-void Relay::setEnabled(bool enabled)
-{
-    RelayS[DD::INDI_ENABLED].s  = enabled ? ISS_ON : ISS_OFF;
-    RelayS[DD::INDI_DISABLED].s = enabled ? ISS_OFF : ISS_ON;
-}
-
-void Relay::sync(IPState state)
-{
-    RelaySP.s = state;
-    IDSetSwitch(&RelaySP, nullptr);
-}
-
-const std::string &Relay::name() const
-{
-    return m_Name;
-}
-
-DragonFlyDome::DragonFlyDome()
+DragonFlyDome::DragonFlyDome() : INDI::OutputInterface(this)
 {
     setVersion(LUNATICO_VERSION_MAJOR, LUNATICO_VERSION_MINOR);
     SetDomeCapability(DOME_CAN_ABORT |  DOME_CAN_PARK);
@@ -97,25 +48,19 @@ DragonFlyDome::DragonFlyDome()
 bool DragonFlyDome::initProperties()
 {
     INDI::Dome::initProperties();
+    INDI::OutputInterface::initProperties("Outputs", 8, "Relay");
 
     SetParkDataType(PARK_NONE);
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
-    // #1 Relays
+    // #1 Relays (Dome Specific Control - these map to OutputInterface relays)
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // Dome Relays
     DomeControlRelayNP[RELAY_OPEN].fill("RELAY_OPEN", "Open Relay", "%.f", 1., 8., 1., 1.);
     DomeControlRelayNP[RELAY_CLOSE].fill("RELAY_CLOSE", "Close Relay", "%.f", 1., 8., 1., 1.);
     DomeControlRelayNP.fill(getDeviceName(), "DOME_CONTROL_RELAYS", "Relay Control",
-                       RELAYS_TAB, IP_RW, 0, IPS_OK);
+                            RELAYS_TAB, IP_RW, 0, IPS_OK);
 
-    // All Relays
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        std::unique_ptr<Relay> oneRelay;
-        oneRelay.reset(new Relay(i, getDeviceName(), RELAYS_TAB));
-        Relays.push_back(std::move(oneRelay));
-    }
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #2 Sensors
@@ -125,7 +70,7 @@ bool DragonFlyDome::initProperties()
     DomeControlSensorNP[SENSOR_UNPARKED].fill("SENSOR_UNPARKED", "Unparked", "%.f", 1., 8., 1., 1.);
     DomeControlSensorNP[SENSOR_PARKED].fill("SENSOR_PARKED", "Parked", "%.f", 1., 8., 1., 1.);
     DomeControlSensorNP.fill(getDeviceName(), "DOME_CONTROL_SENSORS", "Sensors",
-                       SENSORS_TAB, IP_RW, 0, IPS_OK);
+                             SENSORS_TAB, IP_RW, 0, IPS_OK);
 
     // ALL Sensors
     char sensorName[MAXINDINAME] = {0}, sensorLabel[MAXINDILABEL] = {0};
@@ -146,12 +91,12 @@ bool DragonFlyDome::initProperties()
     PerPortSP[PORT_EXP].fill("PORT_EXP", "Exp", ISS_OFF );
     PerPortSP[PORT_THIRD].fill("PORT_THIRD", "Third", ISS_OFF );
     PerPortSP.fill(getDeviceName(), "DRAGONFLY_PORT", "Port", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY,
-                       0, IPS_IDLE);
+                   0, IPS_IDLE);
 
     // Firmware Version
     FirmwareVersionTP[0].fill("VERSION", "Version", "");
     FirmwareVersionTP.fill(getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
-                     IP_RO, 0, IPS_IDLE);
+                           IP_RO, 0, IPS_IDLE);
 
     // Load Configuration
     PerPortSP.load();
@@ -177,17 +122,19 @@ void DragonFlyDome::ISGetProperties(const char *dev)
 bool DragonFlyDome::updateProperties()
 {
     INDI::Dome::updateProperties();
+    INDI::OutputInterface::updateProperties();
 
     if (isConnected())
     {
         InitPark();
 
-        updateRelays();
         updateSensors();
 
         double parkedSensor = -1, unparkedSensor = -1;
-        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.getName(), DomeControlSensorNP[SENSOR_UNPARKED].getName(), &unparkedSensor);
-        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.getName(), DomeControlSensorNP[SENSOR_PARKED].getName(), &parkedSensor);
+        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.getName(), DomeControlSensorNP[SENSOR_UNPARKED].getName(),
+                          &unparkedSensor);
+        IUGetConfigNumber(getDeviceName(), DomeControlSensorNP.getName(), DomeControlSensorNP[SENSOR_PARKED].getName(),
+                          &parkedSensor);
         if (parkedSensor > 0 && unparkedSensor > 0)
         {
             if (isSensorOn(unparkedSensor) == isSensorOn(parkedSensor))
@@ -203,8 +150,6 @@ bool DragonFlyDome::updateProperties()
 
         // Relays
         defineProperty(DomeControlRelayNP);
-        for (auto &oneRelay : Relays)
-            oneRelay->define(this);
 
         // Sensors
         defineProperty(DomeControlSensorNP);
@@ -216,8 +161,6 @@ bool DragonFlyDome::updateProperties()
         deleteProperty(FirmwareVersionTP);
 
         deleteProperty(DomeControlRelayNP);
-        for (auto &oneRelay : Relays)
-            oneRelay->remove(this);
 
         deleteProperty(DomeControlSensorNP);
         deleteProperty(SensorNP.name);
@@ -273,6 +216,11 @@ bool DragonFlyDome::echo()
 
 bool DragonFlyDome::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
+    // Process OutputInterface switches first
+    if (INDI::OutputInterface::processSwitch(dev, name, states, names, n))
+        return true;
+
+    // Then process device-specific switches
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         /////////////////////////////////////////////
@@ -286,34 +234,27 @@ bool DragonFlyDome::ISNewSwitch(const char *dev, const char *name, ISState *stat
             saveConfig(PerPortSP);
             return true;
         }
-        /////////////////////////////////////////////
-        // Relays
-        /////////////////////////////////////////////
-        for (uint8_t i = 0; i < 8; i++)
-        {
-            if (!strcmp(name, Relays[i]->name().c_str()))
-            {
-                bool enabled = !strcmp(IUFindOnSwitchName(states, names, n), "INDI_ENABLED");
-                if (setRelayEnabled(i, enabled))
-                {
-                    Relays[i]->update(states, names, n);
-                    Relays[i]->sync(IPS_OK);
-                }
-                else
-                {
-                    Relays[i]->sync(IPS_ALERT);
-                }
-
-                return true;
-            }
-        }
     }
 
     return INDI::Dome::ISNewSwitch(dev, name, states, names, n);
 }
 
+bool DragonFlyDome::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if (dev && strcmp(dev, getDeviceName()) == 0)
+    {
+        if (INDI::OutputInterface::processText(dev, name, texts, names, n))
+            return true;
+    }
+    return INDI::Dome::ISNewText(dev, name, texts, names, n);
+}
+
 bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
+    // Process OutputInterface numbers first (e.g., PulseDurationNP)
+    if (INDI::OutputInterface::processNumber(dev, name, values, names, n))
+        return true;
+
     if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
     {
         /////////////////////////////////////////////
@@ -343,19 +284,6 @@ bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values
     return INDI::Dome::ISNewNumber(dev, name, values, names, n);
 }
 
-///////////////////////////////////////////////////////////////////////////
-///
-///////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::setRelayEnabled(uint8_t id, bool enabled)
-{
-    char cmd[DRIVER_LEN] = {0};
-    int32_t res = 0;
-    snprintf(cmd, DRIVER_LEN, "!relio rlset 0 %d %d#", id, enabled ? 1 : 0);
-    if (sendCommand(cmd, res))
-        return res == (enabled ? 1 : 0);
-
-    return false;
-}
 
 ///////////////////////////////////////////////////////////////////////////
 /// Set Backlash
@@ -394,15 +322,12 @@ void DragonFlyDome::TimerHit()
     }
 
     // Update all relays every RELAY_UPDATE_THRESHOLD timer hit
+    // This is now handled by OutputInterface and UpdateDigitalOutputs
     m_UpdateRelayCounter++;
-    if (m_UpdateRelayCounter >= RELAY_UPDATE_THRESHOLD)
+    if (m_UpdateRelayCounter >= RELAY_UPDATE_THRESHOLD) // This counter can be repurposed or removed later
     {
         m_UpdateRelayCounter = 0;
-        if (updateRelays())
-        {
-            for (const auto &oneRelay : Relays)
-                oneRelay->sync(oneRelay->isEnabled() ? IPS_OK : IPS_IDLE);
-        }
+        UpdateDigitalOutputs();
     }
 
     // If we are in motion
@@ -449,34 +374,34 @@ bool DragonFlyDome::Abort()
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::setRoofOpen(bool enabled)
 {
-    int id = DomeControlRelayNP[RELAY_OPEN].getValue() - 1;
-    if (id < 0)
+    int open_relay_idx = static_cast<int>(DomeControlRelayNP[RELAY_OPEN].getValue()) - 1;
+    if (open_relay_idx < 0 || open_relay_idx >= static_cast<int>(DigitalOutputsSP.size()))
+    {
+        LOGF_ERROR("Open relay index %d is out of bounds.", open_relay_idx);
         return false;
+    }
 
-    int closeRoofRelay = DomeControlRelayNP[RELAY_CLOSE].getValue() - 1;
-    if (closeRoofRelay < 0)
+    int close_relay_idx = static_cast<int>(DomeControlRelayNP[RELAY_CLOSE].getValue()) - 1;
+    if (close_relay_idx < 0 || close_relay_idx >= static_cast<int>(DigitalOutputsSP.size()))
+    {
+        LOGF_ERROR("Close relay index %d is out of bounds for setRoofOpen.", close_relay_idx);
         return false;
-    // Only proceed is RELAY_CLOSE is OFF
-    if (enabled && Relays[closeRoofRelay]->isEnabled())
+    }
+
+    // Only proceed if RELAY_CLOSE is OFF (or we are turning RELAY_OPEN off)
+    if (enabled && DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
     {
         LOG_DEBUG("Turning off Close Roof Relay in order to turn on Open Roof relay...");
-        setRelayEnabled(closeRoofRelay, false);
-        Relays[closeRoofRelay]->setEnabled(false);
-        Relays[closeRoofRelay]->sync(IPS_IDLE);
+        if (!CommandOutput(close_relay_idx, INDI::OutputInterface::Off))
+        {
+            LOG_ERROR("Failed to turn off close relay before opening.");
+            // Decide if we should still try to open or return false.
+            // For safety, perhaps return false.
+            return false;
+        }
     }
 
-    if (setRelayEnabled(id, enabled))
-    {
-        Relays[id]->setEnabled(enabled);
-        Relays[id]->sync(enabled ? IPS_OK : IPS_IDLE);
-        return true;
-    }
-    else
-    {
-        Relays[id]->setEnabled(!enabled);
-        Relays[id]->sync(IPS_ALERT);
-        return false;
-    }
+    return CommandOutput(open_relay_idx, enabled ? INDI::OutputInterface::On : INDI::OutputInterface::Off);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -484,34 +409,32 @@ bool DragonFlyDome::setRoofOpen(bool enabled)
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::setRoofClose(bool enabled)
 {
-    int id = DomeControlRelayNP[RELAY_CLOSE].getValue() - 1;
-    if (id < 0)
+    int close_relay_idx = static_cast<int>(DomeControlRelayNP[RELAY_CLOSE].getValue()) - 1;
+    if (close_relay_idx < 0 || close_relay_idx >= static_cast<int>(DigitalOutputsSP.size()))
+    {
+        LOGF_ERROR("Close relay index %d is out of bounds.", close_relay_idx);
         return false;
+    }
 
-    int openRoofRelay = DomeControlRelayNP[RELAY_OPEN].getValue() - 1;
-    if (openRoofRelay < 0)
+    int open_relay_idx = static_cast<int>(DomeControlRelayNP[RELAY_OPEN].getValue()) - 1;
+    if (open_relay_idx < 0 || open_relay_idx >= static_cast<int>(DigitalOutputsSP.size()))
+    {
+        LOGF_ERROR("Open relay index %d is out of bounds for setRoofClose.", open_relay_idx);
         return false;
-    // Only proceed is RELAY_OPEN is OFF
-    if (enabled && Relays[openRoofRelay]->isEnabled())
+    }
+
+    // Only proceed if RELAY_OPEN is OFF (or we are turning RELAY_CLOSE off)
+    if (enabled && DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
     {
         LOG_DEBUG("Turning off Open Roof relay in order to turn on Close Roof relay...");
-        setRelayEnabled(openRoofRelay, false);
-        Relays[openRoofRelay]->setEnabled(false);
-        Relays[openRoofRelay]->sync(IPS_IDLE);
+        if (!CommandOutput(open_relay_idx, INDI::OutputInterface::Off))
+        {
+            LOG_ERROR("Failed to turn off open relay before closing.");
+            return false; // Safety: don't proceed if we can't turn off the opposing relay
+        }
     }
 
-    if (setRelayEnabled(id, enabled))
-    {
-        Relays[id]->setEnabled(enabled);
-        Relays[id]->sync(enabled ? IPS_OK : IPS_IDLE);
-        return true;
-    }
-    else
-    {
-        Relays[id]->setEnabled(!enabled);
-        Relays[id]->sync(IPS_ALERT);
-        return false;
-    }
+    return CommandOutput(close_relay_idx, enabled ? INDI::OutputInterface::On : INDI::OutputInterface::Off);
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -527,11 +450,11 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
             LOG_WARN("Roof is already fully opened.");
             return IPS_ALERT;
         }
-//         else if (dir == DOME_CW && getWeatherState() == IPS_ALERT)
-//         {
-//             LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
-//             return IPS_ALERT;
-//         }
+        //         else if (dir == DOME_CW && getWeatherState() == IPS_ALERT)
+        //         {
+        //             LOG_WARN("Weather conditions are in the danger zone. Cannot open roof.");
+        //             return IPS_ALERT;
+        //         }
         else if (dir == DOME_CCW && isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue()))
         {
             LOG_WARN("Roof is already fully closed.");
@@ -590,12 +513,107 @@ IPState DragonFlyDome::UnPark()
 bool DragonFlyDome::saveConfigItems(FILE *fp)
 {
     INDI::Dome::saveConfigItems(fp);
+    INDI::OutputInterface::saveConfigItems(fp);
 
     PerPortSP.save(fp);
     DomeControlRelayNP.save(fp);
     DomeControlSensorNP.save(fp);
 
     return true;
+}
+
+///////////////////////////////////////////////////////////////////////////////
+/// INDI::OutputInterface Implementation
+///////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::CommandOutput(uint32_t index, INDI::OutputInterface::OutputState command)
+{
+    if (index >= 8) // Assuming 8 outputs, adjust as necessary
+    {
+        LOGF_ERROR("Invalid output index %u. Valid range from 0 to 7.", index);
+        return false;
+    }
+
+    char cmd[DRIVER_LEN] = {0};
+    int32_t res = 0;
+    int enabled = (command == INDI::OutputInterface::On) ? 1 : 0;
+
+    // Determine which port to use based on PerPortSP (Main, Exp, Third)
+    // For now, assuming port 0 (Main). This might need adjustment if Dragonfly
+    // supports multiple relay boards on different selected ports.
+    // The original sendCommand in DragonFlyDome doesn't show port selection for !relio commands.
+    // It seems to assume the active PortFD is for the correct device.
+    // Let's assume '0' is the board ID for !relio commands on the selected port.
+    uint8_t board_id = 0;
+    // Example if PerPortSP selected EXP or THIRD and they map to different board IDs:
+    // if (PerPortSP[PORT_EXP].s == ISS_ON) board_id = 1;
+    // else if (PerPortSP[PORT_THIRD].s == ISS_ON) board_id = 2;
+
+    snprintf(cmd, DRIVER_LEN, "!relio rlset %u %u %d#", board_id, index, enabled);
+    if (sendCommand(cmd, res))
+    {
+        // OutputInterface::processSwitch should handle updating DigitalOutputsSP states
+        // when it's called from ISNewSwitch.
+        // However, direct calls to CommandOutput (e.g. from dome logic)
+        // should also reflect the state.
+        DigitalOutputsSP[index][INDI::OutputInterface::Off].s = (enabled == 0) ? ISS_ON : ISS_OFF; // ISwitch state
+        DigitalOutputsSP[index][INDI::OutputInterface::On].s  = (enabled == 1) ? ISS_ON : ISS_OFF; // ISwitch state
+        DigitalOutputsSP[index].setState(IPS_OK);
+        DigitalOutputsSP[index].apply();
+        return res == enabled;
+    }
+
+    DigitalOutputsSP[index].setState(IPS_ALERT);
+    DigitalOutputsSP[index].apply();
+    LOGF_ERROR("Failed to set relay %u to %d", index, enabled);
+    return false;
+}
+
+bool DragonFlyDome::UpdateDigitalOutputs()
+{
+    bool overall_success = true;
+    uint8_t board_id = 0; // Assuming board 0 for now, see CommandOutput comments
+
+    for (uint8_t i = 0; i < DigitalOutputsSP.size(); i++)
+    {
+        char cmd[DRIVER_LEN] = {0};
+        int32_t res = 0;
+        snprintf(cmd, DRIVER_LEN, "!relio rldgrd %u %u#", board_id, i);
+        if (sendCommand(cmd, res))
+        {
+            bool current_state_on = (res == 1);
+            IPState current_property_state = DigitalOutputsSP[i].getState();
+            ISState current_on_switch_state = DigitalOutputsSP[i][INDI::OutputInterface::On].s; // ISwitch state
+
+            if (current_property_state == IPS_BUSY) // If busy, don't override, device is pulsing
+            {
+                // If it was pulsing and now the physical state matches the target of the pulse,
+                // we might need to clear the busy state. This is complex with OutputInterface's
+                // internal pulse timer. For now, let OutputInterface handle pulse completion.
+            }
+            // Update if the actual switch state differs from the property's switch element state,
+            // or if the property was in alert.
+            else if (current_on_switch_state != (current_state_on ? ISS_ON : ISS_OFF) || current_property_state == IPS_ALERT)
+            {
+                DigitalOutputsSP[i][INDI::OutputInterface::Off].s = current_state_on ? ISS_OFF : ISS_ON; // ISwitch state
+                DigitalOutputsSP[i][INDI::OutputInterface::On].s  = current_state_on ? ISS_ON : ISS_OFF; // ISwitch state
+                DigitalOutputsSP[i].setState(IPS_OK); // PropertySwitch state
+                DigitalOutputsSP[i].apply();          // Send update
+            }
+            // Sync our custom Relay object if it's still in use (will be removed later)
+            // if (i < Relays.size() && Relays[i]) // Check Relays[i] is not null // Removed
+            //     Relays[i]->setEnabled(current_state_on);
+        }
+        else
+        {
+            if (DigitalOutputsSP[i].getState() != IPS_BUSY)
+            {
+                DigitalOutputsSP[i].setState(IPS_ALERT);
+                DigitalOutputsSP[i].apply();
+            }
+            overall_success = false;
+        }
+    }
+    return overall_success;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -624,25 +642,6 @@ bool DragonFlyDome::updateSensors()
     }
 
     return true;
-}
-
-/////////////////////////////////////////////////////////////////////////////
-/// Update All Relays
-/////////////////////////////////////////////////////////////////////////////
-bool DragonFlyDome::updateRelays()
-{
-    for (uint8_t i = 0; i < 8; i++)
-    {
-        char cmd[DRIVER_LEN] = {0};
-        int32_t res = 0;
-        snprintf(cmd, DRIVER_LEN, "!relio rldgrd 0 %d#", i);
-        if (!sendCommand(cmd, res))
-            return false;
-        Relays[i]->setEnabled(res == 1);
-    }
-
-    return true;
-
 }
 
 /////////////////////////////////////////////////////////////////////////////

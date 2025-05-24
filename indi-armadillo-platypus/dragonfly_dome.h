@@ -23,33 +23,12 @@
 
 #include <memory>
 #include <indidome.h>
+#include <indioutputinterface.h>
 
 using DD = INDI::DefaultDevice;
 
-class Relay
-{
-    public:
-        explicit Relay(uint8_t id, const std::string &device, const std::string &group);
-        ~Relay() = default;
 
-        void define(DD *parent);
-        void remove(DD *parent);
-        void sync(IPState state);
-        bool update(ISState *states, char *names[], int n);
-        const std::string &name() const;
-        bool isEnabled() const;
-        void setEnabled(bool enabled);
-
-    private:
-
-        uint8_t m_ID;
-        std::string m_Name;
-
-        ISwitchVectorProperty RelaySP;
-        ISwitch RelayS[2];
-};
-
-class DragonFlyDome : public INDI::Dome
+class DragonFlyDome : public INDI::Dome, public INDI::OutputInterface
 {
     public:
         DragonFlyDome();
@@ -61,8 +40,14 @@ class DragonFlyDome : public INDI::Dome
         virtual bool updateProperties() override;
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[],
+                               int n) override; // Add ISNewText override
 
     protected:
+        // Declare implementations for OutputInterface pure virtual methods
+        virtual bool UpdateDigitalOutputs() override;
+        virtual bool CommandOutput(uint32_t index, INDI::OutputInterface::OutputState command) override;
+
         bool Handshake() override;
         void TimerHit() override;
 
@@ -93,10 +78,10 @@ class DragonFlyDome : public INDI::Dome
         ///////////////////////////////////////////////////////////////////////////////
         /// Relays
         ///////////////////////////////////////////////////////////////////////////////
-        bool setRelayEnabled(uint8_t id, bool enabled);
+        // bool setRelayEnabled(uint8_t id, bool enabled); // To be removed
         bool setRoofOpen(bool enabled);
         bool setRoofClose(bool enabled);
-        bool updateRelays();
+        // bool updateRelays(); // To be removed
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Sensors
@@ -125,9 +110,6 @@ class DragonFlyDome : public INDI::Dome
             RELAY_OPEN,
             RELAY_CLOSE,
         };
-
-        // All Relays
-        std::vector<std::unique_ptr<Relay>> Relays;
 
         // Roof Control Sensors
         INDI::PropertyNumber DomeControlSensorNP {2};
