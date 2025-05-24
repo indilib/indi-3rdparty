@@ -861,6 +861,8 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         if (!strcmp(name, m_ControlNP.name))
         {
+            double const old_framerate_limit = m_ControlN[TC_FRAMERATE_LIMIT].value;
+
             if (IUUpdateNumber(&m_ControlNP, values, names, n) < 0)
             {
                 m_ControlNP.s = IPS_ALERT;
@@ -903,10 +905,13 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
 
                     case TC_FRAMERATE_LIMIT:
                         FP(put_Option(m_Handle, CP(OPTION_FRAMERATE), value));
-                        if (value == 0)
-                            LOG_INFO("FPS rate limit is set to unlimited");
-                        else
-                            LOGF_INFO("Limiting frame rate to %d FPS", value);
+                        if (value != old_framerate_limit)
+                        {
+                            if (value == 0)
+                                LOG_INFO("FPS rate limit is set to unlimited");
+                            else
+                                LOGF_INFO("Limiting frame rate to %d FPS", value);
+                        }
                         break;
 
                     default:
