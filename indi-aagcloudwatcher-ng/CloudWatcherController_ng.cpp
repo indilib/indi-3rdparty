@@ -934,7 +934,7 @@ bool CloudWatcherController::getWindSpeed(float &windSpeed) // CW Get Wind Speed
 
         float speed = ispeed;
 
-        LOGF_DEBUG( "raw wind speed is %i for anemometer type %s", speed, (anemometerType == BLACK ? "black" : "grey"));
+        LOGF_DEBUG( "raw wind speed is %i for anemometer type %s", ispeed, (anemometerType == BLACK ? "black" : "grey"));
 
         switch (anemometerType)
         {
@@ -956,7 +956,7 @@ bool CloudWatcherController::getWindSpeed(float &windSpeed) // CW Get Wind Speed
     {
         windSpeed = 0;
     }
-    LOGF_DEBUG( "processed wind speed is %i for anemometer type %s", windSpeed, (anemometerType == BLACK ? "black" : "grey"));
+    LOGF_DEBUG( "processed wind speed is %f for anemometer type %s", windSpeed, (anemometerType == BLACK ? "black" : "grey"));
 
     return true;
 }

@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libatik)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+
 # Built with SDK API 2024.11.26_2038
 set (ATIK_VERSION "2.2.22")
 set (ATIK_SOVERSION "2")
@@ -45,8 +47,10 @@ elseif (UNIX AND NOT WIN32)
   endif ()
 
   # Install udev rules
+  if (INDI_INSTALL_UDEV_RULES)
   set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
   install (FILES 99-atik.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
   # Install library
   install_imported (TARGETS atikcameras flycapture DESTINATION ${CMAKE_INSTALL_LIBDIR})

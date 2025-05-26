@@ -181,6 +181,7 @@ INDIStarbookTen::initProperties()
 bool
 INDIStarbookTen::updateProperties()
 {
+    bool r = true;
     INDI::Telescope::updateProperties();
 
     if (isConnected())
@@ -190,7 +191,7 @@ INDIStarbookTen::updateProperties()
         defineProperty(&GuideRateNP);
         defineProperty(&HomeSP);
 
-        return fetchStartupInfo();
+        r = fetchStartupInfo();
     }
     else
     {
@@ -198,11 +199,11 @@ INDIStarbookTen::updateProperties()
         deleteProperty(StateTP.name);
         deleteProperty(GuideRateNP.name);
         deleteProperty(HomeSP.name);
-
-        return true;
     }
 
     GI::updateProperties();
+
+    return r;
 }
 
 

@@ -6,6 +6,8 @@ set (LIBPENTAX_SOVERSION "1")
 set (LIBMTP_VERSION "9.3.0")
 set (LIBMTP_SOVERSION "9")
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
@@ -33,8 +35,10 @@ if (UNIX AND NOT WIN32 AND NOT APPLE)
   endif()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 
