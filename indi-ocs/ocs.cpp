@@ -65,7 +65,7 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 1);
+    setVersion(1, 2);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -1582,6 +1582,7 @@ IPState OCS::UnPark()
             LOG_INFO("Opening shutter on unparking...");
             ControlShutter(ShutterOperation::SHUTTER_OPEN);
         }
+        setDomeState(DOME_UNPARKED);
         return IPS_OK;
     } else {
         setDomeState(DOME_ERROR);

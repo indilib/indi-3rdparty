@@ -1,3 +1,9 @@
+indi-ocs (1.2) nobel; urgency=medium
+
+  * New release - adds support for shutter control on park/unpark & dome Az slaving
+
+-- Ed Lee <ed@thefamilee.co.uk>  Mon, 26 May 2025 15:15:00 +0100
+
 indi-ocs (1.1) nobel; urgency=medium
 
   * New release - updates and bugfixes
