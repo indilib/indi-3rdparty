@@ -392,16 +392,32 @@ bool DragonFlyDome::setRoofOpen(bool enabled)
     if (enabled && DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
     {
         LOG_DEBUG("Turning off Close Roof Relay in order to turn on Open Roof relay...");
-        if (!CommandOutput(close_relay_idx, INDI::OutputInterface::Off))
+        if (!ISNewProperty(DigitalOutputsSP[close_relay_idx], DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::Off].getName(), ISS_ON))
         {
-            LOG_ERROR("Failed to turn off close relay before opening.");
-            // Decide if we should still try to open or return false.
-            // For safety, perhaps return false.
-            return false;
+            LOG_ERROR("Failed to send command to turn off close relay before opening.");
+            // ISNewProperty updates property states, so we check the actual state
+            if (DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
+            {
+                LOG_ERROR("Close relay is still ON after attempting to turn it off.");
+                return false; // Safety: don't proceed if we can't turn off the opposing relay
+            }
         }
+        // Give a small delay for the command to be processed if needed, or check state
+        // For now, assume ISNewProperty is synchronous enough for the next check or command.
     }
 
-    return CommandOutput(open_relay_idx, enabled ? INDI::OutputInterface::On : INDI::OutputInterface::Off);
+    const char *elementToActivate = enabled ? DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].getName()
+                                    : DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::Off].getName();
+    if (!ISNewProperty(DigitalOutputsSP[open_relay_idx], elementToActivate, ISS_ON))
+    {
+        LOGF_ERROR("Failed to send command to %s open relay.", enabled ? "turn on" : "turn off");
+        return false;
+    }
+    // ISNewProperty returns true if the property is found and processed, not necessarily if the hardware command succeeded.
+    // The property state (IPS_OK, IPS_ALERT) should reflect success.
+    // We rely on OutputInterface::processSwitch to set the correct state.
+    // For the purpose of this function, returning true means the command was dispatched.
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -427,14 +443,25 @@ bool DragonFlyDome::setRoofClose(bool enabled)
     if (enabled && DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
     {
         LOG_DEBUG("Turning off Open Roof relay in order to turn on Close Roof relay...");
-        if (!CommandOutput(open_relay_idx, INDI::OutputInterface::Off))
+        if (!ISNewProperty(DigitalOutputsSP[open_relay_idx], DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::Off].getName(), ISS_ON))
         {
-            LOG_ERROR("Failed to turn off open relay before closing.");
-            return false; // Safety: don't proceed if we can't turn off the opposing relay
+            LOG_ERROR("Failed to send command to turn off open relay before closing.");
+            if (DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
+            {
+                LOG_ERROR("Open relay is still ON after attempting to turn it off.");
+                return false; // Safety: don't proceed if we can't turn off the opposing relay
+            }
         }
     }
 
-    return CommandOutput(close_relay_idx, enabled ? INDI::OutputInterface::On : INDI::OutputInterface::Off);
+    const char *elementToActivate = enabled ? DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].getName()
+                                    : DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::Off].getName();
+    if (!ISNewProperty(DigitalOutputsSP[close_relay_idx], elementToActivate, ISS_ON))
+    {
+        LOGF_ERROR("Failed to send command to %s close relay.", enabled ? "turn on" : "turn off");
+        return false;
+    }
+    return true;
 }
 
 //////////////////////////////////////////////////////////////////////////////

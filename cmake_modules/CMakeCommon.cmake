@@ -6,9 +6,9 @@ include(CheckCCompilerFlag)
     #SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 #ENDIF ()
 
-# C++14 Support
+# C++17 Support
 if (NOT ANDROID)
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 endif(NOT ANDROID)
 
