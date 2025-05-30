@@ -395,10 +395,11 @@ void MaxDomeII::TimerHit()
                     if (nTargetAzimuth >= 0 &&
                             AzimuthDistance(nTargetAzimuth, nCurrentTicks) > 3) // Maximum difference allowed: 3 ticks
                     {
-                        DomeAbsPosNP.setState(IPS_ALERT);
+                        //DomeAbsPosNP.setState(IPS_ALERT);
                         nTimeSinceAzimuthStart = -1;
                         LOG_ERROR("Could not position right");
-                        DomeAbsPosNP.apply();
+                        //DomeAbsPosNP.apply();
+                        setDomeState(DOME_IDLE);
                     }
                     else
                     {
@@ -416,16 +417,17 @@ void MaxDomeII::TimerHit()
                             nTimeSinceAzimuthStart = -1;
                             LOG_INFO("Dome is homed");
                             HomeSP.apply();
+                            setDomeState(DOME_IDLE);
                         }
                         if (ParkSP.getState() != IPS_OK)
                         {
                             if (ParkSP[0].getState() == ISS_ON)
                             {
-                                SetParked(true);
+                                setDomeState(DOME_PARKED);
                             }
                             if (ParkSP[1].getState() == ISS_ON)
                             {
-                                SetParked(false);
+                                setDomeState(DOME_UNPARKED);
                             }
                         }
                     }
