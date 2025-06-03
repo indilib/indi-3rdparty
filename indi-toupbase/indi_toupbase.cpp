@@ -250,9 +250,10 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_TimeoutFactorN, "Timeout", "Factor", "%.2f", 1, 1.3, 0.01, 1.2);
-    IUFillNumberVector(&m_TimeoutFactorNP, &m_TimeoutFactorN, 1, getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB,
-                       IP_RW, 60, IPS_IDLE);
+    m_TimeoutFactorNP[MINIMAL_TIMEOUT].fill("MINIMAL_TIMEOUT", "Min. Timeout", "%.2f", 0.1, 10, 1, 1);
+    m_TimeoutFactorNP[TIMEOUT_FACTOR].fill("TIMEOUT_FACTOR", "Factor", "%.2f", 1, 1.3, 0.01, 1.2);
+    m_TimeoutFactorNP.fill(getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+    m_TimeoutFactorNP.load();
 
     if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
     {
@@ -381,7 +382,7 @@ bool ToupBase::updateProperties()
         if (m_Instance->model->flag & CP(FLAG_FAN))
             defineProperty(&m_FanSP);
 
-        defineProperty(&m_TimeoutFactorNP);
+        defineProperty(m_TimeoutFactorNP);
         defineProperty(&m_ControlNP);
         defineProperty(&m_AutoExposureSP);
         defineProperty(&m_ResolutionSP);
@@ -434,7 +435,7 @@ bool ToupBase::updateProperties()
         if (m_Instance->model->flag & CP(FLAG_FAN))
             deleteProperty(m_FanSP.name);
 
-        deleteProperty(m_TimeoutFactorNP.name);
+        deleteProperty(m_TimeoutFactorNP);
         deleteProperty(m_ControlNP.name);
         deleteProperty(m_AutoExposureSP.name);
         deleteProperty(m_ResolutionSP.name);
@@ -1043,11 +1044,12 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         /// Timeout factor
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_TimeoutFactorNP.name))
+        if (m_TimeoutFactorNP.isNameMatch(name))
         {
-            IUUpdateNumber(&m_TimeoutFactorNP, values, names, n);
-            m_TimeoutFactorNP.s = IPS_OK;
-            IDSetNumber(&m_TimeoutFactorNP, nullptr);
+            m_TimeoutFactorNP.update(values, names, n);
+            m_TimeoutFactorNP.setState(IPS_OK);
+            m_TimeoutFactorNP.apply();
+            saveConfig(m_TimeoutFactorNP);
             return true;
         }
     }
@@ -1585,8 +1587,8 @@ void ToupBase::TimerHit()
         double remaining = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
         PrimaryCCD.setExposureLeft(remaining);
 
-        // Timeout check. Do not timeout ever under 1 second.
-        if (elapsed > std::max(1.0, m_ExposureRequest * m_TimeoutFactorN.value))
+        // Timeout check. Do not timeout ever under MINIMAL_TIMEOUT second.
+        if (elapsed > std::max(m_TimeoutFactorNP[MINIMAL_TIMEOUT].getValue(), m_ExposureRequest * m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue()))
         {
             LOG_ERROR("Exposure timed out waiting for image frame.");
             InExposure = false;
@@ -1840,7 +1842,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
-    IUSaveConfigNumber(fp, &m_TimeoutFactorNP);
+    m_TimeoutFactorNP.save(fp);
     if (HasCooler())
         IUSaveConfigSwitch(fp, &m_CoolerSP);
 

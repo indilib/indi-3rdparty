@@ -266,8 +266,12 @@ class ToupBase : public INDI::CCD
         INDI::PropertyNumber  m_ADCDepthNP{1};
 
         // Timeout factor
-        INumberVectorProperty m_TimeoutFactorNP;
-        INumber m_TimeoutFactorN;
+        INDI::PropertyNumber m_TimeoutFactorNP {2};
+        enum
+        {
+            MINIMAL_TIMEOUT,
+            TIMEOUT_FACTOR
+        };
 
         ISwitchVectorProperty m_GainConversionSP;
         ISwitch m_GainConversionS[3];
