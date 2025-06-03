@@ -474,6 +474,8 @@
 
 #define DEVICETYPE_QHY600M_61M600          4159
 
+#define DEVICETYPE_QHY268M_SPOTCAM         4160
+
 /**
  * Type define for QHY5IIIEND*/
 #define DEVICETYPE_QHY5IIIEND   	4999
