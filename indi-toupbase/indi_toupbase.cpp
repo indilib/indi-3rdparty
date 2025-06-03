@@ -250,9 +250,9 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Timeout Factor
     ///////////////////////////////////////////////////////////////////////////////////
-    m_TimeoutFactorNP[MINIMAL_TIMEOUT].fill("MINIMAL_TIMEOUT", "Min. Timeout", "%.2f", 0.1, 10, 1, 1);
-    m_TimeoutFactorNP[TIMEOUT_FACTOR].fill("TIMEOUT_FACTOR", "Factor", "%.2f", 1, 1.3, 0.01, 1.2);
-    m_TimeoutFactorNP.fill(getDeviceName(), "TIMEOUT_FACTOR", "Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
+    m_TimeoutFactorNP[MINIMAL_TIMEOUT].fill("TIMEOUT_MINIMAL", "Minimum", "%.2f", 0.1, 10, 1, 1);
+    m_TimeoutFactorNP[TIMEOUT_FACTOR].fill("TIMEOUT_FACTOR", "Factor", "%.2f", 0, 2, 0.1, 0);
+    m_TimeoutFactorNP.fill(getDeviceName(), "TIMEOUT_HANDLING", "Timeout", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
     m_TimeoutFactorNP.load();
 
     if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
@@ -1046,7 +1046,18 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         if (m_TimeoutFactorNP.isNameMatch(name))
         {
+            auto oldFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
             m_TimeoutFactorNP.update(values, names, n);
+            auto newFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
+
+            if (oldFactor != newFactor)
+            {
+                if (oldFactor == 0 && newFactor != 0)
+                    LOG_INFO("Timeout handling is enabled.");
+                else if (oldFactor != 0 && newFactor == 0)
+                    LOG_INFO("Timeout handling is disabled.");
+            }
+
             m_TimeoutFactorNP.setState(IPS_OK);
             m_TimeoutFactorNP.apply();
             saveConfig(m_TimeoutFactorNP);
@@ -1587,8 +1598,9 @@ void ToupBase::TimerHit()
         double remaining = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
         PrimaryCCD.setExposureLeft(remaining);
 
+        auto factor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
         // Timeout check. Do not timeout ever under MINIMAL_TIMEOUT second.
-        if (elapsed > std::max(m_TimeoutFactorNP[MINIMAL_TIMEOUT].getValue(), m_ExposureRequest * m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue()))
+        if (factor > 0 && elapsed > std::max(m_TimeoutFactorNP[MINIMAL_TIMEOUT].getValue(), m_ExposureRequest * factor))
         {
             LOG_ERROR("Exposure timed out waiting for image frame.");
             InExposure = false;
