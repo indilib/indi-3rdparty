@@ -1585,8 +1585,8 @@ void ToupBase::TimerHit()
         double remaining = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
         PrimaryCCD.setExposureLeft(remaining);
 
-        // Timeout check
-        if (elapsed > m_ExposureRequest * m_TimeoutFactorN.value)
+        // Timeout check. Do not timeout ever under 1 second.
+        if (elapsed > std::max(1.0, m_ExposureRequest * m_TimeoutFactorN.value))
         {
             LOG_ERROR("Exposure timed out waiting for image frame.");
             InExposure = false;
