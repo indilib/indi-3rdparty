@@ -65,7 +65,7 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 2);
+    setVersion(1, 3);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -1403,7 +1403,7 @@ void OCS::SlowTimerHit()
 IPState OCS::updateWeather() {
     if (weather_tab_enabled) {
 
-        LOG_DEBUG("Weathe update called");
+        LOG_DEBUG("Weather update called");
 
         for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
             if (weather_enabled[measurement] == 1) {
@@ -1563,6 +1563,7 @@ IPState OCS::Park()
     }
     if (sendOCSCommand(OCS_dome_park)) {
         setDomeState(DOME_PARKING);
+        SetParked(true);
         return IPS_BUSY;
     } else {
         setDomeState(DOME_ERROR);
@@ -1583,6 +1584,7 @@ IPState OCS::UnPark()
             ControlShutter(ShutterOperation::SHUTTER_OPEN);
         }
         setDomeState(DOME_UNPARKED);
+        SetParked(false);
         return IPS_OK;
     } else {
         setDomeState(DOME_ERROR);
@@ -2224,7 +2226,7 @@ bool OCS::sendOCSCommand(const char *cmd)
         return false;
     }
 
-    return (response[0] == '0'); //OCS uses 0 for success and non zero for failure, in *most* cases;
+    return (response[0] == '1'); //OCS uses 1 for success and non zero for failure, in *most* cases;
 }
 
 /************************************************************
