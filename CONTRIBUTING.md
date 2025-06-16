@@ -17,6 +17,16 @@ Before submitting your driver, please ensure:
 
 ---
 
+## 🔀 Driver Submission Guidelines: INDI Core vs. INDI Third-Party
+
+When deciding where to submit a driver (INDI Core or INDI Third-Party), use the following rule:
+
+- INDI Core: If the driver can be built and run using only the dependencies already available in INDI Core, it should be included in the INDI Core repository.
+
+- INDI Third-Party: If the driver requires any external dependencies that are not part of INDI Core, it must be submitted as a third-party driver.
+
+This ensures that INDI Core remains lightweight and easy to build, while still allowing flexibility for more complex drivers through the third-party ecosystem.
+
 ## 📁 Directory Structure
 
 Choose the appropriate repository and structure for your driver:
