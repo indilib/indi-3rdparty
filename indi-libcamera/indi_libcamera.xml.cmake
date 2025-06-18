@@ -5,5 +5,9 @@
       <driver name="LibCamera">indi_libcamera_ccd</driver>
       <version>@LIBCAMERA_VERSION_MAJOR@.@LIBCAMERA_VERSION_MINOR@</version>
     </device>
+    <device label="Raspberry PI HQ" manufacturer="Raspberry PI">
+      <driver name="LibCamera">indi_libcamera_ccd</driver>
+      <version>@LIBCAMERA_VERSION_MAJOR@.@LIBCAMERA_VERSION_MINOR@</version>
+    </device>
   </devGroup>
 </driversList>
