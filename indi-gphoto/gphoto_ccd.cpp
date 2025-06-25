@@ -1053,7 +1053,11 @@ bool GPhotoCCD::StartExposure(float duration)
 bool GPhotoCCD::AbortExposure()
 {
     if (!isSimulation())
+    {
         gphoto_abort_exposure(gphotodrv);
+        // It is necessary to read out the data from the camera buffer, otherwise the camera will not respond to the next request.
+        gphoto_read_exposure_fd(gphotodrv, -1);
+    }
     InExposure = false;
     return true;
 }
