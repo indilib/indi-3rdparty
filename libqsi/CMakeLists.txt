@@ -7,7 +7,6 @@ include(GNUInstallDirs)
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
-SET(CMAKE_CXX_STANDARD 11)
 
 find_package(FTDI1 REQUIRED)
 find_package(INDI REQUIRED)

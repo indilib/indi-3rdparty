@@ -1,8 +1,6 @@
 cmake_minimum_required(VERSION 3.16)
 PROJECT(libapogee C CXX)
 
-set(CMAKE_CXX_STANDARD 11)
-
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
