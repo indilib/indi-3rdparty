@@ -703,6 +703,7 @@ bool EQMod::Handshake()
                 && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
         {
             tty_set_generic_udp_format(1);
+            tty_set_auto_reset_udp_session(1);
         }
 
         mount->setPortFD(PortFD);
