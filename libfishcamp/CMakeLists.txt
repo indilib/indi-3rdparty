@@ -5,6 +5,7 @@ PROJECT(libfishcamp C CXX)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
+include(CMakeCommon)
 find_package(INDI REQUIRED)
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
@@ -52,4 +53,3 @@ IF (INDI_INSTALL_FIRMWARE)
     install(FILES 99-fishcamp.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
   ENDIF()
 ENDIF()
-

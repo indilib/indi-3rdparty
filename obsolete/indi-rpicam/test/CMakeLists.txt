@@ -1,4 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
+include(CMakeCommon)
 
 FIND_PACKAGE (GMock REQUIRED)
 FIND_PACKAGE (Threads REQUIRED)
