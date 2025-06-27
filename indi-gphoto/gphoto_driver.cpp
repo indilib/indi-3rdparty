@@ -620,8 +620,12 @@ static void *stop_bulb(void *arg)
             else
                 timeleft = 0;
 
+            if (gphoto->is_aborted)
+                timeleft = 0;
+
             if (timeleft <= 0)
             {
+                pthread_mutex_unlock(&gphoto->mutex);
                 if (gphoto->dsusb)
                 {
                     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Closing DSUSB shutter.");
@@ -657,6 +661,7 @@ static void *stop_bulb(void *arg)
                         gphoto_set_widget_num(gphoto, gphoto->bulb_widget, FALSE);
                     }
                 }
+                pthread_mutex_lock(&gphoto->mutex);
                 gphoto->command |= DSLR_CMD_DONE;
                 pthread_cond_signal(&gphoto->signal);
             }
@@ -669,8 +674,10 @@ static void *stop_bulb(void *arg)
         }
         if (!(gphoto->command & DSLR_CMD_DONE) && (gphoto->command & DSLR_CMD_CAPTURE))
         {
+            pthread_mutex_unlock(&gphoto->mutex);
             //gp_camera_capture(gphoto->camera, GP_CAPTURE_IMAGE, &gphoto->camerapath, gphoto->context);
             gp_camera_capture(gphoto->camera, GP_CAPTURE_IMAGE, &gphoto->camerapath, gphoto->context);
+            pthread_mutex_lock(&gphoto->mutex);
             gphoto->command |= DSLR_CMD_DONE;
             pthread_cond_signal(&gphoto->signal);
         }
@@ -1092,6 +1099,7 @@ int gphoto_mirrorlock(gphoto_driver *gphoto, int msec)
 
 int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirror_lock)
 {
+    gphoto->is_aborted = false;
     if (gphoto->exposure_widget == nullptr)
     {
         DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "No exposure widget found. Can not expose!");
@@ -1102,8 +1110,6 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
                  "Starting exposure (exptime: %g secs, mirror lock: %d, force bulb: %s, exposure index: %d)",
                  exptime_usec / 1e6, mirror_lock, gphoto->force_bulb ? "true" : "false",
                  gphoto->exposure_widget ? gphoto->exposure_widget->value.num : -1);
-    pthread_mutex_lock(&gphoto->mutex);
-    DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Mutex locked");
 
     // Set ISO Settings
     if (gphoto->iso >= 0)
@@ -1217,7 +1223,6 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
             if (gphoto->bulb_fd < 0)
             {
                 DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "Failed to open serial port: %s", gphoto->bulb_port);
-                pthread_mutex_unlock(&gphoto->mutex);
                 return -1;
             }
 
@@ -1251,7 +1256,6 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         else
         {
             DEBUGDEVICE(device, INDI::Logger::DBG_ERROR, "No external or internal bulb widgets found. Cannot capture.");
-            pthread_mutex_unlock(&gphoto->mutex);
             return -1;
         }
 
@@ -1263,6 +1267,7 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
         timeradd(&current_time, &duration, &gphoto->bulb_end);
 
         // Start actual exposure
+        pthread_mutex_lock(&gphoto->mutex);
         gphoto->command = DSLR_CMD_BULB_CAPTURE;
         pthread_cond_signal(&gphoto->signal);
         pthread_mutex_unlock(&gphoto->mutex);
@@ -1283,7 +1288,6 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     if (optimalExposureIndex == -1)
     {
         DEBUGDEVICE(device, INDI::Logger::DBG_ERROR, "Failed to set non-bulb exposure time.");
-        pthread_mutex_unlock(&gphoto->mutex);
         return -1;
     }
     else if (gphoto->exposure_widget && gphoto->exposure_widget->type == GP_WIDGET_TEXT)
@@ -1302,7 +1306,6 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     // Lock the mirror if required.
     if (mirror_lock && gphoto_mirrorlock(gphoto, mirror_lock * 1000))
     {
-        pthread_mutex_unlock(&gphoto->mutex);
         return -1;
     }
 
@@ -1338,6 +1341,7 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     //        DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Exposure started");
     //        return 0;
     //    }
+    pthread_mutex_lock(&gphoto->mutex);
     gphoto->command = DSLR_CMD_CAPTURE;
     pthread_cond_signal(&gphoto->signal);
     pthread_mutex_unlock(&gphoto->mutex);
@@ -1361,16 +1365,20 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         gphoto->camerafile = nullptr;
     }
     if (!(gphoto->command & DSLR_CMD_DONE))
+    {
         pthread_cond_wait(&gphoto->signal, &gphoto->mutex);
+    }
 
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Exposure complete.");
 
     if (gphoto->command & DSLR_CMD_CAPTURE)
     {
+        gphoto->command = 0;
+        pthread_mutex_unlock(&gphoto->mutex);
+
         if (gphoto->handle_sdcard_image == IGNORE_IMAGE)
         {
             gphoto->command = 0;
-            pthread_mutex_unlock(&gphoto->mutex);
             DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Image is ignored per settings.");
             return GP_OK;
         }
@@ -1380,12 +1388,12 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         //Set exposure back to original value
         // JM 2018-08-06: Why do we really need to reset values here?
         //reset_settings(gphoto);
-        pthread_mutex_unlock(&gphoto->mutex);
         return result;
     }
 
     //Bulb mode
     gphoto->command = 0;
+    pthread_mutex_unlock(&gphoto->mutex);
     uint32_t waitMS = std::max(gphoto->download_timeout, 1) * 1000;
     bool downloadComplete = false;
     struct timeval start_time;
@@ -1408,7 +1416,6 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                 usleep(250000);
                 continue;
             }
-            pthread_mutex_unlock(&gphoto->mutex);
             return -1;
         }
 
@@ -1416,7 +1423,6 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         {
             case GP_EVENT_CAPTURE_COMPLETE:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Capture event completed.");
-                pthread_mutex_unlock(&gphoto->mutex);
                 return GP_OK;
 
             case GP_EVENT_FILE_ADDED:
@@ -1439,7 +1445,6 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
                 // If already downloaded, then return immediately.
                 if (downloadComplete)
                 {
-                    pthread_mutex_unlock(&gphoto->mutex);
                     return GP_OK;
                 }
 
@@ -1459,7 +1464,6 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
                 // Give up as we timed out.
                 DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Event timed out after %d ms (elapsed: %d ms).", waitMS, elapsed);
-                pthread_mutex_unlock(&gphoto->mutex);
                 return -1;
             }
             break;
@@ -1474,20 +1478,18 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
 
 int gphoto_abort_exposure(gphoto_driver *gphoto)
 {
-    gphoto->command = DSLR_CMD_ABORT;
-    pthread_cond_signal(&gphoto->signal);
-    pthread_mutex_unlock(&gphoto->mutex);
-
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Aborting exposure...");
 
-    // Wait until exposure is aborted
     pthread_mutex_lock(&gphoto->mutex);
-    if (!(gphoto->command & DSLR_CMD_DONE))
+    gphoto->command |= DSLR_CMD_ABORT;
+    pthread_cond_signal(&gphoto->signal);
+
+    // Wait until exposure is aborted
+    while (!(gphoto->command & DSLR_CMD_DONE))
+    {
         pthread_cond_wait(&gphoto->signal, &gphoto->mutex);
-
+    }
     pthread_mutex_unlock(&gphoto->mutex);
-
-    gphoto_read_exposure(gphoto);
 
     return GP_OK;
 }
