@@ -89,8 +89,12 @@ const std::string &separator)
  std::string help::FixPath(const std::string & inDir)
  {
      std::string result = inDir;
-
-     std::replace_if(result.begin(), result.end(), std::bind2nd(std::equal_to<int8_t>(),'\\'), '/');
+     
+     #if __cplusplus >= 201103L
+     	std::replace_if(result.begin(), result.end(), bind(std::equal_to<int8_t>(), placeholders::_1,'\\'), '/');
+     #else
+     	std::replace_if(result.begin(), result.end(), std::bind2nd(std::equal_to<int8_t>(),'\\'), '/');
+     #endif
 
     if( 0 != result.compare( result.size()-1, 1, "/" ) )
     {

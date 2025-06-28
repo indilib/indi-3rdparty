@@ -314,7 +314,11 @@ public:
 #endif
 
         /** Strict less ordering by name of key only */
-        struct KeyOrder : std::binary_function<Entry, Entry, bool> 
+        #if __cplusplus >= 201103L
+        	struct KeyOrder
+        #else
+        	struct KeyOrder : std::binary_function<Entry, Entry, bool>
+        #endif
 		{
             bool operator()(const Entry & lhs, const Entry & rhs) const 
 			{
@@ -324,7 +328,11 @@ public:
         };
 
         /** Strict less ordering by order, and then name of key */
-        struct LoadOrder : std::binary_function<Entry, Entry, bool> 
+        #if __cplusplus >= 201103L
+        	struct LoadOrder
+        #else
+        	struct LoadOrder : std::binary_function<Entry, Entry, bool>
+        #endif
 		{
             bool operator()(const Entry & lhs, const Entry & rhs) const 
 			{
