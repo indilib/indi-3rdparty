@@ -252,6 +252,10 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
         SET(WITH_SVBONY Off)
         SET(WITH_ASTROASIS Off)
     endif()
+    # The drivers below are only compatible with Apple Silicon since their libraries are not universal binaries
+    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "x86_64")
+    	 SET(WITH_MI Off)
+    endif()
 ENDIF ()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
 IF (CMAKE_COMPILER_IS_GNUCXX AND CMAKE_CXX_COMPILER_VERSION VERSION_LESS 4.9)
