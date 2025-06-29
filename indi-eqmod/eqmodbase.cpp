@@ -834,6 +834,8 @@ bool EQMod::ReadScopeStatus()
         DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder),
                static_cast<long>(currentDEEncoder));
         EncodersToRADec(currentRAEncoder, currentDEEncoder, lst, &currentRA, &currentDEC, &currentHA, &pierSide);
+        if (getPierSide() != pierSide)
+            LOGF_INFO("Pier side changed to %s", getPierSideStr(pierSide));
         setPierSide(pierSide);
 
         alignedRA    = currentRA;
