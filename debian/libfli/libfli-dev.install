@@ -1,2 +1,2 @@
-usr/include/*.h
+usr/include/libfli.h
 usr/lib/*/libfli.so
