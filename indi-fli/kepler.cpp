@@ -33,7 +33,7 @@
 template <typename E>
 constexpr auto to_underlying(E e) noexcept
 {
-    return static_cast<std::underlying_type_t<E>>(e);
+    return static_cast<std::underlying_type_t<E >> (e);
 }
 
 /********************************************************************************
@@ -44,7 +44,7 @@ static class Loader
         INDI::Timer hotPlugTimer;
         FPRODEVICEINFO camerasDeviceInfo[FLI_MAX_SUPPORTED_CAMERAS];
         // Serial / Camera Object
-        std::map<std::wstring, std::shared_ptr<Kepler>> cameras;
+        std::map<std::wstring, std::shared_ptr<Kepler >> cameras;
     public:
         Loader()
         {
@@ -96,7 +96,7 @@ static class Loader
                 std::map<std::wstring, bool> used;
             public:
                 UniqueName() = default;
-                explicit UniqueName(const std::map<std::wstring, std::shared_ptr<Kepler>> &usedCameras)
+                explicit UniqueName(const std::map<std::wstring, std::shared_ptr<Kepler >> &usedCameras)
                 {
 
                     for (const auto &camera : usedCameras)
@@ -239,8 +239,7 @@ Kepler::Kepler(const FPRODEVICEINFO &info, std::wstring name) : m_CameraInfo(inf
 {
     setVersion(FLI_CCD_VERSION_MAJOR, FLI_CCD_VERSION_MINOR);
 
-    std::wstring_convert<std::codecvt_utf8<wchar_t>> convert;
-    auto byteName = convert.to_bytes(name);
+    std::string byteName(name.begin(), name.end());
     setDeviceName(byteName.c_str());
 
     memset(&fproUnpacked, 0, sizeof(fproUnpacked));
