@@ -486,10 +486,8 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
         if (TemperatureSetNP.isNameMatch(name))
         {
             TemperatureSetNP.update(values, names, n);
-            double tvalues[1] = {TemperatureSetNP[0].value};
-            const char *tnames[1] = {TemperatureN[0].name};
-            ISNewNumber(getDeviceName(), "CCD_TEMPERATURE", tvalues, const_cast<char **>(tnames), 1);
-            TemperatureSetNP.setState(IPS_OK);
+            auto result = ISNewProperty(TemperatureNP, TemperatureNP[0].getName(), TemperatureSetNP[0].value);
+            TemperatureSetNP.setState(result ? IPS_OK : IPS_ALERT);
             TemperatureSetNP.apply();
             return true;
         }
