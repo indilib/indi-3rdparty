@@ -95,6 +95,9 @@ class Kepler : public INDI::CCD
         // GPS State
         INDI::PropertyLight GPSStateLP {4};
 
+        // Camera Mode
+        INDI::PropertySwitch CameraModeSP {0};
+
 #ifdef LEGACY_MODE
         //****************************************************************************************
         // Legacy INDI Properties
@@ -165,6 +168,9 @@ class Kepler : public INDI::CCD
         // Gain Tables
         FPROGAINVALUE *m_LowGainTable {nullptr};
         FPROGAINVALUE *m_HighGainTable {nullptr};
+
+        // Camera Modes
+        std::vector<FPROSENSMODE> m_SensorModes;
 
         static std::map<FPRODEVICETYPE, double> SensorPixelSize;
         static constexpr double TEMPERATURE_THRESHOLD {0.1};

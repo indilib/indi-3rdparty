@@ -298,6 +298,9 @@ bool Kepler::initProperties()
             ISS_OFF);
     MergePlanesSP.fill(getDeviceName(), "MERGE_PLANES", "Merging", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Camera Mode is populated in setup()
+    CameraModeSP.fill(getDeviceName(), "CAMERA_MODE", "Camera Mode", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     // Calibration Frames (for MERGE_HARDWARE)
     MergeCalibrationFilesTP[CALIBRATION_DARK].fill("CALIBRATION_DARK", "Dark", "");
     MergeCalibrationFilesTP[CALIBRATION_FLAT].fill("CALIBRATION_FLAT", "Flat", "");
@@ -397,6 +400,7 @@ bool Kepler::updateProperties()
         defineProperty(CoolerDutyNP);
         defineProperty(MergePlanesSP);
         defineProperty(MergeCalibrationFilesTP);
+        defineProperty(CameraModeSP);
         defineProperty(LowGainSP);
         defineProperty(HighGainSP);
         defineProperty(FanSP);
@@ -409,6 +413,7 @@ bool Kepler::updateProperties()
         deleteProperty(CoolerDutyNP);
         deleteProperty(MergePlanesSP);
         deleteProperty(MergeCalibrationFilesTP);
+        deleteProperty(CameraModeSP);
         deleteProperty(LowGainSP);
         deleteProperty(HighGainSP);
         deleteProperty(FanSP);
@@ -505,6 +510,19 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 {
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+        if (CameraModeSP.isNameMatch(name))
+        {
+            CameraModeSP.update(states, names, n);
+            int index = CameraModeSP.findOnSwitchIndex();
+            if (FPROSensor_SetMode(m_CameraHandle, m_SensorModes[index].uiModeIndex) >= 0)
+                CameraModeSP.setState(IPS_OK);
+            else
+                CameraModeSP.setState(IPS_ALERT);
+            CameraModeSP.apply();
+            saveConfig(CameraModeSP);
+            return true;
+        }
+
         // Merge Planes
         if (MergePlanesSP.isNameMatch(name))
         {
@@ -540,7 +558,7 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             else
                 LowGainSP.setState(IPS_ALERT);
             LowGainSP.apply();
-            saveConfig(true, LowGainSP.getName());
+            saveConfig(LowGainSP);
             return true;
         }
 
@@ -555,7 +573,7 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             else
                 HighGainSP.setState(IPS_ALERT);
             HighGainSP.apply();
-            saveConfig(true, HighGainSP.getName());
+            saveConfig(HighGainSP);
             return true;
         }
 
@@ -578,7 +596,7 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 LOG_INFO("Statistics are enabled. Merged images would take longer to download.");
             else
                 LOG_INFO("Statistics are disabled. Merged images would be faster to download.");
-            saveConfig(true, RequestStatSP.getName());
+            saveConfig(RequestStatSP);
             return true;
         }
 
@@ -623,12 +641,26 @@ bool Kepler::ISNewText(const char *dev, const char *name, char *texts[], char *n
         if (MergeCalibrationFilesTP.isNameMatch(name))
         {
             MergeCalibrationFilesTP.update(texts, names, n);
-            MergeCalibrationFilesTP.setState(IPS_OK);
+
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t >> converter;
+            std::wstring wdsnu = converter.from_bytes(MergeCalibrationFilesTP[CALIBRATION_DARK].getText());
+            std::wstring wprnu = converter.from_bytes(MergeCalibrationFilesTP[CALIBRATION_FLAT].getText());
+#pragma GCC diagnostic pop
+
+            if (FPROAlgo_SetHardwareMergeReferenceFiles(m_CameraHandle, wdsnu.c_str(), wprnu.c_str()) >= 0)
+            {
+                MergeCalibrationFilesTP.setState(IPS_OK);
+            }
+            else
+            {
+                MergeCalibrationFilesTP.setState(IPS_ALERT);
+            }
             MergeCalibrationFilesTP.apply();
             saveConfig(MergeCalibrationFilesTP);
             return true;
         }
-
     }
 
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
@@ -656,13 +688,16 @@ bool Kepler::Connect()
         CommunicationMethodSP.setState(IPS_OK);
         CommunicationMethodSP.apply();
 
-        // Enable hardware level merging over PCIe.
-        mergeEnables.bMergeEnable = true;
-        mergeEnables.eMergeFrames = FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH;
-        // N.B. Need to check later which format is more suitable
-        //mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_RCD;
-        mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_FITS;
-        FPROAlgo_SetHardwareMergeEnables(m_CameraHandle, mergeEnables);
+        // Enable hardware level merging over PCIe if we have a fiber connection
+        if (isFiber)
+        {
+            mergeEnables.bMergeEnable = true;
+            mergeEnables.eMergeFrames = FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH;
+            // N.B. Need to check later which format is more suitable
+            //mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_RCD;
+            mergeEnables.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_FITS;
+            FPROAlgo_SetHardwareMergeEnables(m_CameraHandle, mergeEnables);
+        }
 
         LOGF_INFO("Established connection to camera via %s", isFiber ? "Fiber" : "USB");
 
@@ -757,6 +792,25 @@ bool Kepler::setup()
     fproStats.bHighRequest = true;
     fproStats.bMergedRequest = true;
     fproUnpacked.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_FITS;
+
+    // Camera Modes
+    uint32_t modeCount = 0, currentMode = 0;
+    if (FPROSensor_GetModeCount(m_CameraHandle, &modeCount, &currentMode) >= 0)
+    {
+        m_SensorModes.resize(modeCount);
+        CameraModeSP.resize(modeCount);
+        for (uint32_t i = 0; i < modeCount; i++)
+        {
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+            FPROSensor_GetMode(m_CameraHandle, i, &m_SensorModes[i]);
+            std::wstring_convert<std::codecvt_utf8_utf16<wchar_t >> converter;
+            std::string modeName = converter.to_bytes(m_SensorModes[i].wcModeName);
+            CameraModeSP[i].fill(modeName.c_str(), modeName.c_str(), ISS_OFF);
+#pragma GCC diagnostic pop
+        }
+        CameraModeSP[currentMode].setState(ISS_ON);
+    }
 
     // Low Gain tables
     if (m_CameraCapabilitiesList[to_underlying(FPROCAPS::FPROCAP_LOW_GAIN_TABLE_SIZE)] > 0)
@@ -1099,6 +1153,8 @@ bool Kepler::saveConfigItems(FILE * fp)
         LowGainSP.save(fp);
     if (HighGainSP.size() > 0)
         HighGainSP.save(fp);
+    if (CameraModeSP.size() > 0)
+        CameraModeSP.save(fp);
 
     return true;
 }
