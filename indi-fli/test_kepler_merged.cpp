@@ -45,6 +45,28 @@ int main()
 
     printf("Camera opened successfully.\n");
 
+    uint32_t caps[(uint32_t)FPROCAPS::FPROCAP_NUM];
+    uint32_t numCaps = (uint32_t)FPROCAPS::FPROCAP_NUM;
+    result = FPROSensor_GetCapabilityList(cameraHandle, caps, &numCaps);
+    if (result < 0)
+    {
+        printf("Failed to get capability list.\n");
+        FPROCam_Close(cameraHandle);
+        return -1;
+    }
+
+    FPRO_REFFRAMES refFrames;
+    memset(&refFrames, 0, sizeof(refFrames));
+    refFrames.uiWidth = caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_WIDTH];
+    refFrames.uiHeight = caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_HEIGHT];
+    result = FPROAlgo_SetHardwareMergeReferenceFrames(cameraHandle, &refFrames);
+    if (result < 0)
+    {
+        printf("Failed to set hardware merge reference frames.\n");
+        FPROCam_Close(cameraHandle);
+        return -1;
+    }
+
     // Set 1 second exposure
     result = FPROCtrl_SetExposure(cameraHandle, 1e9, 0, false);
     if (result < 0)
@@ -67,6 +89,9 @@ int main()
 
     FPROUNPACKEDIMAGES fproUnpacked;
     memset(&fproUnpacked, 0, sizeof(fproUnpacked));
+    fproUnpacked.bMetaDataRequest = true;
+    fproUnpacked.bLowImageRequest = true;
+    fproUnpacked.bHighImageRequest = true;
     fproUnpacked.bMergedImageRequest = true;
     fproUnpacked.eMergeFormat = FPRO_IMAGE_FORMAT::IFORMAT_FITS;
 
