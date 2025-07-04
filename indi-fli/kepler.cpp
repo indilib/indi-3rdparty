@@ -400,7 +400,8 @@ bool Kepler::updateProperties()
         defineProperty(CoolerDutyNP);
         defineProperty(MergePlanesSP);
         defineProperty(MergeCalibrationFilesTP);
-        defineProperty(CameraModeSP);
+        if (CameraModeSP.size() > 0)
+            defineProperty(CameraModeSP);
         defineProperty(LowGainSP);
         defineProperty(HighGainSP);
         defineProperty(FanSP);
@@ -413,7 +414,8 @@ bool Kepler::updateProperties()
         deleteProperty(CoolerDutyNP);
         deleteProperty(MergePlanesSP);
         deleteProperty(MergeCalibrationFilesTP);
-        deleteProperty(CameraModeSP);
+        if (CameraModeSP.size() > 0)
+            deleteProperty(CameraModeSP);
         deleteProperty(LowGainSP);
         deleteProperty(HighGainSP);
         deleteProperty(FanSP);
