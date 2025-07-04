@@ -55,6 +55,12 @@ int main()
         return -1;
     }
 
+    printf("Camera Capabilities:\n");
+    printf("  Max Width: %u\n", caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_WIDTH]);
+    printf("  Max Height: %u\n", caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_HEIGHT]);
+    printf("  Low Gain Table Size: %u\n", caps[(uint32_t)FPROCAPS::FPROCAP_LOW_GAIN_TABLE_SIZE]);
+    printf("  High Gain Table Size: %u\n", caps[(uint32_t)FPROCAPS::FPROCAP_HIGH_GAIN_TABLE_SIZE]);
+
     FPRO_REFFRAMES refFrames;
     memset(&refFrames, 0, sizeof(refFrames));
     refFrames.uiWidth = caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_WIDTH];
@@ -63,6 +69,15 @@ int main()
     if (result < 0)
     {
         printf("Failed to set hardware merge reference frames.\n");
+        FPROCam_Close(cameraHandle);
+        return -1;
+    }
+
+    result = FPROFrame_SetImageArea(cameraHandle, 0, 0, caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_WIDTH],
+                                    caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_HEIGHT]);
+    if (result < 0)
+    {
+        printf("Failed to set image area.\n");
         FPROCam_Close(cameraHandle);
         return -1;
     }
