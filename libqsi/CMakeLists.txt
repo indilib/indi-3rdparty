@@ -4,10 +4,10 @@ cmake_minimum_required(VERSION 3.16)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
+include(CMakeCommon)
 
 SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
-SET(CMAKE_CXX_STANDARD 11)
 
 find_package(FTDI1 REQUIRED)
 find_package(INDI REQUIRED)

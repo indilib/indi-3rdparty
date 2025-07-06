@@ -15,11 +15,21 @@ Architecture: any
 Depends: libfli2, ${shlibs:Depends}, ${misc:Depends}
 Description: This contains development headers for the Finger Lakes Instruments library.
 
+Package: libflipro2
+Architecture: amd64 arm64
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: Finger Lakes Instrument library is used by applications to control FLI Kepler cameras.
+
+Package: libflipro-dev
+Architecture: amd64 arm64
+Depends: libflipro2, ${shlibs:Depends}, ${misc:Depends}
+Description: This contains development headers for the Finger Lakes Instruments Pro library.
+
 Package: libfli-dbg
 Priority: extra
 Section: debug
 Architecture: any
 Depends: libfli2 (= ${binary:Version}), ${misc:Depends}
 Description: Finger Lakes Instruments (FLI) debug symbols.
- .
- This package contains debug symbols.
+.
+This package contains debug symbols.

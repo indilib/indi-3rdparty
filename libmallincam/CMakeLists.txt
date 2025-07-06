@@ -9,6 +9,7 @@ option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
+include(CMakeCommon)
 include (InstallImported)
 
 add_library (mallincam SHARED IMPORTED)
@@ -46,4 +47,3 @@ install (FILES mallincam.h DESTINATION include/libmallincam)
 
 # Install library
 install_imported (TARGETS mallincam DESTINATION ${CMAKE_INSTALL_LIBDIR})
-

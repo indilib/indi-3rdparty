@@ -326,15 +326,6 @@ void print_usage()
     printf("  -r                 Probe and reset USB device and exit\n");
     printf("  -e1 <exposure>     Primary camera exposure time in milliseconds (default: 30000)\n");
     printf("  -e2 <exposure>     Guide camera exposure time in milliseconds (default: 1000)\n");
-    printf("  -w <width>         Image width (0 for max)\n");
-    printf("  -h <height>        Image height (0 for max)\n");
-    printf("  -b <bin>           Binning value (default: 1)\n");
-    printf("  -f <format>        Image format (default: 0)\n");
-    printf("                     0: RAW 8-bit\n");
-    printf("                     1: RGB 24-bit\n");
-    printf("                     2: RAW 16-bit\n");
-    printf("                     3: Luma 8-bit\n");
-    printf("  -n <count>         Number of images to capture (minimum: 1, default: 100)\n");
     printf("  -t <traffic>       USB traffic value (0-100, default: 40)\n");
     printf("  -?                 Show this help message\n");
 }
@@ -348,7 +339,7 @@ void *camera_thread_function(void *arg)
     int imageFormat = data->image_type;
     int usb_traffic = data->usb_traffic;
     const char *cameraName = data->name;
-    int capture_count = 100;
+    const int capture_count = 100;
 
     printf("[%s] Thread started for camera ID %d\n", cameraName, CamNum);
 
@@ -419,15 +410,12 @@ void *camera_thread_function(void *arg)
 
 int main(int argc, char *argv[])
 {
-    int width = 0, height = 0;
-    int bin = 1, imageFormat = 0;
     long primary_exp_ms = 30000;
     long guide_exp_ms = 1000;
-    int capture_count = 100;
     int usb_traffic = 40;  // Default USB traffic value
     // Parse command line arguments
     int opt;
-    while ((opt = getopt(argc, argv, "prw:h:b:f:e:n:t:?e:1:2:")) != -1)
+    while ((opt = getopt(argc, argv, "pre:t:?")) != -1)
     {
         switch (opt)
         {
@@ -449,37 +437,12 @@ int main(int argc, char *argv[])
                 reset_usb_device(0x03c3, devices[0].product_id);
                 return 0;
             }
-            case 'w':
-                width = atoi(optarg);
-                break;
-            case 'h':
-                height = atoi(optarg);
-                break;
-            case 'b':
-                bin = atoi(optarg);
-                break;
-            case 'f':
-                imageFormat = atoi(optarg);
-                if (imageFormat < 0 || imageFormat > 3)
-                {
-                    fprintf(stderr, "Invalid format. Must be between 0 and 3.\n");
-                    return -1;
-                }
-                break;
             case 'e':
                 if (strcmp(optarg, "1") == 0)
                     primary_exp_ms = atol(argv[optind]);
                 else if (strcmp(optarg, "2") == 0)
                     guide_exp_ms = atol(argv[optind]);
                 optind++;
-                break;
-            case 'n':
-                capture_count = atoi(optarg);
-                if (capture_count < 1)
-                {
-                    fprintf(stderr, "Capture count must be at least 1.\n");
-                    return -1;
-                }
                 break;
             case 't':
                 usb_traffic = atoi(optarg);

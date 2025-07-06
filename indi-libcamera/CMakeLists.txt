@@ -35,8 +35,6 @@ include_directories( ${LibCameraApps_INCLUDE_DIR})
 
 include(CMakeCommon)
 
-set(CMAKE_CXX_STANDARD 17)
-
 ########### indi_libcamera_ccd ###########
 set(indi_libcamera_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/indi_libcamera.cpp
