@@ -209,7 +209,6 @@ option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
 option(WITH_LIBCAMERA "Install LIBCAMERA Driver" On)
-option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -378,11 +377,6 @@ endif(WITH_ASTROASIS)
 
 # This is the main 3rd Party build.  It runs if the Build Libs option is not selected.
 ELSE(BUILD_LIBS)
-
-## TicFocuser-ng
-if (WITH_TICFOCUSER-NG)
-add_subdirectory(indi-TicFocuser-ng)
-endif(WITH_TICFOCUSER-NG)
 
 ## Libcamera
 if (WITH_LIBCAMERA)
