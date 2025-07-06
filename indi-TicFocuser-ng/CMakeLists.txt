@@ -1,8 +1,3 @@
-cmake_minimum_required(VERSION 3.12...4.0)
-
-set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_CXX_STANDARD_REQUIRED On)
-
 if(COMMAND cmake_policy)
     cmake_policy(SET CMP0003 NEW)
 endif(COMMAND cmake_policy)
@@ -13,8 +8,9 @@ set (TICFOCUSER_VERSION_MAJOR 1)
 set (TICFOCUSER_VERSION_MINOR 1)
 
 set(CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-set(BIN_INSTALL_DIR "${CMAKE_INSTALL_PREFIX}/bin")
-set(CMAKE_CXX_FLAGS "-std=c++0x ${CMAKE_CXX_FLAGS}")
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include(GNUInstallDirs)
+include(CMakeCommon)
 
 set(INDI_TICFOCUSER-NG_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/TicFocuser.cpp
