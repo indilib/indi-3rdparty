@@ -1,4 +1,7 @@
+Note: Original project of sebo-b https://github.com/sebo-b/TicFocuser-ng
+
 # TicFocuser-ng
+
 INDI Driver for USB focuser based on Pololu Tic controller.
 
 This project was initially a fork of TicFocuser driver written by Helge Kutzop and published on [GitHub](https://github.com/HelgeMK/TicFocuser) as it seemed that the author is not maintaining it anymore. However, the refactoring of code was such deep, that I'm not sure if a single line of the original code stayed in this version. Helge was basing his version on Radek Kaczorek's "astroberry-diy" drivers published on [GitHub](https://github.com/rkaczorek/astroberry-diy). As said I'm quite certain that all old code was rewritten, nevertheless to respect both authors I kept their names in AUTHORS file.
@@ -63,7 +66,7 @@ If you haven't done so, execute `ticgui` and properly configure Tic controller. 
 At minimum:
 * Configure your motor parameters like: current limit, step mode, speed, acceleration, etc.
 
-![ticcmd](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/ticgui_motorsettings.png)
+![ticcmd](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/ticgui_motorsettings.png)
 
 * Uncheck `Enable command timeout` checkbox in the `Serial` box. More info abt it in [chapter 4.4 of Pololu Tic documentation](https://www.pololu.com/docs/0J71/all#4.4). 
 
@@ -80,24 +83,24 @@ Add `Tic Focuser NG` to INDI profile in KStars and you are good to go.
 ### What will you need
 1. Tic Motor controller (without gold pins). I used T825 which looks like that:
 
-![T825](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/tic825.jpg)
+![T825](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/tic825.jpg)
 
 2. NEMA-17 stepper motor. I'm using an equivalent of [Pololu #2267](https://www.pololu.com/product/2267).
 
-![NEMA17](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/nema17.jpg)
+![NEMA17](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/nema17.jpg)
 
 As I don't relly need much of torque recently I have also bought a much thinner NEMA-17 motor. Model name is 17Hs08-1004S.
 
-![NEMA17_Small](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/nema17_small.jpg)
+![NEMA17_Small](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/nema17_small.jpg)
 
 3. In case you prefer Bluetooth over USB connection, you need a Bluetooth module (find more in the next section).
 
-![DX-BT18](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/dx-bt18.jpg)
+![DX-BT18](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/dx-bt18.jpg)
 
 4. Possibility to 3D print the case.
 5. DC Barrel Power Jack Socket 5.5mm/2.1mm.
 
-![DC](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/dc_barrel.jpg)
+![DC](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/dc_barrel.jpg)
 
 6. Basic soldering skills.
 7. A way to connect the stepper motor to your focuser.
@@ -126,21 +129,21 @@ NOTE: this is a version of the hardware without Bluetooth module. I'll publish a
 
 Model of controller case looks like the following:
 
-![Case](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/case1.jpg)
+![Case](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/case1.jpg)
 
 Case after printout mounted on the motor:
 
-![Case](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/case2.jpg)
+![Case](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/case2.jpg)
 
 With all elements inside:
 
-![Case](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/case3.jpg)
+![Case](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/case3.jpg)
 
 And fully assembled and mounted on the tube:
 
-![Case](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/focuser_final.jpg)
+![Case](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/focuser_final.jpg)
 
-A project of the case is [attached as STL file](https://raw.githubusercontent.com/sebo-b/TicFocuser-ng/master/extras/ticfocuser_case.stl) for 3D printer. 
+A project of the case is [attached as STL file](https://github.com/indilib/indi-3rdparty/blob/master/indi-TicFocuser-ng/doc/ticfocuser_case.stl) for 3D printer. 
 
 Enjoy!
 
