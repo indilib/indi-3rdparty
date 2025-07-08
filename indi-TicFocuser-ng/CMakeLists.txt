@@ -34,16 +34,16 @@ include_directories(
     {CMAKE_CURRENT_BINARY_DIR}
     ${INDI_INCLUDE_DIR} )
 
-find_package(LIBUSB_1)
-if (LIBUSB_1_FOUND)
+find_package(USB1)
+if (USB1_FOUND)
 
     list(APPEND INDI_TICFOCUSER-NG_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/connection/LibUsbConnection.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/TicUsb.cpp
         )
 
-    include_directories(${LIBUSB_1_INCLUDE_DIRS})
-    target_link_libraries( indi_ticfocuser-ng "${LIBUSB_1_LIBRARIES}")
+    include_directories(${USB1_INCLUDE_DIRS})
+    target_link_libraries( indi_ticfocuser-ng ${USB1_LIBRARY})
 
     set(WITH_LIBUSB TRUE)
 endif()
