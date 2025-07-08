@@ -208,7 +208,6 @@ option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
-option(WITH_LIBCAMERA "Install LIBCAMERA Driver" On)
 option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 
 # FFMPEG required for INDI Webcam driver
@@ -383,11 +382,6 @@ ELSE(BUILD_LIBS)
 if (WITH_TICFOCUSER-NG)
 add_subdirectory(indi-TicFocuser-ng)
 endif(WITH_TICFOCUSER-NG)
-
-## Libcamera
-if (WITH_LIBCAMERA)
-add_subdirectory(indi-libcamera)
-endif(WITH_LIBCAMERA)
 
 ## EQMod
 if (WITH_EQMOD)
