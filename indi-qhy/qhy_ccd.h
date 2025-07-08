@@ -30,6 +30,13 @@
 
 #define DEVICE struct usb_device *
 
+/* Enforce the overscan area switch.
+   Detection of this capability using `GetQHYCCDOverScanArea` does not work anymore in SDK version 25.4.2  at least for QHY600 cameras.
+   However, overscan area is correctly determined by `GetQHYCCDEffectiveArea`. Since this function depends on the read mode, easiest
+   approach is to always enable it. If there is no overscan area, switch has no effect.
+*/
+#define ENFORCE_OVERSCAN
+
 class QHYCCD : public INDI::CCD, public INDI::FilterInterface
 {
     public:
@@ -89,6 +96,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         virtual bool saveConfigItems(FILE *fp) override;
         virtual const char *getDefaultName() override;
         void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords) override;
+        virtual bool SetCaptureFormat(uint8_t index) override;
 
         /////////////////////////////////////////////////////////////////////////////
         /// Camera Properties
@@ -392,6 +400,8 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         void getExposure();
         void exposureSetRequest(ImageState request);
         int grabImage();
+        int bitsPerPixel { 16 };		// Desired bpp. Set by setupParams() and StartStreaming().
+        bool ignoreBitsPerPixel { false };	// Do not a attempt to change bpp after failed attempt.
 
         /////////////////////////////////////////////////////////////////////////////
         /// Cooling
@@ -441,7 +451,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasHumidity { false };
         bool HasAmpGlow { false };
         //NEW CODE - Add support for overscan/calibration area
+#ifndef ENFORCE_OVERSCAN
         bool HasOverscanArea { false };
+#endif
         bool IgnoreOverscanArea { true };
 
         /////////////////////////////////////////////////////////////////////////////
