@@ -31,6 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <string.h>
 
 static const size_t MAX_SERIAL_NUMBER = 20; // serial number has 8 characters, 20 is super safe
+int _lastError;
 
 TicUsb::TicUsb():
   handle(NULL), context(NULL)
@@ -97,7 +98,7 @@ void TicUsb::connect(const char* serialNo)
     size_t serialLen = 0;
 
     serialLen = libusb_get_string_descriptor_ascii(handle, desc.iSerialNumber, devSerial, MAX_SERIAL_NUMBER);
-    if (serialLen >= 0 &&
+    if (
         (serialNoLen == 0 || 
           (serialLen == serialNoLen && !strncmp(serialNo,(char*)devSerial,serialLen))) ) 
     {
@@ -152,9 +153,7 @@ void TicUsb::getSegment(TicCommand cmd, uint8_t offset, uint8_t length, void * b
 {
   _lastError = libusb_control_transfer(handle, 0xC0, (uint8_t)cmd, 0, offset, (unsigned char*)buffer, length, 0);
 
-  if (_lastError < 0)
-    return;
-  else if (_lastError != length)
+  if (_lastError != length)
     _lastError = LIBUSB_ERROR_OTHER;
   else
     _lastError = 0;
