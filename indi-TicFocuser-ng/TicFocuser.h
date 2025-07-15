@@ -28,26 +28,26 @@ class TicFocuser : public INDI::Focuser
         TicFocuser();
         virtual ~TicFocuser();
 
-        const char *getDefaultName() {  return "TIC Focuser NG"; }
+        virtual const char *getDefaultName() override {  return "TIC Focuser NG"; }
 
-        virtual bool initProperties();
-        virtual bool updateProperties();        
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
 
-        bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n);
-        bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n);
+        virtual bool ISNewNumber (const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch (const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-        bool saveConfigItems(FILE *fp);
+        virtual bool saveConfigItems(FILE *fp) override;
 
-        bool Disconnect();
-        bool Connect();
+        virtual bool Disconnect() override;
+        virtual bool Connect() override;
 
-        IPState MoveFocuser(FocusDirection dir, int speed, uint16_t duration);
-        IPState MoveAbsFocuser(uint32_t ticks);
-        IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks);
-        bool AbortFocuser();
-        bool SyncFocuser(uint32_t ticks);
+        virtual IPState MoveFocuser(FocusDirection dir, int speed, uint16_t duration) override;
+        virtual IPState MoveAbsFocuser(uint32_t ticks) override;
+        virtual IPState MoveRelFocuser(FocusDirection dir, uint32_t ticks) override;
+        virtual bool AbortFocuser() override;
+        virtual bool SyncFocuser(uint32_t ticks) override;
 
-        void TimerHit();
+        virtual void TimerHit() override;
 
         bool energizeFocuser();
         bool deenergizeFocuser();
