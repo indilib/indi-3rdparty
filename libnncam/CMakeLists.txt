@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libnncam)
 
-set (LIBNNCAM_VERSION "57.28200")
-set (LIBNNCAM_SOVERSION "57")
+set (LIBNNCAM_VERSION "59.28981")
+set (LIBNNCAM_SOVERSION "59")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
