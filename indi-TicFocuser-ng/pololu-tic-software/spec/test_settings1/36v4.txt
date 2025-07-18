@@ -1,0 +1,57 @@
+# Pololu Tic USB Stepper Controller settings file.
+# https://www.pololu.com/docs/0J71
+product: 36v4
+control_mode: rc_speed
+never_sleep: true
+disable_safe_start: true
+ignore_err_line_high: true
+auto_clear_driver_error: true
+soft_error_response: halt_and_hold
+soft_error_position: -44
+serial_baud_rate: 15385
+serial_device_number: 1025
+serial_alt_device_number: 514
+serial_enable_alt_device_number: true
+serial_14bit_device_number: true
+command_timeout: 4040
+serial_crc_for_commands: false
+serial_crc_for_responses: true
+serial_7bit_responses: true
+serial_response_delay: 123
+vin_calibration: -345
+input_averaging_enabled: false
+input_hysteresis: 2233
+input_scaling_degree: quadratic
+input_invert: true
+input_min: 404
+input_neutral_min: 505
+input_neutral_max: 606
+input_max: 3000
+output_min: -999
+output_max: 999
+encoder_prescaler: 5
+encoder_postscaler: 1000000000
+encoder_unlimited: true
+scl_config: user_input pullup active_high
+sda_config: kill_switch analog
+tx_config: kill_switch pullup analog
+rx_config: serial
+rc_config: rc pullup
+invert_motor_direction: true
+max_speed: 235467890
+starting_speed: 20000
+max_accel: 943567820
+max_decel: 766667890
+step_mode: 256
+current_limit: 788
+current_limit_during_error: 72
+auto_homing: true
+auto_homing_forward: true
+homing_speed_towards: 123456789
+homing_speed_away: 90786722
+hp_enable_unrestricted_current_limits: true
+hp_toff: 255
+hp_tblank: 127
+hp_abt: true
+hp_tdecay: 71
+hp_decmod: auto_mixed
