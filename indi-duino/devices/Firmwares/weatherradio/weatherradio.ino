@@ -146,17 +146,17 @@ void updateSensorData() {
    Send current sensor data as JSON document to Serial
 */
 String getSensorData(bool pretty) {
-  const int docSize = JSON_OBJECT_SIZE(9) + // max 9 sensors
-                      JSON_OBJECT_SIZE(1) + // token data
-                      JSON_OBJECT_SIZE(4) + // BME280 sensor
-                      JSON_OBJECT_SIZE(3) + // DHT sensors
-                      JSON_OBJECT_SIZE(3) + // MLX90614 sensor
-                      JSON_OBJECT_SIZE(3) + // TSL237 sensor
-                      JSON_OBJECT_SIZE(7) + // TSL2591 sensor
-                      JSON_OBJECT_SIZE(6) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(2) + // Water sensor
-                      2 * JSON_OBJECT_SIZE(4);  // Rain sensors
-  StaticJsonDocument <docSize> root;
+  // const int docSize = JSON_OBJECT_SIZE(9) + // max 9 sensors
+  //                     JSON_OBJECT_SIZE(1) + // token data
+  //                     JSON_OBJECT_SIZE(4) + // BME280 sensor
+  //                     JSON_OBJECT_SIZE(3) + // DHT sensors
+  //                     JSON_OBJECT_SIZE(3) + // MLX90614 sensor
+  //                     JSON_OBJECT_SIZE(3) + // TSL237 sensor
+  //                     JSON_OBJECT_SIZE(7) + // TSL2591 sensor
+  //                     JSON_OBJECT_SIZE(6) + // Davis Anemometer
+  //                     JSON_OBJECT_SIZE(2) + // Water sensor
+  //                     2 * JSON_OBJECT_SIZE(4);  // Rain sensors
+  StaticJsonDocument <2048> root;
   JsonObject weatherDoc = root.createNestedObject("weather");
 
   unsigned long start = 0;
@@ -208,7 +208,7 @@ String getSensorData(bool pretty) {
 
 
 String getCurrentVersion() {
-  StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
+  StaticJsonDocument <32> doc;
   doc["version"] = WEATHERRADIO_VERSION;
 
   String result = "";
@@ -218,9 +218,9 @@ String getCurrentVersion() {
 }
 
 String getReadDurations() {
-  const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(9);  // max 9 sensors
-  StaticJsonDocument <docSize> root;
+  // const int docSize = JSON_OBJECT_SIZE(1) + // top level
+  //                     JSON_OBJECT_SIZE(9);  // max 9 sensors
+  StaticJsonDocument <512> root;
   JsonObject doc = root.createNestedObject("durations");
 #ifdef USE_BME_SENSOR
   if (bmeData.status)        doc["BME"]              = sensor_read.bme_read;
@@ -259,17 +259,17 @@ String getReadDurations() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(7) + // max 7 configurations
-                      JSON_OBJECT_SIZE(2) + // DHT sensors
-                      JSON_OBJECT_SIZE(3) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(1) + // Water sensor
-                      2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
-                      JSON_OBJECT_SIZE(6) + // WiFi parameters
-                      JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(5) + // Dew heater
-                      JSON_OBJECT_SIZE(2);  // buffer
-  StaticJsonDocument <docSize> root;
+  // const int docSize = JSON_OBJECT_SIZE(1) + // top level
+  //                     JSON_OBJECT_SIZE(7) + // max 7 configurations
+  //                     JSON_OBJECT_SIZE(2) + // DHT sensors
+  //                     JSON_OBJECT_SIZE(3) + // Davis Anemometer
+  //                     JSON_OBJECT_SIZE(1) + // Water sensor
+  //                     2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
+  //                     JSON_OBJECT_SIZE(6) + // WiFi parameters
+  //                     JSON_OBJECT_SIZE(1) + // Arduino
+  //                     JSON_OBJECT_SIZE(5) + // Dew heater
+  //                     JSON_OBJECT_SIZE(2);  // buffer
+  StaticJsonDocument <1200> root;
   JsonObject doc = root.createNestedObject("config");
 
 #ifdef USE_WIFI
@@ -282,7 +282,7 @@ String getCurrentConfig() {
   switch (getWiFiStatus()) {
     case WIFI_CONNECTED:
       wifidata["status"]    = "connected";
-      wifidata["IP"]        = WiFi.localIP();
+      wifidata["IP"]        = WiFi.localIP().toString();
       wifidata["rssi"]      = WiFi.RSSI();
       wifidata["ping (ms)"] = networkData.avg_response_time;
       wifidata["loss"]      = networkData.loss;
@@ -403,6 +403,10 @@ void setup() {
 #ifdef USE_TSL237_SENSOR
   initTSL237();
 #endif //USE_TSL237_SENSOR
+
+#ifdef USE_TSL2591_SENSOR
+  initTSL2591();
+#endif //USE_TSL2591_SENSOR
 
 #ifdef USE_WIFI
   initWiFi();

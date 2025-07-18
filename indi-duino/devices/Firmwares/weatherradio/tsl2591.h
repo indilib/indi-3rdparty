@@ -41,6 +41,10 @@ void configureSensorTSL2591(tsl2591Gain_t gainSetting, tsl2591IntegrationTime_t 
   tsl.setTiming(timeSetting);
 }
 
+void initTSL2591() {
+    tsl.begin();
+    tsl2591Data.status = isTSL2591Present();
+}
 
 // calibrate TSL2591 gain and integration time
 bool calibrateTSL2591() {
@@ -138,7 +142,6 @@ bool calibrateTSL2591() {
 
 void updateTSL2591() {
   if (tsl2591Data.status || (tsl2591Data.status = isTSL2591Present())) {
-    tsl.begin();
     // Read 32 bits with top 16 bits IR, bottom 16 bits full spectrum
     tsl2591Data.full    = tsl.getFullLuminosity();
     tsl2591Data.ir      = tsl2591Data.full >> 16;
