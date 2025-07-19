@@ -410,4 +410,12 @@ bool ShelyakSpox::calibrationUnitCommand(char command, char parameter)
     return true;
 }
 
-//other lamps
+bool ShelyakSpox::saveConfigItems(FILE *fp)
+{
+    // Call the parent's saveConfigItems
+    INDI::DefaultDevice::saveConfigItems(fp);
+
+
+    return true;
+}
+
