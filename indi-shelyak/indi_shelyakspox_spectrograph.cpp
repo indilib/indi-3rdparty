@@ -91,7 +91,7 @@ bool ShelyakSpox::initProperties()
     // setup the text input for the serial port
     IUFillText(&PortT[0], "PORT", "Port", "/dev/ttyUSB0");
     IUFillTextVector(&PortTP, PortT, 1, getDeviceName(), "DEVICE_PORT", "Ports", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
-
+    setDriverInterface(AUX_INTERFACE);
     return true;
 }
 
@@ -410,4 +410,12 @@ bool ShelyakSpox::calibrationUnitCommand(char command, char parameter)
     return true;
 }
 
-//other lamps
+bool ShelyakSpox::saveConfigItems(FILE *fp)
+{
+    // Call the parent's saveConfigItems
+    INDI::DefaultDevice::saveConfigItems(fp);
+
+
+    return true;
+}
+

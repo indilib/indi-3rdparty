@@ -44,6 +44,7 @@ public:
     void ISGetProperties(const char *dev) override;
     bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
     bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+    virtual bool saveConfigItems(FILE *fp) override;
 
 protected:
     const char *getDefaultName() override;
