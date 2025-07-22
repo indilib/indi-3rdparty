@@ -65,6 +65,9 @@ target_link_libraries(indi_toupcam_focuser ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES
 add_executable(toupcam_test toupcam_test.cpp)
 target_link_libraries(toupcam_test ${TOUPCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
 
+add_executable(omegonprocam_test omegonprocam_test.cpp)
+target_link_libraries(omegonprocam_test ${OMEGONPROCAM_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_DL_LIBS} ${CMAKE_THREAD_LIBS_INIT})
+
 ########### indi_altair_* ###########
 add_executable(indi_altair_ccd ${indi_toupbase_SRCS})
 target_compile_definitions(indi_altair_ccd PRIVATE "-DBUILD_ALTAIRCAM")
