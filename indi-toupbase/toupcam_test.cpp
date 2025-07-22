@@ -46,6 +46,7 @@ bool g_isStillImage = false;
 
 // Callback function for events
 void onEvent(unsigned int Event, void* pCallbackCtx) {
+    (void)pCallbackCtx; // Suppress unused parameter warning
     switch (Event) {
         case TOUPCAM_EVENT_IMAGE:
             std::cout << "Event: Live image ready!" << std::endl;
