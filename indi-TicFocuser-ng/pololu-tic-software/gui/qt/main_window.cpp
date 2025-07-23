@@ -13,7 +13,7 @@
 #include <QCloseEvent>
 #include <QComboBox>
 #include <QDesktopServices>
-#include <QDesktopWidget>
+
 #include <QDoubleSpinBox>
 #include <QFileDialog>
 #include <QGridLayout>
@@ -2349,12 +2349,12 @@ void main_window::setup_menu_bar()
 
   open_settings_action = new QAction(this);
   open_settings_action->setObjectName("open_settings_action");
-  open_settings_action->setShortcut(Qt::CTRL + Qt::Key_O);
+  open_settings_action->setShortcut(Qt::CTRL | Qt::Key_O);
   file_menu->addAction(open_settings_action);
 
   save_settings_action = new QAction(this);
   save_settings_action->setObjectName("save_settings_action");
-  save_settings_action->setShortcut(Qt::CTRL + Qt::Key_S);
+  save_settings_action->setShortcut(Qt::CTRL | Qt::Key_S);
   file_menu->addAction(save_settings_action);
 
   file_menu->addSeparator();
@@ -2369,7 +2369,7 @@ void main_window::setup_menu_bar()
 
   disconnect_action = new QAction(this);
   disconnect_action->setObjectName("disconnect_action");
-  disconnect_action->setShortcut(Qt::CTRL + Qt::Key_D);
+  disconnect_action->setShortcut(Qt::CTRL | Qt::Key_D);
   device_menu->addAction(disconnect_action);
 
   clear_driver_error_action = new QAction(this);
@@ -2396,7 +2396,7 @@ void main_window::setup_menu_bar()
 
   apply_settings_action = new QAction(this);
   apply_settings_action->setObjectName("apply_settings_action");
-  apply_settings_action->setShortcut(Qt::CTRL + Qt::Key_P);
+  apply_settings_action->setShortcut(Qt::CTRL | Qt::Key_P);
   device_menu->addAction(apply_settings_action);
 
   upgrade_firmware_action = new QAction(this);
