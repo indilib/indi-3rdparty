@@ -92,7 +92,7 @@ const char *MaxDomeIIDriver::getDeviceName()
 
 void MaxDomeIIDriver::SetDevice(const char *name)
 {
-    strncpy(device_str, name, MAXINDIDEVICE);
+    snprintf(device_str, MAXINDIDEVICE, "%s", name);
 }
 
 /*
