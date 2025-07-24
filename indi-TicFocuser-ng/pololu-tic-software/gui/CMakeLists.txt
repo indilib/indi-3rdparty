@@ -10,7 +10,7 @@ include_directories (
 # Run Qt's moc automatically.
 set (CMAKE_AUTOMOC ON)
 
-find_package (Qt6Widgets)
+find_package(Qt6 COMPONENTS Core Gui Widgets)
 
 configure_file (gui_info.rc.in gui_info.rc)
 
@@ -50,6 +50,12 @@ if (WIN32)
   )
 endif ()
 
-target_link_libraries (gui Qt6::Widgets lib bootloader)
+target_link_libraries(gui PUBLIC
+    Qt6::Core
+    Qt6::Gui
+    Qt6::Widgets
+    lib
+    bootloader
+)
 
 install(TARGETS gui DESTINATION bin)
