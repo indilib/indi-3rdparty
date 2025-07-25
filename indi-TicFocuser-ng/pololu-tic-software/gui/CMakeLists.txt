@@ -1,26 +1,52 @@
+cmake_minimum_required(VERSION 3.16)
+
+project(gui LANGUAGES CXX)
+
+set(CMAKE_AUTOMOC ON)
+set(CMAKE_AUTOUIC ON)
+set(CMAKE_AUTORCC ON)
+
+set(QT_REQUIRED_COMPONENTS
+    Core
+    Gui
+    Widgets
+)
+
+set(QT_ADD_RESOURCES_COMMAND "")
+
+find_package(Qt6 COMPONENTS ${QT_REQUIRED_COMPONENTS})
+
+if(NOT Qt6_FOUND)
+    find_package(Qt5 5.15 COMPONENTS ${QT_REQUIRED_COMPONENTS})
+
+    if(NOT Qt5_FOUND)
+        message(FATAL_ERROR "No version of Qt (Qt6 or Qt5 >= 5.15) was found with all required components.")
+    else()
+        set(QT_MAJOR_VERSION 5)
+        set(QT_ADD_RESOURCES_COMMAND qt5_add_resources)
+    endif()
+else()
+    set(QT_MAJOR_VERSION 6)
+    set(QT_ADD_RESOURCES_COMMAND qt6_add_resources)
+endif()
+
 use_cxx11()
 
-# Find includes in corresponding build directories
 set (CMAKE_INCLUDE_CURRENT_DIR ON)
 
 include_directories (
-  "${CMAKE_CURRENT_SOURCE_DIR}/qt"
+    "${CMAKE_CURRENT_SOURCE_DIR}/qt"
 )
-
-# Run Qt's moc automatically.
-set (CMAKE_AUTOMOC ON)
-
-find_package(Qt6 COMPONENTS Core Gui Widgets)
 
 configure_file (gui_info.rc.in gui_info.rc)
 
 if (POLOLU_BUILD)
   if (APPLE)
     # Embed app.icns in the executable.
-    qt6_add_resources(ICON_QRC qt/app_icns.qrc)
+    ${QT_ADD_RESOURCES_COMMAND}(ICON_QRC qt/app_icns.qrc)
   else ()
     # Embed app.ico in the executable.
-    qt6_add_resources(ICON_QRC qt/app_ico.qrc)
+    ${QT_ADD_RESOURCES_COMMAND}(ICON_QRC qt/app_ico.qrc)
   endif ()
 endif ()
 
