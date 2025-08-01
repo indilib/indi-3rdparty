@@ -71,20 +71,39 @@ if (FLIPRO_FOUND)
 include_directories( ${FLIPRO_INCLUDE_DIR})
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_flipro.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_flipro.xml )
 
-############# Kepler Camera ###############
-set(kepler_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/kepler.cpp
-)
+# Check GLIBC version for Kepler camera
+execute_process(COMMAND getconf GNU_LIBC_VERSION OUTPUT_VARIABLE GLIBC_VERSION_STRING OUTPUT_STRIP_TRAILING_WHITESPACE)
 
-add_executable(indi_kepler_ccd ${kepler_SRCS})
+string(REGEX MATCH "([0-9]+)\\.([0-9]+)" GLIBC_VERSION_MATCH "${GLIBC_VERSION_STRING}")
+if(GLIBC_VERSION_MATCH)
+    set(GLIBC_MAJOR_VERSION "${CMAKE_MATCH_1}")
+    set(GLIBC_MINOR_VERSION "${CMAKE_MATCH_2}")
+else()
+    message(WARNING "Could not determine GLIBC version. Assuming compatible for Kepler camera.")
+    set(GLIBC_MAJOR_VERSION 999) # Assume high version if cannot determine
+    set(GLIBC_MINOR_VERSION 999)
+endif()
 
-target_link_libraries(indi_kepler_ccd ${INDI_LIBRARIES} ${FLIPRO_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
+if(${GLIBC_MAJOR_VERSION} GREATER_EQUAL 2 AND ${GLIBC_MINOR_VERSION} GREATER_EQUAL 34)
+    message(STATUS "GLIBC version ${GLIBC_MAJOR_VERSION}.${GLIBC_MINOR_VERSION} found. Building Kepler camera.")
 
-install(TARGETS indi_kepler_ccd RUNTIME DESTINATION bin)
+    ############# Kepler Camera ###############
+    set(kepler_SRCS
+            ${CMAKE_CURRENT_SOURCE_DIR}/kepler.cpp
+    )
 
-add_executable(test_kepler_merged test_kepler_merged.cpp)
-target_link_libraries(test_kepler_merged ${FLIPRO_LIBRARIES} usb-1.0)
+    add_executable(indi_kepler_ccd ${kepler_SRCS})
 
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_flipro.xml DESTINATION ${INDI_DATA_DIR})
+    target_link_libraries(indi_kepler_ccd ${INDI_LIBRARIES} ${FLIPRO_LIBRARIES} ${CFITSIO_LIBRARIES} ${M_LIB} ${ZLIB_LIBRARY})
+
+    install(TARGETS indi_kepler_ccd RUNTIME DESTINATION bin)
+
+    add_executable(test_kepler_merged test_kepler_merged.cpp)
+    target_link_libraries(test_kepler_merged ${FLIPRO_LIBRARIES} usb-1.0)
+
+    install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_flipro.xml DESTINATION ${INDI_DATA_DIR})
+else()
+    message(WARNING "GLIBC version ${GLIBC_MAJOR_VERSION}.${GLIBC_MINOR_VERSION} is too low. Kepler camera requires GLIBC 2.34 or higher. Skipping build of Kepler camera.")
+endif()
 
 endif (FLIPRO_FOUND)
