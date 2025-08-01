@@ -348,6 +348,15 @@ ASIBase::ASIBase()
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
     mTimerWE.setSingleShot(true);
     mTimerNS.setSingleShot(true);
+    
+    // Initialize exposure snapshot
+    mExposureSnapshot.isActive = false;
+    mExposureSnapshot.subW = 0;
+    mExposureSnapshot.subH = 0;
+    mExposureSnapshot.binX = 1;
+    mExposureSnapshot.binY = 1;
+    mExposureSnapshot.imgType = ASI_IMG_RAW8;
+    mExposureSnapshot.bpp = 8;
 }
 
 ASIBase::~ASIBase()
@@ -1071,9 +1080,31 @@ bool ASIBase::activateCooler(bool enable)
     return (ret == ASI_SUCCESS);
 }
 
+void ASIBase::takeExposureSnapshot()
+{
+    // Snapshot the current camera parameters to prevent race conditions
+    // when parameters change during exposure
+    mExposureSnapshot.subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    mExposureSnapshot.subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+    mExposureSnapshot.binX = PrimaryCCD.getBinX();
+    mExposureSnapshot.binY = PrimaryCCD.getBinY();
+    mExposureSnapshot.imgType = getImageType();
+    mExposureSnapshot.bpp = PrimaryCCD.getBPP();
+    mExposureSnapshot.isActive = true;
+    
+    LOGF_DEBUG("Exposure snapshot taken: %dx%d, bin %dx%d, type %d, bpp %d", 
+               mExposureSnapshot.subW, mExposureSnapshot.subH, 
+               mExposureSnapshot.binX, mExposureSnapshot.binY,
+               mExposureSnapshot.imgType, mExposureSnapshot.bpp);
+}
+
 bool ASIBase::StartExposure(float duration)
 {
     mExposureRetry = 0;
+    
+    // Take a snapshot of current parameters before starting exposure
+    takeExposureSnapshot();
+    
     mWorker.start(std::bind(&ASIBase::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
@@ -1083,6 +1114,9 @@ bool ASIBase::AbortExposure()
     LOG_DEBUG("Aborting exposure...");
 
     mWorker.quit();
+
+    // Clear the exposure snapshot since we're aborting
+    mExposureSnapshot.isActive = false;
 
     ASIStopExposure(mCameraInfo.CameraID);
     return true;
@@ -1221,16 +1255,45 @@ int ASIBase::grabImage(float duration)
 {
     ASI_ERROR_CODE ret = ASI_SUCCESS;
 
-    ASI_IMG_TYPE type = getImageType();
+    // Use snapshot parameters if available, otherwise fall back to current parameters
+    // This prevents race conditions when parameters change during exposure
+    ASI_IMG_TYPE type;
+    uint16_t subW, subH;
+    uint8_t bpp;
+    int nChannels;
+    size_t nTotalBytes;
+    
+    if (mExposureSnapshot.isActive)
+    {
+        type = mExposureSnapshot.imgType;
+        subW = mExposureSnapshot.subW;
+        subH = mExposureSnapshot.subH;
+        bpp = mExposureSnapshot.bpp;
+        nChannels = (type == ASI_IMG_RGB24) ? 3 : 1;
+        nTotalBytes = subW * subH * nChannels * (bpp / 8);
+        
+        LOGF_DEBUG("Using snapshot parameters for image download: %dx%d, type %d, bpp %d, bytes %zu", 
+                   subW, subH, type, bpp, nTotalBytes);
+        
+        // Clear the snapshot after use
+        mExposureSnapshot.isActive = false;
+    }
+    else
+    {
+        type = getImageType();
+        subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+        subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+        bpp = PrimaryCCD.getBPP();
+        nChannels = (type == ASI_IMG_RGB24) ? 3 : 1;
+        nTotalBytes = subW * subH * nChannels * (bpp / 8);
+        
+        LOGF_DEBUG("Using current parameters for image download: %dx%d, type %d, bpp %d, bytes %zu", 
+                   subW, subH, type, bpp, nTotalBytes);
+    }
 
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     uint8_t *image = PrimaryCCD.getFrameBuffer();
     uint8_t *buffer = image;
-
-    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
-    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-    int nChannels = (type == ASI_IMG_RGB24) ? 3 : 1;
-    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
 
     if (type == ASI_IMG_RGB24)
     {
