@@ -1869,6 +1869,9 @@ bool ToupBase::saveConfigItems(FILE * fp)
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
         IUSaveConfigSwitch(fp, &m_HighFullwellSP);
 
+    if (m_Instance->model->flag & CP(FLAG_FAN))
+        IUSaveConfigSwitch(fp, &m_FanSP);
+
     return true;
 }
 
