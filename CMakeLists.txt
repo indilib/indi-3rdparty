@@ -20,7 +20,7 @@ include_directories( "/opt/homebrew/include")
 include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
 # FIX_LIBRARY_LINK Macro
-# This macro will check MacOS Binary Libraries provided by third parties for external links that could cause linking and packaging problems 
+# This macro will check MacOS Binary Libraries provided by third parties for external links that could cause linking and packaging problems
 # If the FIX_MACOS_LIBS option is enabled when building, it will also attempt to fix the problems, which should then allow the build to continue.
 # This macro should be called by the FIX_MACOS_LIBRARIES macro below
 macro(FIX_LIBRARY_LINK PACKAGE_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME LINK)
@@ -82,7 +82,7 @@ macro(FIX_MACOS_LIBRARIES DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME
 
 	 # This section will use the FIX_LIBRARY_ID macro to check and optionally fix Install IDs that could cause linking issues.
 	 FIX_LIBRARY_ID(${DYLIB_NAME} ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME})
-     
+
      # This section gets all the current links to other libraries then checks and optionally corrects absolute or bad links to libraries including libusb and opencv
 	 execute_process(COMMAND bash "-c" "otool -L ${CMAKE_CURRENT_SOURCE_DIR}/${CURRENT_DYLIB_FILENAME} | cut -d ' ' -f1" OUTPUT_VARIABLE LINKS_LIST)
 	 string (REPLACE "\t" "" LINKS_LIST "${LINKS_LIST}")
@@ -97,7 +97,7 @@ macro(FIX_MACOS_LIBRARIES DYLIB_NAME CURRENT_DYLIB_FILENAME LIBRARY_DISPLAY_NAME
 			FIX_LIBRARY_LINK("libopencv_core" ${CURRENT_DYLIB_FILENAME} ${LIBRARY_DISPLAY_NAME} ${LINK})
 		endif(NOT ${LINK} STREQUAL "")
 	 endforeach(LINK IN LISTS LINKS_LIST)
-  
+
 endmacro(FIX_MACOS_LIBRARIES)
 
 endif(APPLE)
@@ -123,7 +123,7 @@ IF (UNIX OR APPLE)
             STRING(FIND ${SOURCE_FILE} libfli DIR3_FOUND)
             STRING(FIND ${SOURCE_FILE} libqhy DIR4_FOUND)
             STRING(FIND ${SOURCE_FILE} libqsi DIR5_FOUND)
-            STRING(FIND ${SOURCE_FILE} libsbig DIR6_FOUND)            
+            STRING(FIND ${SOURCE_FILE} libsbig DIR6_FOUND)
             STRING(FIND ${SOURCE_FILE} libinovasdk DIR8_FOUND)
             STRING(FIND ${SOURCE_FILE} libsvbony DIR9_FOUND)
             IF (NOT ${DIR1_FOUND} EQUAL -1 OR NOT ${DIR2_FOUND} EQUAL -1 OR NOT ${DIR3_FOUND} EQUAL -1 OR NOT ${DIR4_FOUND} EQUAL -1 OR
@@ -208,6 +208,7 @@ option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
+option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -237,7 +238,7 @@ ENDIF(NUTCLIENT_FOUND)
 # Add/remove cases for OSX
 IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_INOVAPLX Off)
-    set(WITH_GIGE Off)    
+    set(WITH_GIGE Off)
     set(WITH_PENTAX Off)
     set(WITH_GPSD Off)
     set(WITH_AHP_XC Off)
@@ -376,6 +377,11 @@ endif(WITH_ASTROASIS)
 
 # This is the main 3rd Party build.  It runs if the Build Libs option is not selected.
 ELSE(BUILD_LIBS)
+
+## TicFocuser-ng
+if (WITH_TICFOCUSER-NG)
+add_subdirectory(indi-TicFocuser-ng)
+endif(WITH_TICFOCUSER-NG)
 
 ## EQMod
 if (WITH_EQMOD)
@@ -879,4 +885,3 @@ message(STATUS "################################################################
 endif (LIBRARIES_FOUND)
 
 ENDIF(BUILD_LIBS)
-

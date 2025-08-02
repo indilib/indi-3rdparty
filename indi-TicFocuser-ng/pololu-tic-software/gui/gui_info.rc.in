@@ -1,0 +1,35 @@
+#define VERSION             ${SOFTWARE_VERSION_MAJOR},${SOFTWARE_VERSION_MINOR},${SOFTWARE_VERSION_PATCH},0
+#define VERSION_STR         "${SOFTWARE_VERSION}"
+
+#cmakedefine POLOLU_BUILD
+
+#include <winver.h>
+
+#ifdef POLOLU_BUILD
+IDI_ICON1 ICON DISCARDABLE "${CMAKE_SOURCE_DIR}/images/app.ico"
+#endif
+
+VS_VERSION_INFO VERSIONINFO
+FILEVERSION VERSION
+PRODUCTVERSION VERSION
+FILEOS VOS_NT_WINDOWS32
+FILETYPE VFT_APP
+BEGIN
+    BLOCK "StringFileInfo"
+    BEGIN
+        BLOCK "040904E4"
+        BEGIN
+            VALUE "CompanyName", "Pololu Corporation"
+            VALUE "FileDescription", "Pololu Tic Control Center"
+            VALUE "FileVersion", VERSION_STR
+            VALUE "ProductName", "Pololu Tic Control Center (${CMAKE_BUILD_TYPE})"
+            VALUE "ProductVersion", VERSION_STR
+            VALUE "LegalCopyright", "Copyright (C) ${YEAR} Pololu Corporation"
+        END
+    END
+    BLOCK "VarFileInfo"
+    BEGIN
+        VALUE "Translation", 0x409, 1252
+    END
+END
+

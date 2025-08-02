@@ -10,7 +10,7 @@
 #
 # This module can find the MMAL camera libraries.
 #
-cmake_minimum_required(VERSION 3.0.0)
+cmake_minimum_required(VERSION 3.16)
 
 set (MMAL_LIBS mmal_core mmal_util mmal_vc_client)
 set (EGL_LIBS brcmGLESv2 brcmEGL)
