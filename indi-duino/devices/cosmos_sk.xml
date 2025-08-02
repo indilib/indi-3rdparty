@@ -1,14 +1,5 @@
 <INDIDriver>
 
-<defSwitchVector device="Arduino Cosmos" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
-    <defSwitch name="CONNECT" label="Connect">
-Off
-    </defSwitch>
-    <defSwitch name="DISCONNECT" label="Disconnect">
-On
-    </defSwitch>
-</defSwitchVector>
-
 <defSwitchVector device="Arduino Cosmos" name="BACK_LIGHT" label="BACK_LIGHT" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="1">
     <defSwitch name="ON" label="OPEN">
 Off
