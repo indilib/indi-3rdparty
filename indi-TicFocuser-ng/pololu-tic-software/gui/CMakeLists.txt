@@ -41,13 +41,19 @@ include_directories (
 configure_file (gui_info.rc.in gui_info.rc)
 
 if (POLOLU_BUILD)
-  if (APPLE)
-    # Embed app.icns in the executable.
-    ${QT_ADD_RESOURCES_COMMAND}(ICON_QRC qt/app_icns.qrc)
-  else ()
-    # Embed app.ico in the executable.
-    ${QT_ADD_RESOURCES_COMMAND}(ICON_QRC qt/app_ico.qrc)
-  endif ()
+    if (APPLE)
+        if (QT_MAJOR_VERSION EQUAL 6)
+            qt6_add_resources(ICON_QRC qt/app_icns.qrc)
+        elseif (QT_MAJOR_VERSION EQUAL 5)
+            qt5_add_resources(ICON_QRC qt/app_icns.qrc)
+        endif ()
+    else ()
+        if (QT_MAJOR_VERSION EQUAL 6)
+            qt6_add_resources(ICON_QRC qt/app_ico.qrc)
+        elseif (QT_MAJOR_VERSION EQUAL 5)
+            qt5_add_resources(ICON_QRC qt/app_ico.qrc)
+        endif ()
+    endif ()
 endif ()
 
 add_executable (gui
