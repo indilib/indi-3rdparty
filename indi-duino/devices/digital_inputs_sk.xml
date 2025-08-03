@@ -1,14 +1,5 @@
 <INDIDriver>
 
-<defSwitchVector device="Arduino INPUTS" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
-    <defSwitch name="CONNECT" label="Connect">
-Off
-    </defSwitch>
-    <defSwitch name="DISCONNECT" label="Disconnect">
-On
-    </defSwitch>
-</defSwitchVector>
-
 <defLightVector device="Arduino INPUTS" name="STATUS" label="STATUS" group="Main Control" state="Idle" perm="ro" rule="AnyOfMany" timeout="1">
     <defLight name="INPUT01" label="INPUT 1">
 	<indiduino pin="2"/>
