@@ -56,15 +56,17 @@
 
 
 // Error messages
-const char *ErrorMessages[] = {
-	"Ok",                              // no error
-	"No response from MAX DOME",       // -1
-	"Invalid declared message length", // -2
-	"Message too short",               // -3
-	"Checksum error",                  // -4
-	"Could not send command",          // -5
-	"Response do not match command",   // -6
-	""
+const char *ErrorMessages[] =
+{
+    "Ok",                              // no error
+    "No response from MAX DOME",       // -1
+    "Invalid declared message length", // -2
+    "Message too short",               // -3
+    "Checksum error",                  // -4
+    "Could not send command",          // -5
+    "Response do not match command",   // -6
+    "Payload too large",               // -7
+    ""
 };
 
 char device_str[MAXINDIDEVICE] = "MaxDome II";
@@ -136,7 +138,7 @@ signed char computeChecksum(char *msg, int len)
 {
     char checksum = 0;
 
-    for (int i=1; i<len && i<BUFFER_SIZE; i++)
+    for (int i = 1; i < len && i < BUFFER_SIZE; i++)
         checksum -= msg[i];
 
     return checksum;
@@ -166,14 +168,16 @@ int MaxDomeIIDriver::ReadResponse()
     while (*buffer != START_BYTE && err == TTY_OK)
         err = tty_read(fd, buffer, 1, MAXDOME_TIMEOUT, &nbytes);
 
-    if (err != TTY_OK || buffer[0] != START_BYTE) {
+    if (err != TTY_OK || buffer[0] != START_BYTE)
+    {
         LOG_ERROR(ErrorMessages[1]);
         return -1;
     }
 
     // Read message length
     err = tty_read(fd, buffer + 1, 1, MAXDOME_TIMEOUT, &nbytes);
-    if (err != TTY_OK || buffer[1] < 0x02 || buffer[1] > 0x0e) {
+    if (err != TTY_OK || buffer[1] < 0x02 || buffer[1] > 0x0e)
+    {
         LOG_ERROR(ErrorMessages[2]);
         return -2;
     }
@@ -182,12 +186,14 @@ int MaxDomeIIDriver::ReadResponse()
 
     // Read the rest of the message
     err = tty_read(fd, buffer + 2, len, MAXDOME_TIMEOUT, &nbytes);
-    if (err != TTY_OK || nbytes != len) {
+    if (err != TTY_OK || nbytes != len)
+    {
         LOG_ERROR(ErrorMessages[3]);
         return -3;
     }
 
-    if (computeChecksum(buffer, len + 2) != 0) {
+    if (computeChecksum(buffer, len + 2) != 0)
+    {
         LOG_ERROR(ErrorMessages[4]);
         return -4;
     }
@@ -216,7 +222,13 @@ int MaxDomeIIDriver::SendCommand(char cmdId, const char *payload, int payloadLen
     int nbytes;
     char errmsg[MAXRBUF];
     char cmd[BUFFER_SIZE];
-    char hexbuf[3*BUFFER_SIZE];
+    char hexbuf[3 * BUFFER_SIZE];
+
+    if (payloadLen > BUFFER_SIZE - 4)
+    {
+        LOG_ERROR(ErrorMessages[7]);
+        return -7;
+    }
 
     cmd[0] = START_BYTE;
     cmd[1] = payloadLen + 2;
@@ -240,7 +252,8 @@ int MaxDomeIIDriver::SendCommand(char cmdId, const char *payload, int payloadLen
     if (nbytes < 0)
         return nbytes;
 
-    if (buffer[2] != (char)(cmdId | TO_COMPUTER)) {
+    if (buffer[2] != (char)(cmdId | TO_COMPUTER))
+    {
         LOG_ERROR(ErrorMessages[6]);
         return -6;
     }
@@ -302,10 +315,11 @@ int MaxDomeIIDriver::GotoAzimuth(int nDir, int nTicks)
 	@return Same as SendCommand
 */
 int MaxDomeIIDriver::Status(ShStatus *shStatus, AzStatus *azStatus,
-        unsigned *azimuthPos, unsigned *homePos)
+                            unsigned *azimuthPos, unsigned *homePos)
 {
     int ret = SendCommand(STATUS_CMD, nullptr, 0);
-    if (ret != 0) {
+    if (ret != 0)
+    {
         return ret;
     }
 
