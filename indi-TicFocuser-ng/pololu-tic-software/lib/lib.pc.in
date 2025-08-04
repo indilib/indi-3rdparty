@@ -1,0 +1,10 @@
+prefix=@CMAKE_INSTALL_PREFIX@
+libdir=${prefix}/lib
+includedir=${prefix}/include
+
+Name: libpololu-tic
+Version: @SOFTWARE_VERSION@
+Description: Tic Stepper Motor Controller library.
+Requires: @PC_REQUIRES@
+Libs: -L${libdir} -lpololu-tic-@SOFTWARE_VERSION_MAJOR@ @PC_MORE_LIBS@
+Cflags: -I${includedir}/libpololu-tic-@SOFTWARE_VERSION_MAJOR@ @PC_MORE_CFLAGS@
