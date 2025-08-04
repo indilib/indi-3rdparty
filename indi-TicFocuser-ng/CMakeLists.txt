@@ -13,14 +13,14 @@ include(GNUInstallDirs)
 include(CMakeCommon)
 
 set(INDI_TICFOCUSER-NG_CORE_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/TicFocuser.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/UsbConnectionBase.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/SerialConnection.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/driver_interfaces/TiclibInterface.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/TicBase.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/TicDefs.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/StreamSerial.cpp
-    )
+    ${CMAKE_CURRENT_SOURCE_DIR}/TicFocuser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/connection/UsbConnectionBase.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/connection/SerialConnection.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/connection/driver_interfaces/TiclibInterface.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/TicBase.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/TicDefs.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/StreamSerial.cpp
+)
 
 add_executable(indi_ticfocuser-ng ${INDI_TICFOCUSER-NG_CORE_SRCS})
 
@@ -96,15 +96,20 @@ elseif(USB1_FOUND AND WITH_LIBUSBP)
     message(STATUS "USB1 found, but LIBUSBP-1 already configured. Skipping USB1 to avoid conflicts.")
 endif()
 
-
-find_package(LIBBLUETOOTH)
+find_package(LibBluetooth)
 if (LIBBLUETOOTH_FOUND)
+    message(STATUS "LibBluetooth found. Enabling Bluetooth support.")
+
     list(APPEND INDI_TICFOCUSER-NG_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/connection/ticlib/StreamBT.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/connection/BluetoothConnection.cpp
     )
+
     target_link_libraries( indi_ticfocuser-ng "${LIBBLUETOOTH_LIBRARIES}")
+
     set(WITH_BLUETOOTH TRUE)
+else()
+    message(STATUS "LibBluetooth not found. Bluetooth support will be disabled.")
 endif()
 
 pkg_check_modules(LIBTIC-1 libpololu-tic-1)
@@ -128,7 +133,7 @@ if(NOT LIBTIC-1_FOUND)
             message(WARNING "Bundled pololu-tic-software found, but 'lib' target not created. Please check its CMakeLists.txt and pololu-tic-software/lib/CMakeLists.txt.")
         endif()
     else()
-        message(WARNING "Bundled pololu-tic-software not found at '${POLOLU_TIC_SOFTWARE_ROOT_DIR}' or it does not contain a CMakeLists.txt.")
+        message(WARNING "Bundled pololu-tic-software not found at '${POLOLU_TIC_DIR}' or it does not contain a CMakeLists.txt.")
     endif()
 endif()
 
