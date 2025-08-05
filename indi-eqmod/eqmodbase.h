@@ -67,6 +67,7 @@ protected:
     double ghalignedRA, ghalignedDEC;
     double targetRA;
     double targetDEC;
+    
 
 #ifdef WITH_ALIGN_GEEHALEL
     Align *align;

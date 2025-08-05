@@ -314,16 +314,18 @@ void Skywatcher::Init()
     wasinitialized = false;
     ReadMotorStatus(Axis1);
     ReadMotorStatus(Axis2);
-
+    
     if (!RAInitialized && !DEInitialized)
     {
         //Read initial stepper values
         dispatch_command(GetAxisPosition, Axis1, nullptr);
         //read_eqmod();
         RAStepInit = Revu24str2long(response + 1);
+
         dispatch_command(GetAxisPosition, Axis2, nullptr);
         //read_eqmod();
         DEStepInit = Revu24str2long(response + 1);
+
         LOGF_DEBUG("%s() : Motors not initialized -- read Init steps RAInit=%ld DEInit = %ld",
                    __FUNCTION__, static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
         // Energize motors
@@ -332,7 +334,7 @@ void Skywatcher::Init()
         //read_eqmod();
         dispatch_command(Initialize, Axis2, nullptr);
         //read_eqmod();
-#ifdef EQMOD_EXT        
+#ifdef EQMODE_EXT        
         RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
         DEStepHome = DEStepInit + DEHomeInitOffset/360. * DESteps360;
 #else
@@ -345,7 +347,8 @@ void Skywatcher::Init()
         // Mount already initialized by another driver / driver instance
         // use default configuration && leave unchanged encoder values
         wasinitialized = true;
-#ifdef EQMOD_EXT
+        
+#ifdef EQMODE_EXT
         SetMountDependantParameter(MountCode);
         RAStepHome = RAStepInit + RAHomeInitOffset/24.*RASteps360;
         DEStepHome = DEStepInit + DEHomeInitOffset/360.*DESteps360;
@@ -547,7 +550,7 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
         case 0x0A:
             strcpy(boardinfo[0], "Star Adventurer");
             break;
-	case 0x0C:
+        case 0x0C:
             strcpy(boardinfo[0], "Star Adventurer GTi");
             break;
         case 0x20:
@@ -564,6 +567,9 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
             break;
         case 0x31:
             strcpy(boardinfo[0], "EQ5 Pro");
+            break;
+        case 0x45:
+            strcpy(boardinfo[0], "Wave 150i");
             break;
         case 0x80:
             strcpy(boardinfo[0], "GT");
@@ -597,15 +603,18 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
     sprintf(boardinfo[2], "0x%02X", MountCode);
     boardinfo[2][4] = '\0';
     
-#ifdef EQMOD_EXT
+#ifdef EQMODE_EXT
     SetMountDependantParameter(MountCode);
 #endif
 }
-#ifdef EQMOD_EXT
+
+#ifdef EQMODE_EXT
 void Skywatcher::SetMountDependantParameter(uint32_t mountCode)
 {
-// RAHomeInitOffset in hour:   RA default Home position is defined as RAStepHome = RAStepInit + RAHomeInitOffset/24.*RASteps360 (in step)
-// DEHomeInitOffset in degree: DE default Home position is defined as DEStepHome = DEStepInit + DEHomeInitOffset/360.*DESteps360 (in step)
+/*
+RAHomeInitOffset in hour:   RA default Home position is defined as RAStepHome = RAStepInit + RAHomeInitOffset/24.*RASteps360 (in step)
+DEHomeInitOffset in degree: DE default Home position is defined as DEStepHome = DEStepInit + DEHomeInitOffset/360.*DESteps360 (in step)
+*/
 
     // default settings
 
@@ -613,7 +622,7 @@ void Skywatcher::SetMountDependantParameter(uint32_t mountCode)
     DEHomeInitOffset = 90.;
     RAStepInit = 0x800000;
     DEStepInit = 0x800000;
-    LOGF_INFO("modifOC SetMountDependantParameter %X %d %d\n",mountCode,RAStepInit,DEStepInit);
+
     // other settings
     switch (mountCode)
     {
@@ -876,6 +885,7 @@ void Skywatcher::ReadMotorStatus(SkywatcherAxis axis)
             break;
     }
     gettimeofday(&lastreadmotorstatus[axis], nullptr);
+
 }
 
 void Skywatcher::SlewRA(double rate)
@@ -1410,7 +1420,7 @@ uint32_t Skywatcher::GetDEAuxEncoder()
 {
     return ReadEncoder(Axis2);
 }
-#ifdef EQMOD_EXT
+#ifdef EQMODE_EXT
 uint32_t Skywatcher::GetRANorthEncoder()
 {
 // We need a strict reference to the north to set the goto displacement limits
@@ -1426,6 +1436,7 @@ double Skywatcher::GetRAHomeInitOffset()
     return RAHomeInitOffset;
 }
 #endif
+
 void Skywatcher::SetST4RAGuideRate(unsigned char r)
 {
     SetST4GuideRate(Axis1, r);
@@ -1878,7 +1889,7 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
 
         //if (INDI::Logger::debugSerial(cmd)) {
         command[nbytes_written - 1] = '\0'; //hmmm, remove \r, the  SkywatcherTrailingChar
-        DEBUGF(telescope->DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
+        //DEBUGF(telescope->DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
         debugnextread = true;
 
         try
@@ -1932,7 +1943,6 @@ bool Skywatcher::read_eqmod()
     }
     // Remove CR
     response[nbytes_read - 1] = '\0';
-
     if (debugnextread)
     {
         DEBUGF(telescope->DBG_COMM, "read_eqmod: \"%s\", %d bytes read", response, nbytes_read);

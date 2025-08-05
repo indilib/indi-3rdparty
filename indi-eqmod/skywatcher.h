@@ -14,6 +14,7 @@
     You should have received a copy of the GNU General Public License
     along with the Skywatcher Protocol INDI driver.  If not, see <http://www.gnu.org/licenses/>.
 */
+#define EQMODE_EXT 
 
 #pragma once
 
@@ -149,10 +150,12 @@ class Skywatcher
         bool GetSnapPort2Status();
 
         void setPortFD(int value);
+        
 #ifdef EQMODE_EXT
         uint32_t GetRANorthEncoder();
         double GetRAHomeInitOffset();
 #endif
+
     private:
         // Official Skywatcher Protocol
         // See http://code.google.com/p/skywatcher/wiki/SkyWatcherProtocol
@@ -255,8 +258,9 @@ class Skywatcher
         {
             SkywatcherDirection direction;
             SkywatcherSlewMode slewmode;
-            SkywatcherSpeedMode speedmode;
+            SkywatcherSpeedMode speedmode;  
         } SkywatcherAxisStatus;
+        
         enum SkywatcherError
         {
             NO_ERROR,
@@ -294,6 +298,7 @@ class Skywatcher
 #ifdef EQMODE_EXT
         void SetMountDependantParameter(uint32_t mountCode);
 #endif
+
         bool read_eqmod();
         bool dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *arg);
 
@@ -328,15 +333,16 @@ class Skywatcher
         uint32_t DEStepHome; // Home DE position in step
         uint32_t RAPeriod {256};   // Current RA worm period
         uint32_t DEPeriod {256};   // Current DE worm period
-
-        uint32_t lastRAStep {0xFFFFFFFF};
-        uint32_t lastDEStep {0xFFFFFFFF};
-        uint32_t lastRAPeriod {0xFFFFFFFF};
-        uint32_t lastDEPeriod {0xFFFFFFFF};
+        
 #ifdef EQMODE_EXT        
         double RAHomeInitOffset;
         double DEHomeInitOffset;
 #endif
+        uint32_t lastRAStep {0xFFFFFFFF};
+        uint32_t lastDEStep {0xFFFFFFFF};
+        uint32_t lastRAPeriod {0xFFFFFFFF};
+        uint32_t lastDEPeriod {0xFFFFFFFF};
+
         bool RAInitialized, DEInitialized, RARunning, DERunning;
         bool wasinitialized;
         SkywatcherAxisStatus RAStatus, DEStatus;
