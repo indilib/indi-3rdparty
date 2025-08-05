@@ -469,7 +469,7 @@ IPState WeatherRadio::handleFirmwareConfig(JsonValue jvalue)
     for (deviceIter = begin(jvalue); deviceIter != end(jvalue); ++deviceIter)
     {
         char *device {new char[strlen(deviceIter->key) + 1] {0}};
-        strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+        snprintf(device, strlen(deviceIter->key) + 1, "%s", deviceIter->key);
 
         if (strcmp(device, WIFI_DEVICE) == 0)
             hasWiFi = true;
@@ -482,7 +482,7 @@ IPState WeatherRadio::handleFirmwareConfig(JsonValue jvalue)
             char *name {new char[strlen(configIter->key) + 1] {0}};
 
             // copy single setting
-            strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
+            snprintf(name, strlen(configIter->key) + 1, "%s", configIter->key);
             std::string value;
             double number;
 
@@ -1007,7 +1007,7 @@ void WeatherRadio::handleWeatherData(JsonValue value)
     for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
     {
         char *name {new char[strlen(deviceIter->key) + 1] {0}};
-        strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+        snprintf(name, strlen(deviceIter->key) + 1, "%s", deviceIter->key);
 
         JsonIterator sensorIter;
         INumberVectorProperty *deviceProp = findRawDeviceProperty(name);

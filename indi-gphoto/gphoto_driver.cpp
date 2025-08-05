@@ -190,7 +190,7 @@ static int RTS_flag = TIOCM_RTS;
 
 void gphoto_set_debug(const char *name)
 {
-    strncpy(device, name, 64);
+    snprintf(device, sizeof(device), "%s", name);
 }
 
 static const char *widget_name(CameraWidget *widget)
@@ -824,7 +824,7 @@ static int download_image(gphoto_driver *gphoto, CameraFilePath *fn, int fd)
                      gphoto->handle_sdcard_image == DELETE_IMAGE ? "true" : "false");
     }
 
-    strncpy(gphoto->filename, fn->name, sizeof(gphoto->filename));
+    snprintf(gphoto->filename, sizeof(gphoto->filename), "%s", fn->name);
 
     if (fd < 0)
     {
@@ -1884,7 +1884,7 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
     // Check for user
     if (shutter_release_port)
     {
-        strncpy(gphoto->bulb_port, shutter_release_port, sizeof(gphoto->bulb_port));
+        snprintf(gphoto->bulb_port, sizeof(gphoto->bulb_port), "%s", shutter_release_port);
         /*if (strcmp(gphoto->bulb_port,"/dev/nullptr") != 0 )
         {
             DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG,"Using external shutter-release cable");

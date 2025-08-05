@@ -106,7 +106,7 @@ ATIKCCD::ATIKCCD(std::string filterName, int id) : FilterInterface(this), m_iDev
     NSDir = NORTH;
     WEDir = WEST;
 
-    strncpy(this->name, filterName.c_str(), MAXINDIDEVICE);
+    snprintf(this->name, sizeof(this->name), "%s", filterName.c_str());
     setDeviceName(this->name);
 }
 
@@ -710,7 +710,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                     {
                         uint16_t value = static_cast<uint16_t>(ControlN[0].value);
                         if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomGain,
-                                                                             reinterpret_cast<uint8_t *>(&value), 2))
+                                reinterpret_cast<uint8_t *>(&value), 2))
                         {
                             IDLog("Failed setting CCD_CONTROL custom gain at %d", value);
                             ControlN[0].value = oldValues[0];
@@ -729,13 +729,13 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                             changed = true;
                         }
                     }
-                    
+
                     // Offset - the value is persistent in the camera
                     if (2 <= n && ControlN[1].value != oldValues[1])
                     {
                         uint16_t value = static_cast<uint16_t>(ControlN[1].value);
                         if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomOffset,
-                                                                             reinterpret_cast<uint8_t *>(&value), 2))
+                                reinterpret_cast<uint8_t *>(&value), 2))
                         {
                             IDLog("Failed setting CCD_CONTROL custom offset at %d", value);
                             ControlN[1].value = oldValues[1];
@@ -771,7 +771,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                 {
                     uint16_t value = static_cast<uint16_t>(GainN[0].value);
                     if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomGain,
-                                                                         reinterpret_cast<uint8_t *>(&value), 2))
+                            reinterpret_cast<uint8_t *>(&value), 2))
                     {
                         IDLog("Failed setting custom gain at %d", value);
                         GainN[0].value = oldValue;
@@ -782,11 +782,11 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                     {
                         GainNP.s = IPS_OK;
                         IDSetNumber(&GainNP, nullptr);
-                        
+
                         ControlN[0].value = GainN[0].value;
                         ControlNP.s = IPS_OK;
                         IDSetNumber(&ControlNP, nullptr);
-                        
+
                         changed = true;
                     }
                 }
@@ -805,7 +805,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                 {
                     uint16_t value = static_cast<uint16_t>(OffsetN[0].value);
                     if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomOffset,
-                                                                         reinterpret_cast<uint8_t *>(&value), 2))
+                            reinterpret_cast<uint8_t *>(&value), 2))
                     {
                         IDLog("Failed setting custom offset at %d", value);
                         OffsetN[0].value = oldValue;

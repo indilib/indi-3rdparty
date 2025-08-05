@@ -514,7 +514,7 @@ ISwitch * PentaxCCD::create_switch(const char * basestr, std::vector<string> opt
     for (int i = 0; i < (int)options.size(); i++)
     {
         snprintf(sw_name, MAXINDINAME, "%s%d", basestr, i);
-        strncpy(sw_label, options[i].c_str(), MAXINDILABEL);
+        snprintf(sw_label, sizeof(sw_label), "%s", options[i].c_str());
         sw_state = (i == setidx) ? ISS_ON : ISS_OFF;
 
         IUFillSwitch(one_sw++, sw_name, sw_label, sw_state);
