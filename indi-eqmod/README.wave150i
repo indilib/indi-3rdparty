@@ -1,0 +1,82 @@
+Note by olivier coutant 30/07/2025 (olive.coutant@gmail.com)
+The skywatcher mount wave150i uses the skywatcher protocol and it is seen by the eqmod driver.
+However, the stepper motor has parameters that slighly differ from those expected by the eqmod driver:
+For celestial RA axis, the (Init) position is different from Home axis (Init is at West, 6 hours away from Home) while these two positions are set equal in the eqmod driver.
+Consequently, goto made before syncing may be wrong by 6 hours. Eastern and Western limits are shifted, etc..
+
+An evolution of the driver available with EQMODE_EXT option (either -DEQMODE_EXT or #define EQMODE_EXT in skywatcher.h)
+is to detect the wave150i mount, and to set the correct stepper values for Init and Home.
+This is done in skywatcher.cpp in a new method "skywatcher::SetMountDependantParameter()"
+Files affected by the evolution are qmodebase.h eqmodebase.cpp skywatcher.h skywatcher.cpp
+The option is currently defined in skywatcher.h.
+This extension allows to set different settings for different mount if needed
+
+CHECKS DONE (INDOOR):
+I) With a wave150i mount, firmware 3.59.45, driver with option EQMODE_EXT
+I.1) Goto issued by ekos on east and west targets, both side of the pier (M51, Alcyone, Rastaban, ...)
+   SynscanApp and ekos report the same RA/DE
+I.2) Goto issued by SynscanApp on east and west targets, SynscanApp and ekos report the same RA/DE
+
+II) With a wave150i mount, firmware 3.59.45, driver with option EQMODE_EXT but masking the mount identification
+II.1) GOTO M51 issued by ekos make the mount rotate 6hours too far. Ekos RA/DE are in agreement with M51 coordinates but
+SynscanApp report RA/DE 6hours wrong. 
+Ekos GOTO and positions are wrong. East and west encoder limits are also wrong:
+[2025-08-05T13:23:57.079 CEST INFO ][           org.kde.kstars.indi] - Wave 150i :  "[INFO] Setting Eqmod Goto encoder limits to East=7257408 West=9519808 "
+They are not symetric with respect to North encoder position (7419008)
+
+
+III) With a wave150i mount, firmware 3.59.45, driver without option EQMODE_EXT 
+Results are identical to the previous test. 
+
+NO CHECK done with EQ5/6/8 mounts
+
+
+TODO: correct initialization, without going through SynScan
+=============================================================
+The following test shows that the wave150i encoder does not report correct position unless SynScanApp issues
+a Park command before using the mount.
+It would be nice that INDI can issues the correct initialization sequence, which most likely requires a motion of the motor
+thus avoiding to systematically use Synscan.
+Sniffing traffic between SynscanApp and the mount when asking for PARKING shows a lot of new synscan commands not described in the
+available documentation (new set like :X1(2)......)
+TODO: identify the necessary commands sent by SynScanApp and add them to indi initialization.
+
+Mount switch on. In park position. No connection from Synscan before indi connection.
+Indi reports:
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Init() : Motors not initialized -- read Init steps RAInit=8388608 DEInit = 8388608 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Init() : Powering motors 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Init() : Setting Home steps RAHome=7419008 DEHome = 9269888 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [INFO] Mount is unparked. 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] InitPark Axis1 7419008.00 Axis2 9269888.00 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Setting Default Park Axis1 to 7419008.00 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Setting Default Park Axis2 to 9269888.00 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Init() : Mount was not parked 
+** INDI message from EQMod Mount: 2025-08-05T10:24:05: [DEBUG] Init() : Mount in Home position -- setting encoders RA=7419008 DE = 9269888 
+** INDI message from EQMod Mount: 2025-08-05T10:24:06: [DEBUG] GetRAEncoderZero() = 8388608 
+** INDI message from EQMod Mount: 2025-08-05T10:24:06: [DEBUG] GetRAEncoderTotal() = 3878400 
+** INDI message from EQMod Mount: 2025-08-05T10:24:06: [DEBUG] GetRAEncoderHome() = 7419008 
+** INDI message from EQMod Mount: 2025-08-05T10:24:06: [DEBUG] GetDEEncoderZero() = 8388608 
+** INDI message from EQMod Mount: 2025-08-05T10:24:06: [DEBUG] GetDEEncoderTotal() = 3525120 
+** INDI message from EQMod Mount: 2025-08-05T10:24:06: [DEBUG] GetDEEncoderHome() = 9269888 
+
+All of this is correct: Init step has been set to RAInit=8388608, Home steps has been set to RAHome=7419008
+
+However, a subsequent call from indi to retrieve positions yields:
+** INDI message from EQMod Mount: 2025-08-05T10:24:12: [SCOPE] Current encoders RA=8388608 DE=9269888
+Which is WRONG since the mount is in Park position and should be detected at RA=7419008
+
+Connection through SynScanApp yields:
+AH/DE 0 90°
+RA/DE 19h54 90°
+0° 90°
+which is also wrong, but coherent with indi reports
+
+After a SynscanApp Goto Home
+AH/DE 18h 90°
+RA/DE 19h57 90°
+-90° 90°
+which is now correct, and so is the return from indi to retrieve positions:
+INDI message from EQMod Mount: 2025-08-05T10:38:00: [SCOPE] Current encoders RA=7419008 DE=9269888
+
+
+

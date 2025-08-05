@@ -149,7 +149,10 @@ class Skywatcher
         bool GetSnapPort2Status();
 
         void setPortFD(int value);
-
+#ifdef EQMODE_EXT
+        uint32_t GetRANorthEncoder();
+        double GetRAHomeInitOffset();
+#endif
     private:
         // Official Skywatcher Protocol
         // See http://code.google.com/p/skywatcher/wiki/SkyWatcherProtocol
@@ -288,7 +291,9 @@ class Skywatcher
         void SetST4GuideRate(SkywatcherAxis axis, unsigned char r);
         void SetAxisPosition(SkywatcherAxis axis, uint32_t step);
         void TurnSnapPort(SkywatcherAxis axis, bool on);
-
+#ifdef EQMODE_EXT
+        void SetMountDependantParameter(uint32_t mountCode);
+#endif
         bool read_eqmod();
         bool dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *arg);
 
@@ -328,7 +333,10 @@ class Skywatcher
         uint32_t lastDEStep {0xFFFFFFFF};
         uint32_t lastRAPeriod {0xFFFFFFFF};
         uint32_t lastDEPeriod {0xFFFFFFFF};
-
+#ifdef EQMODE_EXT        
+        double RAHomeInitOffset;
+        double DEHomeInitOffset;
+#endif
         bool RAInitialized, DEInitialized, RARunning, DERunning;
         bool wasinitialized;
         SkywatcherAxisStatus RAStatus, DEStatus;
