@@ -24,6 +24,7 @@
 struct {
   unsigned long bme_read;
   unsigned long dht_read;
+  unsigned long aht10_read;
   unsigned long mlx90614_read;
   unsigned long tsl237_read;
   unsigned long tsl2591_read;
@@ -51,6 +52,9 @@ void updateDisplayText() {
 #ifdef USE_DHT_SENSOR
   result += "DHT\n" + displayDHTParameters() + " \n";
 #endif //USE_DHT_SENSOR
+#ifdef USE_AHT10_SENSOR
+  result += "AHT10\n" + displayAHT10Parameters() + " \n";
+#endif //USE_AHT10_SENSOR
 #ifdef USE_MLX_SENSOR
   result += "MLX90614\n" + displayMLXParameters() + " \n";
 #endif //USE_MLX_SENSOR
@@ -111,6 +115,12 @@ void updateSensorData() {
   updateDHT();
   sensor_read.dht_read = millis() - start;
 #endif //USE_DHT_SENSOR
+
+#ifdef USE_AHT10_SENSOR
+  start = millis();
+  updateAHT10();
+  sensor_read.aht10_read = millis() - start;
+#endif
 
 #ifdef USE_MLX_SENSOR
   start = millis();
@@ -181,6 +191,10 @@ String getSensorData(bool pretty) {
   serializeDHT(weatherDoc);
 #endif //USE_DHT_SENSOR
 
+#ifdef USE_AHT10_SENSOR
+  serializeAHT10(weatherDoc);
+#endif
+
 #ifdef USE_MLX_SENSOR
   serializeMLX(weatherDoc);
 #endif //USE_MLX_SENSOR
@@ -228,6 +242,9 @@ String getReadDurations() {
 #ifdef USE_DHT_SENSOR
   if (dhtData.status)        doc["DHT"]              = sensor_read.dht_read;
 #endif //USE_DHT_SENSOR
+#ifdef USE_AHT10_SENSOR
+  if (aht10Data.status)      doc["AHT10"]            = sensor_read.aht10_read;
+#endif
 #ifdef USE_MLX_SENSOR
   if (mlxData.status)        doc["MLX90614"]         = sensor_read.mlx90614_read;
 #endif //USE_MLX_SENSOR
@@ -308,6 +325,11 @@ String getCurrentConfig() {
   JsonObject dhtdata = doc.createNestedObject("DHT");
   dhtdata["pin"]  = DHTPIN;
   dhtdata["type"] = DHTTYPE;
+#endif
+
+#ifdef USE_AHT10_SENSOR
+  JsonObject aht = doc.createNestedObject("AHT10");
+  aht["interface"] = "I2C";
 #endif
 
 #ifdef USE_DAVIS_SENSOR
@@ -407,6 +429,10 @@ void setup() {
 #ifdef USE_TSL2591_SENSOR
   initTSL2591();
 #endif //USE_TSL2591_SENSOR
+
+#ifdef USE_AHT10_SENSOR
+  initAHT10();
+#endif
 
 #ifdef USE_WIFI
   initWiFi();
