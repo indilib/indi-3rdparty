@@ -705,6 +705,7 @@ bool EQMod::Handshake()
                 && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
         {
             tty_set_generic_udp_format(1);
+	    tty_set_auto_reset_udp_session(1);
         }
 
         mount->setPortFD(PortFD);
@@ -835,6 +836,8 @@ bool EQMod::ReadScopeStatus()
         DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder),
                static_cast<long>(currentDEEncoder));
         EncodersToRADec(currentRAEncoder, currentDEEncoder, lst, &currentRA, &currentDEC, &currentHA, &pierSide);
+	if (getPierSide() != pierSide)
+            LOGF_INFO("Pier side changed to %s", getPierSideStr(pierSide));
         setPierSide(pierSide);
 
         alignedRA    = currentRA;
