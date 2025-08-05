@@ -82,6 +82,11 @@ IF (UNIX OR APPLE)
         SET(COMP_FLAGS "${COMP_FLAGS} -Wno-nonnull -Wno-deprecated-declarations")
     ENDIF ()
 
+    CHECK_C_COMPILER_FLAG("-Werror=unused-parameter" COMPATIBLE_UNUSED_PARAMETER)
+    IF (${COMPATIBLE_UNUSED_PARAMETER})
+        SET(COMP_FLAGS "${COMP_FLAGS} -Werror=unused-parameter")
+    ENDIF ()
+
     # Minimal debug info with Clang
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
         SET(COMP_FLAGS "${COMP_FLAGS} -gline-tables-only")
