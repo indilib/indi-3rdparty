@@ -119,7 +119,6 @@ if(NOT LIBTIC-1_FOUND)
     if(EXISTS "${POLOLU_TIC_SOFTWARE_ROOT_DIR}/CMakeLists.txt")
         message(STATUS "Found bundled pololu-tic-software at '${POLOLU_TIC_SOFTWARE_ROOT_DIR}'.")
 
-        set(USE_SYSTEM_LIBYAML TRUE CACHE BOOL "Use system libyaml" FORCE)
         add_subdirectory("${POLOLU_TIC_SOFTWARE_ROOT_DIR}" pololu_tic_software_build_dir)
 
         if(TARGET lib)
