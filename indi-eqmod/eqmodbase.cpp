@@ -946,7 +946,7 @@ bool EQMod::ReadScopeStatus()
         {
             char CurrentRAString[64] = {0}, CurrentDEString[64] = {0},
                                        AlignedRAString[64] = {0}, AlignedDEString[64] = {0},
-                                               AZString[64] = {0}, ALString[64] = {0};
+                                           AZString[64] = {0}, ALString[64] = {0};
             fs_sexa(CurrentRAString, currentRA, 2, 3600);
             fs_sexa(CurrentDEString, currentDEC, 2, 3600);
             fs_sexa(AlignedRAString, alignedRA, 2, 3600);
@@ -1919,15 +1919,38 @@ bool EQMod::Goto(double r, double d)
     gotoparams.checklimits      = true;
     gotoparams.pier_side        = TargetPier;
     gotoparams.outsidelimits    = false;
-    if (Hemisphere == NORTH)
+
+    // Wave 150i
+    if (mount->GetMountCode() == 0x45)
     {
-        gotoparams.limiteast        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // 13h
-        gotoparams.limitwest        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // 23h
+        if (Hemisphere == NORTH)
+        {
+            int64_t delta;
+            delta = ((totalRAEncoder / 4) + (totalRAEncoder / 24)); // 7 hours
+            gotoparams.limiteast        = mount->GetRANorthEncoder() - delta;
+            gotoparams.limitwest        = mount->GetRANorthEncoder() + delta;
+        }
+        else
+        {
+            int64_t delta;
+            delta = ((totalRAEncoder / 4) + (totalRAEncoder / 24));
+            gotoparams.limiteast        = mount->GetRANorthEncoder() + delta;
+            gotoparams.limitwest        = mount->GetRANorthEncoder() - delta;
+        }
+        LOGF_INFO("Setting Eqmod Goto encoder limits to East=%d West=%d", gotoparams.limiteast, gotoparams.limitwest);
     }
     else
     {
-        gotoparams.limiteast        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // ??
-        gotoparams.limitwest        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // ??
+        if (Hemisphere == NORTH)
+        {
+            gotoparams.limiteast        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // 13h
+            gotoparams.limitwest        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // 23h
+        }
+        else
+        {
+            gotoparams.limiteast        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // ??
+            gotoparams.limitwest        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // ??
+        }
     }
 
     if (gotoparams.pier_side != PIER_UNKNOWN)

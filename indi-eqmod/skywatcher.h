@@ -75,11 +75,15 @@ class Skywatcher
         uint32_t GetDEEncoderHome();
         uint32_t GetRAPeriod();
         uint32_t GetDEPeriod();
+        uint32_t GetMountCode()
+        {
+            return MountCode;
+        }
 
         INDI_DEPRECATED("Use GetRAMotorStatus(INDI::PropertyLight).")
         void GetRAMotorStatus(ILightVectorProperty *motorLP);
         void GetRAMotorStatus(INDI::PropertyLight motorLP);
-        
+
         INDI_DEPRECATED("Use GetDEMotorStatus(INDI::PropertyLight).")
         void GetDEMotorStatus(ILightVectorProperty *motorLP);
         void GetDEMotorStatus(INDI::PropertyLight motorLP);
@@ -149,6 +153,8 @@ class Skywatcher
         bool GetSnapPort2Status();
 
         void setPortFD(int value);
+        uint32_t GetRANorthEncoder();
+        double GetRAHomeInitOffset();
 
     private:
         // Official Skywatcher Protocol
@@ -288,6 +294,7 @@ class Skywatcher
         void SetST4GuideRate(SkywatcherAxis axis, unsigned char r);
         void SetAxisPosition(SkywatcherAxis axis, uint32_t step);
         void TurnSnapPort(SkywatcherAxis axis, bool on);
+        void SetMountDependantParameter(uint32_t mountCode);
 
         bool read_eqmod();
         bool dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *arg);
@@ -323,6 +330,10 @@ class Skywatcher
         uint32_t DEStepHome; // Home DE position in step
         uint32_t RAPeriod {256};   // Current RA worm period
         uint32_t DEPeriod {256};   // Current DE worm period
+
+        // 150i Mount
+        double RAHomeInitOffset {0};
+        double DEHomeInitOffset {90};
 
         uint32_t lastRAStep {0xFFFFFFFF};
         uint32_t lastDEStep {0xFFFFFFFF};
