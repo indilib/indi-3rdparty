@@ -423,7 +423,7 @@ bool ATIKCCD::setupParams()
 
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOPresetMode, data, 2, &len))
         {
-            int const index = *(reinterpret_cast<uint16_t*>(&data));
+            int const index = *(reinterpret_cast<uint16_t*>(data));
             LOGF_DEBUG("Horizon current GO mode: data[0] %d data[1] %d index %d", data[0], data[1], index);
             IUResetSwitch(&ControlPresetsSP);
             ControlPresetsS[index].s = ISS_ON;
@@ -462,7 +462,7 @@ bool ATIKCCD::setupParams()
         // Exposure speed: low noise, normal or streaming
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonExposureSpeed, data, 2, &len))
         {
-            int const index = *(reinterpret_cast<uint16_t*>(&data));
+            int const index = *(reinterpret_cast<uint16_t*>(data));
             LOGF_DEBUG("Horizon current exposure speed: data[0] %d value %s", data[0],
                        index == 0 ? "Power Save" : index == 1 ? "Normal" : index == 2 ? "Fast" : "Unknown");
             IUResetSwitch(&FastModeSP);
@@ -482,7 +482,7 @@ bool ATIKCCD::setupParams()
         // Bit send, sample format
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonBitSendMode, data, 1, &len))
         {
-            bool const _12bits = *(reinterpret_cast<bool*>(&data));
+            bool const _12bits = *(reinterpret_cast<bool*>(data));
             LOGF_DEBUG("Horizon currrent bit send: data[0] %d value %s", data[0], _12bits ? "16-bit" : "12-bit");
             IUResetSwitch(&BitSendSP);
             BitSendS[_12bits ? 0 : 1].s = ISS_ON;
@@ -495,9 +495,10 @@ bool ATIKCCD::setupParams()
         // FX3 version, depending on DLL
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonFX3Version, data, 6, &len))
         {
-            uint16_t const major = *(reinterpret_cast<uint16_t*>(&data));
-            uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t)));
-            uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t) * 2));
+            uint16_t const * const versions = reinterpret_cast<uint16_t*>(data);
+            uint16_t const major = versions[0];
+            uint16_t const minor = versions[1];
+            uint16_t const patch = versions[2];
             LOGF_DEBUG("Horizon FX3 version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0], data[2],
                        data[3], data[4], data[5], major, minor, patch);
             LOGF_INFO("Horizon FX3 v%d.%d.%d", major, minor, patch);
@@ -506,9 +507,10 @@ bool ATIKCCD::setupParams()
         // FPGA version, depending on DLL
         if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonFPGAVersion, data, 6, &len))
         {
-            uint16_t const major = *(reinterpret_cast<uint16_t*>(&data));
-            uint16_t const minor = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t)));
-            uint16_t const patch = *(reinterpret_cast<uint16_t*>(&data + sizeof(uint16_t) * 2));
+            uint16_t const * const versions = reinterpret_cast<uint16_t*>(data);
+            uint16_t const major = versions[0];
+            uint16_t const minor = versions[1];
+            uint16_t const patch = versions[2];
             LOGF_DEBUG("Horizon currrent FPGA version: data[0-1] %d%d data[2-3] %d data[4-5] %d %value %d.%d.%d", data[0], data[0],
                        data[2], data[3], data[4], data[5], major, minor, patch);
             LOGF_INFO("Horizon FPGA v%d.%d.%d", major, minor, patch);
@@ -555,9 +557,9 @@ void ATIKCCD::updateGainOffset()
     // First read the Gain and Offset boundaries (and value) as if the preset was Custom
     if (ARTEMIS_OK == ArtemisCameraSpecificOptionGetData(hCam, ID_AtikHorizonGOCustomGain, data, 6, &len))
     {
-        uint16_t const minGain = (reinterpret_cast<uint16_t*>(&data))[0];
-        uint16_t const maxGain = (reinterpret_cast<uint16_t*>(&data))[1];
-        uint16_t const valGain = (reinterpret_cast<uint16_t*>(&data))[2];
+        uint16_t const minGain = (reinterpret_cast<uint16_t*>(data))[0];
+        uint16_t const maxGain = (reinterpret_cast<uint16_t*>(data))[1];
+        uint16_t const valGain = (reinterpret_cast<uint16_t*>(data))[2];
         LOGF_INFO("Horizon current gain: data[0:1] 0x%02X%02X data[2:3] 0x%02X%02X data[4:5] 0x%02X%02X values min %u max %u cur %u",
                   data[0], data[1], data[2], data[3], data[4], data[5], minGain, maxGain, valGain);
         ControlN[0].min = static_cast <double> (minGain);
@@ -710,7 +712,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                     {
                         uint16_t value = static_cast<uint16_t>(ControlN[0].value);
                         if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomGain,
-                                reinterpret_cast<uint8_t *>(&value), 2))
+                                reinterpret_cast<uint8_t*>(&value), 2))
                         {
                             IDLog("Failed setting CCD_CONTROL custom gain at %d", value);
                             ControlN[0].value = oldValues[0];
@@ -735,7 +737,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                     {
                         uint16_t value = static_cast<uint16_t>(ControlN[1].value);
                         if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomOffset,
-                                reinterpret_cast<uint8_t *>(&value), 2))
+                                reinterpret_cast<uint8_t*>(&value), 2))
                         {
                             IDLog("Failed setting CCD_CONTROL custom offset at %d", value);
                             ControlN[1].value = oldValues[1];
@@ -771,7 +773,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                 {
                     uint16_t value = static_cast<uint16_t>(GainN[0].value);
                     if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomGain,
-                            reinterpret_cast<uint8_t *>(&value), 2))
+                            reinterpret_cast<uint8_t*>(&value), 2))
                     {
                         IDLog("Failed setting custom gain at %d", value);
                         GainN[0].value = oldValue;
@@ -805,7 +807,7 @@ bool ATIKCCD::ISNewNumber(const char *dev, const char *name, double values[], ch
                 {
                     uint16_t value = static_cast<uint16_t>(OffsetN[0].value);
                     if (ARTEMIS_OK != ArtemisCameraSpecificOptionSetData(hCam, ID_AtikHorizonGOCustomOffset,
-                            reinterpret_cast<uint8_t *>(&value), 2))
+                            reinterpret_cast<uint8_t*>(&value), 2))
                     {
                         IDLog("Failed setting custom offset at %d", value);
                         OffsetN[0].value = oldValue;
