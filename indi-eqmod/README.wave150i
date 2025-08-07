@@ -4,27 +4,13 @@ However, the stepper motor has parameters that slighly differ from those expecte
 For celestial RA axis, the (Init) position is different from Home axis (Init is at West, 6 hours away from Home) while these two positions are set equal in the eqmod driver.
 Consequently, goto made before syncing may be wrong by 6 hours. Eastern and Western limits are shifted, etc..
 
-An evolution of the driver is to detect the wave150i mount, and to set the correct stepper values for Init and Home.
-This is done in skywatcher.cpp in a new method "skywatcher::SetMountDependantParameter()"
-Files affected by the evolution are qmodebase.h eqmodebase.cpp skywatcher.h skywatcher.cpp
+An evolution of the driver is now to detect the wave150i mount, and to set the correct stepper values for Init and Home.
 
-CHECKS DONE (INDOOR):
-I) With a wave150i mount, firmware 3.59.45, driver with option EQMODE_EXT
+CHECKS DONE (INDOOR) on August 7 2025:
+
+I) With a wave150i mount, firmware 3.59.45, driver 
 I.1) Goto issued by ekos on east and west targets, both side of the pier (M51, Alcyone, Rastaban, ...)
    SynscanApp and ekos report the same RA/DE
 I.2) Goto issued by SynscanApp on east and west targets, SynscanApp and ekos report the same RA/DE
 
-II) With a wave150i mount, firmware 3.59.45, driver with option EQMODE_EXT but masking the mount identification
-II.1) GOTO M51 issued by ekos make the mount rotate 6hours too far. Ekos RA/DE are in agreement with M51 coordinates but
-SynscanApp report RA/DE 6hours wrong. 
-Ekos GOTO and positions are wrong. East and west encoder limits are also wrong:
-[2025-08-05T13:23:57.079 CEST INFO ][           org.kde.kstars.indi] - Wave 150i :  "[INFO] Setting Eqmod Goto encoder limits to East=7257408 West=9519808 "
-They are not symetric with respect to North encoder position (7419008)
-
-
-III) With a wave150i mount, firmware 3.59.45, driver without option EQMODE_EXT 
-Results are identical to the previous test. 
-
-NO CHECK done with EQ5/6/8 mounts
-
-Tested on raspberryPi, intel
+Tested on raspberryPi, intel64 with indi V2.1.4
