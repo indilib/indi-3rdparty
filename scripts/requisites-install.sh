@@ -44,7 +44,7 @@ case "$OS" in
                     libgps-dev libraw-dev libdc1394-dev libgphoto2-dev \
                     libboost-dev libboost-regex-dev liblimesuite-dev libopencv-dev libopencv-imgproc \
                     libopencv-highgui \
-                    libzmq3-dev
+                    libzmq3-dev libudev-dev
                 ;;
             fedora)
                 $(command -v sudo) dnf upgrade -y
@@ -62,7 +62,7 @@ case "$OS" in
                     libftdi-devel \
                     gpsd-devel LibRaw-devel libdc1394-devel libgphoto2-devel \
                     boost-devel \
-                    zeromq-devel
+                    zeromq-devel libudev-devel
                 ;;
             centos)
                 # CentOS 8 dont have libnova-devel package
@@ -72,7 +72,7 @@ case "$OS" in
                     git \
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel opencv-devel zeromq-devel
+                    gsl-devel libjpeg-devel fftw-devel opencv-devel zeromq-devel libudev-devel
                 ;;
             opensuse-tumbleweed)
                 # broken git/openssh package
@@ -83,7 +83,7 @@ case "$OS" in
                     cmake gcc-c++ zlib-devel \
                     cfitsio-devel libnova-devel libusb-devel libcurl-devel \
                     gsl-devel libjpeg-devel fftw-devel libtheora-devel opencv-devel \
-                    zeromq-devel
+                    zeromq-devel libudev-devel
                 ;;
             *)
                 echo "Unknown Linux Distribution: $ID"

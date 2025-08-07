@@ -1,14 +1,5 @@
 <INDIDriver>
 
-<defSwitchVector device="Arduino Roof" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
-    <defSwitch name="CONNECT" label="Connect">
-Off
-    </defSwitch>
-    <defSwitch name="DISCONNECT" label="Disconnect">
-On
-    </defSwitch>
-</defSwitchVector>
-
 <defSwitchVector device="Arduino Roof" name="ROOF" label="Roof Action" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="1">
     <defSwitch name="Roof" label="Open">
 Off

@@ -1,4 +1,5 @@
 Note by olivier coutant August 07 2025 (olive.coutant@gmail.com)
+
 The skywatcher mount wave150i uses the skywatcher protocol and it is seen by the eqmod driver.
 However, the stepper motor has parameters that slighly differ from those expected by the eqmod driver:
 For celestial RA axis, the (Init) position is different from Home axis (Init is at West, 6 hours away from Home) while these two positions are set equal in the eqmod driver.
@@ -7,10 +8,19 @@ Consequently, goto made before syncing may be wrong by 6 hours. Eastern and West
 An evolution of the driver is now to detect the wave150i mount, and to set the correct stepper values for Init and Home.
 
 CHECKS DONE (INDOOR) on August 7 2025:
-
 I) With a wave150i mount, firmware 3.59.45, driver 
-I.1) Goto issued by ekos on east and west targets, both side of the pier (M51, Alcyone, Rastaban, ...)
-   SynscanApp and ekos report the same RA/DE
-I.2) Goto issued by SynscanApp on east and west targets, SynscanApp and ekos report the same RA/DE
+=======
+An evolution of the driver available with EQMODE_EXT option (either -DEQMODE_EXT or #define EQMODE_EXT in skywatcher.h)
+is to detect the wave150i mount, and to set the correct stepper values for Init and Home.
+This is done in skywatcher.cpp in a new method "skywatcher::SetMountDependantParameter()"
+Files affected by the evolution are qmodebase.h eqmodebase.cpp skywatcher.h skywatcher.cpp
+The option is currently defined in skywatcher.h.
+This extension allows to set different settings for different mount if needed
 
 Tested on raspberryPi, intel64 with indi V2.1.4
+
+
+NO CHECK done with EQ5/6/8 mounts
+
+
+

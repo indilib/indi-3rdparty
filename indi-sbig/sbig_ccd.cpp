@@ -284,9 +284,13 @@ SBIGCCD::SBIGCCD() : FilterInterface(this)
         LOGF_DEBUG("%s: Error (%s)", __FUNCTION__, GetErrorString(res));
     // TBD: For now let's set name to default name. In the future, we need to to support multiple devices per one driver
     if (*getDeviceName() == '\0')
-        strncpy(name, getDefaultName(), MAXINDINAME);
+    {
+        snprintf(name, sizeof(name), "%s", getDefaultName());
+    }
     else
-        strncpy(name, getDeviceName(), MAXINDINAME);
+    {
+        snprintf(name, sizeof(name), "%s", getDeviceName());
+    }
 
     setVersion(SBIG_VERSION_MAJOR, SBIG_VERSION_MINOR);
 }

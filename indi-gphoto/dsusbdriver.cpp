@@ -32,7 +32,7 @@
 
 DSUSBDriver::DSUSBDriver(const char *device)
 {
-    strncpy(this->device, device, MAXINDIDEVICE);
+    snprintf(this->device, sizeof(this->device), "%s", device);
 
     DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Finding DSUSB 0x134A, 0x9021 ...");
     // Try to see if it is DSUSB

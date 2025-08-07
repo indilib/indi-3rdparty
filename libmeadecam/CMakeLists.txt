@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libmeadecam)
 
-set (LIBMEADECAM_VERSION "59.28981")
+set (LIBMEADECAM_VERSION "59.29176")
 set (LIBMEADECAM_SOVERSION "59")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
