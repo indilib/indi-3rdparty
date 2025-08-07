@@ -1,7 +1,7 @@
 ﻿#ifndef __bressercam_h__
 #define __bressercam_h__
 
-/* Version: 59.28981.20250715 */
+/* Version: 59.29176.20250806 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -303,7 +303,7 @@ typedef struct {
 } BressercamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 59.28981.20250715
+    get the version of this dll/so/dylib, which is: 59.29176.20250806
 */
 #if defined(_WIN32)
 BRESSERCAM_API(const wchar_t*)   Bressercam_Version();
@@ -326,12 +326,12 @@ BRESSERCAM_API(unsigned) Bressercam_EnumV2(BressercamDeviceV2 arr[BRESSERCAM_MAX
 
 /* use the camId of BressercamDeviceV2, which is enumerated by Bressercam_EnumV2.
     if camId is NULL, Bressercam_Open will open the first enumerated camera.
-    For USB, GigE or PCIe camera, the camId can the camId can also be specified as (case sensitive):
-        (a) "sn:xxxxxxxxxxxx" (such as sn:ZP250212241204105)
-        (b) "name:xxxxxx" (such as name: Camera1)
+    For USB, GigE, CameraLink or CXP camera, the camId can also be specified as (case sensitive):
+        (a) "sn:xxxxxxxxxxxx" (Use SN, such as sn:ZP250212241204105), or
+        (b) "name:xxxxxx" (Use name, such as name:Camera1)
     Moreover, for GigE camera, the camId can also be specified as (case sensitive):
-        (a) "ip:xxx.xxx.xxx.xxx" (such as ip:192.168.1.100) or
-        (b) "mac:xxxxxxxxxxxx" (such as mac:d05f64ffff23)
+        (a) "ip:xxx.xxx.xxx.xxx" (Use IP address, such as ip:192.168.1.100), or
+        (b) "mac:xxxxxxxxxxxx" (Use MAC address, such as mac:d05f64ffff23)
     For the issue of opening the camera on Android, please refer to the documentation
 */
 #if defined(_WIN32)
@@ -915,7 +915,7 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_Option(HBressercam h, unsigned iOption, 
 #define BRESSERCAM_OPTION_DEMOSAIC_STILL         0x14       /* [RW] demosaic method for still image */
 #define BRESSERCAM_OPTION_BLACKLEVEL             0x15       /* [RW] black level */
 #define BRESSERCAM_OPTION_MULTITHREAD            0x16       /* [RW] multithread image processing */
-#define BRESSERCAM_OPTION_BINNING                0x17       /* [RW] binning
+#define BRESSERCAM_OPTION_BINNING                0x17       /* [RW] digital binning
                                                                 0x01: (no binning)
                                                                 n: (saturating add, n*n), 0x02(2*2), 0x03(3*3), 0x04(4*4), 0x05(5*5), 0x06(6*6), 0x07(7*7), 0x08(8*8). The Bitdepth of the data remains unchanged.
                                                                 0x40 | n: (unsaturated add, n*n, works only in RAW mode), 0x42(2*2), 0x43(3*3), 0x44(4*4), 0x45(5*5), 0x46(6*6), 0x47(7*7), 0x48(8*8). The Bitdepth of the data is increased. For example, the original data with bitdepth of 12 will increase the bitdepth by 2 bits and become 14 after 2*2 binning.
@@ -1193,7 +1193,14 @@ BRESSERCAM_API(HRESULT)  Bressercam_get_Option(HBressercam h, unsigned iOption, 
 #define BRESSERCAM_OPTION_BACKEND_FULL           0x85       /* [RO] get the number of backend deque full */
 #define BRESSERCAM_OPTION_GPS                    0x86       /* [RO] gps status: 0 => not supported; -1 => gps device offline; 1 => gps device online */
 #define BRESSERCAM_OPTION_LINE_LENGTH            0x87       /* [RW] Line length in pixel clock */
-#define BRESSERCAM_OPTION_SCAN_DIRECTION         0x88       /* [RW] Scan direction: 0 (forward), 1(reverse), 2(alternate) */
+#define BRESSERCAM_OPTION_SCAN_DIRECTION         0x88       /* [RW] Scan direction: 0(forward), 1(reverse), 2(alternate) */
+#define BRESSERCAM_OPTION_BLACKLEVEL_AUTOADJUST  0x89       /* [RW] Black level automatic adjustment function: 0: off, 1: on
+                                                                This setting turn on/off black level auto adjust function by OB(Optical Black) level.
+                                                                In case of long exposure and so on, OB level is offset by leak or any other reason.
+                                                                Because of it, if the adjustment becomes a problem, this setting is introduced for one of the solution.
+                                                         */
+#define BRESSERCAM_OPTION_USER_SET               0x8a       /* [RW] user set */
+#define BRESSERCAM_OPTION_DIGITAL_GAIN           0x1001     /* [RW] digital gain */
 
 /* pixel format */
 #define BRESSERCAM_PIXELFORMAT_RAW8              0x00
@@ -1794,9 +1801,9 @@ BRESSERCAM_API(void)     Bressercam_log_str(unsigned level, const char* str);
 BRESSERCAM_APIV(void)    Bressercam_log(unsigned level, const char* format, ...);
 
 #if defined(BRESSERCAM_LOG)
-#define BRESSERCAM_LOG_NONE(format, ...)	  Bressercam_log(0, format, ##__VA_ARGS__)
-#define BRESSERCAM_LOG_ERROR(format, ...)	  Bressercam_log(1, format, ##__VA_ARGS__)
-#define BRESSERCAM_LOG_DEBUG(format, ...)	  Bressercam_log(2, format, ##__VA_ARGS__)
+#define BRESSERCAM_LOG_NONE(format, ...)     Bressercam_log(0, format, ##__VA_ARGS__)
+#define BRESSERCAM_LOG_ERROR(format, ...)    Bressercam_log(1, format, ##__VA_ARGS__)
+#define BRESSERCAM_LOG_DEBUG(format, ...)    Bressercam_log(2, format, ##__VA_ARGS__)
 #define BRESSERCAM_LOG_VERBOSE(format, ...)  Bressercam_log(3, format, ##__VA_ARGS__)
 /* for example: BRESSERCAM_LOG_DEBUG("%s: blahblah, x = %d, y = %f", __func__ x, y); */
 #endif
