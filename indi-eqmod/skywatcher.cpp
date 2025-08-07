@@ -314,18 +314,16 @@ void Skywatcher::Init()
     wasinitialized = false;
     ReadMotorStatus(Axis1);
     ReadMotorStatus(Axis2);
-    
+
     if (!RAInitialized && !DEInitialized)
     {
         //Read initial stepper values
         dispatch_command(GetAxisPosition, Axis1, nullptr);
         //read_eqmod();
         RAStepInit = Revu24str2long(response + 1);
-
         dispatch_command(GetAxisPosition, Axis2, nullptr);
         //read_eqmod();
         DEStepInit = Revu24str2long(response + 1);
-
         LOGF_DEBUG("%s() : Motors not initialized -- read Init steps RAInit=%ld DEInit = %ld",
                    __FUNCTION__, static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
         // Energize motors
@@ -334,30 +332,29 @@ void Skywatcher::Init()
         //read_eqmod();
         dispatch_command(Initialize, Axis2, nullptr);
         //read_eqmod();
-#ifdef EQMODE_EXT        
-        RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
-        DEStepHome = DEStepInit + DEHomeInitOffset/360. * DESteps360;
-#else
-        RAStepHome = RAStepInit;
+        // Wave 150i
+        if (MountCode == 0x45) //modifOC
+            RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
+        else
+            RAStepHome = RAStepInit;
         DEStepHome = DEStepInit + (DESteps360 / 4);
-#endif
     }
     else
     {
         // Mount already initialized by another driver / driver instance
         // use default configuration && leave unchanged encoder values
         wasinitialized = true;
-        
-#ifdef EQMODE_EXT
-        SetMountDependantParameter(MountCode);
-        RAStepHome = RAStepInit + RAHomeInitOffset/24.*RASteps360;
-        DEStepHome = DEStepInit + DEHomeInitOffset/360.*DESteps360;
-#else
-        RAStepInit     = 0x800000;
-        DEStepInit     = 0x800000;
-        RAStepHome     = RAStepInit ;  
-        DEStepHome     = DEStepInit + (DESteps360 / 4);
-#endif
+
+        // Wave 150i
+        if (MountCode == 0x45) //modifOC
+            RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
+        else
+        {
+            RAStepInit     = 0x800000;
+            DEStepInit     = 0x800000;
+            RAStepHome = RAStepInit;
+        }
+        DEStepHome = DEStepInit + (DESteps360 / 4);
         LOGF_WARN("%s() : Motors already initialized", __FUNCTION__);
         LOGF_WARN("%s() : Setting default Init steps --  RAInit=%ld DEInit = %ld", __FUNCTION__,
                   static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
@@ -568,7 +565,7 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
         case 0x31:
             strcpy(boardinfo[0], "EQ5 Pro");
             break;
-        case 0x45:
+        case 0x45: // usefull to identify the mount in messages, otherwise refered as "CUSTOM" //modifOC
             strcpy(boardinfo[0], "Wave 150i");
             break;
         case 0x80:
@@ -602,36 +599,9 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
     boardinfo[2] = (char *)malloc(5);
     sprintf(boardinfo[2], "0x%02X", MountCode);
     boardinfo[2][4] = '\0';
-    
-#ifdef EQMODE_EXT
     SetMountDependantParameter(MountCode);
-#endif
 }
 
-#ifdef EQMODE_EXT
-void Skywatcher::SetMountDependantParameter(uint32_t mountCode)
-{
-/*
-RAHomeInitOffset in hour:   RA default Home position is defined as RAStepHome = RAStepInit + RAHomeInitOffset/24.*RASteps360 (in step)
-DEHomeInitOffset in degree: DE default Home position is defined as DEStepHome = DEStepInit + DEHomeInitOffset/360.*DESteps360 (in step)
-*/
-
-    // default settings
-
-    RAHomeInitOffset = 0.;
-    DEHomeInitOffset = 90.;
-    RAStepInit = 0x800000;
-    DEStepInit = 0x800000;
-
-    // other settings
-    switch (mountCode)
-    {
-        case 0x45: // Wave150i
-            RAHomeInitOffset = -6.;
-            break;
-    }
-}
-#endif
 void Skywatcher::InquireFeatures()
 {
     uint32_t rafeatures = 0, defeatures = 0;
@@ -701,7 +671,8 @@ bool Skywatcher::HasPPEC()
 
 bool Skywatcher::HasSnapPort1()
 {
-    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x0C || MountCode == 0x23
+    return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x0C
+           || MountCode == 0x23
            || MountCode == 0xA5;
 }
 
@@ -759,22 +730,22 @@ void Skywatcher::InquireDEEncoderInfo(INDI::PropertyNumber encoderNP)
 
 void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
 {
-    
+
     uint32_t * Steps360       = nullptr;
     uint32_t * StepsWorm      = nullptr;
     uint32_t * HighspeedRatio = nullptr;
-    
+
     if (axis == Axis1)
     {
-      Steps360 = &RASteps360;
-      StepsWorm = &RAStepsWorm;
-      HighspeedRatio = &RAHighspeedRatio;
+        Steps360 = &RASteps360;
+        StepsWorm = &RAStepsWorm;
+        HighspeedRatio = &RAHighspeedRatio;
     }
     else
     {
-      Steps360 = &DESteps360;
-      StepsWorm = &DEStepsWorm;
-      HighspeedRatio = &DEHighspeedRatio;
+        Steps360 = &DESteps360;
+        StepsWorm = &DEStepsWorm;
+        HighspeedRatio = &DEHighspeedRatio;
     }
 
     // Steps per 360 degrees
@@ -822,11 +793,11 @@ void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
 
 
     if (axis == Axis1)
-      backlashperiod[Axis1] =
-        (long)(((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / SKYWATCHER_BACKLASH_SPEED_RA);
+        backlashperiod[Axis1] =
+            (long)(((SKYWATCHER_STELLAR_DAY * (double)RAStepsWorm) / (double)RASteps360) / SKYWATCHER_BACKLASH_SPEED_RA);
     else
-      backlashperiod[Axis2] =
-        (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / SKYWATCHER_BACKLASH_SPEED_DE);
+        backlashperiod[Axis2] =
+            (long)(((SKYWATCHER_STELLAR_DAY * (double)DEStepsWorm) / (double)DESteps360) / SKYWATCHER_BACKLASH_SPEED_DE);
 }
 
 bool Skywatcher::IsRARunning()
@@ -885,7 +856,6 @@ void Skywatcher::ReadMotorStatus(SkywatcherAxis axis)
             break;
     }
     gettimeofday(&lastreadmotorstatus[axis], nullptr);
-
 }
 
 void Skywatcher::SlewRA(double rate)
@@ -1420,22 +1390,6 @@ uint32_t Skywatcher::GetDEAuxEncoder()
 {
     return ReadEncoder(Axis2);
 }
-#ifdef EQMODE_EXT
-uint32_t Skywatcher::GetRANorthEncoder()
-{
-// We need a strict reference to the north to set the goto displacement limits
-    int64_t offset;
-    int64_t north;
-    offset = RAHomeInitOffset / 24 * RASteps360; // may be >0 or <0
-    north = RAStepInit + offset;
-    
-    return static_cast<uint32_t>(north);
-}
-double Skywatcher::GetRAHomeInitOffset()
-{
-    return RAHomeInitOffset;
-}
-#endif
 
 void Skywatcher::SetST4RAGuideRate(unsigned char r)
 {
@@ -1889,7 +1843,7 @@ bool Skywatcher::dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, ch
 
         //if (INDI::Logger::debugSerial(cmd)) {
         command[nbytes_written - 1] = '\0'; //hmmm, remove \r, the  SkywatcherTrailingChar
-        //DEBUGF(telescope->DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
+        DEBUGF(telescope->DBG_COMM, "dispatch_command: \"%s\", %d bytes written", command, nbytes_written);
         debugnextread = true;
 
         try
@@ -1943,6 +1897,7 @@ bool Skywatcher::read_eqmod()
     }
     // Remove CR
     response[nbytes_read - 1] = '\0';
+
     if (debugnextread)
     {
         DEBUGF(telescope->DBG_COMM, "read_eqmod: \"%s\", %d bytes read", response, nbytes_read);
@@ -1951,15 +1906,16 @@ bool Skywatcher::read_eqmod()
     switch (response[0])
     {
         case '=':
-	    //check if response is valid
-	    for (const char *p = &response[1]; *p != '\0'; ++p)
-	    {
-		//only allow uppercase hex chars
-		if (!(isxdigit(*p) && !islower(*p)))
-		{
-            		throw EQModError(EQModError::ErrInvalidCmd, "Invalid response to command %s - Reply %s (response contains non-hex character)", command, response);
-		}
-	    }
+            //check if response is valid
+            for (const char *p = &response[1]; *p != '\0'; ++p)
+            {
+                //only allow uppercase hex chars
+                if (!(isxdigit(*p) && !islower(*p)))
+                {
+                    throw EQModError(EQModError::ErrInvalidCmd,
+                                     "Invalid response to command %s - Reply %s (response contains non-hex character)", command, response);
+                }
+            }
             break;
         case '!':
             throw EQModError(EQModError::ErrCmdFailed, "Failed command %s - Reply %s", command, response);
@@ -2006,6 +1962,45 @@ void Skywatcher::long2Revu24str(uint32_t n, char *str)
     str[4]        = hexa[(n & 0xF00000) >> 20];
     str[5]        = hexa[(n & 0x0F0000) >> 16];
     str[6]        = '\0';
+}
+
+
+void Skywatcher::SetMountDependantParameter(uint32_t mountCode)
+{
+    /*
+    RAHomeInitOffset in hour:   RA default Home position is defined as RAStepHome = RAStepInit + RAHomeInitOffset/24.*RASteps360 (in step)
+    DEHomeInitOffset in degree: DE default Home position is defined as DEStepHome = DEStepInit + DEHomeInitOffset/360.*DESteps360 (in step)
+    */
+
+    // other settings
+    switch (mountCode)
+    {
+        case 0x45: // Wave150i
+        {
+            RAHomeInitOffset = -6.;
+            DEHomeInitOffset = 90.;
+            RAStepInit = 0x800000;
+            DEStepInit = 0x800000;
+            RAStepHome = RAStepInit + RAHomeInitOffset / 24. * RASteps360;
+            DEStepHome = DEStepInit + DEHomeInitOffset / 360. * DESteps360;
+        }
+        break;
+    }
+}
+
+uint32_t Skywatcher::GetRANorthEncoder()
+{
+    // We need a strict reference to the north to set the goto displacement limits
+    int64_t offset;
+    int64_t north;
+    offset = RAHomeInitOffset / 24 * RASteps360; // may be >0 or <0
+    north = RAStepInit + offset;
+
+    return static_cast<uint32_t>(north);
+}
+double Skywatcher::GetRAHomeInitOffset()
+{
+    return RAHomeInitOffset;
 }
 
 // Park

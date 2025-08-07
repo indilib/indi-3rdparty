@@ -121,7 +121,6 @@ EQMod::EQMod(): GI(this)
     DBG_MOUNT        = INDI::Logger::getInstance().addDebugLevel("Verbose Mount", "MOUNT");
 
     mount = new Skywatcher(this);
-    
 
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
                            TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION
@@ -158,7 +157,6 @@ EQMod::EQMod(): GI(this)
     // Others
     AutohomeState      = AUTO_HOME_IDLE;
     restartguidePPEC   = false;
-    
 }
 
 EQMod::~EQMod()
@@ -592,7 +590,7 @@ bool EQMod::updateProperties()
 
             mount->Init();
 
-            zeroRAEncoder  = mount->GetRAEncoderZero(); 
+            zeroRAEncoder  = mount->GetRAEncoderZero();
             totalRAEncoder = mount->GetRAEncoderTotal();
             homeRAEncoder  = mount->GetRAEncoderHome();
             zeroDEEncoder  = mount->GetDEEncoderZero();
@@ -705,7 +703,7 @@ bool EQMod::Handshake()
                 && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
         {
             tty_set_generic_udp_format(1);
-	    tty_set_auto_reset_udp_session(1);
+            tty_set_auto_reset_udp_session(1);
         }
 
         mount->setPortFD(PortFD);
@@ -836,7 +834,7 @@ bool EQMod::ReadScopeStatus()
         DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder),
                static_cast<long>(currentDEEncoder));
         EncodersToRADec(currentRAEncoder, currentDEEncoder, lst, &currentRA, &currentDEC, &currentHA, &pierSide);
-	if (getPierSide() != pierSide)
+        if (getPierSide() != pierSide)
             LOGF_INFO("Pier side changed to %s", getPierSideStr(pierSide));
         setPierSide(pierSide);
 
@@ -948,7 +946,7 @@ bool EQMod::ReadScopeStatus()
         {
             char CurrentRAString[64] = {0}, CurrentDEString[64] = {0},
                                        AlignedRAString[64] = {0}, AlignedDEString[64] = {0},
-                                               AZString[64] = {0}, ALString[64] = {0};
+                                           AZString[64] = {0}, ALString[64] = {0};
             fs_sexa(CurrentRAString, currentRA, 2, 3600);
             fs_sexa(CurrentDEString, currentDEC, 2, 3600);
             fs_sexa(AlignedRAString, alignedRA, 2, 3600);
@@ -1442,13 +1440,9 @@ void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double
 {
     double RACurrent = 0.0, DECurrent = 0.0, HACurrent = 0.0;
     TelescopePierSide p;
-
-    // HA Hour angle, angular position around the Right Ascension axis
     HACurrent = EncoderToHours(rastep, zeroRAEncoder, totalRAEncoder, Hemisphere);
     RACurrent = HACurrent + lst;
-
     DECurrent = EncoderToDegrees(destep, zeroDEEncoder, totalDEEncoder, Hemisphere);
-
     //IDLog("EncodersToRADec: destep=%6X zeroDEncoder=%6X totalDEEncoder=%6x DECurrent=%f\n", destep, zeroDEEncoder , totalDEEncoder, DECurrent);
     if (Hemisphere == NORTH)
     {
@@ -1472,7 +1466,6 @@ void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double
     HACurrent = rangeHA(HACurrent);
     RACurrent = range24(RACurrent);
     DECurrent = rangeDec(DECurrent);
-
     *ra       = RACurrent;
     *de       = DECurrent;
     if (ha)
@@ -1480,46 +1473,35 @@ void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double
     if (pierSide)
         *pierSide = p;
 }
-/*
- * step has positive variation either clockwise (RAMotorSense<0) or counter-clockwise (RAMotorSense<0)
- * HA (aka result) is returned with positive variation counter-clockwise  
- * North (HOME) HA reference is set to 6h (=> RA = HA + LST)
- */
+
 double EQMod::EncoderToHours(uint32_t step, uint32_t initstep, uint32_t totalstep, enum Hemisphere h)
 {
     double result = 0.0;
-
-#ifdef EQMODE_EXT
-    result = (static_cast<double>(static_cast<int64_t>(step) - static_cast<int64_t>(initstep)) / totalstep) * 24.0;
-    result = range24(24-result) + mount->GetRAHomeInitOffset();
-      
+    //modifOC
+    // Wave 150i
+    if (mount->GetMountCode() == 0x45)
+    {
+        result = (static_cast<double>(static_cast<int64_t>(step) - static_cast<int64_t>(initstep)) / totalstep) * 24.0;
+        result = range24(24-result) + mount->GetRAHomeInitOffset(); //<= WARNING this is the crucial modification
+    }
+    else
+    {
+        if (step > initstep)
+        {
+            result = (static_cast<double>(step - initstep) / totalstep) * 24.0;
+            result = 24.0 - result;
+        }
+        else
+        {
+            result = (static_cast<double>(initstep - step) / totalstep) * 24.0;
+        }
+    }
     if (h == NORTH)
         result = range24(result + 6.0);
     else
-        result = range24((24 - result) + 6.0); 
-
-    
-#else   
-    if (step > initstep)
-    {
-        result = (static_cast<double>(step - initstep) / totalstep) * 24.0;
-        result = 24.0 - result;
-    }
-    else
-    {
-        result = (static_cast<double>(initstep - step) / totalstep) * 24.0;
-    }
-
-    if (h == NORTH)
-        result = range24(result + 6.0);  
-    else
-        result = range24((24 - result) + 6.0); 
-
-#endif
-    
+        result = range24((24 - result) + 6.0);
     
     return result;
-    
 }
 
 double EQMod::EncoderToDegrees(uint32_t step, uint32_t initstep, uint32_t totalstep, enum Hemisphere h)
@@ -1534,51 +1516,34 @@ double EQMod::EncoderToDegrees(uint32_t step, uint32_t initstep, uint32_t totals
         result = (static_cast<double>(initstep - step) / totalstep) * 360.0;
         result = 360.0 - result;
     }
-    //LOGF_INFO("EncodersToDegrees: step=%6X initstep=%6x result=%f hemisphere %s \n", step, initstep, result, (h==NORTH?"North":"South"));
+    //IDLog("EncodersToDegrees: step=%6X initstep=%6x result=%f hemisphere %s \n", step, initstep, result, (h==NORTH?"North":"South"));
     if (h == NORTH)
         result = range360(result);
     else
         result = range360(360.0 - result);
-    //LOGF_INFO("EncodersToDegrees: returning result=%f\n", result);
+    //IDLog("EncodersToDegrees: returning result=%f\n", result);
 
     return result;
 }
 
 double EQMod::EncoderFromHour(double hour, uint32_t initstep, uint32_t totalstep, enum Hemisphere h)
 {
-    double shifthour = 0.0, step;
-   
-#ifdef EQMODE_EXT
-    shifthour  = range24(hour -6 - mount->GetRAHomeInitOffset());
-#else  
-    shifthour        = range24(hour - 6);
-#endif
-/*
+    double shifthour = 0.0;
+    // Wave 150i
+    if (mount->GetMountCode() == 0x45)    //modifOC
+        shifthour  = range24(hour -6 - mount->GetRAHomeInitOffset());
+    else
+        shifthour        = range24(hour - 6);
+        
     if (h == NORTH)
         if (shifthour < 12.0)
-            step = round(static_cast<double>(initstep) - ((shifthour / 24.0) * totalstep));
+            return round(initstep - ((shifthour / 24.0) * totalstep));
         else
-            step = round(static_cast<double>(initstep) + (((24.0 - shifthour) / 24.0) * totalstep));
-            
+            return round(initstep + (((24.0 - shifthour) / 24.0) * totalstep));
     else if (shifthour < 12.0)
-        step = round(static_cast<double>(initstep) + ((shifthour / 24.0) * totalstep));
+        return round(initstep + ((shifthour / 24.0) * totalstep));
     else
-        step = round(static_cast<double>(initstep) - (((24.0 - shifthour) / 24.0) * totalstep));
-*/        
-
-    if (h == NORTH)
-        if (shifthour < 12.0)
-            step = round(initstep - ((shifthour / 24.0) * totalstep));
-        else
-            step = round(initstep + (((24.0 - shifthour) / 24.0) * totalstep));
-            
-    else if (shifthour < 12.0)
-        step = round(initstep + ((shifthour / 24.0) * totalstep));
-    else
-        step = round(initstep - (((24.0 - shifthour) / 24.0) * totalstep));
-   
-
-    return step;
+        return round(initstep - (((24.0 - shifthour) / 24.0) * totalstep));
 }
 
 double EQMod::EncoderFromRA(double ratarget, TelescopePierSide p, double lst, uint32_t initstep,
@@ -1969,36 +1934,39 @@ bool EQMod::Goto(double r, double d)
     gotoparams.checklimits      = true;
     gotoparams.pier_side        = TargetPier;
     gotoparams.outsidelimits    = false;
-    
-#ifdef EQMODE_EXT
-    if (Hemisphere == NORTH)
-    { 
-        int64_t delta;
-        delta = ((totalRAEncoder / 4) + (totalRAEncoder / 24)); // 7 hours 
-        gotoparams.limiteast        = mount->GetRANorthEncoder() - delta; 
-        gotoparams.limitwest        = mount->GetRANorthEncoder() + delta; 
+
+    // Wave 150i
+    if (mount->GetMountCode() == 0x45)
+    {
+        if (Hemisphere == NORTH)
+        {
+            int64_t delta;
+            delta = ((totalRAEncoder / 4) + (totalRAEncoder / 24)); // 7 hours
+            gotoparams.limiteast        = mount->GetRANorthEncoder() - delta;
+            gotoparams.limitwest        = mount->GetRANorthEncoder() + delta;
+        }
+        else
+        {
+            int64_t delta;
+            delta = ((totalRAEncoder / 4) + (totalRAEncoder / 24));
+            gotoparams.limiteast        = mount->GetRANorthEncoder() + delta;
+            gotoparams.limitwest        = mount->GetRANorthEncoder() - delta;
+        }
+        LOGF_INFO("Setting Eqmod Goto encoder limits to East=%d West=%d", gotoparams.limiteast, gotoparams.limitwest);
     }
     else
     {
-        int64_t delta;
-        delta = ((totalRAEncoder / 4) + (totalRAEncoder / 24)); 
-        gotoparams.limiteast        = mount->GetRANorthEncoder() + delta; 
-        gotoparams.limitwest        = mount->GetRANorthEncoder() - delta; 
+        if (Hemisphere == NORTH)
+        {
+            gotoparams.limiteast        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // 13h
+            gotoparams.limitwest        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // 23h
+        }
+        else
+        {
+            gotoparams.limiteast        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // ??
+            gotoparams.limitwest        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // ??
+        }
     }
-    LOGF_INFO("Setting Eqmod Goto encoder limits to East=%d West=%d", gotoparams.limiteast, gotoparams.limitwest);
-#else
-    if (Hemisphere == NORTH)
-    {
-        gotoparams.limiteast        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // 13h
-        gotoparams.limitwest        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // 23h
-    }
-    else
-    {
-        gotoparams.limiteast        = zeroRAEncoder + (totalRAEncoder / 4) + (totalRAEncoder / 24); // ??
-        gotoparams.limitwest        = zeroRAEncoder - (totalRAEncoder / 4) - (totalRAEncoder / 24); // ??
-    }
-    LOGF_INFO("Setting Eqmod Goto encoder limits to East=%d West=%d", gotoparams.limiteast, gotoparams.limitwest);
-#endif
 
     if (gotoparams.pier_side != PIER_UNKNOWN)
     {
