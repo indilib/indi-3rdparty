@@ -333,7 +333,7 @@ void Skywatcher::Init()
         dispatch_command(Initialize, Axis2, nullptr);
         //read_eqmod();
         // Wave 150i
-        if (MountCode == 0x45) //modifOC
+        if (MountCode == 0x45)
             RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
         else
             RAStepHome = RAStepInit;
@@ -346,7 +346,7 @@ void Skywatcher::Init()
         wasinitialized = true;
 
         // Wave 150i
-        if (MountCode == 0x45) //modifOC
+        if (MountCode == 0x45)
             RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
         else
         {
@@ -565,7 +565,7 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
         case 0x31:
             strcpy(boardinfo[0], "EQ5 Pro");
             break;
-        case 0x45: // usefull to identify the mount in messages, otherwise refered as "CUSTOM" //modifOC
+        case 0x45:
             strcpy(boardinfo[0], "Wave 150i");
             break;
         case 0x80:
