@@ -1477,20 +1477,29 @@ void EQMod::EncodersToRADec(uint32_t rastep, uint32_t destep, double lst, double
 double EQMod::EncoderToHours(uint32_t step, uint32_t initstep, uint32_t totalstep, enum Hemisphere h)
 {
     double result = 0.0;
-    if (step > initstep)
+    // Wave 150i
+    if (mount->GetMountCode() == 0x45)
     {
-        result = (static_cast<double>(step - initstep) / totalstep) * 24.0;
-        result = 24.0 - result;
+        result = (static_cast<double>(static_cast<int64_t>(step) - static_cast<int64_t>(initstep)) / totalstep) * 24.0;
+        result = range24(24-result) + mount->GetRAHomeInitOffset(); //<= WARNING this is the crucial modification
     }
     else
     {
-        result = (static_cast<double>(initstep - step) / totalstep) * 24.0;
+        if (step > initstep)
+        {
+            result = (static_cast<double>(step - initstep) / totalstep) * 24.0;
+            result = 24.0 - result;
+        }
+        else
+        {
+            result = (static_cast<double>(initstep - step) / totalstep) * 24.0;
+        }
     }
-
     if (h == NORTH)
         result = range24(result + 6.0);
     else
         result = range24((24 - result) + 6.0);
+    
     return result;
 }
 
@@ -1519,7 +1528,12 @@ double EQMod::EncoderToDegrees(uint32_t step, uint32_t initstep, uint32_t totals
 double EQMod::EncoderFromHour(double hour, uint32_t initstep, uint32_t totalstep, enum Hemisphere h)
 {
     double shifthour = 0.0;
-    shifthour        = range24(hour - 6);
+    // Wave 150i
+    if (mount->GetMountCode() == 0x45)  
+        shifthour  = range24(hour -6 - mount->GetRAHomeInitOffset());
+    else
+        shifthour        = range24(hour - 6);
+        
     if (h == NORTH)
         if (shifthour < 12.0)
             return round(initstep - ((shifthour / 24.0) * totalstep));
