@@ -1,3 +1,9 @@
+libbressercam (59.29176.20250806) jammy; urgency=medium
+
+  * Upstream release
+
+ -- bresser <bresser@bresser.com>  Thu, 07 Aug 2025 12:49:58 +0800
+
 libbressercam (59.28981.20250715) jammy; urgency=medium
 
   * Upstream release

@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libaltaircam)
 
-set (LIBALTAIRCAM_VERSION "59.28981")
+set (LIBALTAIRCAM_VERSION "59.29176")
 set (LIBALTAIRCAM_SOVERSION "59")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
