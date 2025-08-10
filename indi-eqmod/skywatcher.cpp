@@ -332,11 +332,7 @@ void Skywatcher::Init()
         //read_eqmod();
         dispatch_command(Initialize, Axis2, nullptr);
         //read_eqmod();
-        // Wave 150i
-        if (MountCode == 0x45)
-            RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
-        else
-            RAStepHome = RAStepInit;
+        RAStepHome = RAStepInit;
         DEStepHome = DEStepInit + (DESteps360 / 4);
     }
     else
@@ -344,17 +340,10 @@ void Skywatcher::Init()
         // Mount already initialized by another driver / driver instance
         // use default configuration && leave unchanged encoder values
         wasinitialized = true;
-
-        // Wave 150i
-        if (MountCode == 0x45)
-            RAStepHome = RAStepInit + RAHomeInitOffset/24. * RASteps360;
-        else
-        {
-            RAStepInit     = 0x800000;
-            DEStepInit     = 0x800000;
-            RAStepHome = RAStepInit;
-        }
-        DEStepHome = DEStepInit + (DESteps360 / 4);
+        RAStepInit     = 0x800000;
+        DEStepInit     = 0x800000;
+        RAStepHome     = RAStepInit;
+        DEStepHome     = DEStepInit + (DESteps360 / 4);
         LOGF_WARN("%s() : Motors already initialized", __FUNCTION__);
         LOGF_WARN("%s() : Setting default Init steps --  RAInit=%ld DEInit = %ld", __FUNCTION__,
                   static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
@@ -564,9 +553,6 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
             break;
         case 0x31:
             strcpy(boardinfo[0], "EQ5 Pro");
-            break;
-        case 0x45:
-            strcpy(boardinfo[0], "Wave 150i");
             break;
         case 0x80:
             strcpy(boardinfo[0], "GT");
