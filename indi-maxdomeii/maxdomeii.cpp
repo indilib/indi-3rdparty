@@ -736,7 +736,7 @@ bool MaxDomeII::ISNewNumber(const char *dev, const char *name, double values[], 
             else
             {
                 ShutterOperationAzimuthNP.setState(IPS_ALERT);
-                LOGF_ERROR("%s", ErrorMessages[abs(error)]);
+                LOGF_ERROR("%s", ErrorMessages[error]);
                 ShutterOperationAzimuthNP.apply();
             }
 
