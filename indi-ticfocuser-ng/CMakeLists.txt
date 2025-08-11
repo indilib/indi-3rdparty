@@ -110,47 +110,41 @@ else()
     message(STATUS "LibBluetooth not found. Bluetooth support will be disabled.")
 endif()
 
-pkg_check_modules(LIBTIC-1 libpololu-tic-1)
+set(POLOLU_TIC_SOFTWARE_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pololu-tic-software")
+if(EXISTS "${POLOLU_TIC_SOFTWARE_ROOT_DIR}/CMakeLists.txt")
+    message(STATUS "Found bundled pololu-tic-software at '${POLOLU_TIC_SOFTWARE_ROOT_DIR}'. Attempting to build and link.")
+    add_subdirectory("${POLOLU_TIC_SOFTWARE_ROOT_DIR}" pololu_tic_software_build_dir)
 
-if(NOT LIBTIC-1_FOUND)
-    message(STATUS "LIBTIC-1 (libpololu-tic-1) not found on system. Trying to build from bundled pololu-tic-software.")
-
-    set(POLOLU_TIC_SOFTWARE_ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/pololu-tic-software")
-    if(EXISTS "${POLOLU_TIC_SOFTWARE_ROOT_DIR}/CMakeLists.txt")
-        message(STATUS "Found bundled pololu-tic-software at '${POLOLU_TIC_SOFTWARE_ROOT_DIR}'.")
-
-        add_subdirectory("${POLOLU_TIC_SOFTWARE_ROOT_DIR}" pololu_tic_software_build_dir)
-
-        if(TARGET lib)
-            set(LIBTIC-1_LIBRARIES lib)
-
-            set(LIBTIC-1_INCLUDE_DIR "${POLOLU_TIC_SOFTWARE_ROOT_DIR}/include")
-            set(LIBTIC-1_FOUND TRUE)
-            message(STATUS "Successfully configured using bundled pololu-tic-software library 'lib'.")
-        else()
-            message(WARNING "Bundled pololu-tic-software found, but 'lib' target not created. Please check its CMakeLists.txt and pololu-tic-software/lib/CMakeLists.txt.")
-        endif()
+    if(TARGET lib)
+        message(STATUS "Successfully configured using bundled pololu-tic-software library 'lib'.")
+        list(APPEND INDI_TICFOCUSER-NG_SRCS
+            ${CMAKE_CURRENT_SOURCE_DIR}/connection/driver_interfaces/PololuUsbInterface.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/connection/PololuUsbConnection.cpp
+        )
+        target_link_libraries(indi_ticfocuser-ng lib) # Link directly to the CMake target
+        target_include_directories(indi_ticfocuser-ng PUBLIC "${POLOLU_TIC_SOFTWARE_ROOT_DIR}/include")
+        set(WITH_LIBTIC TRUE)
     else()
-        message(WARNING "Bundled pololu-tic-software not found at '${POLOLU_TIC_DIR}' or it does not contain a CMakeLists.txt.")
+        message(WARNING "Bundled pololu-tic-software found, but 'lib' target not created. Falling back to system search.")
     endif()
 endif()
 
-if(LIBTIC-1_FOUND)
-    message(STATUS "Using LIBTIC-1 (from system or bundled source).")
-    list(APPEND INDI_TICFOCUSER-NG_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/driver_interfaces/PololuUsbInterface.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/connection/PololuUsbConnection.cpp
-    )
-
-    if(LIBTIC-1_INCLUDE_DIR)
-        include_directories(${LIBTIC-1_INCLUDE_DIR})
+if(NOT WITH_LIBTIC)
+    pkg_check_modules(LIBTIC-1 libpololu-tic-1)
+    if(LIBTIC-1_FOUND)
+        message(STATUS "Using LIBTIC-1 (libpololu-tic-1) from system.")
+        list(APPEND INDI_TICFOCUSER-NG_SRCS
+            ${CMAKE_CURRENT_SOURCE_DIR}/connection/driver_interfaces/PololuUsbInterface.cpp
+            ${CMAKE_CURRENT_SOURCE_DIR}/connection/PololuUsbConnection.cpp
+        )
+        if(LIBTIC-1_INCLUDE_DIR)
+            target_include_directories(indi_ticfocuser-ng PUBLIC ${LIBTIC-1_INCLUDE_DIR})
+        endif()
+        target_link_libraries(indi_ticfocuser-ng "${LIBTIC-1_LIBRARIES}")
+        set(WITH_LIBTIC TRUE)
+    else()
+        message(WARNING "LIBTIC-1 (libpololu-tic-1) was not found on the system and could not be built from bundled source. Functionality might be limited.")
     endif()
-
-    target_link_libraries(indi_ticfocuser-ng "${LIBTIC-1_LIBRARIES}")
-
-    set(WITH_LIBTIC TRUE)
-else()
-    message(WARNING "LIBTIC-1 (libpololu-tic-1) was not found on the system and could not be built from bundled source. Functionality might be limited.")
 endif()
 
 target_sources(indi_ticfocuser-ng PUBLIC ${INDI_TICFOCUSER-NG_SRCS})
