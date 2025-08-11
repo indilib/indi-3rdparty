@@ -1837,7 +1837,6 @@ void fcImage_do_hotPixel_kernel(UInt16 imageHeight, UInt16 imageWidth, UInt16 *f
     size_t size;
     UInt16 brightestNeighbor;
     UInt16 thisPixel;
-    int numHotPixels;
 
     // this routine will work 'in place'.  We will first allocate a temporary image buffer
     // we copy the image to it and then fill the original buffer with the filtered image
@@ -1847,7 +1846,6 @@ void fcImage_do_hotPixel_kernel(UInt16 imageHeight, UInt16 imageWidth, UInt16 *f
 
     if (tempBuffer != NULL)
     {
-        numHotPixels = 0;
 
         // copy the image buffer to my local storage
         memcpy(tempBuffer, frameBuffer, size);
@@ -1927,7 +1925,6 @@ void fcImage_do_hotPixel_kernel(UInt16 imageHeight, UInt16 imageWidth, UInt16 *f
 
                 if (floatCenterPixel > floatBrightPixel)
                 {
-                    numHotPixels++;
                     // substitute average
                     *outputPtr = (UInt16)accumPixel;
                 }
