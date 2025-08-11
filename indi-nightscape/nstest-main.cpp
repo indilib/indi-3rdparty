@@ -65,7 +65,6 @@ void usage(char * prog)
 
 int main(int argc, char **argv)
 {
-    int ftd = 1;
     //char eeprom [128];
     int  i;
     //int baudrate = 115200;
@@ -156,7 +155,6 @@ int main(int argc, char **argv)
         cn = new NsChannelU(camnum);
     }
 #else
-    ftd = 0;
     cn = new NsChannelU(camnum);
 #endif
     if (cn->open() < 0) exit (-1);

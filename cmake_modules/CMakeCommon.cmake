@@ -68,9 +68,6 @@ IF (UNIX OR APPLE)
         SET(COMP_FLAGS "${COMP_FLAGS} -Werror")
     ENDIF ()
     # Omit problematic warnings
-    IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
-        SET(COMP_FLAGS "${COMP_FLAGS} -Wno-unused-but-set-variable")
-    ENDIF ()
     IF ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" AND CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 6.9.9)
         SET(COMP_FLAGS "${COMP_FLAGS} -Wno-format-truncation")
     ENDIF ()
@@ -85,6 +82,11 @@ IF (UNIX OR APPLE)
     CHECK_C_COMPILER_FLAG("-Werror=unused-parameter" COMPATIBLE_UNUSED_PARAMETER)
     IF (${COMPATIBLE_UNUSED_PARAMETER})
         SET(COMP_FLAGS "${COMP_FLAGS} -Werror=unused-parameter")
+    ENDIF ()
+
+    CHECK_C_COMPILER_FLAG("-Werror=unused-but-set-variable" COMPATIBLE_UNUSED_BUT_SET_VARIABLE)
+    IF (${COMPATIBLE_UNUSED_BUT_SET_VARIABLE})
+        SET(COMP_FLAGS "${COMP_FLAGS} -Werror=unused-but-set-variable")
     ENDIF ()
 
     # Minimal debug info with Clang
