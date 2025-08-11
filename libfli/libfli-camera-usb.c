@@ -2943,7 +2943,6 @@ long fli_camera_usb_read_eeprom(flidev_t dev, long loc, long address, long lengt
 {
 	iobuf_t buf[IOBUF_MAX_SIZ];
 	long rlen, wlen;
-	long r = 0;
 
 	int ret = 0;
 	long addr;
@@ -2954,7 +2953,7 @@ long fli_camera_usb_read_eeprom(flidev_t dev, long loc, long address, long lengt
 		/* MaxCam and IMG cameras */
 		case FLIUSB_CAM_ID:
 		{
-			r = -EFAULT;
+			ret = -EFAULT;
 		}
 		break;
 
@@ -2999,8 +2998,6 @@ long fli_camera_usb_write_eeprom(flidev_t dev, long loc, long address, long leng
 {
 	iobuf_t buf[IOBUF_MAX_SIZ];
 	long rlen, wlen;
-	long r = 0;
-
 	int ret = 0;
 	long addr;
 	int pagesize = 32;
@@ -3010,7 +3007,7 @@ long fli_camera_usb_write_eeprom(flidev_t dev, long loc, long address, long leng
 		/* MaxCam and IMG cameras */
 		case FLIUSB_CAM_ID:
 		{
-			r = -EFAULT;
+			ret = -EFAULT;
 		}
 		break;
 

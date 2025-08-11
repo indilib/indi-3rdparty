@@ -23,7 +23,7 @@
   THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
   ``AS IS'' AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
   LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
-  FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE
+FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALC THE
   REGENTS OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
   INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING,
   BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
@@ -126,11 +126,9 @@ long fli_camera_open(flidev_t dev)
 
 long fli_camera_close(flidev_t dev)
 {
-  flicamdata_t *cam;
-
   CHKDEVICE(dev);
 
-  cam = DEVICE->device_data;
+  flicamdata_t *cam = DEVICE->device_data;
 
   if (cam->gbuf != NULL)
   {
@@ -390,17 +388,13 @@ long fli_camera_command(flidev_t dev, int cmd, int argc, ...)
 				r = -EINVAL;
 			else
 			{
-				flicamdata_t *cam;
-
-				cam = DEVICE->device_data;
-
-				cam->grabrowcount = 1;
-				cam->grabrowcounttot = cam->grabrowcount;
-				cam->grabrowindex = 0;
-				cam->grabrowbatchsize = 1;
-				cam->grabrowbufferindex = cam->grabrowcount;
-				cam->flushcountbeforefirstrow = 0;
-				cam->flushcountafterlastrow = 0;
+				((flicamdata_t *)DEVICE->device_data)->grabrowcount = 1;
+				((flicamdata_t *)DEVICE->device_data)->grabrowcounttot = ((flicamdata_t *)DEVICE->device_data)->grabrowcount;
+				((flicamdata_t *)DEVICE->device_data)->grabrowindex = 0;
+				((flicamdata_t *)DEVICE->device_data)->grabrowbatchsize = 1;
+				((flicamdata_t *)DEVICE->device_data)->grabrowbufferindex = ((flicamdata_t *)DEVICE->device_data)->grabrowcount;
+				((flicamdata_t *)DEVICE->device_data)->flushcountbeforefirstrow = 0;
+				((flicamdata_t *)DEVICE->device_data)->flushcountafterlastrow = 0;
 			
 				switch (DEVICE->domain)
 				{
@@ -942,9 +936,7 @@ long fli_camera_command(flidev_t dev, int cmd, int argc, ...)
 			else
 			{
 				long shutter;
-				flicamdata_t *cam;
-
-				cam = DEVICE->device_data;
+				flicamdata_t *cam = DEVICE->device_data;
 
 				shutter = *va_arg(ap, long *);
 
@@ -987,9 +979,6 @@ long fli_camera_command(flidev_t dev, int cmd, int argc, ...)
 			else
 			{
 				long bgflush;
-				flicamdata_t *cam;
-
-				cam = DEVICE->device_data;
 
 				bgflush = *va_arg(ap, long *);
 

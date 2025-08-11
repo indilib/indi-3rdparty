@@ -929,8 +929,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
   long dir, timeout, move, stepsleft;
   long rlen, wlen;
   unsigned short buf[16];
-	iobuf_t _buf[IOBUF_MAX_SIZ];
-	clock_t begin;
+  iobuf_t _buf[IOBUF_MAX_SIZ];
 
   fdata = DEVICE->device_data;
 
@@ -1032,7 +1031,7 @@ static long fli_stepmotor(flidev_t dev, long steps, long block)
 				}
 			}
 
-			begin = clock();
+			clock_t begin = clock();
 			stepsleft = 0;
 			while ( (stepsleft != 0x7000) && (block != 0) )
 			{
@@ -1249,7 +1248,6 @@ static long fli_homedevice(flidev_t dev, long block)
 	}
 	else /* New HW */
 	{
-		clock_t begin;
 		unsigned short stepsleft;
 
 		rlen = 2; wlen = 2;
@@ -1260,8 +1258,7 @@ static long fli_homedevice(flidev_t dev, long block)
 			debug(FLIDEBUG_WARN, "Invalid echo.");
 			return -EIO;
 		}
-		begin = clock();
-		stepsleft = 0x04;
+        stepsleft = 0x04;
 		while ( ((stepsleft & 0x04) != 0) && (block != 0) )
 		{
 #ifdef _WIN32
