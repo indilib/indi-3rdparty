@@ -1,4 +1,4 @@
-Source: indi-TicFocuser-ng
+Source: indi-ticfocuser-ng
 Section: science
 Priority: extra
 Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
@@ -14,21 +14,21 @@ Build-Depends: debhelper (>= 9),
                libbluetooth-dev
 Standards-Version: 3.9.4
 
-Package: indi-TicFocuser-ng
+Package: indi-ticfocuser-ng
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
-Description: INDI Driver for TicFocuser-ng
- Driver for TicFocuser-ng.
+Description: INDI Driver for ticfocuser-ng
+ Driver for ticfocuser-ng.
  .
  This driver is compatible with any INDI client such as KStars or Xephem.
 
-Package: indi-TicFocuser-ng-dbg
+Package: indi-ticfocuser-ng-dbg
 Priority: extra
 Section: debug
 Architecture: any
-Depends: indi-TicFocuser-ng (= ${binary:Version}), ${misc:Depends}
-Description: INDI Driver for TicFocuser-ng
- Driver for TicFocuser-ng.
+Depends: indi-ticfocuser-ng (= ${binary:Version}), ${misc:Depends}
+Description: INDI Driver for ticfocuser-ng
+ Driver for ticfocuser-ng.
  .
  This driver is compatible with any INDI client such as KStars or Xephem.
  This package contains the debug symbols for the this driver, useful to investigate problems in INDI.

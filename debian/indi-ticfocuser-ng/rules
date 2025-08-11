@@ -15,5 +15,5 @@ DEB_CMAKE_EXTRA_FLAGS += -DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON
 # Build with symbols for better debugging
 DEB_CMAKE_EXTRA_FLAGS += -DCMAKE_BUILD_TYPE=RelWithDebInfo
 
-DEB_SRCDIR=indi-TicFocuser-ng
+DEB_SRCDIR=indi-ticfocuser-ng
 DEB_DH_SHLIBDEPS_ARGS=-u--ignore-missing-info
