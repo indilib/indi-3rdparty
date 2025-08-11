@@ -44,8 +44,8 @@ void updateSHT30() {
 void serializeSHT30(JsonObject& doc) {
   if (!sht30Data.status) return;
   JsonObject sht = doc.createNestedObject("SHT30");
-  sht["temperature"] = sht30Data.temperature;
-  sht["humidity"] = sht30Data.humidity;
+  sht["Temp"] = sht30Data.temperature;
+  sht["Hum"] = sht30Data.humidity;
 }
 
 String displaySHT30Parameters() {
