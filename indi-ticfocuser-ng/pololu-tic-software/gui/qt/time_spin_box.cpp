@@ -104,7 +104,6 @@ int time_spin_box::step_down(int key) const
     QString value_text = textFromValue(key);
 
     bool found_key = false;
-    int best_key = 0;
     int best_value = std::numeric_limits<int>::min();
     for (auto i = mapping.constBegin(); i != mapping.constEnd(); ++i)
     {
@@ -112,7 +111,6 @@ int time_spin_box::step_down(int key) const
                 value_text != text_from_value(i.value()))
         {
             found_key = true;
-            best_key = i.key();
             best_value = i.value();
         }
     }
