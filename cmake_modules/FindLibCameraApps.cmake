@@ -16,7 +16,7 @@ if (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
 else (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
-    find_library(LibCameraApps_LIBRARY NAMES camera_app
+    find_library(LibCameraApps_LIBRARY NAMES rpicam_app
       PATHS
       ${_obLinkDir}
       ${GNUWIN32_DIR}/lib

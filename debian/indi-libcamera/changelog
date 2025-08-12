@@ -1,3 +1,9 @@
+indi-libcamera (1.2) bookworm; urgency=low
+
+  * Updated due to librpicam-app-dev change.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 12 Aug 2025 11:00:00 +0300
+
 indi-libcamera (1.1) bullseye; urgency=low
 
   * Rebase on rpicam.
