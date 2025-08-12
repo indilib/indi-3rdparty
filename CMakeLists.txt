@@ -381,7 +381,7 @@ ELSE(BUILD_LIBS)
 
 ## TicFocuser-ng
 if (WITH_TICFOCUSER-NG)
-add_subdirectory(indi-TicFocuser-ng)
+add_subdirectory(indi-ticfocuser-ng)
 endif(WITH_TICFOCUSER-NG)
 
 ## EQMod
