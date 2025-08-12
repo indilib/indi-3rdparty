@@ -48,7 +48,7 @@
 
 static class Loader
 {
-        std::map<int, std::shared_ptr<INDILibCamera>> cameras;
+        std::map<int, std::shared_ptr<INDILibCamera >> cameras;
     public:
         Loader()
         {
@@ -266,7 +266,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
     StreamInfo info = app.GetStreamInfo(stream);
     BufferReadSync r(&app, payload->buffers[stream]);
-    const std::vector<libcamera::Span<uint8_t>> mem = r.Get();
+    const std::vector<libcamera::Span<uint8_t >> mem = r.Get();
 
     try
     {
@@ -453,7 +453,17 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             }
             else
             {
-                read(fd, memptr, memsize);
+                ssize_t bytesRead = read(fd, memptr, memsize);
+                if (bytesRead == -1 || static_cast<size_t>(bytesRead) < memsize)
+                {
+                    LOGF_ERROR("Error reading file %s: %s or incomplete read (%zd/%zu bytes)", filename, strerror(errno), bytesRead, memsize);
+                    PrimaryCCD.setExposureFailed();
+                    app.StopCamera();
+                    app.Teardown();
+                    app.CloseCamera();
+                    close(fd);
+                    return;
+                }
             }
             // Close file
             close(fd);
