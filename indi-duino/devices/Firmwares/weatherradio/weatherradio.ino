@@ -25,6 +25,7 @@ struct {
   unsigned long bme_read;
   unsigned long dht_read;
   unsigned long aht10_read;
+  unsigned long sht30_read;
   unsigned long mlx90614_read;
   unsigned long tsl237_read;
   unsigned long tsl2591_read;
@@ -55,6 +56,9 @@ void updateDisplayText() {
 #ifdef USE_AHT10_SENSOR
   result += "AHT10\n" + displayAHT10Parameters() + " \n";
 #endif //USE_AHT10_SENSOR
+#ifdef USE_SHT30_SENSOR
+  result += "SHT30\n" + displaySHT30Parameters() + " \n";
+#endif //USE_SHT30_SENSOR
 #ifdef USE_MLX_SENSOR
   result += "MLX90614\n" + displayMLXParameters() + " \n";
 #endif //USE_MLX_SENSOR
@@ -121,6 +125,12 @@ void updateSensorData() {
   updateAHT10();
   sensor_read.aht10_read = millis() - start;
 #endif
+
+#ifdef USE_SHT30_SENSOR
+  start = millis();
+  updateSHT30();
+  sensor_read.sht30_read = millis() - start;
+#endif // USE_SHT30_SENSOR
 
 #ifdef USE_MLX_SENSOR
   start = millis();
@@ -193,6 +203,10 @@ String getSensorData(bool pretty) {
 
 #ifdef USE_AHT10_SENSOR
   serializeAHT10(weatherDoc);
+#endif
+
+#ifdef USE_SHT30_SENSOR
+  serializeSHT30(weatherDoc);
 #endif
 
 #ifdef USE_MLX_SENSOR
@@ -432,6 +446,10 @@ void setup() {
 
 #ifdef USE_AHT10_SENSOR
   initAHT10();
+#endif
+
+#ifdef USE_SHT30_SENSOR
+  initSHT30();
 #endif
 
 #ifdef USE_WIFI
