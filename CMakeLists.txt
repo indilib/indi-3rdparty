@@ -245,7 +245,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_AHP_GT Off)
     set(WITH_TICFOCUSER-NG Off)
     # The drivers below are not yet compatible with Apple Silicon since their libraries are not universal binaries
-    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
         SET(WITH_ASICAM Off)
         SET(WITH_SBIG Off)
         SET(WITH_ATIK Off)
