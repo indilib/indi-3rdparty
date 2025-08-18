@@ -126,7 +126,7 @@ QHYCCD::QHYCCD(const char *name) : FilterInterface(this)
     HasOffset     = false;
     HasFilters    = false;
 
-    snprintf(this->m_Name, MAXINDINAME, "QHY CCD %.15s", name);
+    snprintf(this->m_Name, MAXINDINAME, "QHY_CCD_%.15s", name);
     snprintf(this->m_CamID, MAXINDINAME, "%s", name);
     setDeviceName(this->m_Name);
 
@@ -396,7 +396,9 @@ void QHYCCD::ISGetProperties(const char *dev)
         }
 
         //NEW CODE - Add support for overscan/calibration area
+#ifndef ENFORCE_OVERSCAN
         if(HasOverscanArea)
+#endif
             defineProperty(&OverscanAreaSP);
     }
 }
@@ -404,19 +406,29 @@ void QHYCCD::ISGetProperties(const char *dev)
 bool QHYCCD::updateProperties()
 {
     // Set format first if connected.
-    if (isConnected())
+    if ( isConnected() )
     {
-        // N.B. AFAIK, there is no way to switch image formats.
-        CaptureFormat format;
-        if (GetCCDCapability() & CCD_HAS_BAYER)
-        {
-            format = {"INDI_RAW", "RAW", 16, true};
-        }
-        else
-        {
-            format = {"INDI_MONO", "Mono", 16, true};
-        }
-        addCaptureFormat(format);
+        // capture formats
+        CaptureFormatSP.resize(0);
+        m_CaptureFormats.clear();
+        if ( GetCCDCapability() & CCD_HAS_BAYER ) {
+	    if ( HasTransferBit ) {
+	        addCaptureFormat( {"INDI_RAW_16", "RAW 16", 16, true} );	
+		addCaptureFormat( {"INDI_RAW_8" , "RAW 8" , 8 , false} );
+	    }
+	    else {
+		addCaptureFormat( {"INDI_RAW", "RAW", 16, true} );
+	    }
+	}
+	else {
+	    if ( HasTransferBit ) {
+	        addCaptureFormat( {"INDI_MONO_16", "Mono 16", 16, true} );	
+		addCaptureFormat( {"INDI_MONO_8" , "Mono 8" , 8 , false} );	
+	    }
+	    else {
+		addCaptureFormat( {"INDI_MONO", "Mono", 16, true} );
+	    }
+	}
     }
 
     // Define parent class properties
@@ -624,7 +636,9 @@ bool QHYCCD::updateProperties()
         }
 
         //NEW CODE - Add support for overscan/calibration area
+#ifndef ENFORCE_OVERSCAN
         if (HasOverscanArea)
+#endif
             defineProperty(&OverscanAreaSP);
 
         // Let's get parameters now from CCD
@@ -700,7 +714,9 @@ bool QHYCCD::updateProperties()
         }
 
         //NEW CODE - Add support for overscan/calibration area
+#ifndef ENFORCE_OVERSCAN
         if (HasOverscanArea)
+#endif
             deleteProperty(OverscanAreaSP.name);
     }
 
@@ -1101,6 +1117,7 @@ bool QHYCCD::Connect()
         }
 
         LOGF_INFO("Humidity Support: %s", HasHumidity ? "True" : "False");
+#ifndef ENFORCE_OVERSCAN
         ////////////////////////////////////////////////////////////////////
         /// Overscan Area Support
         ////////////////////////////////////////////////////////////////////
@@ -1113,6 +1130,7 @@ bool QHYCCD::Connect()
         }
 
         LOGF_DEBUG("Overscan Area Support: %s", HasOverscanArea ? "True" : "False");
+#endif
 
         // Set Camera Capability
         SetCCDCapability(cap);
@@ -1178,7 +1196,6 @@ bool QHYCCD::Disconnect()
 
 bool QHYCCD::setupParams()
 {
-
     //NEW CODE - Add support for overscan/calibration area, use sensorROI & effectiveROI as containers for frame width/offest
     uint32_t nbuf, bpp;
     double chipw, chiph, pixelw, pixelh;
@@ -1236,7 +1253,18 @@ bool QHYCCD::setupParams()
         //    LOGF_DEBUG("GetQHYCCDOverscanArea: subX :%d subY: %d subW: %d subH: %d", overscanROI.subX, overscanROI.subY,
         //               overscanROI.subW, overscanROI.subH);
         //}
+
+	// set bits per pixel transfer size
+	if ( HasTransferBit ) {
+	    if ( SetQHYCCDBitsMode(m_CameraHandle, bitsPerPixel) == QHYCCD_SUCCESS ) 
+		bpp = bitsPerPixel;
+	    else 
+    		LOGF_WARN("SetQHYCCDBitsMode %d bit failed. Current mode: %d bit.", bitsPerPixel, bpp);
+	}
+	ignoreBitsPerPixel = true; 	// avoids re-initializion after error
     }
+
+    LOGF_DEBUG("Capture format: width=%d height=%d bpp=%d", (int)effectiveROI.subW, (int)effectiveROI.subH, (int)bpp);
 
     //NEW CODE - Add support for overscan/calibration area
     //Overscan area is ignored, exposure frame to be within effectiveROI
@@ -1318,10 +1346,14 @@ bool QHYCCD::StartExposure(float duration)
             return false;
         }
 
-        // Try to set 16bit mode if supported back.
-        SetQHYCCDBitsMode(m_CameraHandle, PrimaryCCD.getBPP());
+        // re-initialize the camera parameters
+        QHYCCD::setupParams();
     }
-
+    // re-initialize the camera parameters if bitsPerPixel has been cahnged
+    else if ( HasTransferBit && (!ignoreBitsPerPixel) && (bitsPerPixel!=PrimaryCCD.getBPP()) ) {
+	QHYCCD::setupParams();
+    }
+    
     m_ImageFrameType = PrimaryCCD.getFrameType();
 
     if (GetCCDCapability() & CCD_HAS_SHUTTER)
@@ -2465,19 +2497,19 @@ bool QHYCCD::StartStreaming()
             LOG_WARN("SetQHYCCDParam CONTROL_USBTRAFFIC 20.0 failed.");
     }
 
-    ret = SetQHYCCDBitsMode(m_CameraHandle, 8);
-    if (ret == QHYCCD_SUCCESS)
-        Streamer->setPixelFormat(qhyFormat, 8);
-    else
-    {
-        LOG_WARN("SetQHYCCDBitsMode 8bit failed.");
-        Streamer->setPixelFormat(qhyFormat, PrimaryCCD.getBPP());
+    int bpp = PrimaryCCD.getBPP();
+    if ( HasTransferBit ) {
+	if ( SetQHYCCDBitsMode(m_CameraHandle, bitsPerPixel) == QHYCCD_SUCCESS ) 
+	    bpp = bitsPerPixel;
+	else 
+    	    LOGF_WARN("SetQHYCCDBitsMode %d bit failed.", bpp);
     }
+    Streamer->setPixelFormat(qhyFormat, bpp);
 
     //LOG_INFO("start live mode"); //DEBUG
 
-    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS), w=%d h=%d", m_ExposureRequest,
-              Streamer->getTargetFPS(), subW, subH);
+    LOGF_INFO("Starting video streaming with exposure %.f seconds (%.f FPS), w=%d h=%d bpp=%d", m_ExposureRequest,
+              Streamer->getTargetFPS(), subW, subH, bpp);
     BeginQHYCCDLive(m_CameraHandle);
     pthread_mutex_lock(&condMutex);
     m_ThreadRequest = StateStream;
@@ -2605,6 +2637,7 @@ void QHYCCD::streamVideo()
             }
 
             Streamer->newFrame(buffer, w * h * bpp / 8 * channels, timestamp);
+            LOGF_DEBUG("got live frame: w=%d, h=%d, bpp=%d", w, h, bpp);
 
             //DEBUG
             //if(!frames)
@@ -2978,4 +3011,12 @@ void QHYCCD::JDtoISO8601(double JD, char *iso8601)
     tp = gmtime(&gpstime);
     // Format it in ISO8601 format
     strftime(iso8601, MAXINDIDEVICE, "%Y-%m-%dT%H:%M:%S", tp);
+}
+
+// Updated at next startExposure() or startStream()
+bool QHYCCD::SetCaptureFormat(uint8_t index)
+{
+    bitsPerPixel = index ? 8 : 16;
+    ignoreBitsPerPixel = false;
+    return true;
 }
