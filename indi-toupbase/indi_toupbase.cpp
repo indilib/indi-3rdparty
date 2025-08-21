@@ -39,7 +39,7 @@
 
 static class Loader
 {
-        std::deque<std::unique_ptr<ToupBase>> cameras;
+        std::deque<std::unique_ptr<ToupBase >> cameras;
         XP(DeviceV2) pCameraInfo[CP(MAX)];
     public:
         Loader()
@@ -123,7 +123,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     m_BinningModeSP[TC_BINNING_AVG].fill("TC_BINNING_AVG", "AVG", ISS_OFF);
     m_BinningModeSP[TC_BINNING_ADD].fill("TC_BINNING_ADD", "Add", ISS_ON);
-    m_BinningModeSP.fill(getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
+    m_BinningModeSP.fill(getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO, ISR_1OFMANY, 0,
+                         IPS_IDLE);
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
@@ -149,7 +150,8 @@ bool ToupBase::initProperties()
     {
         nsp = 8;
         m_ControlNP[TC_HUE].fill("Hue", "Hue", "%.f", CP(HUE_MIN), CP(HUE_MAX), 1, CP(HUE_DEF));
-        m_ControlNP[TC_SATURATION].fill("Saturation", "Saturation", "%.f", CP(SATURATION_MIN), CP(SATURATION_MAX), 1, CP(SATURATION_DEF));
+        m_ControlNP[TC_SATURATION].fill("Saturation", "Saturation", "%.f", CP(SATURATION_MIN), CP(SATURATION_MAX), 1,
+                                        CP(SATURATION_DEF));
     }
     m_ControlNP[TC_BRIGHTNESS].fill("Brightness", "Brightness", "%.f", CP(BRIGHTNESS_MIN), CP(BRIGHTNESS_MAX), 1, 0);
     m_ControlNP[TC_GAMMA].fill("Gamma", "Gamma", "%.f", CP(GAMMA_MIN), CP(GAMMA_MAX), 1, CP(GAMMA_DEF));
@@ -259,7 +261,8 @@ bool ToupBase::initProperties()
             ++nsp;
         }
         m_GainConversionSP.resize(nsp);
-        m_GainConversionSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        m_GainConversionSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
+                                IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -279,7 +282,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     m_HighFullwellSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
     m_HighFullwellSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
-    m_HighFullwellSP.fill(getDeviceName(), "TC_HIGHFULLWELL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    m_HighFullwellSP.fill(getDeviceName(), "TC_HIGHFULLWELL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
+                          IPS_IDLE);
 
     if (m_Instance->model->flag & CP(FLAG_FAN))
     {
@@ -295,7 +299,8 @@ bool ToupBase::initProperties()
             for (uint32_t i = 1; i <= m_Instance->model->maxfanspeed; ++i)
                 m_FanSP[i].fill((std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(), ISS_OFF);
         }
-        m_FanSP.fill(getDeviceName(), "TC_FAN_SPEED", (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        m_FanSP.fill(getDeviceName(), "TC_FAN_SPEED", (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed", CONTROL_TAB,
+                     IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -1077,21 +1082,29 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         if (m_TimeoutFactorNP.isNameMatch(name))
         {
-            auto oldFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
-            m_TimeoutFactorNP.update(values, names, n);
-            auto newFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
-
-            if (oldFactor != newFactor)
+            if (m_TimeoutFactorNP.isUpdated(values, names, n))
             {
-                if (oldFactor == 0 && newFactor != 0)
-                    LOG_INFO("Timeout handling is enabled.");
-                else if (oldFactor != 0 && newFactor == 0)
-                    LOG_INFO("Timeout handling is disabled.");
-            }
+                auto oldFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
+                m_TimeoutFactorNP.update(values, names, n);
+                auto newFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
 
-            m_TimeoutFactorNP.setState(IPS_OK);
-            m_TimeoutFactorNP.apply();
-            saveConfig(m_TimeoutFactorNP);
+                if (oldFactor != newFactor)
+                {
+                    if (oldFactor == 0 && newFactor != 0)
+                        LOG_INFO("Timeout handling is enabled.");
+                    else if (oldFactor != 0 && newFactor == 0)
+                        LOG_INFO("Timeout handling is disabled.");
+                }
+
+                m_TimeoutFactorNP.setState(IPS_OK);
+                m_TimeoutFactorNP.apply();
+                saveConfig(m_TimeoutFactorNP);
+            }
+            else
+            {
+                m_TimeoutFactorNP.setState(IPS_OK);
+                m_TimeoutFactorNP.apply();
+            }
             return true;
         }
     }
@@ -1138,7 +1151,6 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             {
                 m_CoolerSP.update(states, names, n);
                 activateCooler(m_CoolerSP[INDI_ENABLED].getState() == ISS_ON);
-                saveConfig(m_CoolerSP);
             }
             else
             {
@@ -1196,7 +1208,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                     m_LowNoiseSP.setState(IPS_OK);
                 else
                 {
-                    LOGF_ERROR("Failed to set low noise %s. %s", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
+                    LOGF_ERROR("Failed to set low noise %s. %s", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                               errorCodes(rc).c_str());
                     m_LowNoiseSP.setState(IPS_ALERT);
                     m_LowNoiseSP.reset();
                     m_LowNoiseSP[prevIndex].setState(ISS_ON);
@@ -1382,22 +1395,30 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         if (m_BBAutoSP.isNameMatch(name))
         {
-            m_BBAutoSP.update(states, names, n);
-            HRESULT rc = FP(AbbOnce(m_Handle, nullptr, nullptr));
-            m_BBAutoSP.reset();
-            if (SUCCEEDED(rc))
+            if (m_BBAutoSP.isUpdated(states, names, n))
             {
-                LOG_INFO("Auto black balance once");
-                m_BBAutoSP.setState(IPS_OK);
+                m_BBAutoSP.update(states, names, n);
+                HRESULT rc = FP(AbbOnce(m_Handle, nullptr, nullptr));
+                m_BBAutoSP.reset();
+                if (SUCCEEDED(rc))
+                {
+                    LOG_INFO("Auto black balance once");
+                    m_BBAutoSP.setState(IPS_OK);
+                }
+                else
+                {
+                    LOGF_ERROR("Failed to auto black balance. %s", errorCodes(rc).c_str());
+                    m_BBAutoSP.setState(IPS_ALERT);
+                }
+
+                m_BBAutoSP.apply();
+                saveConfig(m_BBAutoSP);
             }
             else
             {
-                LOGF_ERROR("Failed to auto black balance. %s", errorCodes(rc).c_str());
-                m_BBAutoSP.setState(IPS_ALERT);
+                m_BBAutoSP.setState(IPS_OK);
+                m_BBAutoSP.apply();
             }
-
-            m_BBAutoSP.apply();
-            saveConfig(m_BBAutoSP);
             return true;
         }
 
@@ -1406,17 +1427,25 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         if (m_FanSP.isNameMatch(name))
         {
-            m_FanSP.update(states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FAN), m_FanSP.findOnSwitchIndex()));
-            if (SUCCEEDED(rc))
-                m_FanSP.setState(IPS_OK);
+            if (m_FanSP.isUpdated(states, names, n))
+            {
+                m_FanSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FAN), m_FanSP.findOnSwitchIndex()));
+                if (SUCCEEDED(rc))
+                    m_FanSP.setState(IPS_OK);
+                else
+                {
+                    m_FanSP.setState(IPS_ALERT);
+                    LOGF_ERROR("Failed to set fan. %s", errorCodes(rc).c_str());
+                }
+                m_FanSP.apply();
+                saveConfig(m_FanSP);
+            }
             else
             {
-                m_FanSP.setState(IPS_ALERT);
-                LOGF_ERROR("Failed to set fan. %s", errorCodes(rc).c_str());
+                m_FanSP.setState(IPS_OK);
+                m_FanSP.apply();
             }
-            m_FanSP.apply();
-            saveConfig(m_FanSP);
             return true;
         }
 
@@ -1425,17 +1454,25 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         if (m_HeatSP.isNameMatch(name))
         {
-            m_HeatSP.update(states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HEAT), m_HeatSP.findOnSwitchIndex()));
-            if (SUCCEEDED(rc))
-                m_HeatSP.setState(IPS_OK);
+            if (m_HeatSP.isUpdated(states, names, n))
+            {
+                m_HeatSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HEAT), m_HeatSP.findOnSwitchIndex()));
+                if (SUCCEEDED(rc))
+                    m_HeatSP.setState(IPS_OK);
+                else
+                {
+                    LOGF_ERROR("Failed to set heat. %s", errorCodes(rc).c_str());
+                    m_HeatSP.setState(IPS_ALERT);
+                }
+                m_HeatSP.apply();
+                saveConfig(m_HeatSP);
+            }
             else
             {
-                LOGF_ERROR("Failed to set heat. %s", errorCodes(rc).c_str());
-                m_HeatSP.setState(IPS_ALERT);
+                m_HeatSP.setState(IPS_OK);
+                m_HeatSP.apply();
             }
-            m_HeatSP.apply();
-            saveConfig(m_HeatSP);
             return true;
         }
     }
@@ -1970,8 +2007,6 @@ bool ToupBase::saveConfigItems(FILE * fp)
     INDI::CCD::saveConfigItems(fp);
 
     m_TimeoutFactorNP.save(fp);
-    if (HasCooler())
-        m_CoolerSP.save(fp);
 
     m_ControlNP.save(fp);
     m_OffsetNP.save(fp);
