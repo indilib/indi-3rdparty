@@ -650,7 +650,7 @@ void ToupBase::setupParams()
     FP(get_eSize(m_Handle, &currentResolutionIndex));
     // If we have a config resolution index, then prefer it over the current resolution index.
     finalResolutionIndex = (m_ConfigResolutionIndex >= 0
-                            && m_ConfigResolutionIndex < m_ResolutionSP.size()) ? m_ConfigResolutionIndex : currentResolutionIndex;
+                            && m_ConfigResolutionIndex < static_cast<int>(m_ResolutionSP.size())) ? m_ConfigResolutionIndex : currentResolutionIndex;
     // In case there is NO previous resolution set
     // then select the LOWER resolution on arm architecture
     // since this has less chance of failure. If the user explicitly selects any resolution
