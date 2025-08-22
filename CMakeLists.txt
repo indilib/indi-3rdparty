@@ -5,6 +5,8 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 
 include(GNUInstallDirs)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 ## Some files like libnova.h and libusb.h are in in subdirectories of the include directory
 ## For the CMAKE Modules, they find the subdirectory, so then something like ln_types.h should be #include ln_types.h
 ## But some packages and drivers write their header files like this: #include libnova/ln_types.h
