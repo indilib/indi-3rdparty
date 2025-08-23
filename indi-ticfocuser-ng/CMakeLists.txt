@@ -137,8 +137,8 @@ if(NOT WITH_LIBTIC)
             ${CMAKE_CURRENT_SOURCE_DIR}/connection/driver_interfaces/PololuUsbInterface.cpp
             ${CMAKE_CURRENT_SOURCE_DIR}/connection/PololuUsbConnection.cpp
         )
-        if(LIBTIC-1_INCLUDE_DIR)
-            target_include_directories(indi_ticfocuser-ng PUBLIC ${LIBTIC-1_INCLUDE_DIR})
+        if(LIBTIC-1_INCLUDE_DIRS)
+            target_include_directories(indi_ticfocuser-ng PUBLIC ${LIBTIC-1_INCLUDE_DIRS})
         endif()
         target_link_libraries(indi_ticfocuser-ng "${LIBTIC-1_LIBRARIES}")
         set(WITH_LIBTIC TRUE)
