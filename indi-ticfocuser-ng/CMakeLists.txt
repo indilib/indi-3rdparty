@@ -41,7 +41,7 @@ message(STATUS "Found Libusb-1.0 via pkg-config: Includes=${LIBUSB1_PC_INCLUDE_D
 target_include_directories(indi_ticfocuser-ng PUBLIC ${LIBUSB1_PC_INCLUDE_DIRS})
 target_link_libraries(indi_ticfocuser-ng ${LIBUSB1_PC_LIBRARIES})
 
-pkg_check_modules(LIBUSBP_PC libusbp)
+pkg_check_modules(LIBUSBP_PC libusbp-1)
 
 if (NOT LIBUSBP_PC_FOUND)
     message(STATUS "LIBUSBP-1 (libusbp) not found on system via pkg-config. Trying to build from bundled libusbp.")
