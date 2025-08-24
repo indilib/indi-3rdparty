@@ -186,11 +186,10 @@ int PCA9685::setOff(uint8_t nPort)
 
 bool PCA9685::isPortOn(uint8_t nPort)
 {
-    int nErr = 0;
     int on_value = 0;
     int off_value = 0;
 
-    nErr = getPWM(nPort, on_value, off_value);
+    getPWM(nPort, on_value, off_value);
     return (on_value==4096);
 }
 
