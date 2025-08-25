@@ -24,6 +24,9 @@
 #include <indiccd.h>
 #include <inditimer.h>
 #include <indielapsedtimer.h>
+#include <indipropertyswitch.h>
+#include <indipropertynumber.h>
+#include <indipropertytext.h>
 #include "libtoupbase.h"
 
 class ToupBase : public INDI::CCD
@@ -121,8 +124,7 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Resolution
         //#############################################################################
-        ISwitch m_ResolutionS[CP(MAX)];
-        ISwitchVectorProperty m_ResolutionSP;
+        INDI::PropertySwitch m_ResolutionSP {0};
 
         //#############################################################################
         // Misc
@@ -147,28 +149,24 @@ class ToupBase : public INDI::CCD
         //#############################################################################
         // Properties
         //#############################################################################
-        ISwitchVectorProperty m_BinningModeSP;
-        ISwitch m_BinningModeS[2];
+        INDI::PropertySwitch m_BinningModeSP {2};
         typedef enum
         {
             TC_BINNING_AVG,
             TC_BINNING_ADD,
         } BINNING_MODE;
 
-        ISwitchVectorProperty m_HighFullwellSP;
-        ISwitch m_HighFullwellS[2];
+        INDI::PropertySwitch m_HighFullwellSP {2};
 
         bool activateCooler(bool enable);
 
-        ISwitchVectorProperty m_CoolerSP;
-        ISwitch m_CoolerS[2];
+        INDI::PropertySwitch m_CoolerSP {2};
 
         INDI::PropertyNumber m_CoolerNP {1};
 
         int32_t m_maxTecVoltage { -1 };
 
-        INumberVectorProperty m_ControlNP;
-        INumber m_ControlN[8];
+        INDI::PropertyNumber m_ControlNP {8};
         enum
         {
             TC_GAIN,
@@ -182,14 +180,11 @@ class ToupBase : public INDI::CCD
         };
 
         // Auto Black Balance
-        ISwitch m_BBAutoS;
-        ISwitchVectorProperty m_BBAutoSP;
+        INDI::PropertySwitch m_BBAutoSP {1};
 
-        ISwitch m_AutoExposureS[2];
-        ISwitchVectorProperty m_AutoExposureSP;
+        INDI::PropertySwitch m_AutoExposureSP {2};
 
-        INumber m_BlackBalanceN[3];
-        INumberVectorProperty m_BlackBalanceNP;
+        INDI::PropertyNumber m_BlackBalanceNP {3};
         enum
         {
             TC_BLACK_R,
@@ -198,12 +193,10 @@ class ToupBase : public INDI::CCD
         };
 
         // Offset (Black Level)
-        INumberVectorProperty m_OffsetNP;
-        INumber m_OffsetN [1];
+        INDI::PropertyNumber m_OffsetNP {1};
 
         // R/G/B/Gray low/high levels
-        INumber m_LevelRangeN[8];
-        INumberVectorProperty m_LevelRangeNP;
+        INDI::PropertyNumber m_LevelRangeNP {8};
         enum
         {
             TC_LO_R,
@@ -217,8 +210,7 @@ class ToupBase : public INDI::CCD
         };
 
         // White Balance
-        INumber m_WBN[3];
-        INumberVectorProperty m_WBNP;
+        INDI::PropertyNumber m_WBNP {3};
         enum
         {
             TC_WB_R,
@@ -227,28 +219,22 @@ class ToupBase : public INDI::CCD
         };
 
         // Auto White Balance
-        ISwitch m_WBAutoS;
-        ISwitchVectorProperty m_WBAutoSP;
+        INDI::PropertySwitch m_WBAutoSP {1};
 
         // Fan
-        ISwitch *m_FanS { nullptr };
-        ISwitchVectorProperty m_FanSP;
+        INDI::PropertySwitch m_FanSP {0};
 
         // Low Noise
-        ISwitchVectorProperty m_LowNoiseSP;
-        ISwitch m_LowNoiseS[2];
+        INDI::PropertySwitch m_LowNoiseSP {2};
 
         // Heat
-        ISwitchVectorProperty m_HeatSP;
-        ISwitch *m_HeatS { nullptr };
+        INDI::PropertySwitch m_HeatSP {0};
 
         // Tail Light
-        ISwitchVectorProperty m_TailLightSP;
-        ISwitch m_TailLightS[2];
+        INDI::PropertySwitch m_TailLightSP {2};
 
         // Camera Info
-        ITextVectorProperty m_CameraTP;
-        IText m_CameraT[6];
+        INDI::PropertyText m_CameraTP {6};
         enum
         {
             TC_CAMERA_MODEL,
@@ -260,8 +246,7 @@ class ToupBase : public INDI::CCD
         };
 
         // SDK Version
-        ITextVectorProperty m_SDKVersionTP;
-        IText m_SDKVersionT;
+        INDI::PropertyText m_SDKVersionTP {1};
 
         INDI::PropertyNumber  m_ADCDepthNP{1};
 
@@ -273,8 +258,7 @@ class ToupBase : public INDI::CCD
             TIMEOUT_FACTOR
         };
 
-        ISwitchVectorProperty m_GainConversionSP;
-        ISwitch m_GainConversionS[3];
+        INDI::PropertySwitch m_GainConversionSP {3};
         enum
         {
             GAIN_LOW,
