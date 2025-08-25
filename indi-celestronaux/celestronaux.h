@@ -291,8 +291,6 @@ class CelestronAUX :
         double m_GuideOffset[2] = {0, 0};
         double m_TrackRates[2] = {TRACKRATE_SIDEREAL, 0};
 
-        // approach distance
-        double Approach {1};
         TelescopePierSide m_TargetPierSide {PIER_UNKNOWN};
 
         // Tracking targets
