@@ -1,3 +1,10 @@
+indi-celestronaux (1.4.1) jammy; urgency=medium
+
+  * Add configurable approach direction with tracking vector support
+  * Bump version to 1.4.1
+
+ -- Paweł T. Jochym <jochym@gmail.com>  Mon, 26 Aug 2024 16:45:00 +0200
+
 indi-celestronaux (1.4) jammy; urgency=medium
 
   * Implement predictive tracking with PID corrections in AltAz mode (#960) by Paweł T. Jochym
