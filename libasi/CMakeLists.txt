@@ -1,6 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libasi)
 
+# Using ASI Camera SDK Version 1.39 updated on 2025-10-26
 # Using ASI Camera SDK Version 1.37 updated on 2024-12-03
 # Using ASI EFW SDK Version 1.7 updated on 2021-05-17
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
@@ -9,7 +10,7 @@ project (libasi)
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
-set (ASICAM_VERSION "1.37")
+set (ASICAM_VERSION "1.39")
 set (ASICAM_SOVERSION "1")
 
 set (ASIEFW_VERSION "1.7")
