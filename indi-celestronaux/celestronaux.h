@@ -402,6 +402,10 @@ class CelestronAUX :
         enum { SLEW_LIMIT_AXIS1_MIN, SLEW_LIMIT_AXIS1_MAX, SLEW_LIMIT_AXIS2_MIN, SLEW_LIMIT_AXIS2_MAX };
 
 
+        // Approach Direction
+        INDI::PropertySwitch ApproachDirectionSP {2};
+        enum { APPROACH_TRACKING_VECTOR, APPROACH_CONSTANT_OFFSET };
+
         // GPS emulator
         INDI::PropertySwitch GPSEmuSP {2};
         enum { GPSEMU_OFF, GPSEMU_ON };

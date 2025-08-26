@@ -356,6 +356,11 @@ bool CelestronAUX::initProperties()
     GPSEmuSP[GPSEMU_ON].fill("GPSEMU_ON", "ON", ISS_ON);
     GPSEmuSP.fill(getDeviceName(), "GPSEMU", "GPS Emu", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
+    // Approach Direction
+    ApproachDirectionSP[APPROACH_TRACKING_VECTOR].fill("APPROACH_TRACKING_VECTOR", "Tracking vector", ISS_ON);
+    ApproachDirectionSP[APPROACH_CONSTANT_OFFSET].fill("APPROACH_CONSTANT_OFFSET", "Constant offset", ISS_OFF);
+    ApproachDirectionSP.fill(getDeviceName(), "APPROACH_DIRECTION", "Approach Direction", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     /////////////////////////////////////////////////////////////////////////////////////
     /// Guide Tab
     /////////////////////////////////////////////////////////////////////////////////////
@@ -578,6 +583,7 @@ bool CelestronAUX::updateProperties()
 
 
         defineProperty(GPSEmuSP);
+        defineProperty(ApproachDirectionSP);
 
         // Encoders
         defineProperty(EncoderNP);
@@ -741,6 +747,7 @@ bool CelestronAUX::updateProperties()
         deleteProperty(SlewLimitPositionNP);
 
         deleteProperty(GPSEmuSP);
+        deleteProperty(ApproachDirectionSP);
 
         deleteProperty(EncoderNP);
         deleteProperty(AngleNP);
@@ -775,6 +782,7 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     CordWrapPositionSP.save(fp);
     CordWrapBaseSP.save(fp);
     GPSEmuSP.save(fp);
+    ApproachDirectionSP.save(fp);
 
     Axis1LimitToggleSP.save(fp);
     Axis2LimitToggleSP.save(fp);
@@ -970,6 +978,17 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 
         //            return true;
         //        }
+
+        // Approach Direction
+        if (ApproachDirectionSP.isNameMatch(name))
+        {
+            ApproachDirectionSP.update(states, names, n);
+            ApproachDirectionSP.setState(IPS_OK);
+            ApproachDirectionSP.apply();
+            saveConfig(true, ApproachDirectionSP.getName());
+            LOGF_INFO("Approach direction set to: %s", ApproachDirectionSP.findOnSwitch()->getLabel());
+            return true;
+        }
 
         // Port Type
         if (PortTypeSP.isNameMatch(name))
@@ -1575,7 +1594,7 @@ bool CelestronAUX::ReadScopeStatus()
     {
         if (isSlewing() == false)
         {
-            // Stages are GOTO --> SLEWING FAST --> APPRAOCH --> SLEWING SLOW --> TRACKING
+            // Stages are GOTO --> SLEWING FAST --> APPROACH --> SLEWING SLOW --> TRACKING
             if (ScopeStatus == SLEWING_FAST)
             {
                 ScopeStatus = APPROACH;
@@ -1671,10 +1690,46 @@ bool CelestronAUX::Goto(double ra, double dec)
     TelescopeDirectionVector TDV;
     INDI::IEquatorialCoordinates MountRADE { ra, dec };
 
+    double julianOffsetForGoto = 0.0;
+    double encOffsetForGoto = 0.0;
+    double az_dir = 1.0;  // Default direction multiplier for AZ
+    double alt_dir = 1.0; // Default direction multiplier for ALT
+    
+    // Only apply offset for the initial fast slew, not for iterative approaches
+    if (ScopeStatus != APPROACH)
+    {
+        if (ApproachDirectionSP[APPROACH_TRACKING_VECTOR].getState() == ISS_ON)
+        {
+            // Time-based tracking vector approach
+            const double deltaT_seconds = 120.0; // Time in seconds to rewind the position
+            julianOffsetForGoto = -deltaT_seconds / (24.0 * 60 * 60); // Convert to Julian days
+            
+            // Calculate tracking direction
+            TelescopeDirectionVector TDV_now, TDV_offset;
+            if (TransformCelestialToTelescope(ra, dec, 0.0, TDV_now) &&
+                TransformCelestialToTelescope(ra, dec, julianOffsetForGoto, TDV_offset))
+            {
+                INDI::IHorizontalCoordinates now {0, 0}, offset {0, 0};
+                AltitudeAzimuthFromTelescopeDirectionVector(TDV_now, now);
+                AltitudeAzimuthFromTelescopeDirectionVector(TDV_offset, offset);
+                
+                // Calculate direction coefficients based on tracking motion
+                az_dir = (offset.azimuth > now.azimuth) ? 1.0 : -1.0;
+                alt_dir = (offset.altitude > now.altitude) ? 1.0 : -1.0;
+            }
+        }
+        
+        // Set the base offset (0.5 degrees in steps) for both approaches
+        encOffsetForGoto = 0.5 * STEPS_PER_DEGREE;
+    }
+    
     // Transform Celestial to Telescope coordinates.
     // We have no good way to estimate how long will the mount takes to reach target (with deceleration,
     // and not just speed). So we will use iterative GOTO once the first GOTO is complete.
-    if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
+    // Stages are GOTO --> SLEWING FAST --> APPROACH --> SLEWING SLOW --> TRACKING
+    // For the initial GOTO, we apply the JulianOffset. For subsequent APPROACH, we use 0.0.
+    // This is handled by the 'julianOffsetForGoto' variable.
+    if (TransformCelestialToTelescope(ra, dec, julianOffsetForGoto, TDV))
     {
         // For Alt-Az Mounts, we get the Mount AltAz coords
         if (m_MountType == ALT_AZ)
@@ -1739,8 +1794,14 @@ bool CelestronAUX::Goto(double ra, double dec)
            axis2Steps);
 
     // Slew to physical steps.
-    slewTo(AXIS_AZ, axis1Steps, ScopeStatus != APPROACH);
-    slewTo(AXIS_ALT, axis2Steps, ScopeStatus != APPROACH);
+    // We approach from the selected/calculated direction
+    if (ScopeStatus != APPROACH)
+    {
+        DEBUGF(INDI::Logger::DBG_DEBUG, "Applying offset - az_dir: %.1f, alt_dir: %.1f, offset: %.2f steps", 
+               az_dir, alt_dir, encOffsetForGoto);
+    }
+    slewTo(AXIS_AZ, axis1Steps - (az_dir * encOffsetForGoto), ScopeStatus != APPROACH);
+    slewTo(AXIS_ALT, axis2Steps - (alt_dir * encOffsetForGoto), ScopeStatus != APPROACH);
 
     ScopeStatus = (ScopeStatus == APPROACH) ? SLEWING_SLOW : SLEWING_FAST;
     TrackState = SCOPE_SLEWING;
@@ -2038,8 +2099,8 @@ void CelestronAUX::TimerHit()
                 predRate[AXIS_ALT] = 3600 * predRate[AXIS_ALT] * 1024;
 
                 // Now add the guiding offsets.
-                targetMountAxisCoordinates.azimuth += m_GuideOffset[AXIS_AZ];
-                targetMountAxisCoordinates.altitude += m_GuideOffset[AXIS_ALT];
+                    targetMountAxisCoordinates.azimuth += m_GuideOffset[AXIS_AZ];
+                    targetMountAxisCoordinates.altitude += m_GuideOffset[AXIS_ALT];
 
                 // If we had guiding pulses active, mark them as complete
                 if (GuideWENP.getState() == IPS_BUSY)
