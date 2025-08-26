@@ -1690,7 +1690,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     TelescopeDirectionVector TDV;
     INDI::IEquatorialCoordinates MountRADE { ra, dec };
 
-    double julianOffsetForGoto = 0.0;
+    // double julianOffsetForGoto = 0.0;
     double encOffsetForGoto = 0.0;
     double az_dir = 1.0;  // Default direction multiplier for AZ
     double alt_dir = 1.0; // Default direction multiplier for ALT
@@ -1701,8 +1701,8 @@ bool CelestronAUX::Goto(double ra, double dec)
         if (ApproachDirectionSP[APPROACH_TRACKING_VECTOR].getState() == ISS_ON)
         {
             // Time-based tracking vector approach
-            const double deltaT_seconds = 120.0; // Time in seconds to rewind the position
-            julianOffsetForGoto = -deltaT_seconds / (24.0 * 60 * 60); // Convert to Julian days
+            const double deltaT_seconds = 60.0; // Time in seconds to rewind the position
+            double julianOffsetForGoto = -deltaT_seconds / (24.0 * 60 * 60); // Convert to Julian days
             
             // Calculate tracking direction
             TelescopeDirectionVector TDV_now, TDV_offset;
@@ -1714,8 +1714,8 @@ bool CelestronAUX::Goto(double ra, double dec)
                 AltitudeAzimuthFromTelescopeDirectionVector(TDV_offset, offset);
                 
                 // Calculate direction coefficients based on tracking motion
-                az_dir = (offset.azimuth > now.azimuth) ? 1.0 : -1.0;
-                alt_dir = (offset.altitude > now.altitude) ? 1.0 : -1.0;
+                az_dir = (offset.azimuth > now.azimuth) ? -1.0 : 1.0;
+                alt_dir = (offset.altitude > now.altitude) ? -1.0 : 1.0;
             }
         }
         
@@ -1727,9 +1727,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     // We have no good way to estimate how long will the mount takes to reach target (with deceleration,
     // and not just speed). So we will use iterative GOTO once the first GOTO is complete.
     // Stages are GOTO --> SLEWING FAST --> APPROACH --> SLEWING SLOW --> TRACKING
-    // For the initial GOTO, we apply the JulianOffset. For subsequent APPROACH, we use 0.0.
-    // This is handled by the 'julianOffsetForGoto' variable.
-    if (TransformCelestialToTelescope(ra, dec, julianOffsetForGoto, TDV))
+    if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
     {
         // For Alt-Az Mounts, we get the Mount AltAz coords
         if (m_MountType == ALT_AZ)
