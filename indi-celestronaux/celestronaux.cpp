@@ -985,7 +985,7 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             ApproachDirectionSP.update(states, names, n);
             ApproachDirectionSP.setState(IPS_OK);
             ApproachDirectionSP.apply();
-            saveConfig(true, ApproachDirectionSP.getName());
+            saveConfig(ApproachDirectionSP);
             LOGF_INFO("Approach direction set to: %s", ApproachDirectionSP.findOnSwitch()->getLabel());
             return true;
         }
@@ -1690,7 +1690,6 @@ bool CelestronAUX::Goto(double ra, double dec)
     TelescopeDirectionVector TDV;
     INDI::IEquatorialCoordinates MountRADE { ra, dec };
 
-    // double julianOffsetForGoto = 0.0;
     double encOffsetForGoto = 0.0;
     double az_dir = 1.0;  // Default direction multiplier for AZ
     double alt_dir = 1.0; // Default direction multiplier for ALT
