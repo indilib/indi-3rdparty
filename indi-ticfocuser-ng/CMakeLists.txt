@@ -52,8 +52,8 @@ if (NOT LIBUSBP_PC_FOUND)
 
         add_subdirectory("${LIBUSBP_ROOT_DIR}" libusbp_build_dir)
 
-        if(TARGET usbp)
-            set(LIBUSBP_PC_LIBRARIES usbp)
+        if(TARGET usbp-1)
+            set(LIBUSBP_PC_LIBRARIES usbp-1)
             set(LIBUSBP_PC_INCLUDE_DIRS "${LIBUSBP_ROOT_DIR}/include")
             set(LIBUSBP_PC_FOUND TRUE) # Marque comme trouvé
             message(STATUS "Successfully configured using bundled libusbp library 'usbp'.")
