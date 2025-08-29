@@ -28,7 +28,7 @@ if(UNIX OR APPLE OR ANDROID)
   # not using optimization when testing for libraries, hence breaking the build.
   check_c_compiler_flag("-Werror -D_FORTIFY_SOURCE=2" COMPATIBLE_FORTIFY_SOURCE)
   if(
-    ${COMPATIBLE_FORTIFY_SOURCE}
+    COMPATIBLE_FORTIFY_SOURCE
     AND NOT CMAKE_BUILD_TYPE MATCHES "Debug"
   )
     set(SEC_COMP_FLAGS "-D_FORTIFY_SOURCE=2")
