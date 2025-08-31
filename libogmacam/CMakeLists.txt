@@ -1,48 +1,65 @@
 cmake_minimum_required(VERSION 3.16)
-project (libogmacam)
+project(libogmacam)
 
-set (LIBOGMACAM_VERSION "59.29176")
-set (LIBOGMACAM_SOVERSION "59")
+set(LIBOGMACAM_VERSION "59.29176")
+set(LIBOGMACAM_SOVERSION "59")
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+  if(NOT UDEVRULES_INSTALL_DIR)
+    set(
+      UDEVRULES_INSTALL_DIR
+      "/usr/lib/udev/rules.d"
+      CACHE STRING
+      "Base directory for udev rules"
+    )
+  endif()
+endif()
 
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-include (GNUInstallDirs)
-include (InstallImported)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include(GNUInstallDirs)
+include(InstallImported)
 
-add_library (ogmacam SHARED IMPORTED)
+add_library(ogmacam SHARED IMPORTED)
 
-set_target_properties (ogmacam PROPERTIES VERSION ${LIBOGMACAM_VERSION} SOVERSION ${LIBOGMACAM_SOVERSION})
+set_target_properties(
+  ogmacam
+  PROPERTIES VERSION ${LIBOGMACAM_VERSION} SOVERSION ${LIBOGMACAM_SOVERSION}
+)
 
-if (APPLE)
+if(APPLE)
+  set_property(TARGET ogmacam PROPERTY IMPORTED_LOCATION "mac/libogmacam.bin")
 
-  set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "mac/libogmacam.bin")
-
-  FIX_MACOS_LIBRARIES("libogmacam" "mac/libogmacam.bin" "OGMACAM")
-
-elseif (UNIX AND NOT WIN32)
-
-  if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "armhf/libogmacam.bin")
-  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "arm64/libogmacam.bin")
-  elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET ogmacam PROPERTY IMPORTED_LOCATION "x64/libogmacam.bin")
-  else ()
-    message (FATAL_ERROR "unsupported architecture.")
-  endif ()
-
-  # Install udev rules
-  if (INDI_INSTALL_UDEV_RULES)
-    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-    install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-ogmacam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  fix_macos_libraries("libogmacam" "mac/libogmacam.bin" "OGMACAM")
+elseif(UNIX AND NOT WIN32)
+  if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
+    set_property(
+      TARGET ogmacam
+      PROPERTY IMPORTED_LOCATION "armhf/libogmacam.bin"
+    )
+  elseif(CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set_property(
+      TARGET ogmacam
+      PROPERTY IMPORTED_LOCATION "arm64/libogmacam.bin"
+    )
+  elseif(CMAKE_SIZEOF_VOID_P MATCHES "8")
+    set_property(TARGET ogmacam PROPERTY IMPORTED_LOCATION "x64/libogmacam.bin")
+  else()
+    message(FATAL_ERROR "unsupported architecture.")
   endif()
 
-endif ()
+  # Install udev rules
+  if(INDI_INSTALL_UDEV_RULES)
+    install(
+      FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-ogmacam.rules
+      DESTINATION ${UDEVRULES_INSTALL_DIR}
+    )
+  endif()
+endif()
 
 # Install header files
-install (FILES ogmacam.h DESTINATION include/libogmacam)
+install(FILES ogmacam.h DESTINATION include/libogmacam)
 
 # Install library
-install_imported (TARGETS ogmacam DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install_imported(TARGETS ogmacam DESTINATION ${CMAKE_INSTALL_LIBDIR})

@@ -1,51 +1,88 @@
 cmake_minimum_required(VERSION 3.16)
-project (libricohcamerasdk)
+project(libricohcamerasdk)
 
-set (LIBPENTAX_VERSION "1.1.0")
-set (LIBPENTAX_SOVERSION "1")
-set (LIBMTP_VERSION "9.3.0")
-set (LIBMTP_SOVERSION "9")
+set(LIBPENTAX_VERSION "1.1.0")
+set(LIBPENTAX_SOVERSION "1")
+set(LIBMTP_VERSION "9.3.0")
+set(LIBMTP_SOVERSION "9")
 
-option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+if(${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+  option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+  if(NOT UDEVRULES_INSTALL_DIR)
+    set(
+      UDEVRULES_INSTALL_DIR
+      "/usr/lib/udev/rules.d"
+      CACHE STRING
+      "Base directory for udev rules"
+    )
+  endif()
+endif()
 
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
-list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
-include (GNUInstallDirs)
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
+include(GNUInstallDirs)
 include(CMakeCommon)
-include (InstallImported)
+include(InstallImported)
 
-add_library (RicohCameraSDKCpp SHARED IMPORTED)
-add_library (mtpricoh          SHARED IMPORTED)
+add_library(RicohCameraSDKCpp SHARED IMPORTED)
+add_library(mtpricoh SHARED IMPORTED)
 
-set_target_properties (RicohCameraSDKCpp PROPERTIES VERSION ${LIBPENTAX_VERSION} SOVERSION ${LIBPENTAX_SOVERSION})
-set_target_properties (mtpricoh          PROPERTIES VERSION ${LIBMTP_VERSION} SOVERSION ${LIBMTP_SOVERSION})
+set_target_properties(
+  RicohCameraSDKCpp
+  PROPERTIES VERSION ${LIBPENTAX_VERSION} SOVERSION ${LIBPENTAX_SOVERSION}
+)
+set_target_properties(
+  mtpricoh
+  PROPERTIES VERSION ${LIBMTP_VERSION} SOVERSION ${LIBMTP_SOVERSION}
+)
 
-if (UNIX AND NOT WIN32 AND NOT APPLE)
-
-  if (${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)")
-    set_property (TARGET RicohCameraSDKCpp PROPERTY IMPORTED_LOCATION "lib/x64/libRicohCameraSDKCpp.bin")
-    set_property (TARGET mtpricoh          PROPERTY IMPORTED_LOCATION "lib/x64/libmtpricoh.bin")
+if(UNIX AND NOT WIN32 AND NOT APPLE)
+  if(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^(x86_64|amd64)")
+    set_property(
+      TARGET RicohCameraSDKCpp
+      PROPERTY IMPORTED_LOCATION "lib/x64/libRicohCameraSDKCpp.bin"
+    )
+    set_property(
+      TARGET mtpricoh
+      PROPERTY IMPORTED_LOCATION "lib/x64/libmtpricoh.bin"
+    )
   elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^i[3-6]86")
-    set_property (TARGET RicohCameraSDKCpp PROPERTY IMPORTED_LOCATION "lib/x86/libRicohCameraSDKCpp.bin")
-    set_property (TARGET mtpricoh          PROPERTY IMPORTED_LOCATION "lib/x86/libmtpricoh.bin")
+    set_property(
+      TARGET RicohCameraSDKCpp
+      PROPERTY IMPORTED_LOCATION "lib/x86/libRicohCameraSDKCpp.bin"
+    )
+    set_property(
+      TARGET mtpricoh
+      PROPERTY IMPORTED_LOCATION "lib/x86/libmtpricoh.bin"
+    )
   elseif(${CMAKE_SYSTEM_PROCESSOR} MATCHES "^arm")
-    set_property (TARGET RicohCameraSDKCpp PROPERTY IMPORTED_LOCATION "lib/armv7l/libRicohCameraSDKCpp.bin")
-    set_property (TARGET mtpricoh          PROPERTY IMPORTED_LOCATION "lib/armv7l/libmtpricoh.bin")
-  else ()
+    set_property(
+      TARGET RicohCameraSDKCpp
+      PROPERTY IMPORTED_LOCATION "lib/armv7l/libRicohCameraSDKCpp.bin"
+    )
+    set_property(
+      TARGET mtpricoh
+      PROPERTY IMPORTED_LOCATION "lib/armv7l/libmtpricoh.bin"
+    )
+  else()
     message(FATAL_ERROR "Unsupported architecture: ${CMAKE_SYSTEM_PROCESSOR}")
   endif()
 
   # Install udev rules
-  if (INDI_INSTALL_UDEV_RULES)
-    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-    install (FILES 99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-  endif ()
-
-endif ()
+  if(INDI_INSTALL_UDEV_RULES)
+    install(FILES 99-pentax.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif()
+endif()
 
 # Install header files
-install (FILES include/ricoh_camera_sdk.hpp DESTINATION include/libricohcamerasdk)
-install (DIRECTORY include/ricoh_camera_sdk DESTINATION include/libricohcamerasdk)
+install(
+  FILES include/ricoh_camera_sdk.hpp
+  DESTINATION include/libricohcamerasdk
+)
+install(
+  DIRECTORY include/ricoh_camera_sdk
+  DESTINATION include/libricohcamerasdk
+)
 
 # Install library
-install_imported (TARGETS RicohCameraSDKCpp mtpricoh DESTINATION ${CMAKE_INSTALL_LIBDIR})
+install_imported(TARGETS RicohCameraSDKCpp mtpricoh DESTINATION ${CMAKE_INSTALL_LIBDIR})
