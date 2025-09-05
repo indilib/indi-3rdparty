@@ -53,23 +53,23 @@ elseif (APPLE)
     mac/iokit_mac.c)
 endif ()
 
-add_library (usbp ${sources})
+add_library (usbp-1 ${sources})
 
-target_include_directories (usbp PUBLIC
+target_include_directories (usbp-1 PUBLIC
   "${CMAKE_CURRENT_SOURCE_DIR}/../include"
   "${CMAKE_CURRENT_SOURCE_DIR}"
   "${CMAKE_CURRENT_BINARY_DIR}"
 )
 
-get_target_property(USBP_TYPE usbp TYPE)
+get_target_property(USBP_TYPE usbp-1 TYPE)
 
 if (USBP_TYPE STREQUAL STATIC_LIBRARY)
-  target_compile_definitions(usbp PUBLIC LIBUSBP_STATIC)
+  target_compile_definitions(usbp-1 PUBLIC LIBUSBP_STATIC)
   set(PC_MORE_CFLAGS -DLIBUSBP_STATIC)
 endif ()
 
 if (WIN32)
-  target_link_libraries (usbp setupapi winusb uuid ole32)
+  target_link_libraries (usbp-1 setupapi winusb uuid ole32)
   if (USBP_TYPE STREQUAL STATIC_LIBRARY)
     set (PC_MORE_LIBS "-lsetupapi -lwinusb -luuid -lole32")
   endif ()
@@ -80,7 +80,7 @@ elseif (LINUX)
   endif ()
   string (REPLACE ";" " " LIBUDEV_CFLAGS "${LIBUDEV_CFLAGS}")
   set (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${LIBUDEV_CFLAGS}")
-  target_link_libraries (usbp udev)
+  target_link_libraries (usbp-1 udev)
   if (USBP_TYPE STREQUAL STATIC_LIBRARY)
     set (PC_REQUIRES "libudev")
   endif ()
@@ -91,7 +91,7 @@ elseif (APPLE)
   endif ()
 endif ()
 
-set_target_properties(usbp PROPERTIES
+set_target_properties(usbp-1 PROPERTIES
   OUTPUT_NAME usbp-${LIBUSBP_VERSION_MAJOR}
   SOVERSION ${LIBUSBP_VERSION}
   VERSION ${LIBUSBP_VERSION}
@@ -118,7 +118,7 @@ configure_file (
 install(FILES "${CMAKE_CURRENT_BINARY_DIR}/libusbp-${LIBUSBP_VERSION_MAJOR}.pc"
   DESTINATION lib/pkgconfig)
 
-install(TARGETS usbp
+install(TARGETS usbp-1
   RUNTIME DESTINATION bin
   LIBRARY DESTINATION lib
   ARCHIVE DESTINATION lib)

@@ -291,8 +291,6 @@ class CelestronAUX :
         double m_GuideOffset[2] = {0, 0};
         double m_TrackRates[2] = {TRACKRATE_SIDEREAL, 0};
 
-        // approach distance
-        double Approach {1};
         TelescopePierSide m_TargetPierSide {PIER_UNKNOWN};
 
         // Tracking targets
@@ -403,6 +401,10 @@ class CelestronAUX :
         INDI::PropertyNumber SlewLimitPositionNP {4};
         enum { SLEW_LIMIT_AXIS1_MIN, SLEW_LIMIT_AXIS1_MAX, SLEW_LIMIT_AXIS2_MIN, SLEW_LIMIT_AXIS2_MAX };
 
+
+        // Approach Direction
+        INDI::PropertySwitch ApproachDirectionSP {2};
+        enum { APPROACH_TRACKING_VECTOR, APPROACH_CONSTANT_OFFSET };
 
         // GPS emulator
         INDI::PropertySwitch GPSEmuSP {2};

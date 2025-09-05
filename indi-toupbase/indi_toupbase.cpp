@@ -39,7 +39,7 @@
 
 static class Loader
 {
-        std::deque<std::unique_ptr<ToupBase>> cameras;
+        std::deque<std::unique_ptr<ToupBase >> cameras;
         XP(DeviceV2) pCameraInfo[CP(MAX)];
     public:
         Loader()
@@ -106,8 +106,6 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance, const std::string &name) : m_In
 
 ToupBase::~ToupBase()
 {
-    delete[] m_FanS;
-    delete[] m_HeatS;
 }
 
 const char *ToupBase::getDefaultName()
@@ -123,20 +121,19 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Binning Mode Control
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_BinningModeS[TC_BINNING_AVG], "TC_BINNING_AVG", "AVG", ISS_OFF);
-    IUFillSwitch(&m_BinningModeS[TC_BINNING_ADD], "TC_BINNING_ADD", "Add", ISS_ON);
-    IUFillSwitchVector(&m_BinningModeSP, m_BinningModeS, 2, getDeviceName(), "CCD_BINNING_MODE", "Binning Mode",
-                       IMAGE_SETTINGS_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
+    m_BinningModeSP[TC_BINNING_AVG].fill("TC_BINNING_AVG", "AVG", ISS_OFF);
+    m_BinningModeSP[TC_BINNING_ADD].fill("TC_BINNING_ADD", "Add", ISS_ON);
+    m_BinningModeSP.fill(getDeviceName(), "CCD_BINNING_MODE", "Binning Mode", IMAGE_SETTINGS_TAB, IP_WO, ISR_1OFMANY, 0,
+                         IPS_IDLE);
 
     if (m_Instance->model->flag & CP(FLAG_TEC_ONOFF))
     {
         ///////////////////////////////////////////////////////////////////////////////////
         /// Cooler Control
         ///////////////////////////////////////////////////////////////////////////////////
-        IUFillSwitch(&m_CoolerS[INDI_ENABLED], "COOLER_ON", "ON", ISS_ON);
-        IUFillSwitch(&m_CoolerS[INDI_DISABLED], "COOLER_OFF", "OFF", ISS_OFF);
-        IUFillSwitchVector(&m_CoolerSP, m_CoolerS, 2, getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY,
-                           0, IPS_BUSY);
+        m_CoolerSP[INDI_ENABLED].fill("COOLER_ON", "ON", ISS_ON);
+        m_CoolerSP[INDI_DISABLED].fill("COOLER_OFF", "OFF", ISS_OFF);
+        m_CoolerSP.fill(getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_BUSY);
 
         m_CoolerNP[0].fill("COOLER_POWER", "Percent", "%.f", 0, 100, 10, 0);
         m_CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooler Power", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
@@ -145,24 +142,23 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     /// Controls
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_ControlN[TC_GAIN], "Gain", "Gain", "%.f", CP(EXPOGAIN_MIN), CP(EXPOGAIN_MIN), 1, CP(EXPOGAIN_MIN));
-    IUFillNumber(&m_ControlN[TC_CONTRAST], "Contrast", "Contrast", "%.f", CP(CONTRAST_MIN), CP(CONTRAST_MAX), 1,
-                 CP(CONTRAST_DEF));
+    m_ControlNP[TC_GAIN].fill("Gain", "Gain", "%.f", CP(EXPOGAIN_MIN), CP(EXPOGAIN_MIN), 1, CP(EXPOGAIN_MIN));
+    m_ControlNP[TC_CONTRAST].fill("Contrast", "Contrast", "%.f", CP(CONTRAST_MIN), CP(CONTRAST_MAX), 1, CP(CONTRAST_DEF));
     if (m_MonoCamera)
         nsp = 6;
     else
     {
         nsp = 8;
-        IUFillNumber(&m_ControlN[TC_HUE], "Hue", "Hue", "%.f", CP(HUE_MIN), CP(HUE_MAX), 1, CP(HUE_DEF));
-        IUFillNumber(&m_ControlN[TC_SATURATION], "Saturation", "Saturation", "%.f", CP(SATURATION_MIN), CP(SATURATION_MAX), 1,
-                     CP(SATURATION_DEF));
+        m_ControlNP[TC_HUE].fill("Hue", "Hue", "%.f", CP(HUE_MIN), CP(HUE_MAX), 1, CP(HUE_DEF));
+        m_ControlNP[TC_SATURATION].fill("Saturation", "Saturation", "%.f", CP(SATURATION_MIN), CP(SATURATION_MAX), 1,
+                                        CP(SATURATION_DEF));
     }
-    IUFillNumber(&m_ControlN[TC_BRIGHTNESS], "Brightness", "Brightness", "%.f", CP(BRIGHTNESS_MIN), CP(BRIGHTNESS_MAX), 1, 0);
-    IUFillNumber(&m_ControlN[TC_GAMMA], "Gamma", "Gamma", "%.f", CP(GAMMA_MIN), CP(GAMMA_MAX), 1, CP(GAMMA_DEF));
-    IUFillNumber(&m_ControlN[TC_SPEED], "Speed", "Speed", "%.f", 0, m_Instance->model->maxspeed, 1, 0);
-    IUFillNumber(&m_ControlN[TC_FRAMERATE_LIMIT], "FPS Limit", "FPS Limit", "%.f", 0, 63, 1, 0);
-    IUFillNumberVector(&m_ControlNP, m_ControlN, nsp, getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60,
-                       IPS_IDLE);
+    m_ControlNP[TC_BRIGHTNESS].fill("Brightness", "Brightness", "%.f", CP(BRIGHTNESS_MIN), CP(BRIGHTNESS_MAX), 1, 0);
+    m_ControlNP[TC_GAMMA].fill("Gamma", "Gamma", "%.f", CP(GAMMA_MIN), CP(GAMMA_MAX), 1, CP(GAMMA_DEF));
+    m_ControlNP[TC_SPEED].fill("Speed", "Speed", "%.f", 0, m_Instance->model->maxspeed, 1, 0);
+    m_ControlNP[TC_FRAMERATE_LIMIT].fill("FPS Limit", "FPS Limit", "%.f", 0, 63, 1, 0);
+    m_ControlNP.resize(nsp);
+    m_ControlNP.fill(getDeviceName(), "CCD_CONTROLS", "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Black Balance
@@ -170,32 +166,30 @@ bool ToupBase::initProperties()
     if (m_MonoCamera)
     {
         nsp = 1;
-        IUFillNumber(&m_BlackBalanceN[TC_BLACK_R], "TC_BLACK", "Value", "%.f", 0, 255, 1, 0);
+        m_BlackBalanceNP[TC_BLACK_R].fill("TC_BLACK", "Value", "%.f", 0, 255, 1, 0);
     }
     else
     {
         nsp = 3;
-        IUFillNumber(&m_BlackBalanceN[TC_BLACK_R], "TC_BLACK_R", "Red", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_BlackBalanceN[TC_BLACK_G], "TC_BLACK_G", "Green", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_BlackBalanceN[TC_BLACK_B], "TC_BLACK_B", "Blue", "%.f", 0, 255, 1, 0);
+        m_BlackBalanceNP[TC_BLACK_R].fill("TC_BLACK_R", "Red", "%.f", 0, 255, 1, 0);
+        m_BlackBalanceNP[TC_BLACK_G].fill("TC_BLACK_G", "Green", "%.f", 0, 255, 1, 0);
+        m_BlackBalanceNP[TC_BLACK_B].fill("TC_BLACK_B", "Blue", "%.f", 0, 255, 1, 0);
     }
-    IUFillNumberVector(&m_BlackBalanceNP, m_BlackBalanceN, nsp, getDeviceName(), "CCD_BLACK_BALANCE", "Black Balance",
-                       CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    m_BlackBalanceNP.resize(nsp);
+    m_BlackBalanceNP.fill(getDeviceName(), "CCD_BLACK_BALANCE", "Black Balance", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Auto Black Balance
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_BBAutoS, "TC_AUTO_BB", "Auto", ISS_OFF);
-    IUFillSwitchVector(&m_BBAutoSP, &m_BBAutoS, 1, getDeviceName(), "TC_AUTO_BB", "Auto Black Balance", CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    m_BBAutoSP[0].fill("TC_AUTO_BB", "Auto", ISS_OFF);
+    m_BBAutoSP.fill(getDeviceName(), "TC_AUTO_BB", "Auto Black Balance", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Black Level (Offset)
     // JM 2023.04.07 DO NOT NAME IT BLACK LEVEL, it must remain as OFFSET
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillNumber(&m_OffsetN[0], "OFFSET", "Value", "%.f", 0, 255, 1, 0);
-    IUFillNumberVector(&m_OffsetNP, m_OffsetN, 1, getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW,
-                       60, IPS_IDLE);
+    m_OffsetNP[0].fill("OFFSET", "Value", "%.f", 0, 255, 1, 0);
+    m_OffsetNP.fill(getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // R/G/B/Y Level Range
@@ -203,48 +197,46 @@ bool ToupBase::initProperties()
     if (m_MonoCamera)
     {
         nsp = 2;
-        IUFillNumber(&m_LevelRangeN[TC_LO_R], "TC_LO", "Low", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_LevelRangeN[TC_HI_R], "TC_HI", "High", "%.f", 0, 255, 1, 255);
+        m_LevelRangeNP[TC_LO_R].fill("TC_LO", "Low", "%.f", 0, 255, 1, 0);
+        m_LevelRangeNP[TC_HI_R].fill("TC_HI", "High", "%.f", 0, 255, 1, 255);
     }
     else
     {
         nsp = 8;
-        IUFillNumber(&m_LevelRangeN[TC_LO_R], "TC_LO_R", "Low Red", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_LevelRangeN[TC_HI_R], "TC_HI_R", "High Red", "%.f", 0, 255, 1, 255);
-        IUFillNumber(&m_LevelRangeN[TC_LO_G], "TC_LO_G", "Low Green", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_LevelRangeN[TC_HI_G], "TC_HI_G", "High Green", "%.f", 0, 255, 1, 255);
-        IUFillNumber(&m_LevelRangeN[TC_LO_B], "TC_LO_B", "Low Blue", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_LevelRangeN[TC_HI_B], "TC_HI_B", "High Blue", "%.f", 0, 255, 1, 255);
-        IUFillNumber(&m_LevelRangeN[TC_LO_Y], "TC_LO_Y", "Low Gray", "%.f", 0, 255, 1, 0);
-        IUFillNumber(&m_LevelRangeN[TC_HI_Y], "TC_HI_Y", "High Gray", "%.f", 0, 255, 1, 255);
+        m_LevelRangeNP[TC_LO_R].fill("TC_LO_R", "Low Red", "%.f", 0, 255, 1, 0);
+        m_LevelRangeNP[TC_HI_R].fill("TC_HI_R", "High Red", "%.f", 0, 255, 1, 255);
+        m_LevelRangeNP[TC_LO_G].fill("TC_LO_G", "Low Green", "%.f", 0, 255, 1, 0);
+        m_LevelRangeNP[TC_HI_G].fill("TC_HI_G", "High Green", "%.f", 0, 255, 1, 255);
+        m_LevelRangeNP[TC_LO_B].fill("TC_LO_B", "Low Blue", "%.f", 0, 255, 1, 0);
+        m_LevelRangeNP[TC_HI_B].fill("TC_HI_B", "High Blue", "%.f", 0, 255, 1, 255);
+        m_LevelRangeNP[TC_LO_Y].fill("TC_LO_Y", "Low Gray", "%.f", 0, 255, 1, 0);
+        m_LevelRangeNP[TC_HI_Y].fill("TC_HI_Y", "High Gray", "%.f", 0, 255, 1, 255);
     }
-    IUFillNumberVector(&m_LevelRangeNP, m_LevelRangeN, nsp, getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", CONTROL_TAB,
-                       IP_RW, 60, IPS_IDLE);
+    m_LevelRangeNP.resize(nsp);
+    m_LevelRangeNP.fill(getDeviceName(), "CCD_LEVEL_RANGE", "Level Range", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     // Auto Exposure
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_AutoExposureS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
-    IUFillSwitch(&m_AutoExposureS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
-    IUFillSwitchVector(&m_AutoExposureSP, m_AutoExposureS, 2, getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure",
-                       CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    m_AutoExposureSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
+    m_AutoExposureSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
+    m_AutoExposureSP.fill(getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
 
     if (m_MonoCamera == false)
     {
         ///////////////////////////////////////////////////////////////////////////////////
         // White Balance
         ///////////////////////////////////////////////////////////////////////////////////
-        IUFillNumber(&m_WBN[TC_WB_R], "TC_WB_R", "Red", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
-        IUFillNumber(&m_WBN[TC_WB_G], "TC_WB_G", "Green", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
-        IUFillNumber(&m_WBN[TC_WB_B], "TC_WB_B", "Blue", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
-        IUFillNumberVector(&m_WBNP, m_WBN, 3, getDeviceName(), "TC_WB", "White Balance", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+        m_WBNP[TC_WB_R].fill("TC_WB_R", "Red", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+        m_WBNP[TC_WB_G].fill("TC_WB_G", "Green", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+        m_WBNP[TC_WB_B].fill("TC_WB_B", "Blue", "%.f", CP(WBGAIN_MIN), CP(WBGAIN_MAX), 10, CP(WBGAIN_DEF));
+        m_WBNP.fill(getDeviceName(), "TC_WB", "White Balance", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
         ///////////////////////////////////////////////////////////////////////////////////
         /// Auto White Balance
         ///////////////////////////////////////////////////////////////////////////////////
-        IUFillSwitch(&m_WBAutoS, "TC_AUTO_WB", "Auto", ISS_OFF);
-        IUFillSwitchVector(&m_WBAutoSP, &m_WBAutoS, 1, getDeviceName(), "TC_AUTO_WB", "Auto White Balance", CONTROL_TAB, IP_RW,
-                           ISR_1OFMANY, 60, IPS_IDLE);
+        m_WBAutoSP[0].fill("TC_AUTO_WB", "Auto", ISS_OFF);
+        m_WBAutoSP.fill(getDeviceName(), "TC_AUTO_WB", "Auto White Balance", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -261,83 +253,82 @@ bool ToupBase::initProperties()
         /// Conversion Gain
         ///////////////////////////////////////////////////////////////////////////////////
         int nsp = 2;
-        IUFillSwitch(&m_GainConversionS[GAIN_LOW], "GAIN_LOW", "Low", ISS_OFF);
-        IUFillSwitch(&m_GainConversionS[GAIN_HIGH], "GAIN_HIGH", "High", ISS_OFF);
+        m_GainConversionSP[GAIN_LOW].fill("GAIN_LOW", "Low", ISS_OFF);
+        m_GainConversionSP[GAIN_HIGH].fill("GAIN_HIGH", "High", ISS_OFF);
         if (m_Instance->model->flag & CP(FLAG_CGHDR))
         {
-            IUFillSwitch(&m_GainConversionS[GAIN_HDR], "GAIN_HDR", "HDR", ISS_OFF);
+            m_GainConversionSP[GAIN_HDR].fill("GAIN_HDR", "HDR", ISS_OFF);
             ++nsp;
         }
-        IUFillSwitchVector(&m_GainConversionSP, m_GainConversionS, nsp, getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain",
-                           CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        m_GainConversionSP.resize(nsp);
+        m_GainConversionSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
+                                IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Low Noise
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_LowNoiseS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
-    IUFillSwitch(&m_LowNoiseS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
-    IUFillSwitchVector(&m_LowNoiseSP, m_LowNoiseS, 2, getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    m_LowNoiseSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
+    m_LowNoiseSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
+    m_LowNoiseSP.fill(getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Tail Light
-    IUFillSwitch(&m_TailLightS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
-    IUFillSwitch(&m_TailLightS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
-    IUFillSwitchVector(&m_TailLightSP, m_TailLightS, 2, getDeviceName(), "TC_TAILLIGHT", "Tail Light", CONTROL_TAB, IP_RW,
-                       ISR_1OFMANY, 60, IPS_IDLE);
+    m_TailLightSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
+    m_TailLightSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
+    m_TailLightSP.fill(getDeviceName(), "TC_TAILLIGHT", "Tail Light", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillSwitch(&m_HighFullwellS[INDI_ENABLED], "INDI_ENABLED", "ON", ISS_OFF);
-    IUFillSwitch(&m_HighFullwellS[INDI_DISABLED], "INDI_DISABLED", "OFF", ISS_ON);
-    IUFillSwitchVector(&m_HighFullwellSP, m_HighFullwellS, 2, getDeviceName(), "TC_HIGHFULLWELL", "High Fullwell Mode",
-                       CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    m_HighFullwellSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
+    m_HighFullwellSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
+    m_HighFullwellSP.fill(getDeviceName(), "TC_HIGHFULLWELL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
+                          IPS_IDLE);
 
     if (m_Instance->model->flag & CP(FLAG_FAN))
     {
         ///////////////////////////////////////////////////////////////////////////////////
         /// Fan
         ///////////////////////////////////////////////////////////////////////////////////
-        m_FanS = new ISwitch[m_Instance->model->maxfanspeed + 1];
-        IUFillSwitch(&m_FanS[0], "INDI_DISABLED", "OFF", ISS_OFF);
+        m_FanSP.resize(m_Instance->model->maxfanspeed + 1);
+        m_FanSP[0].fill("INDI_DISABLED", "OFF", ISS_OFF);
         if (m_Instance->model->maxfanspeed <= 1)
-            IUFillSwitch(&m_FanS[1], "INDI_ENABLED", "ON", ISS_OFF);
+            m_FanSP[1].fill("INDI_ENABLED", "ON", ISS_OFF);
         else
         {
             for (uint32_t i = 1; i <= m_Instance->model->maxfanspeed; ++i)
-                IUFillSwitch(&m_FanS[i], (std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(), ISS_OFF);
+                m_FanSP[i].fill((std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(), ISS_OFF);
         }
-        IUFillSwitchVector(&m_FanSP, m_FanS, m_Instance->model->maxfanspeed + 1, getDeviceName(), "TC_FAN_SPEED",
-                           (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        m_FanSP.fill(getDeviceName(), "TC_FAN_SPEED", (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed", CONTROL_TAB,
+                     IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Resolution
     ///////////////////////////////////////////////////////////////////////////////////
+    m_ResolutionSP.resize(m_Instance->model->preview);
     for (unsigned i = 0; i < m_Instance->model->preview; i++)
     {
         char label[MAXINDILABEL] = {0};
         snprintf(label, MAXINDILABEL, "%d x %d", m_Instance->model->res[i].width, m_Instance->model->res[i].height);
-        IUFillSwitch(&m_ResolutionS[i], label, label, ISS_OFF);
+        m_ResolutionSP[i].fill(label, label, ISS_OFF);
     }
-    IUFillSwitchVector(&m_ResolutionSP, m_ResolutionS, m_Instance->model->preview, getDeviceName(), "CCD_RESOLUTION",
-                       "Resolution", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    IUGetConfigOnSwitchIndex(getDeviceName(), m_ResolutionSP.name, &m_ConfigResolutionIndex);
+    m_ResolutionSP.fill(getDeviceName(), "CCD_RESOLUTION", "Resolution", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    IUGetConfigOnSwitchIndex(getDeviceName(), m_ResolutionSP.getName(), &m_ConfigResolutionIndex);
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// Firmware
     ///////////////////////////////////////////////////////////////////////////////////
-    IUFillText(&m_CameraT[TC_CAMERA_MODEL], "MODEL", "Model", m_Instance->model->name);
-    IUFillText(&m_CameraT[TC_CAMERA_DATE], "PRODUCTIONDATE", "Production Date", nullptr);
-    IUFillText(&m_CameraT[TC_CAMERA_SN], "SN", "SN", nullptr);
-    IUFillText(&m_CameraT[TC_CAMERA_FW_VERSION], "FIRMWAREVERSION", "Firmware Version", nullptr);
-    IUFillText(&m_CameraT[TC_CAMERA_HW_VERSION], "HARDWAREVERSION", "Hardware Version", nullptr);
-    IUFillText(&m_CameraT[TC_CAMERA_REV], "REVISION", "Revision", nullptr);
-    IUFillTextVector(&m_CameraTP, m_CameraT, 6, getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
+    m_CameraTP[TC_CAMERA_MODEL].fill("MODEL", "Model", m_Instance->model->name);
+    m_CameraTP[TC_CAMERA_DATE].fill("PRODUCTIONDATE", "Production Date", nullptr);
+    m_CameraTP[TC_CAMERA_SN].fill("SN", "SN", nullptr);
+    m_CameraTP[TC_CAMERA_FW_VERSION].fill("FIRMWAREVERSION", "Firmware Version", nullptr);
+    m_CameraTP[TC_CAMERA_HW_VERSION].fill("HARDWAREVERSION", "Hardware Version", nullptr);
+    m_CameraTP[TC_CAMERA_REV].fill("REVISION", "Revision", nullptr);
+    m_CameraTP.fill(getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
-    IUFillText(&m_SDKVersionT, "VERSION", "Version", FP(Version()));
-    IUFillTextVector(&m_SDKVersionTP, &m_SDKVersionT, 1, getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
+    m_SDKVersionTP[0].fill("VERSION", "Version", FP(Version()));
+    m_SDKVersionTP.fill(getDeviceName(), "SDK", "SDK", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
     m_ADCDepthNP[0].fill("BITS", "Bits", "%2.0f", 0, 32, 1, m_maxBitDepth);
     m_ADCDepthNP.fill(getDeviceName(), "ADC_DEPTH", "ADC Depth", IMAGE_INFO_TAB, IP_RO, 60, IPS_IDLE);
@@ -369,7 +360,7 @@ bool ToupBase::updateProperties()
     {
         if (HasCooler())
         {
-            defineProperty(&m_CoolerSP);
+            defineProperty(m_CoolerSP);
             defineProperty(m_CoolerNP);
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
@@ -380,51 +371,51 @@ bool ToupBase::updateProperties()
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
-            defineProperty(&m_FanSP);
+            defineProperty(m_FanSP);
 
         defineProperty(m_TimeoutFactorNP);
-        defineProperty(&m_ControlNP);
-        defineProperty(&m_AutoExposureSP);
-        defineProperty(&m_ResolutionSP);
+        defineProperty(m_ControlNP);
+        defineProperty(m_AutoExposureSP);
+        defineProperty(m_ResolutionSP);
 
         if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-            defineProperty(&m_HighFullwellSP);
+            defineProperty(m_HighFullwellSP);
 
         if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-            defineProperty(&m_LowNoiseSP);
+            defineProperty(m_LowNoiseSP);
 
         if (m_Instance->model->flag & CP(FLAG_HEAT))
-            defineProperty(&m_HeatSP);
+            defineProperty(m_HeatSP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
-            defineProperty(&m_GainConversionSP);
+            defineProperty(m_GainConversionSP);
 
         if (m_SupportTailLight)
-            defineProperty(&m_TailLightSP);
+            defineProperty(m_TailLightSP);
 
         // Binning mode
-        defineProperty(&m_BinningModeSP);
+        defineProperty(m_BinningModeSP);
         if (m_MonoCamera == false)
         {
-            defineProperty(&m_WBNP);
-            defineProperty(&m_WBAutoSP);
+            defineProperty(m_WBNP);
+            defineProperty(m_WBAutoSP);
         }
-        defineProperty(&m_BlackBalanceNP);
-        defineProperty(&m_BBAutoSP);
+        defineProperty(m_BlackBalanceNP);
+        defineProperty(m_BBAutoSP);
         // Levels
-        defineProperty(&m_LevelRangeNP);
-        defineProperty(&m_OffsetNP);
+        defineProperty(m_LevelRangeNP);
+        defineProperty(m_OffsetNP);
 
         // Firmware
-        defineProperty(&m_CameraTP);
-        defineProperty(&m_SDKVersionTP);
+        defineProperty(m_CameraTP);
+        defineProperty(m_SDKVersionTP);
         defineProperty(m_ADCDepthNP);
     }
     else
     {
         if (HasCooler())
         {
-            deleteProperty(m_CoolerSP.name);
+            deleteProperty(m_CoolerSP);
             deleteProperty(m_CoolerNP);
         }
         else
@@ -433,42 +424,42 @@ bool ToupBase::updateProperties()
         }
 
         if (m_Instance->model->flag & CP(FLAG_FAN))
-            deleteProperty(m_FanSP.name);
+            deleteProperty(m_FanSP);
 
         deleteProperty(m_TimeoutFactorNP);
-        deleteProperty(m_ControlNP.name);
-        deleteProperty(m_AutoExposureSP.name);
-        deleteProperty(m_ResolutionSP.name);
+        deleteProperty(m_ControlNP);
+        deleteProperty(m_AutoExposureSP);
+        deleteProperty(m_ResolutionSP);
 
         if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-            deleteProperty(m_LowNoiseSP.name);
+            deleteProperty(m_LowNoiseSP);
 
         if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-            deleteProperty(m_HighFullwellSP.name);
+            deleteProperty(m_HighFullwellSP);
 
         if (m_Instance->model->flag & CP(FLAG_HEAT))
-            deleteProperty(m_HeatSP.name);
+            deleteProperty(m_HeatSP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
-            deleteProperty(m_GainConversionSP.name);
+            deleteProperty(m_GainConversionSP);
 
         if (m_SupportTailLight)
-            deleteProperty(m_TailLightSP.name);
+            deleteProperty(m_TailLightSP);
 
-        deleteProperty(m_BinningModeSP.name);
+        deleteProperty(m_BinningModeSP);
         if (m_MonoCamera == false)
         {
-            deleteProperty(m_WBNP.name);
-            deleteProperty(m_WBAutoSP.name);
+            deleteProperty(m_WBNP);
+            deleteProperty(m_WBAutoSP);
         }
-        deleteProperty(m_BlackBalanceNP.name);
-        deleteProperty(m_BBAutoSP.name);
-        deleteProperty(m_LevelRangeNP.name);
-        deleteProperty(m_OffsetNP.name);
+        deleteProperty(m_BlackBalanceNP);
+        deleteProperty(m_BBAutoSP);
+        deleteProperty(m_LevelRangeNP);
+        deleteProperty(m_OffsetNP);
 
-        deleteProperty(m_CameraTP.name);
-        deleteProperty(m_SDKVersionTP.name);
-        deleteProperty(m_ADCDepthNP.getName());
+        deleteProperty(m_CameraTP);
+        deleteProperty(m_SDKVersionTP);
+        deleteProperty(m_ADCDepthNP);
     }
 
     return true;
@@ -556,18 +547,17 @@ void ToupBase::setupParams()
         FP(get_Option(m_Handle, CP(OPTION_HEAT_MAX), &maxval));
         FP(get_Option(m_Handle, CP(OPTION_HEAT), &curval));
 
-        m_HeatS = new ISwitch[maxval + 1];
-        IUFillSwitch(&m_HeatS[0], "INDI_DISABLED", "OFF", (0 == curval) ? ISS_ON : ISS_OFF);
+        m_HeatSP.resize(maxval + 1);
+        m_HeatSP[0].fill("INDI_DISABLED", "OFF", (0 == curval) ? ISS_ON : ISS_OFF);
         if (maxval <= 1)
-            IUFillSwitch(&m_HeatS[1], "INDI_ENABLED", "ON", (1 == curval) ? ISS_ON : ISS_OFF);
+            m_HeatSP[1].fill("INDI_ENABLED", "ON", (1 == curval) ? ISS_ON : ISS_OFF);
         else
         {
             for (int i = 1; i <= maxval; ++i)
-                IUFillSwitch(&m_HeatS[i], (std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
-                             (i == curval) ? ISS_ON : ISS_OFF);
+                m_HeatSP[i].fill((std::string("HEAT") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
+                                 (i == curval) ? ISS_ON : ISS_OFF);
         }
-        IUFillSwitchVector(&m_HeatSP, m_HeatS, maxval + 1, getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW,
-                           ISR_1OFMANY, 60, IPS_IDLE);
+        m_HeatSP.fill(getDeviceName(), "TC_HEAT_CONTROL", "Heat", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     FP(put_AutoExpoEnable(m_Handle, 0));
@@ -578,16 +568,16 @@ void ToupBase::setupParams()
     char tmpBuffer[64] = {0};
     uint16_t pRevision = 0;
     FP(get_SerialNumber(m_Handle, tmpBuffer));
-    IUSaveText(&m_CameraT[TC_CAMERA_SN], tmpBuffer);
+    m_CameraTP[TC_CAMERA_SN].setText(tmpBuffer);
     FP(get_ProductionDate(m_Handle, tmpBuffer));
-    IUSaveText(&m_CameraT[TC_CAMERA_DATE], tmpBuffer);
+    m_CameraTP[TC_CAMERA_DATE].setText(tmpBuffer);
     FP(get_FwVersion(m_Handle, tmpBuffer));
-    IUSaveText(&m_CameraT[TC_CAMERA_FW_VERSION], tmpBuffer);
+    m_CameraTP[TC_CAMERA_FW_VERSION].setText(tmpBuffer);
     FP(get_HwVersion(m_Handle, tmpBuffer));
-    IUSaveText(&m_CameraT[TC_CAMERA_HW_VERSION], tmpBuffer);
+    m_CameraTP[TC_CAMERA_HW_VERSION].setText(tmpBuffer);
     FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
-    IUSaveText(&m_CameraT[TC_CAMERA_REV], tmpBuffer);
+    m_CameraTP[TC_CAMERA_REV].setText(tmpBuffer);
 
     // Max supported bit depth
     m_maxBitDepth = FP(get_MaxBitDepth(m_Handle));
@@ -650,9 +640,9 @@ void ToupBase::setupParams()
     {
         int fan = 0;
         FP(get_Option(m_Handle, CP(OPTION_FAN), &fan));
-        IUResetSwitch(&m_FanSP);
+        m_FanSP.reset();
         for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-            m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
+            m_FanSP[i].setState((fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF);
     }
 
     // Get active resolution index
@@ -660,16 +650,17 @@ void ToupBase::setupParams()
     FP(get_eSize(m_Handle, &currentResolutionIndex));
     // If we have a config resolution index, then prefer it over the current resolution index.
     finalResolutionIndex = (m_ConfigResolutionIndex >= 0
-                            && m_ConfigResolutionIndex < m_ResolutionSP.nsp) ? m_ConfigResolutionIndex : currentResolutionIndex;
+                            && m_ConfigResolutionIndex < static_cast<int>(m_ResolutionSP.size())) ? m_ConfigResolutionIndex : currentResolutionIndex;
     // In case there is NO previous resolution set
     // then select the LOWER resolution on arm architecture
     // since this has less chance of failure. If the user explicitly selects any resolution
     // it would be saved in the config and this will not apply.
-#if defined(__arm__) || defined (__aarch64__)
-    if (m_ConfigResolutionIndex == -1)
-        finalResolutionIndex = m_ResolutionSP.nsp - 1;
-#endif
-    m_ResolutionS[finalResolutionIndex].s = ISS_ON;
+    // JM 2025.08.19: Disabled this restriction, we should get full resolution on ARM as well
+    // #if defined(__arm__) || defined (__aarch64__)
+    //     if (m_ConfigResolutionIndex == -1)
+    //         finalResolutionIndex = m_ResolutionSP.size() - 1;
+    // #endif
+    m_ResolutionSP[finalResolutionIndex].setState(ISS_ON);
     // If final resolution index different from current, let's set it.
     if (finalResolutionIndex != currentResolutionIndex)
         FP(put_eSize(m_Handle, finalResolutionIndex));
@@ -685,46 +676,46 @@ void ToupBase::setupParams()
     // Get CCD Controls values
     int conversionGain = 0;
     FP(get_Option(m_Handle, CP(OPTION_CG), &conversionGain));
-    m_GainConversionS[conversionGain].s = ISS_ON;
+    m_GainConversionSP[conversionGain].setState(ISS_ON);
 
     uint16_t nMax = 0, nDef = 0;
     // Gain
     FP(get_ExpoAGainRange(m_Handle, nullptr, &nMax, &nDef));
-    m_ControlN[TC_GAIN].max = nMax;
-    m_ControlN[TC_GAIN].value = nDef;
+    m_ControlNP[TC_GAIN].setMax(nMax);
+    m_ControlNP[TC_GAIN].setValue(nDef);
 
     int nVal = 0;
     // Contrast
     FP(get_Contrast(m_Handle, &nVal));
-    m_ControlN[TC_CONTRAST].value = nVal;
+    m_ControlNP[TC_CONTRAST].setValue(nVal);
 
     if (m_MonoCamera == false)
     {
         // Hue
         FP(get_Hue(m_Handle, &nVal));
-        m_ControlN[TC_HUE].value = nVal;
+        m_ControlNP[TC_HUE].setValue(nVal);
 
         // Saturation
         FP(get_Saturation(m_Handle, &nVal));
-        m_ControlN[TC_SATURATION].value = nVal;
+        m_ControlNP[TC_SATURATION].setValue(nVal);
     }
 
     // Brightness
     FP(get_Brightness(m_Handle, &nVal));
-    m_ControlN[TC_BRIGHTNESS].value = nVal;
+    m_ControlNP[TC_BRIGHTNESS].setValue(nVal);
 
     // Gamma
     FP(get_Gamma(m_Handle, &nVal));
-    m_ControlN[TC_GAMMA].value = nVal;
+    m_ControlNP[TC_GAMMA].setValue(nVal);
 
     // Speed
     // JM 2020-05-06: Reduce speed on ARM for all resolutions
 #if defined(__arm__) || defined (__aarch64__)
-    m_ControlN[TC_SPEED].value = 0;
+    m_ControlNP[TC_SPEED].setValue(0);
     FP(put_Speed(m_Handle, 0));
 #else
     rc = FP(get_Speed(m_Handle, &nDef));
-    m_ControlN[TC_SPEED].value = nDef;
+    m_ControlNP[TC_SPEED].setValue(nDef);
 #endif
 
     // Frame Rate
@@ -733,10 +724,10 @@ void ToupBase::setupParams()
     // JM 2019-08-19: On ARM, set frame limit to max (63) instead of 0 (unlimited)
     // since that results in failure to capture from large sensors
 #ifdef __arm__
-    frameRateLimit = m_ControlN[TC_FRAMERATE_LIMIT].max;
+    frameRateLimit = m_ControlNP[TC_FRAMERATE_LIMIT].getMax();
     FP(put_Option(m_Handle, CP(OPTION_FRAMERATE), frameRateLimit));
 #endif
-    m_ControlN[TC_FRAMERATE_LIMIT].value = frameRateLimit;
+    m_ControlNP[TC_FRAMERATE_LIMIT].setValue(frameRateLimit);
 
     // Set Bin more for better quality over skip
     if (m_Instance->model->flag & CP(FLAG_BINSKIP_SUPPORTED))
@@ -752,9 +743,9 @@ void ToupBase::setupParams()
         rc = FP(get_WhiteBalanceGain(m_Handle, aGain));
         if (SUCCEEDED(rc))
         {
-            m_WBN[TC_WB_R].value = aGain[TC_WB_R];
-            m_WBN[TC_WB_G].value = aGain[TC_WB_G];
-            m_WBN[TC_WB_B].value = aGain[TC_WB_B];
+            m_WBNP[TC_WB_R].setValue(aGain[TC_WB_R]);
+            m_WBNP[TC_WB_G].setValue(aGain[TC_WB_G]);
+            m_WBNP[TC_WB_B].setValue(aGain[TC_WB_B]);
         }
     }
 
@@ -765,20 +756,20 @@ void ToupBase::setupParams()
     {
         if (m_MonoCamera)
         {
-            m_LevelRangeN[TC_LO_R].value = aLow[3];
-            m_LevelRangeN[TC_HI_R].value = aHigh[3];
+            m_LevelRangeNP[TC_LO_R].setValue(aLow[3]);
+            m_LevelRangeNP[TC_HI_R].setValue(aHigh[3]);
         }
         else
         {
-            m_LevelRangeN[TC_LO_R].value = aLow[0];
-            m_LevelRangeN[TC_LO_G].value = aLow[1];
-            m_LevelRangeN[TC_LO_B].value = aLow[2];
-            m_LevelRangeN[TC_LO_Y].value = aLow[3];
+            m_LevelRangeNP[TC_LO_R].setValue(aLow[0]);
+            m_LevelRangeNP[TC_LO_G].setValue(aLow[1]);
+            m_LevelRangeNP[TC_LO_B].setValue(aLow[2]);
+            m_LevelRangeNP[TC_LO_Y].setValue(aLow[3]);
 
-            m_LevelRangeN[TC_HI_R].value = aHigh[0];
-            m_LevelRangeN[TC_HI_G].value = aHigh[1];
-            m_LevelRangeN[TC_HI_B].value = aHigh[2];
-            m_LevelRangeN[TC_HI_Y].value = aHigh[3];
+            m_LevelRangeNP[TC_HI_R].setValue(aHigh[0]);
+            m_LevelRangeNP[TC_HI_G].setValue(aHigh[1]);
+            m_LevelRangeNP[TC_HI_B].setValue(aHigh[2]);
+            m_LevelRangeNP[TC_HI_Y].setValue(aHigh[3]);
         }
     }
 
@@ -787,11 +778,11 @@ void ToupBase::setupParams()
     rc = FP(get_BlackBalance(m_Handle, aSub));
     if (SUCCEEDED(rc))
     {
-        m_BlackBalanceN[TC_BLACK_R].value = aSub[0];
+        m_BlackBalanceNP[TC_BLACK_R].setValue(aSub[0]);
         if (m_MonoCamera == false)
         {
-            m_BlackBalanceN[TC_BLACK_G].value = aSub[1];
-            m_BlackBalanceN[TC_BLACK_B].value = aSub[2];
+            m_BlackBalanceNP[TC_BLACK_G].setValue(aSub[1]);
+            m_BlackBalanceNP[TC_BLACK_B].setValue(aSub[2]);
         }
     }
 
@@ -800,7 +791,7 @@ void ToupBase::setupParams()
     // Therefore, black level is a saved option
     // Set range of black level based on max bit depth RAW
     int bLevelStep = 1 << (m_maxBitDepth - 8);
-    m_OffsetN[0].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
+    m_OffsetNP[0].setMax(CP(BLACKLEVEL8_MAX) * bLevelStep);
 
     // Allocate memory
     allocateFrameBuffer();
@@ -860,20 +851,25 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         /// Controls (Contrast, Brightness, Hue...etc)
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_ControlNP.name))
+        if (m_ControlNP.isNameMatch(name))
         {
-            double const old_framerate_limit = m_ControlN[TC_FRAMERATE_LIMIT].value;
+            double const old_framerate_limit = m_ControlNP[TC_FRAMERATE_LIMIT].getValue();
 
-            if (IUUpdateNumber(&m_ControlNP, values, names, n) < 0)
+            if (m_ControlNP.isUpdated(values, names, n))
             {
-                m_ControlNP.s = IPS_ALERT;
-                IDSetNumber(&m_ControlNP, nullptr);
+                m_ControlNP.update(values, names, n);
+                saveConfig(m_ControlNP);
+            }
+            else
+            {
+                m_ControlNP.setState(IPS_OK);
+                m_ControlNP.apply();
                 return true;
             }
 
-            for (uint8_t i = 0; i < m_ControlNP.nnp; i++)
+            for (uint8_t i = 0; i < m_ControlNP.size(); i++)
             {
-                int value = static_cast<int>(m_ControlN[i].value);
+                int value = static_cast<int>(m_ControlNP[i].getValue());
                 switch (i)
                 {
                     case TC_GAIN:
@@ -920,124 +916,164 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
                 }
             }
 
-            m_ControlNP.s = IPS_OK;
-            IDSetNumber(&m_ControlNP, nullptr);
+            m_ControlNP.setState(IPS_OK);
+            m_ControlNP.apply();
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Level Range
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_LevelRangeNP.name))
+        if (m_LevelRangeNP.isNameMatch(name))
         {
-            IUUpdateNumber(&m_LevelRangeNP, values, names, n);
-            uint16_t lo[4], hi[4];
-            if (m_MonoCamera)
+            if (m_LevelRangeNP.isUpdated(values, names, n))
             {
-                lo[0] = lo[1] = lo[2] = lo[3] = static_cast<uint16_t>(m_LevelRangeN[TC_LO_R].value);
-                hi[0] = hi[1] = hi[2] = hi[3] = static_cast<uint16_t>(m_LevelRangeN[TC_HI_R].value);
+                m_LevelRangeNP.update(values, names, n);
+                saveConfig(m_LevelRangeNP);
             }
             else
             {
-                lo[0] = static_cast<uint16_t>(m_LevelRangeN[TC_LO_R].value);
-                lo[1] = static_cast<uint16_t>(m_LevelRangeN[TC_LO_G].value);
-                lo[2] = static_cast<uint16_t>(m_LevelRangeN[TC_LO_B].value);
-                lo[3] = static_cast<uint16_t>(m_LevelRangeN[TC_LO_Y].value);
-                hi[0] = static_cast<uint16_t>(m_LevelRangeN[TC_HI_R].value);
-                hi[1] = static_cast<uint16_t>(m_LevelRangeN[TC_HI_G].value);
-                hi[2] = static_cast<uint16_t>(m_LevelRangeN[TC_HI_B].value);
-                hi[3] = static_cast<uint16_t>(m_LevelRangeN[TC_HI_Y].value);
+                m_LevelRangeNP.setState(IPS_OK);
+                m_LevelRangeNP.apply();
+                return true;
+            }
+
+            uint16_t lo[4], hi[4];
+            if (m_MonoCamera)
+            {
+                lo[0] = lo[1] = lo[2] = lo[3] = static_cast<uint16_t>(m_LevelRangeNP[TC_LO_R].getValue());
+                hi[0] = hi[1] = hi[2] = hi[3] = static_cast<uint16_t>(m_LevelRangeNP[TC_HI_R].getValue());
+            }
+            else
+            {
+                lo[0] = static_cast<uint16_t>(m_LevelRangeNP[TC_LO_R].getValue());
+                lo[1] = static_cast<uint16_t>(m_LevelRangeNP[TC_LO_G].getValue());
+                lo[2] = static_cast<uint16_t>(m_LevelRangeNP[TC_LO_B].getValue());
+                lo[3] = static_cast<uint16_t>(m_LevelRangeNP[TC_LO_Y].getValue());
+                hi[0] = static_cast<uint16_t>(m_LevelRangeNP[TC_HI_R].getValue());
+                hi[1] = static_cast<uint16_t>(m_LevelRangeNP[TC_HI_G].getValue());
+                hi[2] = static_cast<uint16_t>(m_LevelRangeNP[TC_HI_B].getValue());
+                hi[3] = static_cast<uint16_t>(m_LevelRangeNP[TC_HI_Y].getValue());
             };
 
             HRESULT rc = FP(put_LevelRange(m_Handle, lo, hi));
             if (SUCCEEDED(rc))
-                m_LevelRangeNP.s = IPS_OK;
+                m_LevelRangeNP.setState(IPS_OK);
             else
             {
-                m_LevelRangeNP.s = IPS_ALERT;
+                m_LevelRangeNP.setState(IPS_ALERT);
                 LOGF_ERROR("Failed to set level range. %s", errorCodes(rc).c_str());
             }
 
-            IDSetNumber(&m_LevelRangeNP, nullptr);
+            m_LevelRangeNP.apply();
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Black Balance
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_BlackBalanceNP.name))
+        if (m_BlackBalanceNP.isNameMatch(name))
         {
-            IUUpdateNumber(&m_BlackBalanceNP, values, names, n);
-            uint16_t aSub[3];
-            if (m_MonoCamera)
-                aSub[0] = aSub[1] = aSub[2] = static_cast<uint16_t>(m_BlackBalanceN[TC_BLACK_R].value);
+            if (m_BlackBalanceNP.isUpdated(values, names, n))
+            {
+                m_BlackBalanceNP.update(values, names, n);
+                saveConfig(m_BlackBalanceNP);
+            }
             else
             {
-                aSub[0] = static_cast<uint16_t>(m_BlackBalanceN[TC_BLACK_R].value);
-                aSub[1] = static_cast<uint16_t>(m_BlackBalanceN[TC_BLACK_G].value);
-                aSub[2] = static_cast<uint16_t>(m_BlackBalanceN[TC_BLACK_B].value);
+                m_BlackBalanceNP.setState(IPS_OK);
+                m_BlackBalanceNP.apply();
+                return true;
+            }
+
+            uint16_t aSub[3];
+            if (m_MonoCamera)
+                aSub[0] = aSub[1] = aSub[2] = static_cast<uint16_t>(m_BlackBalanceNP[TC_BLACK_R].getValue());
+            else
+            {
+                aSub[0] = static_cast<uint16_t>(m_BlackBalanceNP[TC_BLACK_R].getValue());
+                aSub[1] = static_cast<uint16_t>(m_BlackBalanceNP[TC_BLACK_G].getValue());
+                aSub[2] = static_cast<uint16_t>(m_BlackBalanceNP[TC_BLACK_B].getValue());
             };
 
             HRESULT rc = FP(put_BlackBalance(m_Handle, aSub));
             if (SUCCEEDED(rc))
-                m_BlackBalanceNP.s = IPS_OK;
+                m_BlackBalanceNP.setState(IPS_OK);
             else
             {
-                m_BlackBalanceNP.s = IPS_ALERT;
+                m_BlackBalanceNP.setState(IPS_ALERT);
                 LOGF_ERROR("Failed to set black balance. %s", errorCodes(rc).c_str());
             }
 
-            IDSetNumber(&m_BlackBalanceNP, nullptr);
+            m_BlackBalanceNP.apply();
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Offset (Black Level)
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_OffsetNP.name))
+        if (m_OffsetNP.isNameMatch(name))
         {
-            IUUpdateNumber(&m_OffsetNP, values, names, n);
-            int bLevel = static_cast<uint16_t>(m_OffsetN[0].value);
-
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BLACKLEVEL), bLevel));
-            if (FAILED(rc))
+            if (m_OffsetNP.isUpdated(values, names, n))
             {
-                m_OffsetNP.s = IPS_ALERT;
-                LOGF_ERROR("Failed to set offset. %s", errorCodes(rc).c_str());
+                m_OffsetNP.update(values, names, n);
+                int bLevel = static_cast<uint16_t>(m_OffsetNP[0].getValue());
+
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BLACKLEVEL), bLevel));
+                if (FAILED(rc))
+                {
+                    m_OffsetNP.setState(IPS_ALERT);
+                    LOGF_ERROR("Failed to set offset. %s", errorCodes(rc).c_str());
+                }
+                else
+                {
+                    m_OffsetNP.setState(IPS_OK);
+                }
+
+                m_OffsetNP.apply();
+                saveConfig(m_OffsetNP);
             }
             else
             {
-                m_OffsetNP.s = IPS_OK;
+                m_OffsetNP.setState(IPS_OK);
+                m_OffsetNP.apply();
             }
-
-            IDSetNumber(&m_OffsetNP, nullptr);
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// White Balance
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_WBNP.name))
+        if (m_WBNP.isNameMatch(name))
         {
-            IUUpdateNumber(&m_WBNP, values, names, n);
-
-            int aSub[3] =
+            if (m_WBNP.isUpdated(values, names, n))
             {
-                static_cast<int>(m_WBN[TC_WB_R].value),
-                static_cast<int>(m_WBN[TC_WB_G].value),
-                static_cast<int>(m_WBN[TC_WB_B].value),
-            };
+                m_WBNP.update(values, names, n);
 
-            HRESULT rc = FP(put_WhiteBalanceGain(m_Handle, aSub));
-            if (SUCCEEDED(rc))
-                m_WBNP.s = IPS_OK;
+                int aSub[3] =
+                {
+                    static_cast<int>(m_WBNP[TC_WB_R].getValue()),
+                    static_cast<int>(m_WBNP[TC_WB_G].getValue()),
+                    static_cast<int>(m_WBNP[TC_WB_B].getValue()),
+                };
+
+                HRESULT rc = FP(put_WhiteBalanceGain(m_Handle, aSub));
+                if (SUCCEEDED(rc))
+                    m_WBNP.setState(IPS_OK);
+                else
+                {
+                    m_WBNP.setState(IPS_ALERT);
+                    LOGF_ERROR("Failed to set white balance. %s", errorCodes(rc).c_str());
+                }
+
+                m_WBNP.apply();
+                saveConfig(m_WBNP);
+            }
             else
             {
-                m_WBNP.s = IPS_ALERT;
-                LOGF_ERROR("Failed to set white balance. %s", errorCodes(rc).c_str());
+                m_WBNP.setState(IPS_OK);
+                m_WBNP.apply();
             }
-
-            IDSetNumber(&m_WBNP, nullptr);
             return true;
         }
 
@@ -1046,21 +1082,29 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
         //////////////////////////////////////////////////////////////////////
         if (m_TimeoutFactorNP.isNameMatch(name))
         {
-            auto oldFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
-            m_TimeoutFactorNP.update(values, names, n);
-            auto newFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
-
-            if (oldFactor != newFactor)
+            if (m_TimeoutFactorNP.isUpdated(values, names, n))
             {
-                if (oldFactor == 0 && newFactor != 0)
-                    LOG_INFO("Timeout handling is enabled.");
-                else if (oldFactor != 0 && newFactor == 0)
-                    LOG_INFO("Timeout handling is disabled.");
-            }
+                auto oldFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
+                m_TimeoutFactorNP.update(values, names, n);
+                auto newFactor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
 
-            m_TimeoutFactorNP.setState(IPS_OK);
-            m_TimeoutFactorNP.apply();
-            saveConfig(m_TimeoutFactorNP);
+                if (oldFactor != newFactor)
+                {
+                    if (oldFactor == 0 && newFactor != 0)
+                        LOG_INFO("Timeout handling is enabled.");
+                    else if (oldFactor != 0 && newFactor == 0)
+                        LOG_INFO("Timeout handling is disabled.");
+                }
+
+                m_TimeoutFactorNP.setState(IPS_OK);
+                m_TimeoutFactorNP.apply();
+                saveConfig(m_TimeoutFactorNP);
+            }
+            else
+            {
+                m_TimeoutFactorNP.setState(IPS_OK);
+                m_TimeoutFactorNP.apply();
+            }
             return true;
         }
     }
@@ -1078,10 +1122,21 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         /// Binning
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_BinningModeSP.name))
+        if (m_BinningModeSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_BinningModeSP, states, names, n);
-            auto mode = (m_BinningModeS[TC_BINNING_AVG].s == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
+            if (m_BinningModeSP.isUpdated(states, names, n))
+            {
+                m_BinningModeSP.update(states, names, n);
+                saveConfig(m_BinningModeSP);
+            }
+            else
+            {
+                m_BinningModeSP.setState(IPS_OK);
+                m_BinningModeSP.apply();
+                return true;
+            }
+
+            auto mode = (m_BinningModeSP[TC_BINNING_AVG].getState() == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
             m_BinningMode = mode;
             updateBinningMode(PrimaryCCD.getBinX(), mode);
             return true;
@@ -1090,237 +1145,334 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         /// Cooler
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_CoolerSP.name))
+        if (m_CoolerSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_CoolerSP, states, names, n);
-            activateCooler(m_CoolerS[INDI_ENABLED].s == ISS_ON);
-            saveConfig(true, m_CoolerSP.name);
+            if (m_CoolerSP.isUpdated(states, names, n))
+            {
+                m_CoolerSP.update(states, names, n);
+                activateCooler(m_CoolerSP[INDI_ENABLED].getState() == ISS_ON);
+            }
+            else
+            {
+                m_CoolerSP.setState(IPS_OK);
+                m_CoolerSP.apply();
+                return true;
+            }
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// High Fullwell
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_HighFullwellSP.name))
+        if (m_HighFullwellSP.isNameMatch(name))
         {
-            int prevIndex = IUFindOnSwitchIndex(&m_HighFullwellSP);
-            IUUpdateSwitch(&m_HighFullwellSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellS[INDI_ENABLED].s));
-            if (SUCCEEDED(rc))
-                m_HighFullwellSP.s = IPS_OK;
+            int prevIndex = m_HighFullwellSP.findOnSwitchIndex();
+            if (m_HighFullwellSP.isUpdated(states, names, n))
+            {
+                m_HighFullwellSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellSP[INDI_ENABLED].getState()));
+                if (SUCCEEDED(rc))
+                    m_HighFullwellSP.setState(IPS_OK);
+                else
+                {
+                    LOGF_ERROR("Failed to set high fullwell %s. %s", m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                               errorCodes(rc).c_str());
+                    m_HighFullwellSP.setState(IPS_ALERT);
+                    m_HighFullwellSP.reset();
+                    m_HighFullwellSP[prevIndex].setState(ISS_ON);
+                }
+
+                m_HighFullwellSP.apply();
+                saveConfig(m_HighFullwellSP);
+            }
             else
             {
-                LOGF_ERROR("Failed to set high fullwell %s. %s", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF",
-                           errorCodes(rc).c_str());
-                m_HighFullwellSP.s = IPS_ALERT;
-                IUResetSwitch(&m_HighFullwellSP);
-                m_HighFullwellS[prevIndex].s = ISS_ON;
+                m_HighFullwellSP.setState(IPS_OK);
+                m_HighFullwellSP.apply();
+                return true;
             }
-
-            IDSetSwitch(&m_HighFullwellSP, nullptr);
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Low Noise
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_LowNoiseSP.name))
+        if (m_LowNoiseSP.isNameMatch(name))
         {
-            int prevIndex = IUFindOnSwitchIndex(&m_LowNoiseSP);
-            IUUpdateSwitch(&m_LowNoiseSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_LOW_NOISE), m_LowNoiseS[INDI_ENABLED].s));
-            if (SUCCEEDED(rc))
-                m_LowNoiseSP.s = IPS_OK;
+            int prevIndex = m_LowNoiseSP.findOnSwitchIndex();
+            if (m_LowNoiseSP.isUpdated(states, names, n))
+            {
+                m_LowNoiseSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_LOW_NOISE), m_LowNoiseSP[INDI_ENABLED].getState()));
+                if (SUCCEEDED(rc))
+                    m_LowNoiseSP.setState(IPS_OK);
+                else
+                {
+                    LOGF_ERROR("Failed to set low noise %s. %s", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                               errorCodes(rc).c_str());
+                    m_LowNoiseSP.setState(IPS_ALERT);
+                    m_LowNoiseSP.reset();
+                    m_LowNoiseSP[prevIndex].setState(ISS_ON);
+                }
+
+                m_LowNoiseSP.apply();
+                saveConfig(m_LowNoiseSP);
+            }
             else
             {
-                LOGF_ERROR("Failed to set low noise %s. %s", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
-                m_LowNoiseSP.s = IPS_ALERT;
-                IUResetSwitch(&m_LowNoiseSP);
-                m_LowNoiseS[prevIndex].s = ISS_ON;
+                m_LowNoiseSP.setState(IPS_OK);
+                m_LowNoiseSP.apply();
+                return true;
             }
-
-            IDSetSwitch(&m_LowNoiseSP, nullptr);
             return true;
         }
 
         // Tail Light
-        if (!strcmp(name, m_TailLightSP.name))
+        if (m_TailLightSP.isNameMatch(name))
         {
-            int prevIndex = IUFindOnSwitchIndex(&m_TailLightSP);
-            IUUpdateSwitch(&m_TailLightSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightS[INDI_ENABLED].s));
-            if (SUCCEEDED(rc))
-                m_TailLightSP.s = IPS_OK;
+            int prevIndex = m_TailLightSP.findOnSwitchIndex();
+            if (m_TailLightSP.isUpdated(states, names, n))
+            {
+                m_TailLightSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightSP[INDI_ENABLED].getState()));
+                if (SUCCEEDED(rc))
+                    m_TailLightSP.setState(IPS_OK);
+                else
+                {
+                    LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                               errorCodes(rc).c_str());
+                    m_TailLightSP.setState(IPS_ALERT);
+                    m_TailLightSP.reset();
+                    m_TailLightSP[prevIndex].setState(ISS_ON);
+                }
+                m_TailLightSP.apply();
+                saveConfig(m_TailLightSP);
+            }
             else
             {
-                LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF",
-                           errorCodes(rc).c_str());
-                m_TailLightSP.s = IPS_ALERT;
-                IUResetSwitch(&m_TailLightSP);
-                m_TailLightS[prevIndex].s = ISS_ON;
+                m_TailLightSP.setState(IPS_OK);
+                m_TailLightSP.apply();
+                return true;
             }
-            IDSetSwitch(&m_TailLightSP, nullptr);
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Auto Exposure
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_AutoExposureSP.name))
+        if (m_AutoExposureSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_AutoExposureSP, states, names, n);
-            m_AutoExposureSP.s = IPS_OK;
-            FP(put_AutoExpoEnable(m_Handle, m_AutoExposureS[INDI_ENABLED].s == ISS_ON ? 1 : 0));
-            IDSetSwitch(&m_AutoExposureSP, nullptr);
+            if (m_AutoExposureSP.isUpdated(states, names, n))
+            {
+                m_AutoExposureSP.update(states, names, n);
+                m_AutoExposureSP.setState(IPS_OK);
+                FP(put_AutoExpoEnable(m_Handle, m_AutoExposureSP[INDI_ENABLED].getState() == ISS_ON ? 1 : 0));
+                m_AutoExposureSP.apply();
+                saveConfig(m_AutoExposureSP);
+            }
+            else
+            {
+                m_AutoExposureSP.setState(IPS_OK);
+                m_AutoExposureSP.apply();
+                return true;
+            }
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Conversion Gain
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_GainConversionSP.name))
+        if (m_GainConversionSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_GainConversionSP, states, names, n);
-            m_GainConversionSP.s = IPS_OK;
-            FP(put_Option(m_Handle, CP(OPTION_CG), IUFindOnSwitchIndex(&m_GainConversionSP)));
-            IDSetSwitch(&m_GainConversionSP, nullptr);
+            if (m_GainConversionSP.isUpdated(states, names, n))
+            {
+                m_GainConversionSP.update(states, names, n);
+                m_GainConversionSP.setState(IPS_OK);
+                FP(put_Option(m_Handle, CP(OPTION_CG), m_GainConversionSP.findOnSwitchIndex()));
+                m_GainConversionSP.apply();
+                saveConfig(m_GainConversionSP);
+            }
+            else
+            {
+                m_GainConversionSP.setState(IPS_OK);
+                m_GainConversionSP.apply();
+                return true;
+            }
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Resolution
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_ResolutionSP.name))
+        if (m_ResolutionSP.isNameMatch(name))
         {
             if (Streamer->isBusy())
             {
-                m_ResolutionSP.s = IPS_ALERT;
+                m_ResolutionSP.setState(IPS_ALERT);
                 LOG_ERROR("Cannot change resolution while streaming/recording");
-                IDSetSwitch(&m_ResolutionSP, nullptr);
+                m_ResolutionSP.apply();
                 return true;
             }
 
-            int preIndex = IUFindOnSwitchIndex(&m_ResolutionSP);
-            IUUpdateSwitch(&m_ResolutionSP, states, names, n);
-            int targetIndex = IUFindOnSwitchIndex(&m_ResolutionSP);
-
-            if (m_ConfigResolutionIndex == targetIndex)
+            int preIndex = m_ResolutionSP.findOnSwitchIndex();
+            if (m_ResolutionSP.isUpdated(states, names, n))
             {
-                m_ResolutionSP.s = IPS_OK;
-                IDSetSwitch(&m_ResolutionSP, nullptr);
-                return true;
-            }
+                m_ResolutionSP.update(states, names, n);
+                int targetIndex = m_ResolutionSP.findOnSwitchIndex();
+                // Stop capture
+                FP(Stop(m_Handle));
 
-            // Stop capture
-            FP(Stop(m_Handle));
+                HRESULT rc = FP(put_eSize(m_Handle, targetIndex));
+                if (FAILED(rc))
+                {
+                    m_ResolutionSP.setState(IPS_ALERT);
+                    m_ResolutionSP.reset();
+                    m_ResolutionSP[preIndex].setState(ISS_ON);
+                    LOGF_ERROR("Failed to change resolution. %s", errorCodes(rc).c_str());
+                }
+                else
+                {
+                    m_ResolutionSP.setState(IPS_OK);
+                    PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
+                    PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
+                    LOGF_INFO("Resolution changed to %s", m_ResolutionSP[targetIndex].getLabel());
+                    allocateFrameBuffer();
+                    m_ConfigResolutionIndex = targetIndex;
+                    saveConfig(m_ResolutionSP);
+                }
 
-            HRESULT rc = FP(put_eSize(m_Handle, targetIndex));
-            if (FAILED(rc))
-            {
-                m_ResolutionSP.s = IPS_ALERT;
-                IUResetSwitch(&m_ResolutionSP);
-                m_ResolutionS[preIndex].s = ISS_ON;
-                LOGF_ERROR("Failed to change resolution. %s", errorCodes(rc).c_str());
+                m_ResolutionSP.apply();
+
+                // Restart capture
+                rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
+                if (FAILED(rc))
+                    LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
             }
             else
             {
-                m_ResolutionSP.s = IPS_OK;
-                PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
-                PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
-                LOGF_INFO("Resolution changed to %s", m_ResolutionS[targetIndex].label);
-                allocateFrameBuffer();
-                m_ConfigResolutionIndex = targetIndex;
-                saveConfig(true, m_ResolutionSP.name);
+                m_ResolutionSP.setState(IPS_OK);
+                m_ResolutionSP.apply();
+                return true;
             }
-
-            IDSetSwitch(&m_ResolutionSP, nullptr);
-
-            // Restart capture
-            rc = FP(StartPullModeWithCallback(m_Handle, &ToupBase::eventCB, this));
-            if (FAILED(rc))
-                LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Auto White Balance
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_WBAutoSP.name))
+        if (m_WBAutoSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_WBAutoSP, states, names, n);
-            HRESULT rc = FP(AwbInit(m_Handle, nullptr, nullptr));
-            IUResetSwitch(&m_WBAutoSP);
-            if (SUCCEEDED(rc))
+            if (m_WBAutoSP.isUpdated(states, names, n))
             {
-                LOG_INFO("Auto white balance once");
-                m_WBAutoSP.s = IPS_OK;
+                m_WBAutoSP.update(states, names, n);
+                HRESULT rc = FP(AwbInit(m_Handle, nullptr, nullptr));
+                m_WBAutoSP.reset();
+                if (SUCCEEDED(rc))
+                {
+                    LOG_INFO("Auto white balance once");
+                    m_WBAutoSP.setState(IPS_OK);
+                }
+                else
+                {
+                    LOGF_ERROR("Failed to auto white balance. %s", errorCodes(rc).c_str());
+                    m_WBAutoSP.setState(IPS_ALERT);
+                }
+
+                m_WBAutoSP.apply();
+                saveConfig(m_WBAutoSP);
             }
             else
             {
-                LOGF_ERROR("Failed to auto white balance. %s", errorCodes(rc).c_str());
-                m_WBAutoSP.s = IPS_ALERT;
+                m_WBAutoSP.setState(IPS_OK);
+                m_WBAutoSP.apply();
+                return true;
             }
-
-            IDSetSwitch(&m_WBAutoSP, nullptr);
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Auto Black Balance
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_BBAutoSP.name))
+        if (m_BBAutoSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_BBAutoSP, states, names, n);
-            HRESULT rc = FP(AbbOnce(m_Handle, nullptr, nullptr));
-            IUResetSwitch(&m_BBAutoSP);
-            if (SUCCEEDED(rc))
+            if (m_BBAutoSP.isUpdated(states, names, n))
             {
-                LOG_INFO("Auto black balance once");
-                m_BBAutoSP.s = IPS_OK;
+                m_BBAutoSP.update(states, names, n);
+                HRESULT rc = FP(AbbOnce(m_Handle, nullptr, nullptr));
+                m_BBAutoSP.reset();
+                if (SUCCEEDED(rc))
+                {
+                    LOG_INFO("Auto black balance once");
+                    m_BBAutoSP.setState(IPS_OK);
+                }
+                else
+                {
+                    LOGF_ERROR("Failed to auto black balance. %s", errorCodes(rc).c_str());
+                    m_BBAutoSP.setState(IPS_ALERT);
+                }
+
+                m_BBAutoSP.apply();
+                saveConfig(m_BBAutoSP);
             }
             else
             {
-                LOGF_ERROR("Failed to auto black balance. %s", errorCodes(rc).c_str());
-                m_BBAutoSP.s = IPS_ALERT;
+                m_BBAutoSP.setState(IPS_OK);
+                m_BBAutoSP.apply();
             }
-
-            IDSetSwitch(&m_BBAutoSP, nullptr);
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Fan
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_FanSP.name))
+        if (m_FanSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_FanSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FAN), IUFindOnSwitchIndex(&m_FanSP)));
-            if (SUCCEEDED(rc))
-                m_FanSP.s = IPS_OK;
+            if (m_FanSP.isUpdated(states, names, n))
+            {
+                m_FanSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_FAN), m_FanSP.findOnSwitchIndex()));
+                if (SUCCEEDED(rc))
+                    m_FanSP.setState(IPS_OK);
+                else
+                {
+                    m_FanSP.setState(IPS_ALERT);
+                    LOGF_ERROR("Failed to set fan. %s", errorCodes(rc).c_str());
+                }
+                m_FanSP.apply();
+                saveConfig(m_FanSP);
+            }
             else
             {
-                m_FanSP.s = IPS_ALERT;
-                LOGF_ERROR("Failed to set fan. %s", errorCodes(rc).c_str());
+                m_FanSP.setState(IPS_OK);
+                m_FanSP.apply();
             }
-            IDSetSwitch(&m_FanSP, nullptr);
             return true;
         }
 
         //////////////////////////////////////////////////////////////////////
         /// Heat
         //////////////////////////////////////////////////////////////////////
-        if (!strcmp(name, m_HeatSP.name))
+        if (m_HeatSP.isNameMatch(name))
         {
-            IUUpdateSwitch(&m_HeatSP, states, names, n);
-            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HEAT), IUFindOnSwitchIndex(&m_HeatSP)));
-            if (SUCCEEDED(rc))
-                m_HeatSP.s = IPS_OK;
+            if (m_HeatSP.isUpdated(states, names, n))
+            {
+                m_HeatSP.update(states, names, n);
+                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HEAT), m_HeatSP.findOnSwitchIndex()));
+                if (SUCCEEDED(rc))
+                    m_HeatSP.setState(IPS_OK);
+                else
+                {
+                    LOGF_ERROR("Failed to set heat. %s", errorCodes(rc).c_str());
+                    m_HeatSP.setState(IPS_ALERT);
+                }
+                m_HeatSP.apply();
+                saveConfig(m_HeatSP);
+            }
             else
             {
-                LOGF_ERROR("Failed to set heat. %s", errorCodes(rc).c_str());
-                m_HeatSP.s = IPS_ALERT;
+                m_HeatSP.setState(IPS_OK);
+                m_HeatSP.apply();
             }
-            IDSetSwitch(&m_HeatSP, nullptr);
             return true;
         }
     }
@@ -1406,30 +1558,30 @@ bool ToupBase::activateCooler(bool enable)
         return true;
 
     rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
-    IUResetSwitch(&m_CoolerSP);
+    m_CoolerSP.reset();
     if (FAILED(rc))
     {
-        m_CoolerS[enable ? INDI_DISABLED : INDI_ENABLED].s = ISS_ON;
-        m_CoolerSP.s = IPS_ALERT;
+        m_CoolerSP[enable ? INDI_DISABLED : INDI_ENABLED].setState(ISS_ON);
+        m_CoolerSP.setState(IPS_ALERT);
         LOGF_ERROR("Failed to turn cooler %s. %s", enable ? "ON" : "OFF", errorCodes(rc).c_str());
-        IDSetSwitch(&m_CoolerSP, nullptr);
+        m_CoolerSP.apply();
         return false;
     }
     else
     {
-        m_CoolerS[enable ? INDI_ENABLED : INDI_DISABLED].s = ISS_ON;
-        m_CoolerSP.s = enable ? IPS_BUSY : IPS_IDLE;
-        IDSetSwitch(&m_CoolerSP, nullptr);
+        m_CoolerSP[enable ? INDI_ENABLED : INDI_DISABLED].setState(ISS_ON);
+        m_CoolerSP.setState(enable ? IPS_BUSY : IPS_IDLE);
+        m_CoolerSP.apply();
 
         /* turn on TEC may force to turn on the fan */
         if (enable && (m_Instance->model->flag & CP(FLAG_FAN)))
         {
             int fan = 0;
             FP(get_Option(m_Handle, CP(OPTION_FAN), &fan));
-            IUResetSwitch(&m_FanSP);
+            m_FanSP.reset();
             for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-                m_FanS[i].s = (fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF;
-            IDSetSwitch(&m_FanSP, nullptr);
+                m_FanSP[i].setState((fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF);
+            m_FanSP.apply();
         }
 
         return true;
@@ -1554,14 +1706,14 @@ bool ToupBase::updateBinningMode(int binx, int mode)
     if (FAILED(rc))
     {
         LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx, binx, binningMode, errorCodes(rc).c_str());
-        m_BinningModeSP.s = IPS_ALERT;
-        IDSetSwitch(&m_BinningModeSP, nullptr);
+        m_BinningModeSP.setState(IPS_ALERT);
+        m_BinningModeSP.apply();
         return false;
     }
     else
     {
-        m_BinningModeSP.s = IPS_OK;
-        IDSetSwitch(&m_BinningModeSP, nullptr);
+        m_BinningModeSP.setState(IPS_OK);
+        m_BinningModeSP.apply();
     }
 
     PrimaryCCD.setBin(binx, binx);
@@ -1825,7 +1977,7 @@ const char *ToupBase::getBayerString()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 void ToupBase::refreshControls()
 {
-    IDSetNumber(&m_ControlNP, nullptr);
+    m_ControlNP.apply();
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1835,16 +1987,16 @@ void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FIT
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
-    fitsKeywords.push_back({"GAIN", m_ControlN[TC_GAIN].value, 3, "Gain"});
-    fitsKeywords.push_back({"OFFSET", m_OffsetN[0].value, 3, "Offset"});
+    fitsKeywords.push_back({"GAIN", m_ControlNP[TC_GAIN].getValue(), 3, "Gain"});
+    fitsKeywords.push_back({"OFFSET", m_OffsetNP[0].getValue(), 3, "Offset"});
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-        fitsKeywords.push_back({"LOWNOISE", m_LowNoiseS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "Low Noise"});
+        fitsKeywords.push_back({"LOWNOISE", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "Low Noise"});
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-        fitsKeywords.push_back({"FULLWELL", m_HighFullwellS[INDI_ENABLED].s == ISS_ON ? "ON" : "OFF", "High Fullwell"});
-    fitsKeywords.push_back({"SN", m_CameraT[TC_CAMERA_SN].text, "Serial Number"});
-    fitsKeywords.push_back({"PRODATE", m_CameraT[TC_CAMERA_DATE].text, "Production Date"});
-    fitsKeywords.push_back({"FIRMVER", m_CameraT[TC_CAMERA_FW_VERSION].text, "Firmware Version"});
-    fitsKeywords.push_back({"HARDVER", m_CameraT[TC_CAMERA_HW_VERSION].text, "Hardware Version"});
+        fitsKeywords.push_back({"FULLWELL", m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "High Fullwell"});
+    fitsKeywords.push_back({"SN", m_CameraTP[TC_CAMERA_SN].getText(), "Serial Number"});
+    fitsKeywords.push_back({"PRODATE", m_CameraTP[TC_CAMERA_DATE].getText(), "Production Date"});
+    fitsKeywords.push_back({"FIRMVER", m_CameraTP[TC_CAMERA_FW_VERSION].getText(), "Firmware Version"});
+    fitsKeywords.push_back({"HARDVER", m_CameraTP[TC_CAMERA_HW_VERSION].getText(), "Hardware Version"});
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1855,22 +2007,37 @@ bool ToupBase::saveConfigItems(FILE * fp)
     INDI::CCD::saveConfigItems(fp);
 
     m_TimeoutFactorNP.save(fp);
-    if (HasCooler())
-        IUSaveConfigSwitch(fp, &m_CoolerSP);
 
-    IUSaveConfigNumber(fp, &m_ControlNP);
-    IUSaveConfigNumber(fp, &m_OffsetNP);
-    IUSaveConfigSwitch(fp, &m_ResolutionSP);
-    IUSaveConfigSwitch(fp, &m_BinningModeSP);
+    m_ControlNP.save(fp);
+    m_OffsetNP.save(fp);
+    m_ResolutionSP.save(fp);
+    m_BinningModeSP.save(fp);
 
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-        IUSaveConfigSwitch(fp, &m_LowNoiseSP);
+        m_LowNoiseSP.save(fp);
 
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-        IUSaveConfigSwitch(fp, &m_HighFullwellSP);
+        m_HighFullwellSP.save(fp);
 
     if (m_Instance->model->flag & CP(FLAG_FAN))
-        IUSaveConfigSwitch(fp, &m_FanSP);
+        m_FanSP.save(fp);
+
+    m_LevelRangeNP.save(fp);
+    m_BlackBalanceNP.save(fp);
+    m_OffsetNP.save(fp);
+    if (m_MonoCamera == false)
+    {
+        m_WBNP.save(fp);
+        m_WBAutoSP.save(fp);
+    }
+    if (m_SupportTailLight)
+        m_TailLightSP.save(fp);
+    m_AutoExposureSP.save(fp);
+    if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+        m_GainConversionSP.save(fp);
+    m_BBAutoSP.save(fp);
+    if (m_Instance->model->flag & CP(FLAG_HEAT))
+        m_HeatSP.save(fp);
 
     return true;
 }
@@ -1907,9 +2074,9 @@ void ToupBase::eventCallBack(unsigned event)
         {
             uint16_t expoGain = CP(EXPOGAIN_MIN);
             FP(get_ExpoAGain(m_Handle, &expoGain));
-            m_ControlN[TC_GAIN].value = expoGain;
-            m_ControlNP.s = IPS_OK;
-            IDSetNumber(&m_ControlNP, nullptr);
+            m_ControlNP[TC_GAIN].setValue(expoGain);
+            m_ControlNP.setState(IPS_OK);
+            m_ControlNP.apply();
         }
         break;
         case CP(EVENT_IMAGE):
@@ -1978,22 +2145,22 @@ void ToupBase::eventCallBack(unsigned event)
         {
             int aGain[3] = { 0 };
             FP(get_WhiteBalanceGain)(m_Handle, aGain);
-            m_WBN[TC_WB_R].value = aGain[TC_WB_R];
-            m_WBN[TC_WB_G].value = aGain[TC_WB_G];
-            m_WBN[TC_WB_B].value = aGain[TC_WB_B];
-            m_WBNP.s = IPS_OK;
-            IDSetNumber(&m_WBNP, nullptr);
+            m_WBNP[TC_WB_R].setValue(aGain[TC_WB_R]);
+            m_WBNP[TC_WB_G].setValue(aGain[TC_WB_G]);
+            m_WBNP[TC_WB_B].setValue(aGain[TC_WB_B]);
+            m_WBNP.setState(IPS_OK);
+            m_WBNP.apply();
         }
         break;
         case CP(EVENT_BLACK):
         {
             unsigned short aSub[3] = { 0 };
             FP(get_BlackBalance)(m_Handle, aSub);
-            m_BlackBalanceN[TC_BLACK_R].value = aSub[TC_BLACK_R];
-            m_BlackBalanceN[TC_BLACK_G].value = aSub[TC_BLACK_G];
-            m_BlackBalanceN[TC_BLACK_B].value = aSub[TC_BLACK_B];
-            m_BlackBalanceNP.s = IPS_OK;
-            IDSetNumber(&m_BlackBalanceNP, nullptr);
+            m_BlackBalanceNP[TC_BLACK_R].setValue(aSub[TC_BLACK_R]);
+            m_BlackBalanceNP[TC_BLACK_G].setValue(aSub[TC_BLACK_G]);
+            m_BlackBalanceNP[TC_BLACK_B].setValue(aSub[TC_BLACK_B]);
+            m_BlackBalanceNP.setState(IPS_OK);
+            m_BlackBalanceNP.apply();
         }
         break;
         case CP(EVENT_ERROR):
@@ -2084,8 +2251,8 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
     int bLevelStep = 1;
     if (m_BitsPerPixel > 8)
         bLevelStep = 1 << (m_maxBitDepth - 8);
-    m_OffsetN[0].max = CP(BLACKLEVEL8_MAX) * bLevelStep;
-    IUUpdateMinMax(&m_OffsetNP);
+    m_OffsetNP[0].setMax(CP(BLACKLEVEL8_MAX) * bLevelStep);
+    m_OffsetNP.updateMinMax();
 
     LOGF_DEBUG("Video Format: %d, BitsPerPixel: %d", index, m_BitsPerPixel);
 
