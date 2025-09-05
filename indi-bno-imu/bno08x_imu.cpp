@@ -23,6 +23,8 @@
 #include <indilogger.h>
 #include <sh2_SensorValue.h>
 
+std::unique_ptr<BNO08X> imu(new BNO08X());
+
 BNO08X::BNO08X()
 {
     SetCapability(IMU_HAS_ORIENTATION | IMU_HAS_ACCELERATION | IMU_HAS_GYROSCOPE | IMU_HAS_MAGNETOMETER |
@@ -48,33 +50,38 @@ bool BNO08X::updateProperties()
 
 bool BNO08X::Handshake()
 {
-    if (!i2cConnection->Connect())
-    {
-        LOG_ERROR("BNO08X connection failed.");
-        return false;
-    }
-
-    // PortFD is now managed by the base IMU class and is available after connection.
-    // Use PortFD to initialize the BNO08x object.
-    if (PortFD < 0)
-    {
-        LOG_ERROR("Invalid I2C file descriptor. Cannot initialize BNO08x.");
-        return false;
-    }
-
     try
     {
         // Initialize the BNO08x sensor with the I2C file descriptor
         bno08x.begin_i2c(PortFD);
 
+        std::string chipID = "N/A";
+        std::string firmwareVersion = "N/A";
+        std::string sensorStatus = "N/A";
+
         if (bno08x.wasReset())
         {
             LOG_INFO("BNO08X sensor reset detected - normal startup behavior.");
+            sensorStatus = "Reset Detected";
         }
         else
         {
             LOG_INFO("BNO08X: No sensor reset detected.");
+            sensorStatus = "Operational";
         }
+
+        // Retrieve product ID information
+        if (bno08x.prodIds.numEntries > 0)
+        {
+            const sh2_ProductId_t &entry = bno08x.prodIds.entry[0];
+            chipID = std::to_string(entry.swPartNumber);
+            firmwareVersion = std::to_string(entry.swVersionMajor) + "." +
+                              std::to_string(entry.swVersionMinor) + "." +
+                              std::to_string(entry.swVersionPatch);
+        }
+
+        // Set device information
+        SetDeviceInfo(chipID, firmwareVersion, sensorStatus);
 
         // Enable desired reports
         if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) // 10ms update rate
@@ -206,11 +213,11 @@ bool BNO08X::readSensorData()
                 break;
 
             case SH2_STEP_DETECTOR:
-                LOGF_INFO("BNO08X: Step detected! Latency: %d us", sensorValue.un.stepDetector.latency);
+                LOGF_DEBUG("BNO08X: Step detected! Latency: %d us", sensorValue.un.stepDetector.latency);
                 break;
 
             case SH2_STABILITY_CLASSIFIER:
-                LOGF_INFO("BNO08X: Stability Classifier: %d", sensorValue.un.stabilityClassifier.classification);
+                LOGF_DEBUG("BNO08X: Stability Classifier: %d", sensorValue.un.stabilityClassifier.classification);
                 break;
 
             case SH2_RAW_ACCELEROMETER:
@@ -363,10 +370,17 @@ bool BNO08X::SetOperationMode(const std::string &mode)
     return true;
 }
 
-bool BNO08X::SetUnits(bool metric, bool degrees)
+bool BNO08X::SetDistanceUnits(bool metric)
 {
-    // TODO: Implement BNO08X unit setting
-    LOGF_INFO("BNO08X: Setting units (metric: %d, degrees: %d).", metric, degrees);
+    // TODO: Implement BNO08X distance unit setting
+    LOGF_INFO("BNO08X: Setting distance units (metric: %d).", metric);
+    return true;
+}
+
+bool BNO08X::SetAngularUnits(bool degrees)
+{
+    // TODO: Implement BNO08X angular unit setting
+    LOGF_INFO("BNO08X: Setting angular units (degrees: %d).", degrees);
     return true;
 }
 

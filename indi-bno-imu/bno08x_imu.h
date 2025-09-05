@@ -53,7 +53,8 @@ class BNO08X : public INDI::IMU
         virtual bool ResetCalibration() override;
         virtual bool SetPowerMode(const std::string &mode) override;
         virtual bool SetOperationMode(const std::string &mode) override;
-        virtual bool SetUnits(bool metric, bool degrees) override;
+        virtual bool SetDistanceUnits(bool metric) override;
+        virtual bool SetAngularUnits(bool degrees) override;
         virtual bool SetUpdateRate(double rate) override;
         virtual bool SetOffsets(double x, double y, double z) override;
         virtual bool SetDeviceInfo(const std::string &chipID, const std::string &firmwareVersion,
