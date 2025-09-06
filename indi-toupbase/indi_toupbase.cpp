@@ -678,6 +678,7 @@ void ToupBase::setupParams()
     // Set final resolution index to work around bug in toupcam firmware.
     // TODO: revert this when touptek fixes the related firmware issue
     // that block downloading of images, unless the resolution is cycled
+    FP(put_eSize(m_Handle, 0));
     FP(put_eSize(m_Handle, finalResolutionIndex));
 
     SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height,
