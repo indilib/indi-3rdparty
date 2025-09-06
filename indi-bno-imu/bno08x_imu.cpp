@@ -87,11 +87,19 @@ bool BNO08X::Handshake()
         SetDeviceInfo(chipID, firmwareVersion, sensorStatus);
 
         // Enable desired reports
-        if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Rotation Vector report.");
-            return false;
-        }
+        // Enable desired reports
+        // Disable SH2_ROTATION_VECTOR due to magnetic interference issues
+        // if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) // 10ms update rate
+        // {
+        //     LOG_ERROR("BNO08X: Failed to enable Rotation Vector report.");
+        //     return false;
+        // }
+        // Disable SH2_GAME_ROTATION_VECTOR as it lacks absolute heading
+        // if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 10000)) // 10ms update rate
+        // {
+        //     LOG_ERROR("BNO08X: Failed to enable Game Rotation Vector report.");
+        //     return false;
+        // }
         if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) // 10ms update rate
         {
             LOG_ERROR("BNO08X: Failed to enable Accelerometer report.");
@@ -107,6 +115,7 @@ bool BNO08X::Handshake()
             LOG_ERROR("BNO08X: Failed to enable Magnetometer report.");
             return false;
         }
+        // Enable SH2_GEOMAGNETIC_ROTATION_VECTOR for stable heading with magnetic north reference
         if (!bno08x.enableReport(SH2_GEOMAGNETIC_ROTATION_VECTOR, 10000)) // 10ms update rate
         {
             LOG_ERROR("BNO08X: Failed to enable Geomagnetic Rotation Vector report.");
