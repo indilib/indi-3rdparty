@@ -36,6 +36,8 @@
 #include <map>
 #include <unistd.h>
 
+
+
 #define USE_POA_EXP     // since SDK v3.8.0: change time unit of exposure from micor second to second
 
 #define MAX_EXP_RETRIES         3
@@ -52,6 +54,97 @@ const char *POABase::getBayerString() const
 {
     return Helpers::toString(mCameraInfo.bayerPattern);
 }
+
+
+bool POABase::setExposure(long expoUs, bool isAuto)
+{
+    POAConfigValue exposValue;
+    exposValue.intValue = expoUs;
+
+    POAErrors error = POASetConfig(mCameraInfo.cameraID, POA_EXPOSURE, exposValue, isAuto ? POA_TRUE : POA_FALSE);
+
+    if(error != POA_OK)
+    {
+        LOGF_ERROR("set exposure failed:  (%s).", Helpers::toString(error));
+        return false;
+    }
+
+    return true;
+}
+
+long POABase::getExposure()
+{
+    POAConfigValue exposValue;
+
+    POABool boolValue;
+
+    POAErrors error = POAGetConfig(mCameraInfo.cameraID, POA_EXPOSURE, &exposValue, &boolValue);
+
+    if(error != POA_OK)
+    {
+        LOGF_ERROR("get exposure failed:  (%s).", Helpers::toString(error));
+        return false;
+    }
+
+    return exposValue.intValue;
+}
+
+
+bool POABase::startExposure()
+{
+    POAErrors error = POAStartExposure(mCameraInfo.cameraID, POA_FALSE); // continuously exposure
+
+    if(error != POA_OK)
+    {
+
+        LOGF_ERROR("start exposure failed:  (%s).", Helpers::toString(error));
+        return false;
+    }
+
+    return true;
+}
+
+bool POABase::isImgDataAvailable()
+{
+    POABool pIsReady = POA_FALSE;
+
+    POAErrors error = POAImageReady(mCameraInfo.cameraID , &pIsReady);
+
+    if(error != POA_OK)
+    {
+        return false;
+    }
+
+    return pIsReady == POA_TRUE ? true : false;
+
+}
+
+
+bool POABase::getImageData(unsigned char *pDataBuffer, unsigned long size)
+{
+    long exposureUs = getExposure();
+    POAErrors error = POAGetImageData(mCameraInfo.cameraID, pDataBuffer, size, exposureUs /1000 + 500);
+
+    if (error != POA_OK )
+        LOGF_ERROR("GetImageData failed:  (%s).", Helpers::toString(error));
+
+    return error == POA_OK ? true : false;
+}
+
+bool POABase::stopExposure()
+{
+    POAErrors error = POAStopExposure(mCameraInfo.cameraID);
+
+    if(error != POA_OK)
+    {
+        LOGF_ERROR("stop exposure failed:  (%s).", Helpers::toString(error));
+        return false;
+    }
+
+    return true;
+}
+
+
 
 void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 {
@@ -185,51 +278,38 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
 
 void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float duration)
 {
-    POAErrors ret;
-    POAConfigValue confVal;
 
+    bool isExpose= false;
     workerBlinkExposure(
         isAbortToQuit,
         BlinkNP[BLINK_COUNT   ].getValue(),
-        BlinkNP[BLINK_DURATION].getValue()
+                        BlinkNP[BLINK_DURATION].getValue()
     );
 
     PrimaryCCD.setExposureDuration(duration);
 
-    LOGF_DEBUG("StartExposure->setexp : %.3fs", duration);
+    LOGF_INFO("StartExposure->setexp : %.3fs", duration);
 
-#ifdef USE_POA_EXP
-    confVal.floatValue = (double)(duration);
-    ret = POASetConfig(mCameraInfo.cameraID, POA_EXP, confVal, POA_FALSE);
-#else
-    confVal.intValue = (long)(duration * 1000 * 1000);
-    ret = POASetConfig(mCameraInfo.cameraID, POA_EXPOSURE, confVal, POA_FALSE);
-#endif
-    if (ret != POA_OK)
+    if ( !setExposure(duration*1000*1000, false)  )
     {
-        LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        LOG_ERROR("Failed to set exposure duration");
     }
 
-    // Try exposure for 3 times
-    // isDark is for mechanical shutter control
-    // However, PlayerOne Cameras doesn't have mechanical shutter
-    //POABool isDark = (PrimaryCCD.getFrameType() == INDI::CCDChip::DARK_FRAME) ? POA_TRUE : POA_FALSE;
-
-    for (int i = 0; i < 3; i++)
+    for (int i = 0; i < MAX_EXP_RETRIES; i++)
     {
-        //ret = POAStartExposure(mCameraInfo.cameraID, isDark);
-        ret = POAStartExposure(mCameraInfo.cameraID, POA_TRUE);
-        if (ret == POA_OK)
+        if (startExposure()) {
+            isExpose=true;
             break;
+        }
 
-        LOGF_ERROR("Failed to start exposure (%s)", Helpers::toString(ret));
+        LOGF_WARN("Failed to start exposure, next try (%d)/%d", i , MAX_EXP_RETRIES );
         // Wait 100ms before trying again
         usleep(100 * 1000);
     }
 
-    if (ret != POA_OK)
+    if (!isExpose)
     {
-        LOG_WARN("PlayerOne firmware might require an update to *compatible mode.");
+        LOGF_ERROR("Failed to start exposure after %d try", MAX_EXP_RETRIES);
         return;
     }
 
@@ -238,82 +318,44 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
     if (duration > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
-    int statRetry = 0;
-    POACameraState status;
-    POABool pIsReady;
-    do
-    {
-        float delay = 0.1;
-        float timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
+    /* loop delay when exposure TimeLeft < 0.6 seconds */
+    int delay = 1000;
 
-        /*
-         * Check the status every second until the time left is
-         * about one second, after which decrease the poll interval
-         *
-         * For expsoures with more than a second left try
-         * to keep the displayed "exposure left" value at
-         * a full second boundary, which keeps the
-         * count down neat
-         */
-        if (timeLeft > 1.1)
-        {
-            delay = std::max(timeLeft - std::trunc(timeLeft), 0.005f);
-            timeLeft = std::round(timeLeft);
-        }
+    float timeLeft;
 
-        if (timeLeft > 0)
-        {
-            PrimaryCCD.setExposureLeft(timeLeft);
-        }
+    while(!isImgDataAvailable()) {
 
-        usleep(delay * 1000 * 1000);
+       timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
 
-        POAErrors ret = POAGetCameraState(mCameraInfo.cameraID, &status);
+       if (timeLeft > 0 )
+         PrimaryCCD.setExposureLeft(timeLeft);
 
-        if (isAbortToQuit)
+       if (isAbortToQuit)
             return;
 
-        if (ret != POA_OK)
-        {
-            LOGF_DEBUG("Failed to get exposure status (%s)", Helpers::toString(ret));
-            if (++statRetry < 10)
-            {
-                usleep(100);
-                continue;
-            }
+       /* Refresh every 0.5 seconds if timeleft > 0.6 else refresh every 1000(delay) microseconds  */
+       if (timeLeft > 0.6 )
+       {
+           PrimaryCCD.setExposureLeft(timeLeft);
+           LOGF_DEBUG("TimeLeft: %3.1f seconds ...", timeLeft );
+           /* wait 0.5s */
+           usleep(500000);
+       }
+       else
+           usleep(delay);
 
-            LOGF_ERROR("Exposure status timed out (%s)", Helpers::toString(ret));
-            PrimaryCCD.setExposureFailed();
-            return;
-        }
-
-        if (ret == POA_ERROR_EXPOSURE_FAILED)
-        {
-            if (++mExposureRetry < MAX_EXP_RETRIES)
-            {
-                LOG_DEBUG("POA_ERROR_EXPOSURE_FAILED. Restarting exposure...");
-                POAStopExposure(mCameraInfo.cameraID);
-                workerExposure(isAbortToQuit, duration);
-                return;
-            }
-
-            LOGF_ERROR("Exposure failed after %d attempts.", mExposureRetry);
-            POAStopExposure(mCameraInfo.cameraID);
-            PrimaryCCD.setExposureFailed();
-            return;
-        }
-
-        POAImageReady(mCameraInfo.cameraID, &pIsReady);
     }
-    while (!pIsReady);
 
-    // Reset exposure retry
-    mExposureRetry = 0;
+    LOG_DEBUG("End while isImgDataAvaiable");
+
     PrimaryCCD.setExposureLeft(0.0);
-    if (PrimaryCCD.getExposureDuration() > 3)
+    stopExposure();
+
+    if (PrimaryCCD.getExposureDuration() > VERBOSE_EXPOSURE)
         LOG_INFO("Exposure done, downloading image...");
 
     grabImage(duration);
+
 }
 
 ///////////////////////////////////////////////////////////////////////
@@ -1236,7 +1278,7 @@ bool POABase::UpdateCCDBin(int binx, int biny)
  N.B. No processing is done on the image */
 int POABase::grabImage(float duration)
 {
-    POAErrors ret = POA_OK;
+
 
     POAImgFormat type = getImageType();
 
@@ -1259,13 +1301,10 @@ int POABase::grabImage(float duration)
         }
     }
 
-    ret = POAGetImageData(mCameraInfo.cameraID, buffer, nTotalBytes, -1);
-    if (ret != POA_OK)
+    /* getImageData:Blocking function wait exposure+500ms */
+    if (!getImageData(buffer,nTotalBytes))
     {
-        LOGF_ERROR(
-            "Failed to get data after exposure (%dx%d #%d channels) (%s).",
-            subW, subH, nChannels, Helpers::toString(ret)
-        );
+        LOG_ERROR("getImageData failed ");
         if (type == POA_RGB24)
             free(buffer);
         return -1;
