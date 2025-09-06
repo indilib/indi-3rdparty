@@ -23,6 +23,7 @@
 #include <indiimu.h>
 #include <connectionplugins/connectioni2c.h>
 #include <BNO08x.h>
+#include <cmath>
 
 class BNO08X : public INDI::IMU
 {
@@ -42,10 +43,6 @@ class BNO08X : public INDI::IMU
 
     protected:
         // Implement virtual functions from IMUInterface
-        virtual bool SetOrientationData(double roll, double pitch, double yaw, double w = 0.0) override;
-        virtual bool SetAccelerationData(double x, double y, double z) override;
-        virtual bool SetGyroscopeData(double x, double y, double z) override;
-        virtual bool SetMagnetometerData(double x, double y, double z) override;
         virtual bool SetCalibrationStatus(int sys, int gyro, int accel, int mag) override;
         virtual bool StartCalibration() override;
         virtual bool SaveCalibrationData() override;
@@ -59,9 +56,6 @@ class BNO08X : public INDI::IMU
         virtual bool SetOffsets(double x, double y, double z) override;
         virtual bool SetDeviceInfo(const std::string &chipID, const std::string &firmwareVersion,
                                    const std::string &sensorStatus) override;
-        virtual bool SetTemperature(double temperature) override;
-        virtual bool SetStabilityMonitoring(double vibrationLevel, double stabilityThreshold) override;
-
     private:
         BNO08x bno08x; // BNO08x sensor object
         bool readSensorData();

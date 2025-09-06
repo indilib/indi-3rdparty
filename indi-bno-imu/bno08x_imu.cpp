@@ -22,13 +22,16 @@
 #include <indicom.h>
 #include <indilogger.h>
 #include <sh2_SensorValue.h>
+#include <sh2.h>
+#include <sh2_err.h>
+#include <cmath>
 
 std::unique_ptr<BNO08X> imu(new BNO08X());
 
 BNO08X::BNO08X()
 {
     SetCapability(IMU_HAS_ORIENTATION | IMU_HAS_ACCELERATION | IMU_HAS_GYROSCOPE | IMU_HAS_MAGNETOMETER |
-                  IMU_HAS_CALIBRATION | IMU_HAS_TEMPERATURE | IMU_HAS_STABILITY_MON);
+                  IMU_HAS_CALIBRATION);
 
     setSupportedConnections(INDI::IMU::CONNECTION_I2C);
     setDriverInterface(IMU_INTERFACE);
@@ -241,63 +244,9 @@ bool BNO08X::readSensorData()
                              (sensorValue.status >> 4) & 0x03, // Accelerometer calibration
                              (sensorValue.status >> 6) & 0x03); // Magnetometer calibration
 
-        // Temperature is not directly available from BNO08x reports,
-        // but could be estimated or read from another sensor if available.
-        // For now, keep a placeholder or remove if not supported.
-        SetTemperature(25.0); // Placeholder
-
-        // Stability monitoring can be derived from sensor data or specific reports
-        // For now, keep a placeholder or remove if not supported.
-        SetStabilityMonitoring(0.0, 0.0); // Placeholder
-
         return true;
     }
     return false;
-}
-
-
-
-// Implement virtual functions from IMUInterface
-bool BNO08X::SetOrientationData(double roll, double pitch, double yaw, double w)
-{
-    // Update INDI property and send to client
-    OrientationNP[0].setValue(roll);
-    OrientationNP[1].setValue(pitch);
-    OrientationNP[2].setValue(yaw);
-    OrientationNP[3].setValue(w);
-    OrientationNP.setState(IPS_OK);
-    OrientationNP.apply();
-    return true;
-}
-
-bool BNO08X::SetAccelerationData(double x, double y, double z)
-{
-    AccelerationNP[0].setValue(x);
-    AccelerationNP[1].setValue(y);
-    AccelerationNP[2].setValue(z);
-    AccelerationNP.setState(IPS_OK);
-    AccelerationNP.apply();
-    return true;
-}
-
-bool BNO08X::SetGyroscopeData(double x, double y, double z)
-{
-    GyroscopeNP[0].setValue(x);
-    GyroscopeNP[1].setValue(y);
-    GyroscopeNP[2].setValue(z);
-    GyroscopeNP.setState(IPS_OK);
-    GyroscopeNP.apply();
-    return true;
-}
-
-bool BNO08X::SetMagnetometerData(double x, double y, double z)
-{
-    MagnetometerNP[0].setValue(x);
-    MagnetometerNP[1].setValue(y);
-    MagnetometerNP[2].setValue(z);
-    MagnetometerNP.setState(IPS_OK);
-    MagnetometerNP.apply();
-    return true;
 }
 
 bool BNO08X::SetCalibrationStatus(int sys, int gyro, int accel, int mag)
@@ -330,29 +279,63 @@ bool BNO08X::SetCalibrationStatus(int sys, int gyro, int accel, int mag)
 
 bool BNO08X::StartCalibration()
 {
-    // TODO: Implement BNO08X calibration start
-    LOG_INFO("BNO08X: Starting calibration.");
+    LOG_INFO("BNO08X: Starting calibration. Please move the device as follows:");
+    LOG_INFO("  - Accelerometer (3D): Move into 4-6 unique orientations, hold each for ~1s.");
+    LOG_INFO("  - Accelerometer (planar): Rotate around Z-axis by at least 180 degrees.");
+    LOG_INFO("  - Gyroscope: Place on a stationary surface for 2-3 seconds.");
+    LOG_INFO("  - Magnetometer: Rotate 180 degrees and back in each axis (roll, pitch, yaw) for ~2s per axis.");
+
+    // Enable dynamic calibration for Accel, Gyro, Mag, Planar Accel, On Table Cal
+    uint8_t sensorsToCalibrate = SH2_CAL_ACCEL | SH2_CAL_GYRO | SH2_CAL_MAG | SH2_CAL_PLANAR;
+    int status = sh2_setCalConfig(sensorsToCalibrate);
+
+    if (status != SH2_OK)
+    {
+        LOGF_ERROR("BNO08X: Failed to enable ME Calibration, status: %d", status);
+        return false;
+    }
+
+    LOG_INFO("BNO08X: ME Calibration enabled. Sensor will self-calibrate with motion.");
     return true;
 }
 
 bool BNO08X::SaveCalibrationData()
 {
-    // TODO: Implement BNO08X calibration save
-    LOG_INFO("BNO08X: Saving calibration data.");
+    LOG_INFO("BNO08X: Saving calibration data to FRS.");
+
+    int status = sh2_saveDcdNow();
+    if (status != SH2_OK)
+    {
+        LOGF_ERROR("BNO08X: Failed to save calibration data, status: %d", status);
+        return false;
+    }
+
+    LOG_INFO("BNO08X: Calibration data save command sent. Data should persist across non-power-up resets.");
     return true;
 }
 
 bool BNO08X::LoadCalibrationData()
 {
-    // TODO: Implement BNO08X calibration load
-    LOG_INFO("BNO08X: Loading calibration data.");
-    return true;
+    // This is a complex operation involving FRS read/write.
+    // For now, we'll log a message indicating it's not fully implemented.
+    // The BNO08x automatically loads DCD from FRS on non-power-up resets.
+    LOG_INFO("BNO08X: Loading calibration data is a complex FRS operation and is not fully implemented in this driver.");
+    LOG_INFO("BNO08X: Dynamic Calibration Data (DCD) is automatically loaded from FRS on non-power-up resets.");
+    return false; // Indicate not fully implemented
 }
 
 bool BNO08X::ResetCalibration()
 {
-    // TODO: Implement BNO08X calibration reset
-    LOG_INFO("BNO08X: Resetting calibration data.");
+    LOG_INFO("BNO08X: Resetting calibration data and performing a soft reset.");
+
+    int status = sh2_clearDcdAndReset();
+    if (status != SH2_OK)
+    {
+        LOGF_ERROR("BNO08X: Failed to reset calibration data, status: %d", status);
+        return false;
+    }
+
+    LOG_INFO("BNO08X: Calibration data cleared and sensor reset. Calibration will restart from scratch.");
     return true;
 }
 
@@ -405,22 +388,5 @@ bool BNO08X::SetDeviceInfo(const std::string &chipID, const std::string &firmwar
     DeviceInfoTP[2].setText(sensorStatus);
     DeviceInfoTP.setState(IPS_OK);
     DeviceInfoTP.apply();
-    return true;
-}
-
-bool BNO08X::SetTemperature(double temperature)
-{
-    TemperatureNP[0].setValue(temperature);
-    TemperatureNP.setState(IPS_OK);
-    TemperatureNP.apply();
-    return true;
-}
-
-bool BNO08X::SetStabilityMonitoring(double vibrationLevel, double stabilityThreshold)
-{
-    StabilityMonitoringNP[0].setValue(vibrationLevel);
-    StabilityMonitoringNP[1].setValue(stabilityThreshold);
-    StabilityMonitoringNP.setState(IPS_OK);
-    StabilityMonitoringNP.apply();
     return true;
 }
