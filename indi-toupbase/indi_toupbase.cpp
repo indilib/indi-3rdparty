@@ -324,6 +324,7 @@ bool ToupBase::initProperties()
     m_CameraTP[TC_CAMERA_SN].fill("SN", "SN", nullptr);
     m_CameraTP[TC_CAMERA_FW_VERSION].fill("FIRMWAREVERSION", "Firmware Version", nullptr);
     m_CameraTP[TC_CAMERA_HW_VERSION].fill("HARDWAREVERSION", "Hardware Version", nullptr);
+    m_CameraTP[TC_CAMERA_FPGA_VERSION].fill("FPGAVERSION", "FPGA Version", nullptr);
     m_CameraTP[TC_CAMERA_REV].fill("REVISION", "Revision", nullptr);
     m_CameraTP.fill(getDeviceName(), "CAMERA", "Camera", INFO_TAB, IP_RO, 0, IPS_IDLE);
 
@@ -575,6 +576,10 @@ void ToupBase::setupParams()
     m_CameraTP[TC_CAMERA_FW_VERSION].setText(tmpBuffer);
     FP(get_HwVersion(m_Handle, tmpBuffer));
     m_CameraTP[TC_CAMERA_HW_VERSION].setText(tmpBuffer);
+    if (FP(get_FpgaVersion(m_Handle, tmpBuffer)) >= 0)
+		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
+	else
+		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");	
     FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
     m_CameraTP[TC_CAMERA_REV].setText(tmpBuffer);
@@ -1997,6 +2002,7 @@ void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FIT
     fitsKeywords.push_back({"PRODATE", m_CameraTP[TC_CAMERA_DATE].getText(), "Production Date"});
     fitsKeywords.push_back({"FIRMVER", m_CameraTP[TC_CAMERA_FW_VERSION].getText(), "Firmware Version"});
     fitsKeywords.push_back({"HARDVER", m_CameraTP[TC_CAMERA_HW_VERSION].getText(), "Hardware Version"});
+    fitsKeywords.push_back({"FPGAVER", m_CameraTP[TC_CAMERA_FPGA_VERSION].getText(), "FPGA Version"});
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////

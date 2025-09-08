@@ -234,7 +234,7 @@ class ToupBase : public INDI::CCD
         INDI::PropertySwitch m_TailLightSP {2};
 
         // Camera Info
-        INDI::PropertyText m_CameraTP {6};
+        INDI::PropertyText m_CameraTP {7};
         enum
         {
             TC_CAMERA_MODEL,
@@ -242,6 +242,7 @@ class ToupBase : public INDI::CCD
             TC_CAMERA_SN,
             TC_CAMERA_FW_VERSION,
             TC_CAMERA_HW_VERSION,
+			TC_CAMERA_FPGA_VERSION,
             TC_CAMERA_REV
         };
 
