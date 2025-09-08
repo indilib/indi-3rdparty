@@ -86,82 +86,27 @@ bool BNO08X::Handshake()
         // Set device information
         SetDeviceInfo(chipID, firmwareVersion, sensorStatus);
 
-        // Enable desired reports
-        // Enable desired reports
-        // Disable SH2_ROTATION_VECTOR due to magnetic interference issues
-        // if (!bno08x.enableReport(SH2_ROTATION_VECTOR, 10000)) // 10ms update rate
-        // {
-        //     LOG_ERROR("BNO08X: Failed to enable Rotation Vector report.");
-        //     return false;
-        // }
-        // Disable SH2_GAME_ROTATION_VECTOR as it lacks absolute heading
-        // if (!bno08x.enableReport(SH2_GAME_ROTATION_VECTOR, 10000)) // 10ms update rate
-        // {
-        //     LOG_ERROR("BNO08X: Failed to enable Game Rotation Vector report.");
-        //     return false;
-        // }
-        if (!bno08x.enableReport(SH2_ACCELEROMETER, 10000)) // 10ms update rate
+        if (!bno08x.enableReport(SH2_ROTATION_VECTOR))
         {
-            LOG_ERROR("BNO08X: Failed to enable Accelerometer report.");
+            LOG_ERROR("BNO08X: Failed to enable Rotation Vector report.");
             return false;
         }
-        if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED, 10000)) // 10ms update rate
+
+        if (!bno08x.enableReport(SH2_GYROSCOPE_CALIBRATED))
         {
             LOG_ERROR("BNO08X: Failed to enable Gyroscope report.");
             return false;
         }
-        if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Magnetometer report.");
-            return false;
-        }
-        // Enable SH2_GEOMAGNETIC_ROTATION_VECTOR for stable heading with magnetic north reference
-        if (!bno08x.enableReport(SH2_GEOMAGNETIC_ROTATION_VECTOR, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Geomagnetic Rotation Vector report.");
-            return false;
-        }
-        if (!bno08x.enableReport(SH2_LINEAR_ACCELERATION, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Linear Acceleration report.");
-            return false;
-        }
-        if (!bno08x.enableReport(SH2_GRAVITY, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Gravity report.");
-            return false;
-        }
-        if (!bno08x.enableReport(SH2_TAP_DETECTOR, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Tap Detector report.");
-            return false;
-        }
-        if (!bno08x.enableReport(SH2_STEP_DETECTOR, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Step Detector report.");
-            return false;
-        }
-        if (!bno08x.enableReport(SH2_STABILITY_CLASSIFIER, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Stability Classifier report.");
-            return false;
-        }
-        if (!bno08x.enableReport(SH2_RAW_ACCELEROMETER, 10000)) // 10ms update rate
+        if (!bno08x.enableReport(SH2_ACCELEROMETER))
         {
             LOG_ERROR("BNO08X: Failed to enable Raw Accelerometer report.");
             return false;
         }
-        if (!bno08x.enableReport(SH2_RAW_GYROSCOPE, 10000)) // 10ms update rate
+        if (!bno08x.enableReport(SH2_MAGNETIC_FIELD_CALIBRATED))
         {
             LOG_ERROR("BNO08X: Failed to enable Raw Gyroscope report.");
             return false;
         }
-        if (!bno08x.enableReport(SH2_RAW_MAGNETOMETER, 10000)) // 10ms update rate
-        {
-            LOG_ERROR("BNO08X: Failed to enable Raw Magnetometer report.");
-            return false;
-        }
-
         LOG_INFO("BNO08X initialized and reports enabled successfully.");
         return true;
     }
