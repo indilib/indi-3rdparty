@@ -328,13 +328,6 @@ bool BNO08X::SetUpdateRate(double rate)
     return true;
 }
 
-bool BNO08X::SetOffsets(double x, double y, double z)
-{
-    // TODO: Implement BNO08X offset setting
-    LOGF_INFO("BNO08X: Setting offsets (x: %f, y: %f, z: %f).", x, y, z);
-    return true;
-}
-
 bool BNO08X::SetDeviceInfo(const std::string &chipID, const std::string &firmwareVersion, const std::string &sensorStatus)
 {
     DeviceInfoTP[0].setText(chipID);
