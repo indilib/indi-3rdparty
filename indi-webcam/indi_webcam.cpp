@@ -102,6 +102,7 @@ void indi_webcam::findAVFoundationVideoSources()
     if(isConnected())
     {
         avcodec_close(pCodecCtx);
+        avcodec_free_context(&pCodecCtx);
         avformat_close_input(&pFormatCtx);
     }
     else
@@ -116,6 +117,7 @@ void indi_webcam::findAVFoundationVideoSources()
             if(ConnectToSource("avfoundation", "default", frameRate, videoSize, inputPixelFormat, "Not using IP Camera"))
                 DEBUG(INDI::Logger::DBG_SESSION, "Source List Updated");
             avcodec_close(pCodecCtx);
+            avcodec_free_context(&pCodecCtx);
             avformat_close_input(&pFormatCtx);
         }
     }
@@ -207,14 +209,14 @@ indi_webcam::indi_webcam()
     pixelSize = 5.0;
 
     //Creating the format context.
-    pFormatCtx = nullptr;
     pFormatCtx = avformat_alloc_context();
 }
 
 indi_webcam::~indi_webcam()
 {
+    freeMemory();
     if(pFormatCtx)
-        free(pFormatCtx);
+        avformat_free_context(pFormatCtx);
 }
 
 
@@ -250,6 +252,7 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
     if(isConnected())
     {
         avcodec_close(pCodecCtx);
+        avcodec_free_context(&pCodecCtx);
         avformat_close_input(&pFormatCtx);
     }
 
@@ -309,6 +312,8 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
     //Find an appropriate decoder and then
     // Allocate a pointer to the codec context for the video stream
     pCodec = avcodec_find_decoder(pFormatCtx->streams[videoStream]->codecpar->codec_id);
+    if(pCodecCtx)
+        avcodec_free_context(&pCodecCtx);
     pCodecCtx = avcodec_alloc_context3(pCodec);
     avcodec_parameters_to_context(pCodecCtx, pFormatCtx->streams[videoStream]->codecpar);
 
@@ -489,6 +494,7 @@ bool indi_webcam::Disconnect()
     {
         // Close the codecs
         avcodec_close(pCodecCtx);
+        avcodec_free_context(&pCodecCtx);
 
         // Close the video file
         avformat_close_input(&pFormatCtx);
@@ -1300,7 +1306,10 @@ bool indi_webcam::StartExposure(float duration)
 bool indi_webcam::AbortExposure()
 {
     if(stackBuffer)
+    {
         free(stackBuffer);
+        stackBuffer = nullptr;
+    }
     InExposure = false;
     return true;
 }
@@ -1377,6 +1386,7 @@ bool indi_webcam::grabImage()
         if(webcamStacking)
             addToStack();
         gotAnImageAlready = true;
+        freeMemory();
     }
     else
     {
@@ -1723,16 +1733,22 @@ bool indi_webcam::setupStreaming()
     numBytes = av_image_get_buffer_size(out_pix_fmt, pCodecCtx->width, pCodecCtx->height, 1);
 
     // Allocate video frame
+    if(pFrame)
+        av_frame_free(&pFrame);
     pFrame = av_frame_alloc();
     if(pFrame == nullptr)
         return false;
+
     // Allocate an AVFrame structure
+    if(pFrameOUT)
+        av_frame_free(&pFrameOUT);
     pFrameOUT = av_frame_alloc();
     if(pFrameOUT == nullptr)
         return false;
 
     // Assign appropriate parts of buffer to image planes in pFrameRGB
-    buffer = (uint8_t *)av_malloc(numBytes * sizeof(uint8_t));
+    if(!buffer)
+        buffer = (uint8_t *)malloc(numBytes * sizeof(uint8_t));
     if(buffer == nullptr)
         return false;
 
@@ -1896,12 +1912,12 @@ void indi_webcam::freeMemory()
 
     // Free the RGB image
     if(pFrameOUT)
-        av_free(pFrameOUT);
+        av_frame_free(&pFrameOUT);
     pFrameOUT = nullptr;
 
     // Free the input frame
     if(pFrame)
-        av_free(pFrame);
+        av_frame_free(&pFrame);
     pFrame = nullptr;
 
 }
