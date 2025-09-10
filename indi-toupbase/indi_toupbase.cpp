@@ -21,6 +21,10 @@
 
 #include "indi_toupbase.h"
 #include "config.h"
+#include <cstddef>
+#include <cstdint>
+#include <cstring>
+#include <list>
 #include <stream/streammanager.h>
 #include <unordered_map>
 #include <unistd.h>
@@ -506,6 +510,20 @@ bool ToupBase::Connect()
         int taillight = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
         m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+
+        if (m_SupportTailLight) {
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightSP[INDI_ENABLED].getState()));
+            if (SUCCEEDED(rc))
+                m_TailLightSP.setState(IPS_OK);
+            else
+            {
+                LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                            errorCodes(rc).c_str());
+                m_TailLightSP.setState(IPS_ALERT);
+                m_TailLightSP.reset();
+            }
+            m_TailLightSP.apply();
+        }
     }
 
     // Get min/max exposures
@@ -576,10 +594,11 @@ void ToupBase::setupParams()
     m_CameraTP[TC_CAMERA_FW_VERSION].setText(tmpBuffer);
     FP(get_HwVersion(m_Handle, tmpBuffer));
     m_CameraTP[TC_CAMERA_HW_VERSION].setText(tmpBuffer);
-    if (FP(get_FpgaVersion(m_Handle, tmpBuffer)) >= 0)
-		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
-	else
-		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");	
+    if (FP(get_FpgaVersion(m_Handle, tmpBuffer)) >= 0) {
+		    m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
+	  } else {
+		    m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");	
+    }
     FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
     m_CameraTP[TC_CAMERA_REV].setText(tmpBuffer);
@@ -652,10 +671,13 @@ void ToupBase::setupParams()
 
     // Get active resolution index
     uint32_t currentResolutionIndex = 0, finalResolutionIndex = 0;
+    uint32_t maxResolutionIndex = m_ResolutionSP.size();
     FP(get_eSize(m_Handle, &currentResolutionIndex));
     // If we have a config resolution index, then prefer it over the current resolution index.
     finalResolutionIndex = (m_ConfigResolutionIndex >= 0
-                            && m_ConfigResolutionIndex < static_cast<int>(m_ResolutionSP.size())) ? m_ConfigResolutionIndex : currentResolutionIndex;
+                            && m_ConfigResolutionIndex < static_cast<int>(maxResolutionIndex)) ?
+                                m_ConfigResolutionIndex : 
+                                currentResolutionIndex;
     // In case there is NO previous resolution set
     // then select the LOWER resolution on arm architecture
     // since this has less chance of failure. If the user explicitly selects any resolution
@@ -666,9 +688,22 @@ void ToupBase::setupParams()
     //         finalResolutionIndex = m_ResolutionSP.size() - 1;
     // #endif
     m_ResolutionSP[finalResolutionIndex].setState(ISS_ON);
-    // If final resolution index different from current, let's set it.
-    if (finalResolutionIndex != currentResolutionIndex)
-        FP(put_eSize(m_Handle, finalResolutionIndex));
+    if (std::strstr(m_Instance->model->name, "585")) {
+        // for 585-based cameras let's rock the resolution settings in order to avoid the
+        // image download bug
+        uint32_t switchingPlan[3] = {0, 0, finalResolutionIndex};
+        if (currentResolutionIndex == finalResolutionIndex) {
+            switchingPlan[0] = (currentResolutionIndex == maxResolutionIndex) ? 0 : maxResolutionIndex;
+            switchingPlan[1] = (currentResolutionIndex == maxResolutionIndex) ? maxResolutionIndex : 0;
+        }
+        for (int i=0; i < 3; ++i) {
+            FP(put_eSize(m_Handle, switchingPlan[i]));
+        }
+    }
+    else if (finalResolutionIndex != currentResolutionIndex) {
+        // If final resolution index different from current, let's set it.
+         FP(put_eSize(m_Handle, finalResolutionIndex));
+    }
 
     SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height,
                  m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
@@ -682,6 +717,8 @@ void ToupBase::setupParams()
     int conversionGain = 0;
     FP(get_Option(m_Handle, CP(OPTION_CG), &conversionGain));
     m_GainConversionSP[conversionGain].setState(ISS_ON);
+    FP(put_Option(m_Handle, CP(OPTION_CG), m_GainConversionSP.findOnSwitchIndex()));
+    m_GainConversionSP.apply();
 
     uint16_t nMax = 0, nDef = 0;
     // Gain
