@@ -1386,7 +1386,6 @@ bool indi_webcam::grabImage()
         if(webcamStacking)
             addToStack();
         gotAnImageAlready = true;
-        freeMemory();
     }
     else
     {
