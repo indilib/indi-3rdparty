@@ -2,7 +2,7 @@
 <driversList>
     <devGroup group="Detectors">
         <device label="BNO08X IMU" manufacturer="Bosch Sensortec">
-            <driver name="BNO08X IMU">indi_bno08x_imu</drive>
+            <driver name="BNO08X IMU">indi_bno08x_imu</driver>
             <version>@BNO_VERSION_MAJOR@.@BNO_VERSION_MINOR@</version>
         </device>
     </devGroup>
