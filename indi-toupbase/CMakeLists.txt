@@ -52,7 +52,6 @@ set(
   ${CMAKE_CURRENT_SOURCE_DIR}/libtoupbase.cpp
 )
 
-find_package(ALTAIRCAM REQUIRED)
 find_package(BRESSERCAM REQUIRED)
 find_package(MALLINCAM REQUIRED)
 find_package(MEADECAM REQUIRED)
@@ -63,7 +62,6 @@ find_package(STARSHOOTG REQUIRED)
 find_package(TSCAM REQUIRED)
 find_package(SVBONYCAM REQUIRED)
 
-include_directories(${ALTAIRCAM_INCLUDE_DIR})
 include_directories(${STARSHOOTG_INCLUDE_DIR})
 include_directories(${NNCAM_INCLUDE_DIR})
 include_directories(${MALLINCAM_INCLUDE_DIR})
@@ -74,40 +72,6 @@ include_directories(${OGMACAM_INCLUDE_DIR})
 include_directories(${TSCAM_INCLUDE_DIR})
 include_directories(${SVBONYCAM_INCLUDE_DIR})
 
-########### indi_altair_* ###########
-add_executable(indi_altair_ccd ${indi_toupbase_SRCS})
-target_compile_definitions(indi_altair_ccd PRIVATE "-DBUILD_ALTAIRCAM")
-target_link_libraries(
-  indi_altair_ccd
-  ${INDI_LIBRARIES}
-  ${CFITSIO_LIBRARIES}
-  ${ALTAIRCAM_LIBRARIES}
-  ${ZLIB_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
-add_executable(indi_altair_wheel ${indi_wheel_SRCS})
-target_compile_definitions(indi_altair_wheel PRIVATE "-DBUILD_ALTAIRCAM")
-target_link_libraries(
-  indi_altair_wheel
-  ${INDI_LIBRARIES}
-  ${CFITSIO_LIBRARIES}
-  ${ALTAIRCAM_LIBRARIES}
-  ${ZLIB_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
-add_executable(indi_altair_focuser ${indi_focuser_SRCS})
-target_compile_definitions(indi_altair_focuser PRIVATE "-DBUILD_ALTAIRCAM")
-target_link_libraries(
-  indi_altair_focuser
-  ${INDI_LIBRARIES}
-  ${CFITSIO_LIBRARIES}
-  ${ALTAIRCAM_LIBRARIES}
-  ${ZLIB_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
 
 ########### indi_bressercam_* ###########
 add_executable(indi_bressercam_ccd ${indi_toupbase_SRCS})
@@ -442,7 +406,6 @@ target_link_libraries(
 #####################################
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
-  target_link_libraries(indi_altair_ccd rt)
   target_link_libraries(indi_bressercam_ccd rt)
   target_link_libraries(indi_mallincam_ccd rt)
   target_link_libraries(indi_nncam_ccd rt)
@@ -452,7 +415,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
   target_link_libraries(indi_tscam_ccd rt)
   target_link_libraries(indi_svbonycam_ccd rt)
   target_link_libraries(indi_meadecam_ccd rt)
-  target_link_libraries(indi_altair_wheel rt)
   target_link_libraries(indi_bressercam_wheel rt)
   target_link_libraries(indi_mallincam_wheel rt)
   target_link_libraries(indi_nncam_wheel rt)
@@ -462,7 +424,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
   target_link_libraries(indi_tscam_wheel rt)
   target_link_libraries(indi_svbonycam_wheel rt)
   target_link_libraries(indi_meadecam_wheel rt)
-  target_link_libraries(indi_altair_focuser rt)
   target_link_libraries(indi_bressercam_focuser rt)
   target_link_libraries(indi_mallincam_focuser rt)
   target_link_libraries(indi_nncam_focuser rt)
@@ -479,7 +440,6 @@ endif(
 
 install(
   TARGETS
-    indi_altair_ccd
     indi_bressercam_ccd
     indi_mallincam_ccd
     indi_nncam_ccd
@@ -489,7 +449,6 @@ install(
     indi_tscam_ccd
     indi_svbonycam_ccd
     indi_meadecam_ccd
-    indi_altair_wheel
     indi_bressercam_wheel
     indi_mallincam_wheel
     indi_nncam_wheel
@@ -499,7 +458,6 @@ install(
     indi_tscam_wheel
     indi_svbonycam_wheel
     indi_meadecam_wheel
-    indi_altair_focuser
     indi_bressercam_focuser
     indi_mallincam_focuser
     indi_nncam_focuser
