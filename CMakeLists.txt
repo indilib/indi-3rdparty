@@ -232,6 +232,7 @@ option(WITH_ARMADILLO "Install Armadillo & Platypus Driver" On)
 option(WITH_NIGHTSCAPE "Install Nightscape 8300 Driver" On)
 option(WITH_ATIK "Install Atik Driver" On)
 option(WITH_TOUPBASE "Install Toupbase Driver" On)
+option(WITH_TOUPCAM "Install Touptek Driver" On)
 option(WITH_DREAMFOCUSER "Install DreamFocuser Driver" On)
 option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_AVALONUD "Install AvalonUD Drivers" On)
@@ -302,6 +303,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_SBIG Off)
     set(WITH_ATIK Off)
     set(WITH_TOUPBASE Off)
+    set(WITH_TOUPCAM Off)
     set(WITH_QHY Off)
     set(WITH_SVBONY Off)
     set(WITH_ASTROASIS Off)
@@ -334,6 +336,7 @@ if(NO_PRE_BUILT)
   set(WITH_SBIG Off)
   set(WITH_SVBONY Off)
   set(WITH_TOUPBASE Off)
+  set(WITH_TOUPCAM Off)
   set(WITH_ASTROASIS Off)
 endif(NO_PRE_BUILT)
 
@@ -401,7 +404,6 @@ if(BUILD_LIBS)
   #toupbase dependencies
   if(WITH_TOUPBASE)
     add_subdirectory(libmeadecam)
-    add_subdirectory(libtoupcam)
     add_subdirectory(libaltaircam)
     add_subdirectory(libbressercam)
     add_subdirectory(libogmacam)
@@ -412,6 +414,11 @@ if(BUILD_LIBS)
     add_subdirectory(libtscam)
     add_subdirectory(libsvbonycam)
   endif(WITH_TOUPBASE)
+
+  #libtoupcam
+  if(WITH_TOUPCAM)
+    add_subdirectory(libtoupcam)
+  endif(WITH_TOUPCAM)
 
   #libsvbiny
   if(WITH_SVBONY)
@@ -535,7 +542,6 @@ else(BUILD_LIBS)
 
   ## TOUPBASE
   if(WITH_TOUPBASE)
-    find_package(TOUPCAM)
     find_package(ALTAIRCAM)
     find_package(BRESSERCAM)
     find_package(OGMACAM)
@@ -547,8 +553,7 @@ else(BUILD_LIBS)
     find_package(OMEGONPROCAM)
     find_package(MEADECAM)
     if(
-      TOUPCAM_FOUND
-      AND ALTAIRCAM_FOUND
+      ALTAIRCAM_FOUND
       AND BRESSERCAM_FOUND
       AND OGMACAM_FOUND
       AND TSCAM_FOUND
@@ -561,7 +566,6 @@ else(BUILD_LIBS)
     )
       add_subdirectory(indi-toupbase)
     else(
-      TOUPCAM_FOUND
       AND ALTAIRCAM_FOUND
       AND BRESSERCAM_FOUND
       AND OGMACAM_FOUND
@@ -573,9 +577,6 @@ else(BUILD_LIBS)
       AND OMEGONPROCAM_FOUND
       AND MEADECAM_FOUND
     )
-      if(NOT TOUPCAM_FOUND)
-        add_subdirectory(libtoupcam)
-      endif()
       if(NOT ALTAIRCAM_FOUND)
         add_subdirectory(libaltaircam)
       endif()
@@ -608,7 +609,6 @@ else(BUILD_LIBS)
       endif()
       set(LIBRARIES_FOUND FALSE)
     endif(
-      TOUPCAM_FOUND
       AND ALTAIRCAM_FOUND
       AND BRESSERCAM_FOUND
       AND OGMACAM_FOUND
@@ -621,6 +621,18 @@ else(BUILD_LIBS)
       AND MEADECAM_FOUND
     )
   endif(WITH_TOUPBASE)
+
+  # Touptek drivers
+  if(WITH_TOUPCAM)
+    find_package(TOUPCAM)
+    if(TOUPCAM_FOUND)
+      add_subdirectory(indi-toupcam)
+    else(TOUPCAM_FOUND)
+      if(NOT TOUPCAM_FOUND)
+        add_subdirectory(libtoupcam)
+      endif()
+    endif(TOUPCAM_FOUND)
+  endif(WITH_TOUPCAM)
 
   ## Bee Focuser
   if(WITH_BEEFOCUS)
@@ -915,12 +927,12 @@ else(BUILD_LIBS)
       )
     endif(WITH_ATIK AND NOT ATIK_FOUND)
 
-    if(WITH_TOUPBASE AND NOT TOUPCAM_FOUND)
+    if(WITH_TOUPCAM AND NOT TOUPCAM_FOUND)
       message(
         STATUS
         "libtoupcam was not found and will now be built. Please install libtoupcam first before running cmake again to install indi-toupbase."
       )
-    endif(WITH_TOUPBASE AND NOT TOUPCAM_FOUND)
+    endif(WITH_TOUPCAM AND NOT TOUPCAM_FOUND)
 
     if(WITH_TOUPBASE AND NOT ALTAIRCAM_FOUND)
       message(
