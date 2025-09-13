@@ -506,6 +506,20 @@ bool ToupBase::Connect()
         int taillight = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
         m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+
+        if (m_SupportTailLight) {
+            HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), m_TailLightSP[INDI_ENABLED].getState()));
+            if (SUCCEEDED(rc))
+                m_TailLightSP.setState(IPS_OK);
+            else
+            {
+                LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                            errorCodes(rc).c_str());
+                m_TailLightSP.setState(IPS_ALERT);
+                m_TailLightSP.reset();
+            }
+            m_TailLightSP.apply();
+        }
     }
 
     // Get min/max exposures
@@ -666,9 +680,9 @@ void ToupBase::setupParams()
     //         finalResolutionIndex = m_ResolutionSP.size() - 1;
     // #endif
     m_ResolutionSP[finalResolutionIndex].setState(ISS_ON);
-    // If final resolution index different from current, let's set it.
-    if (finalResolutionIndex != currentResolutionIndex)
+    if (finalResolutionIndex != currentResolutionIndex) {
         FP(put_eSize(m_Handle, finalResolutionIndex));
+    }
 
     SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height,
                  m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
@@ -682,6 +696,8 @@ void ToupBase::setupParams()
     int conversionGain = 0;
     FP(get_Option(m_Handle, CP(OPTION_CG), &conversionGain));
     m_GainConversionSP[conversionGain].setState(ISS_ON);
+    FP(put_Option(m_Handle, CP(OPTION_CG), m_GainConversionSP.findOnSwitchIndex()));
+    m_GainConversionSP.apply();
 
     uint16_t nMax = 0, nDef = 0;
     // Gain
