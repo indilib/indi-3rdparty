@@ -234,6 +234,7 @@ option(WITH_ATIK "Install Atik Driver" On)
 option(WITH_TOUPBASE "Install Toupbase Driver" On)
 option(WITH_TOUPCAM "Install Touptek Driver" On)
 option(WITH_ALTAIRCAM "Install Altair Driver" On)
+option(WITH_BRESSERCAM "Install Bressercam Driver" On)
 option(WITH_DREAMFOCUSER "Install DreamFocuser Driver" On)
 option(WITH_AVALON "Install Avalon StarGO Driver" On)
 option(WITH_AVALONUD "Install AvalonUD Drivers" On)
@@ -306,6 +307,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_TOUPBASE Off)
     set(WITH_TOUPCAM Off)
     set(WITH_ALTAIRCAM Off)
+    set(WITH_BRESSERCAM Off)
     set(WITH_QHY Off)
     set(WITH_SVBONY Off)
     set(WITH_ASTROASIS Off)
@@ -340,6 +342,7 @@ if(NO_PRE_BUILT)
   set(WITH_TOUPBASE Off)
   set(WITH_TOUPCAM Off)
   set(WITH_ALTAIRCAM Off)
+  set(WITH_BRESSERCAM Off)
   set(WITH_ASTROASIS Off)
 endif(NO_PRE_BUILT)
 
@@ -407,7 +410,6 @@ if(BUILD_LIBS)
   #toupbase dependencies
   if(WITH_TOUPBASE)
     add_subdirectory(libmeadecam)
-    add_subdirectory(libbressercam)
     add_subdirectory(libogmacam)
     add_subdirectory(libstarshootg)
     add_subdirectory(libnncam)
@@ -422,10 +424,15 @@ if(BUILD_LIBS)
     add_subdirectory(libtoupcam)
   endif(WITH_TOUPCAM)
 
-  #libtoupcam
+  #libaltaircam
   if(WITH_ALTAIRCAM)
     add_subdirectory(libaltaircam)
   endif(WITH_ALTAIRCAM)
+
+  #libbressercam
+  if(WITH_BRESSERCAM)
+    add_subdirectory(libbressercam)
+  endif(WITH_BRESSERCAM)
 
   #libsvbiny
   if(WITH_SVBONY)
@@ -549,7 +556,6 @@ else(BUILD_LIBS)
 
   ## TOUPBASE
   if(WITH_TOUPBASE)
-    find_package(BRESSERCAM)
     find_package(OGMACAM)
     find_package(TSCAM)
     find_package(SVBONYCAM)
@@ -559,8 +565,7 @@ else(BUILD_LIBS)
     find_package(OMEGONPROCAM)
     find_package(MEADECAM)
     if(
-      BRESSERCAM_FOUND
-      AND OGMACAM_FOUND
+      OGMACAM_FOUND
       AND TSCAM_FOUND
       AND SVBONYCAM_FOUND
       AND STARSHOOTG_FOUND
@@ -571,8 +576,7 @@ else(BUILD_LIBS)
     )
       add_subdirectory(indi-toupbase)
     else(
-      BRESSERCAM_FOUND
-      AND OGMACAM_FOUND
+      OGMACAM_FOUND
       AND TSCAM_FOUND
       AND SVBONYCAM_FOUND
       AND STARSHOOTG_FOUND
@@ -581,9 +585,6 @@ else(BUILD_LIBS)
       AND OMEGONPROCAM_FOUND
       AND MEADECAM_FOUND
     )
-      if(NOT BRESSERCAM_FOUND)
-        add_subdirectory(libbressercam)
-      endif()
       if(NOT OGMACAM_FOUND)
         add_subdirectory(libogmacam)
       endif()
@@ -610,8 +611,7 @@ else(BUILD_LIBS)
       endif()
       set(LIBRARIES_FOUND FALSE)
     endif(
-      BRESSERCAM_FOUND
-      AND OGMACAM_FOUND
+      OGMACAM_FOUND
       AND TSCAM_FOUND
       AND SVBONYCAM_FOUND
       AND STARSHOOTG_FOUND
@@ -641,6 +641,16 @@ else(BUILD_LIBS)
       add_subdirectory(libaltaircam)
     endif(ALTAIRCAM_FOUND)
   endif(WITH_ALTAIRCAM)
+
+  # ALtair drivers
+  if(WITH_BRESSERCAM)
+    find_package(BRESSERCAM)
+    if(BRESSERCAM_FOUND)
+      add_subdirectory(indi-bressercam)
+    else(BRESSERCAM_FOUND)
+      add_subdirectory(libbressercam)
+    endif(BRESSERCAM_FOUND)
+  endif(WITH_BRESSERCAM)
 
   ## Bee Focuser
   if(WITH_BEEFOCUS)
@@ -949,12 +959,12 @@ else(BUILD_LIBS)
       )
     endif(WITH_ALTAIRCAM AND NOT ALTAIRCAM_FOUND)
 
-    if(WITH_TOUPBASE AND NOT BRESSERCAM_FOUND)
+    if(WITH_BRESSERCAM AND NOT BRESSERCAM_FOUND)
       message(
         STATUS
         "libbressercam was not found and will now be built. Please install libbressercam first before running cmake again to install indi-toupbase."
       )
-    endif(WITH_TOUPBASE AND NOT BRESSERCAM_FOUND)
+    endif(WITH_BRESSERCAM AND NOT BRESSERCAM_FOUND)
 
     if(WITH_TOUPBASE AND NOT OGMACAM_FOUND)
       message(

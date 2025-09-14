@@ -52,7 +52,6 @@ set(
   ${CMAKE_CURRENT_SOURCE_DIR}/libtoupbase.cpp
 )
 
-find_package(BRESSERCAM REQUIRED)
 find_package(MALLINCAM REQUIRED)
 find_package(MEADECAM REQUIRED)
 find_package(NNCAM REQUIRED)
@@ -67,46 +66,9 @@ include_directories(${NNCAM_INCLUDE_DIR})
 include_directories(${MALLINCAM_INCLUDE_DIR})
 include_directories(${MEADECAM_INCLUDE_DIR})
 include_directories(${OMEGONPROCAM_INCLUDE_DIR})
-include_directories(${BRESSERCAM_INCLUDE_DIR})
 include_directories(${OGMACAM_INCLUDE_DIR})
 include_directories(${TSCAM_INCLUDE_DIR})
 include_directories(${SVBONYCAM_INCLUDE_DIR})
-
-
-########### indi_bressercam_* ###########
-add_executable(indi_bressercam_ccd ${indi_toupbase_SRCS})
-target_compile_definitions(indi_bressercam_ccd PRIVATE "-DBUILD_BRESSERCAM")
-target_link_libraries(
-  indi_bressercam_ccd
-  ${INDI_LIBRARIES}
-  ${CFITSIO_LIBRARIES}
-  ${BRESSERCAM_LIBRARIES}
-  ${ZLIB_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
-add_executable(indi_bressercam_wheel ${indi_wheel_SRCS})
-target_compile_definitions(indi_bressercam_wheel PRIVATE "-DBUILD_BRESSERCAM")
-target_link_libraries(
-  indi_bressercam_wheel
-  ${INDI_LIBRARIES}
-  ${CFITSIO_LIBRARIES}
-  ${BRESSERCAM_LIBRARIES}
-  ${ZLIB_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
-add_executable(indi_bressercam_focuser ${indi_focuser_SRCS})
-target_compile_definitions(indi_bressercam_focuser PRIVATE "-DBUILD_BRESSERCAM")
-target_link_libraries(
-  indi_bressercam_focuser
-  ${INDI_LIBRARIES}
-  ${CFITSIO_LIBRARIES}
-  ${BRESSERCAM_LIBRARIES}
-  ${ZLIB_LIBRARY}
-  ${CMAKE_DL_LIBS}
-  ${CMAKE_THREAD_LIBS_INIT}
-)
 
 ########### indi_mallincam_* ###########
 add_executable(indi_mallincam_ccd ${indi_toupbase_SRCS})
@@ -406,7 +368,6 @@ target_link_libraries(
 #####################################
 
 if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
-  target_link_libraries(indi_bressercam_ccd rt)
   target_link_libraries(indi_mallincam_ccd rt)
   target_link_libraries(indi_nncam_ccd rt)
   target_link_libraries(indi_ogmacam_ccd rt)
@@ -415,7 +376,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
   target_link_libraries(indi_tscam_ccd rt)
   target_link_libraries(indi_svbonycam_ccd rt)
   target_link_libraries(indi_meadecam_ccd rt)
-  target_link_libraries(indi_bressercam_wheel rt)
   target_link_libraries(indi_mallincam_wheel rt)
   target_link_libraries(indi_nncam_wheel rt)
   target_link_libraries(indi_ogmacam_wheel rt)
@@ -424,7 +384,6 @@ if(CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
   target_link_libraries(indi_tscam_wheel rt)
   target_link_libraries(indi_svbonycam_wheel rt)
   target_link_libraries(indi_meadecam_wheel rt)
-  target_link_libraries(indi_bressercam_focuser rt)
   target_link_libraries(indi_mallincam_focuser rt)
   target_link_libraries(indi_nncam_focuser rt)
   target_link_libraries(indi_ogmacam_focuser rt)
@@ -440,7 +399,6 @@ endif(
 
 install(
   TARGETS
-    indi_bressercam_ccd
     indi_mallincam_ccd
     indi_nncam_ccd
     indi_ogmacam_ccd
@@ -449,7 +407,6 @@ install(
     indi_tscam_ccd
     indi_svbonycam_ccd
     indi_meadecam_ccd
-    indi_bressercam_wheel
     indi_mallincam_wheel
     indi_nncam_wheel
     indi_ogmacam_wheel
@@ -458,7 +415,6 @@ install(
     indi_tscam_wheel
     indi_svbonycam_wheel
     indi_meadecam_wheel
-    indi_bressercam_focuser
     indi_mallincam_focuser
     indi_nncam_focuser
     indi_ogmacam_focuser
