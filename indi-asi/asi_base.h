@@ -1,7 +1,7 @@
 /*
     ASI CCD Driver
 
-    Copyright (C) 2015-2021 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2015-2026 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
     Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
 
@@ -136,9 +136,6 @@ class ASIBase : public INDI::CCD
         /** Reset USB device when camera gets stuck */
         void resetUSBDevice();
 
-        /** Take a snapshot of current camera parameters to prevent race conditions */
-        void takeExposureSnapshot();
-
         /** Additional Properties to INDI::CCD */
         INDI::PropertyNumber  CoolerNP {1};
         INDI::PropertySwitch  CoolerSP {2};
@@ -166,22 +163,11 @@ class ASIBase : public INDI::CCD
             FLIP_VERTICAL
         };
 
+        INDI::PropertySwitch USBResetSP {2};
+
         std::string mCameraName, mCameraID, mSerialNumber, mNickname;
         ASI_CAMERA_INFO mCameraInfo;
         uint8_t mExposureRetry {0};
         ASI_IMG_TYPE mCurrentVideoFormat;
         std::vector<ASI_CONTROL_CAPS> mControlCaps;
-
-        // Snapshot variables to store camera parameters at exposure start
-        // This prevents race conditions when parameters change during exposure
-        struct ExposureSnapshot
-        {
-            uint16_t subW;
-            uint16_t subH;
-            uint8_t binX;
-            uint8_t binY;
-            ASI_IMG_TYPE imgType;
-            uint8_t bpp;
-            bool isActive;
-        } mExposureSnapshot;
 };
