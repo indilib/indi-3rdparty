@@ -532,16 +532,12 @@ bool Kepler::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             MergePlanesSP.setState(IPS_OK);
 
             int index = MergePlanesSP.findOnSwitchIndex();
-            fproUnpacked.bLowImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)
-                                            || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
-            fproUnpacked.bHighImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)
-                                             || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+            fproUnpacked.bLowImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY);
+            fproUnpacked.bHighImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY);
             fproUnpacked.bMergedImageRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
             fproUnpacked.bMetaDataRequest = true;
-            fproStats.bLowRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)
-                                    || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
-            fproStats.bHighRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)
-                                     || index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
+            fproStats.bLowRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY);
+            fproStats.bHighRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY);
             fproStats.bMergedRequest = index == to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH);
 
             MergePlanesSP.apply();
