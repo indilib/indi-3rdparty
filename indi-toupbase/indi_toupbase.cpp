@@ -26,72 +26,71 @@
 #include <unistd.h>
 #include <deque>
 
-#define BITDEPTH_FLAG       (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
-#define CONTROL_TAB         "Control"
+#define BITDEPTH_FLAG (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
+#define CONTROL_TAB   "Control"
 
 #ifndef MAKEFOURCC
-#define MAKEFOURCC(ch0, ch1, ch2, ch3) \
-    (static_cast<uint32_t>(static_cast<uint8_t>(ch0)) \
-    | (static_cast<uint32_t>(static_cast<uint8_t>(ch1)) << 8) \
-    | (static_cast<uint32_t>(static_cast<uint8_t>(ch2)) << 16) \
-    | (static_cast<uint32_t>(static_cast<uint8_t>(ch3)) << 24))
+#define MAKEFOURCC(ch0, ch1, ch2, ch3)                                                                            \
+    (static_cast<uint32_t>(static_cast<uint8_t>(ch0)) | (static_cast<uint32_t>(static_cast<uint8_t>(ch1)) << 8) | \
+     (static_cast<uint32_t>(static_cast<uint8_t>(ch2)) << 16) |                                                   \
+     (static_cast<uint32_t>(static_cast<uint8_t>(ch3)) << 24))
 #endif /* defined(MAKEFOURCC) */
 
 static class Loader
 {
-        std::deque<std::unique_ptr<ToupBase >> cameras;
-        XP(DeviceV2) pCameraInfo[CP(MAX)];
-    public:
-        Loader()
+    std::deque<std::unique_ptr<ToupBase>> cameras;
+    XP(DeviceV2) pCameraInfo[CP(MAX)];
+
+  public:
+    Loader()
+    {
+        const int iConnectedCount = FP(EnumV2(pCameraInfo));
+
+        // In case we have identical cameras we need to fix that.
+        // e.g. if we have Camera, Camera, it will become
+        // Camera, Camera #2
+        std::vector<std::string> names;
+        for (int i = 0; i < iConnectedCount; i++)
         {
-            const int iConnectedCount = FP(EnumV2(pCameraInfo));
-
-            // In case we have identical cameras we need to fix that.
-            // e.g. if we have Camera, Camera, it will become
-            // Camera, Camera #2
-            std::vector<std::string> names;
-            for (int i = 0; i < iConnectedCount; i++)
-            {
-                names.push_back(pCameraInfo[i].model->name);
-            }
-            if (iConnectedCount > 0)
-                fixDuplicates(names);
-
-            for (int i = 0; i < iConnectedCount; i++)
-            {
-                if ((CP(FLAG_CCD_INTERLACED) | CP(FLAG_CCD_PROGRESSIVE) | CP(FLAG_CMOS)) & pCameraInfo[i].model->flag)
-                    cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i], names[i])));
-            }
-            if (cameras.empty())
-                IDLog("No camera detected");
+            names.push_back(pCameraInfo[i].model->name);
         }
+        if (iConnectedCount > 0)
+            fixDuplicates(names);
 
-        // If duplicate cameras are found, append a number to the camera to set it apart.
-        void fixDuplicates(std::vector<std::string> &strings)
+        for (int i = 0; i < iConnectedCount; i++)
         {
-            std::unordered_map<std::string, int> stringCounts;
+            if ((CP(FLAG_CCD_INTERLACED) | CP(FLAG_CCD_PROGRESSIVE) | CP(FLAG_CMOS)) & pCameraInfo[i].model->flag)
+                cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i], names[i])));
+        }
+        if (cameras.empty())
+            IDLog("No camera detected");
+    }
 
-            for (std::string &str : strings)
+    // If duplicate cameras are found, append a number to the camera to set it apart.
+    void fixDuplicates(std::vector<std::string> &strings)
+    {
+        std::unordered_map<std::string, int> stringCounts;
+
+        for (std::string &str : strings)
+        {
+            if (stringCounts.count(str) > 0)
             {
-                if (stringCounts.count(str) > 0)
-                {
-                    int count = stringCounts[str]++;
-                    str += " #" + std::to_string(count + 1);
-                    stringCounts[str]++;
-                }
-                else
-                {
-                    stringCounts[str] = 1;
-                }
+                int count = stringCounts[str]++;
+                str += " #" + std::to_string(count + 1);
+                stringCounts[str]++;
+            }
+            else
+            {
+                stringCounts[str] = 1;
             }
         }
+    }
 } loader;
 
-ToupBase::ToupBase(const XP(DeviceV2) *instance, const std::string &name) : m_Instance(instance)
+ToupBase::ToupBase(const XP(DeviceV2) * instance, const std::string &name) : m_Instance(instance)
 {
     IDLog("model: %s, name: %s, maxspeed: %d, preview: %d, maxfanspeed: %d", m_Instance->model->name, name.c_str(),
-          m_Instance->model->maxspeed,
-          m_Instance->model->preview, m_Instance->model->maxfanspeed);
+          m_Instance->model->maxspeed, m_Instance->model->preview, m_Instance->model->maxfanspeed);
 
     setVersion(TOUPBASE_VERSION_MAJOR, TOUPBASE_VERSION_MINOR);
 
@@ -104,9 +103,7 @@ ToupBase::ToupBase(const XP(DeviceV2) *instance, const std::string &name) : m_In
     mTimerNS.setSingleShot(true);
 }
 
-ToupBase::~ToupBase()
-{
-}
+ToupBase::~ToupBase() {}
 
 const char *ToupBase::getDefaultName()
 {
@@ -143,7 +140,8 @@ bool ToupBase::initProperties()
     /// Controls
     ///////////////////////////////////////////////////////////////////////////////////
     m_ControlNP[TC_GAIN].fill("Gain", "Gain", "%.f", CP(EXPOGAIN_MIN), CP(EXPOGAIN_MIN), 1, CP(EXPOGAIN_MIN));
-    m_ControlNP[TC_CONTRAST].fill("Contrast", "Contrast", "%.f", CP(CONTRAST_MIN), CP(CONTRAST_MAX), 1, CP(CONTRAST_DEF));
+    m_ControlNP[TC_CONTRAST].fill("Contrast", "Contrast", "%.f", CP(CONTRAST_MIN), CP(CONTRAST_MAX), 1,
+                                  CP(CONTRAST_DEF));
     if (m_MonoCamera)
         nsp = 6;
     else
@@ -220,7 +218,8 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     m_AutoExposureSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
     m_AutoExposureSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
-    m_AutoExposureSP.fill(getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+    m_AutoExposureSP.fill(getDeviceName(), "CCD_AUTO_EXPOSURE", "Auto Exposure", CONTROL_TAB, IP_RW, ISR_1OFMANY, 0,
+                          IPS_IDLE);
 
     if (m_MonoCamera == false)
     {
@@ -236,7 +235,8 @@ bool ToupBase::initProperties()
         /// Auto White Balance
         ///////////////////////////////////////////////////////////////////////////////////
         m_WBAutoSP[0].fill("TC_AUTO_WB", "Auto", ISS_OFF);
-        m_WBAutoSP.fill(getDeviceName(), "TC_AUTO_WB", "Auto White Balance", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        m_WBAutoSP.fill(getDeviceName(), "TC_AUTO_WB", "Auto White Balance", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
+                        IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -261,8 +261,8 @@ bool ToupBase::initProperties()
             ++nsp;
         }
         m_GainConversionSP.resize(nsp);
-        m_GainConversionSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
-                                IPS_IDLE);
+        m_GainConversionSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW,
+                                ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -297,10 +297,11 @@ bool ToupBase::initProperties()
         else
         {
             for (uint32_t i = 1; i <= m_Instance->model->maxfanspeed; ++i)
-                m_FanSP[i].fill((std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(), ISS_OFF);
+                m_FanSP[i].fill((std::string("FAN_SPEED") + std::to_string(i)).c_str(), std::to_string(i).c_str(),
+                                ISS_OFF);
         }
-        m_FanSP.fill(getDeviceName(), "TC_FAN_SPEED", (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed", CONTROL_TAB,
-                     IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+        m_FanSP.fill(getDeviceName(), "TC_FAN_SPEED", (m_Instance->model->maxfanspeed <= 1) ? "Fan" : "Fan Speed",
+                     CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -309,7 +310,7 @@ bool ToupBase::initProperties()
     m_ResolutionSP.resize(m_Instance->model->preview);
     for (unsigned i = 0; i < m_Instance->model->preview; i++)
     {
-        char label[MAXINDILABEL] = {0};
+        char label[MAXINDILABEL] = { 0 };
         snprintf(label, MAXINDILABEL, "%d x %d", m_Instance->model->res[i].width, m_Instance->model->res[i].height);
         m_ResolutionSP[i].fill(label, label, ISS_OFF);
     }
@@ -503,8 +504,8 @@ bool ToupBase::Connect()
     }
 
     {
-        int taillight = 0;
-        HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
+        int taillight      = 0;
+        HRESULT rc         = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
         m_SupportTailLight = SUCCEEDED(rc) ? true : false;
     }
 
@@ -566,7 +567,7 @@ void ToupBase::setupParams()
     FP(put_Option(m_Handle, CP(OPTION_ZERO_PADDING), 1));
 
     // Get Firmware Info
-    char tmpBuffer[64] = {0};
+    char tmpBuffer[64] = { 0 };
     uint16_t pRevision = 0;
     FP(get_SerialNumber(m_Handle, tmpBuffer));
     m_CameraTP[TC_CAMERA_SN].setText(tmpBuffer);
@@ -577,9 +578,9 @@ void ToupBase::setupParams()
     FP(get_HwVersion(m_Handle, tmpBuffer));
     m_CameraTP[TC_CAMERA_HW_VERSION].setText(tmpBuffer);
     if (FP(get_FpgaVersion(m_Handle, tmpBuffer)) >= 0)
-		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
-	else
-		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");	
+        m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
+    else
+        m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");
     FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
     m_CameraTP[TC_CAMERA_REV].setText(tmpBuffer);
@@ -593,7 +594,7 @@ void ToupBase::setupParams()
 
     if (m_maxBitDepth > 8)
     {
-        FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), 1));// enable bitdepth
+        FP(put_Option(m_Handle, CP(OPTION_BITDEPTH), 1)); // enable bitdepth
         m_BitsPerPixel = 16;
     }
 
@@ -603,36 +604,37 @@ void ToupBase::setupParams()
 
     FP(put_Option(m_Handle, CP(OPTION_RAW), 1));
 
-    if (m_MonoCamera)// Check if mono camera
+    if (m_MonoCamera) // Check if mono camera
     {
-        CaptureFormat mono16 = {"INDI_MONO_16", "Mono 16", 16, false};
-        CaptureFormat mono8 = {"INDI_MONO_8", "Mono 8", 8, false};
+        CaptureFormat mono16 = { "INDI_MONO_16", "Mono 16", 16, false };
+        CaptureFormat mono8  = { "INDI_MONO_8", "Mono 8", 8, false };
         if (m_maxBitDepth > 8)
         {
             m_CurrentVideoFormat = 1;
-            mono16.isDefault = true;
+            mono16.isDefault     = true;
         }
         else
         {
             m_CurrentVideoFormat = 0;
-            m_BitsPerPixel = 8;
-            mono8.isDefault = true;
+            m_BitsPerPixel       = 8;
+            mono8.isDefault      = true;
         }
 
         m_CameraPixelFormat = INDI_MONO;
-        m_Channels = 1;
+        m_Channels          = 1;
 
         addCaptureFormat(mono8);
         if (m_maxBitDepth > 8)
             addCaptureFormat(mono16);
     }
-    else// Color Camera
+    else // Color Camera
     {
-        CaptureFormat rgb = {"INDI_RGB", "RGB", 8, false };
-        CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
+        CaptureFormat rgb = { "INDI_RGB", "RGB", 8, false };
+        CaptureFormat raw = { "INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8",
+                              static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
 
         m_Channels = 1;
-        BayerTP[2].setText(getBayerString());// Get RAW Format
+        BayerTP[2].setText(getBayerString()); // Get RAW Format
 
         addCaptureFormat(rgb);
         addCaptureFormat(raw);
@@ -654,8 +656,10 @@ void ToupBase::setupParams()
     uint32_t currentResolutionIndex = 0, finalResolutionIndex = 0;
     FP(get_eSize(m_Handle, &currentResolutionIndex));
     // If we have a config resolution index, then prefer it over the current resolution index.
-    finalResolutionIndex = (m_ConfigResolutionIndex >= 0
-                            && m_ConfigResolutionIndex < static_cast<int>(m_ResolutionSP.size())) ? m_ConfigResolutionIndex : currentResolutionIndex;
+    finalResolutionIndex =
+        (m_ConfigResolutionIndex >= 0 && m_ConfigResolutionIndex < static_cast<int>(m_ResolutionSP.size())) ?
+            m_ConfigResolutionIndex :
+            currentResolutionIndex;
     // In case there is NO previous resolution set
     // then select the LOWER resolution on arm architecture
     // since this has less chance of failure. If the user explicitly selects any resolution
@@ -670,8 +674,9 @@ void ToupBase::setupParams()
     if (finalResolutionIndex != currentResolutionIndex)
         FP(put_eSize(m_Handle, finalResolutionIndex));
 
-    SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height,
-                 m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
+    SetCCDParams(m_Instance->model->res[finalResolutionIndex].width,
+                 m_Instance->model->res[finalResolutionIndex].height, m_BitsPerPixel, m_Instance->model->xpixsz,
+                 m_Instance->model->ypixsz);
 
     // Set trigger mode to software
     rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
@@ -715,7 +720,7 @@ void ToupBase::setupParams()
 
     // Speed
     // JM 2020-05-06: Reduce speed on ARM for all resolutions
-#if defined(__arm__) || defined (__aarch64__)
+#if defined(__arm__) || defined(__aarch64__)
     m_ControlNP[TC_SPEED].setValue(0);
     FP(put_Speed(m_Handle, 0));
 #else
@@ -744,8 +749,8 @@ void ToupBase::setupParams()
     if (m_MonoCamera == false)
     {
         // Get White Balance Gain
-        int aGain[3] = {0};
-        rc = FP(get_WhiteBalanceGain(m_Handle, aGain));
+        int aGain[3] = { 0 };
+        rc           = FP(get_WhiteBalanceGain(m_Handle, aGain));
         if (SUCCEEDED(rc))
         {
             m_WBNP[TC_WB_R].setValue(aGain[TC_WB_R]);
@@ -755,7 +760,7 @@ void ToupBase::setupParams()
     }
 
     // Get Level Ranges
-    uint16_t aLow[4] = {0}, aHigh[4] = {255, 255, 255, 255};
+    uint16_t aLow[4] = { 0 }, aHigh[4] = { 255, 255, 255, 255 };
     rc = FP(get_LevelRange(m_Handle, aLow, aHigh));
     if (SUCCEEDED(rc))
     {
@@ -779,8 +784,8 @@ void ToupBase::setupParams()
     }
 
     // Get Black Balance
-    uint16_t aSub[3] = {0};
-    rc = FP(get_BlackBalance(m_Handle, aSub));
+    uint16_t aSub[3] = { 0 };
+    rc               = FP(get_BlackBalance(m_Handle, aSub));
     if (SUCCEEDED(rc))
     {
         m_BlackBalanceNP[TC_BLACK_R].setValue(aSub[0]);
@@ -1055,8 +1060,7 @@ bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], c
             {
                 m_WBNP.update(values, names, n);
 
-                int aSub[3] =
-                {
+                int aSub[3] = {
                     static_cast<int>(m_WBNP[TC_WB_R].getValue()),
                     static_cast<int>(m_WBNP[TC_WB_G].getValue()),
                     static_cast<int>(m_WBNP[TC_WB_B].getValue()),
@@ -1141,7 +1145,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 return true;
             }
 
-            auto mode = (m_BinningModeSP[TC_BINNING_AVG].getState() == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
+            auto mode     = (m_BinningModeSP[TC_BINNING_AVG].getState() == ISS_ON) ? TC_BINNING_AVG : TC_BINNING_ADD;
             m_BinningMode = mode;
             updateBinningMode(PrimaryCCD.getBinX(), mode);
             return true;
@@ -1175,12 +1179,14 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             if (m_HighFullwellSP.isUpdated(states, names, n))
             {
                 m_HighFullwellSP.update(states, names, n);
-                HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellSP[INDI_ENABLED].getState()));
+                HRESULT rc =
+                    FP(put_Option(m_Handle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellSP[INDI_ENABLED].getState()));
                 if (SUCCEEDED(rc))
                     m_HighFullwellSP.setState(IPS_OK);
                 else
                 {
-                    LOGF_ERROR("Failed to set high fullwell %s. %s", m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
+                    LOGF_ERROR("Failed to set high fullwell %s. %s",
+                               m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
                                errorCodes(rc).c_str());
                     m_HighFullwellSP.setState(IPS_ALERT);
                     m_HighFullwellSP.reset();
@@ -1213,8 +1219,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                     m_LowNoiseSP.setState(IPS_OK);
                 else
                 {
-                    LOGF_ERROR("Failed to set low noise %s. %s", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
-                               errorCodes(rc).c_str());
+                    LOGF_ERROR("Failed to set low noise %s. %s",
+                               m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
                     m_LowNoiseSP.setState(IPS_ALERT);
                     m_LowNoiseSP.reset();
                     m_LowNoiseSP[prevIndex].setState(ISS_ON);
@@ -1244,8 +1250,8 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                     m_TailLightSP.setState(IPS_OK);
                 else
                 {
-                    LOGF_ERROR("Failed to set tail light %s. %s", m_TailLightSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF",
-                               errorCodes(rc).c_str());
+                    LOGF_ERROR("Failed to set tail light %s. %s",
+                               m_TailLightSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", errorCodes(rc).c_str());
                     m_TailLightSP.setState(IPS_ALERT);
                     m_TailLightSP.reset();
                     m_TailLightSP[prevIndex].setState(ISS_ON);
@@ -1338,8 +1344,10 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                 else
                 {
                     m_ResolutionSP.setState(IPS_OK);
-                    PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
-                    PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
+                    PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width,
+                                             m_Instance->model->res[targetIndex].height);
+                    PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width,
+                                        m_Instance->model->res[targetIndex].height);
                     LOGF_INFO("Resolution changed to %s", m_ResolutionSP[targetIndex].getLabel());
                     allocateFrameBuffer();
                     m_ConfigResolutionIndex = targetIndex;
@@ -1491,7 +1499,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 bool ToupBase::StartStreaming()
 {
     const uint32_t uSecs = static_cast<uint32_t>(1000000.0f / Streamer->getTargetFPS());
-    HRESULT rc = FP(put_ExpoTime(m_Handle, uSecs));
+    HRESULT rc           = FP(put_ExpoTime(m_Handle, uSecs));
     if (FAILED(rc))
     {
         LOGF_ERROR("Failed to set streaming exposure time. %s", errorCodes(rc).c_str());
@@ -1552,14 +1560,14 @@ int ToupBase::SetTemperature(double temperature)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::activateCooler(bool enable)
 {
-    int val = 0;
+    int val         = 0;
     auto isCoolerOn = false;
-    HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
+    HRESULT rc      = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
     if (SUCCEEDED(rc))
         isCoolerOn = (val != 0);
 
     // If no state change, return.
-    if ( (enable && isCoolerOn) || (!enable && !isCoolerOn))
+    if ((enable && isCoolerOn) || (!enable && !isCoolerOn))
         return true;
 
     rc = FP(put_Option(m_Handle, CP(OPTION_TEC), enable ? 1 : 0));
@@ -1607,7 +1615,7 @@ bool ToupBase::StartExposure(float duration)
 
     PrimaryCCD.setExposureDuration(static_cast<double>(duration));
 
-    HRESULT rc = 0;
+    HRESULT rc   = 0;
     time_t uSecs = static_cast<time_t>(duration * 1000000.0f);
 
     m_ExposureRequest = duration;
@@ -1628,13 +1636,13 @@ bool ToupBase::StartExposure(float duration)
     m_ExposureTimer.start();
 
     timeval current_time, exposure_time;
-    exposure_time.tv_sec = uSecs / 1000000;
+    exposure_time.tv_sec  = uSecs / 1000000;
     exposure_time.tv_usec = uSecs % 1000000;
     gettimeofday(&current_time, nullptr);
     timeradd(&current_time, &exposure_time, &m_ExposureEnd);
 
     InExposure = true;
-    if (FAILED(rc = FP(Trigger(m_Handle, 1))))// Trigger an exposure
+    if (FAILED(rc = FP(Trigger(m_Handle, 1)))) // Trigger an exposure
     {
         LOGF_ERROR("Failed to trigger exposure. %s", errorCodes(rc).c_str());
         return false;
@@ -1675,7 +1683,8 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
-    LOGF_DEBUG("Camera ROI. X: %d, Y: %d, W: %d, H: %d. Binning %dx%d", x, y, w, h, PrimaryCCD.getBinX(), PrimaryCCD.getBinY());
+    LOGF_DEBUG("Camera ROI. X: %d, Y: %d, W: %d, H: %d. Binning %dx%d", x, y, w, h, PrimaryCCD.getBinX(),
+               PrimaryCCD.getBinY());
 
     HRESULT rc = FP(put_Roi(m_Handle, x, y, w, h));
     if (FAILED(rc))
@@ -1710,7 +1719,8 @@ bool ToupBase::updateBinningMode(int binx, int mode)
     HRESULT rc = FP(put_Option(m_Handle, CP(OPTION_BINNING), binningMode));
     if (FAILED(rc))
     {
-        LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx, binx, binningMode, errorCodes(rc).c_str());
+        LOGF_ERROR("Binning %dx%d with Option 0x%x is not support. %s", binx, binx, binningMode,
+                   errorCodes(rc).c_str());
         m_BinningModeSP.setState(IPS_ALERT);
         m_BinningModeSP.apply();
         return false;
@@ -1752,7 +1762,7 @@ void ToupBase::TimerHit()
     if (InExposure)
     {
         double const elapsed = m_ExposureTimer.elapsed() / 1000.0;
-        double remaining = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
+        double remaining     = m_ExposureRequest > elapsed ? m_ExposureRequest - elapsed : 0;
         PrimaryCCD.setExposureLeft(remaining);
 
         auto factor = m_TimeoutFactorNP[TIMEOUT_FACTOR].getValue();
@@ -1768,7 +1778,7 @@ void ToupBase::TimerHit()
     if (m_Instance->model->flag & CP(FLAG_GETTEMPERATURE))
     {
         int16_t nTemperature = 0;
-        HRESULT rc = FP(get_Temperature(m_Handle, &nTemperature));
+        HRESULT rc           = FP(get_Temperature(m_Handle, &nTemperature));
         if (FAILED(rc))
         {
             if (TemperatureNP.getState() != IPS_ALERT)
@@ -1804,7 +1814,7 @@ void ToupBase::TimerHit()
 
     if (HasCooler() && (m_maxTecVoltage > 0))
     {
-        int val = 0;
+        int val    = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TEC), &val));
         if (FAILED(rc))
         {
@@ -1865,18 +1875,19 @@ IPState ToupBase::guidePulse(INDI::Timer &timer, float ms, eGUIDEDIRECTION dir)
 
     LOGF_DEBUG("Starting %s guide for %f ms.", toString(dir), ms);
 
-    timer.callOnTimeout([this, dir]
-    {
-        // BUG in SDK. ST4 guiding pulses do not stop after duration.
-        // N.B. Pulse guiding has to be explicitly stopped.
-        FP(ST4PlusGuide(m_Handle, TOUPBASE_STOP, 0));
-        LOGF_DEBUG("Stopped %s guide.", toString(dir));
+    timer.callOnTimeout(
+        [this, dir]
+        {
+            // BUG in SDK. ST4 guiding pulses do not stop after duration.
+            // N.B. Pulse guiding has to be explicitly stopped.
+            FP(ST4PlusGuide(m_Handle, TOUPBASE_STOP, 0));
+            LOGF_DEBUG("Stopped %s guide.", toString(dir));
 
-        if (dir == TOUPBASE_NORTH || dir == TOUPBASE_SOUTH)
-            GuideComplete(AXIS_DE);
-        else if (dir == TOUPBASE_EAST || dir == TOUPBASE_WEST)
-            GuideComplete(AXIS_RA);
-    });
+            if (dir == TOUPBASE_NORTH || dir == TOUPBASE_SOUTH)
+                GuideComplete(AXIS_DE);
+            else if (dir == TOUPBASE_EAST || dir == TOUPBASE_WEST)
+                GuideComplete(AXIS_RA);
+        });
 
     if (ms < 1)
     {
@@ -1988,27 +1999,29 @@ void ToupBase::refreshControls()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
+void ToupBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
 
-    fitsKeywords.push_back({"GAIN", m_ControlNP[TC_GAIN].getValue(), 3, "Gain"});
-    fitsKeywords.push_back({"OFFSET", m_OffsetNP[0].getValue(), 3, "Offset"});
+    fitsKeywords.push_back({ "GAIN", m_ControlNP[TC_GAIN].getValue(), 3, "Gain" });
+    fitsKeywords.push_back({ "OFFSET", m_OffsetNP[0].getValue(), 3, "Offset" });
     if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
-        fitsKeywords.push_back({"LOWNOISE", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "Low Noise"});
+        fitsKeywords.push_back(
+            { "LOWNOISE", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "Low Noise" });
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
-        fitsKeywords.push_back({"FULLWELL", m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "High Fullwell"});
-    fitsKeywords.push_back({"SN", m_CameraTP[TC_CAMERA_SN].getText(), "Serial Number"});
-    fitsKeywords.push_back({"PRODATE", m_CameraTP[TC_CAMERA_DATE].getText(), "Production Date"});
-    fitsKeywords.push_back({"FIRMVER", m_CameraTP[TC_CAMERA_FW_VERSION].getText(), "Firmware Version"});
-    fitsKeywords.push_back({"HARDVER", m_CameraTP[TC_CAMERA_HW_VERSION].getText(), "Hardware Version"});
-    fitsKeywords.push_back({"FPGAVER", m_CameraTP[TC_CAMERA_FPGA_VERSION].getText(), "FPGA Version"});
+        fitsKeywords.push_back(
+            { "FULLWELL", m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "High Fullwell" });
+    fitsKeywords.push_back({ "SN", m_CameraTP[TC_CAMERA_SN].getText(), "Serial Number" });
+    fitsKeywords.push_back({ "PRODATE", m_CameraTP[TC_CAMERA_DATE].getText(), "Production Date" });
+    fitsKeywords.push_back({ "FIRMVER", m_CameraTP[TC_CAMERA_FW_VERSION].getText(), "Firmware Version" });
+    fitsKeywords.push_back({ "HARDVER", m_CameraTP[TC_CAMERA_HW_VERSION].getText(), "Hardware Version" });
+    fitsKeywords.push_back({ "FPGAVER", m_CameraTP[TC_CAMERA_FPGA_VERSION].getText(), "FPGA Version" });
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ToupBase::saveConfigItems(FILE * fp)
+bool ToupBase::saveConfigItems(FILE *fp)
 {
     INDI::CCD::saveConfigItems(fp);
 
@@ -2051,20 +2064,20 @@ bool ToupBase::saveConfigItems(FILE * fp)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-void ToupBase::eventCB(unsigned event, void* pCtx)
+void ToupBase::eventCB(unsigned event, void *pCtx)
 {
-    static_cast<ToupBase*>(pCtx)->eventCallBack(event);
+    static_cast<ToupBase *>(pCtx)->eventCallBack(event);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-uint8_t* ToupBase::getRgbBuffer()
+uint8_t *ToupBase::getRgbBuffer()
 {
     if (m_rgbBuffer && (m_rgbBufferSize == PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3))
         return m_rgbBuffer;
     m_rgbBufferSize = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3;
-    m_rgbBuffer = static_cast<uint8_t*>(realloc(m_rgbBuffer, m_rgbBufferSize));
+    m_rgbBuffer     = static_cast<uint8_t *>(realloc(m_rgbBuffer, m_rgbBufferSize));
     return m_rgbBuffer;
 }
 
@@ -2090,7 +2103,8 @@ void ToupBase::eventCallBack(unsigned event)
             int captureBits = m_BitsPerPixel == 8 ? 8 : m_maxBitDepth;
             if (Streamer->isStreaming() || Streamer->isRecording())
             {
-                HRESULT rc = FP(PullImageWithRowPitchV2(m_Handle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels, -1, nullptr));
+                HRESULT rc = FP(PullImageWithRowPitchV2(m_Handle, PrimaryCCD.getFrameBuffer(), captureBits * m_Channels,
+                                                        -1, nullptr));
                 if (SUCCEEDED(rc))
                     Streamer->newFrame(PrimaryCCD.getFrameBuffer(), PrimaryCCD.getFrameBufferSize());
             }
@@ -2134,8 +2148,8 @@ void ToupBase::eventCallBack(unsigned event)
                         }
                     }
 
-                    LOGF_DEBUG("Image received. Width: %d, Height: %d, flag: %d, timestamp: %ld", info.width, info.height, info.flag,
-                               info.timestamp);
+                    LOGF_DEBUG("Image received. Width: %d, Height: %d, flag: %d, timestamp: %ld", info.width,
+                               info.height, info.flag, info.timestamp);
                     ExposureComplete(&PrimaryCCD);
                 }
             }
@@ -2235,7 +2249,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
 
         if (0 == index)
         {
-            m_Channels = 3;
+            m_Channels     = 3;
             m_BitsPerPixel = 8;
             SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
         }
