@@ -20,6 +20,7 @@
 //#define USE_DHT_SENSOR            // USE DHT HUMIDITY SENSOR.
                                   // HINT: Edit dht.h for sensor specifics
 //#define USE_AHT10_SENSOR          // USE the AHT10 temperature and humidity sensor
+//#define USE_SHT30_SENSOR          // USE the SHT30 temperature and humidity sensor
 //#define USE_MLX_SENSOR            // USE MELEXIS 90614 IR SENSOR.
 //#define USE_TSL2591_SENSOR        // USE TSL2591 SENSOR.
 //#define USE_TSL237_SENSOR         // USE TSL237 SENSOR.
@@ -109,6 +110,10 @@
 #ifdef USE_AHT10_SENSOR
 #include "aht10.h"
 #endif //USE_AHT10_SENSOR
+
+#ifdef USE_SHT30_SENSOR
+#include "sht30.h"
+#endif //USE_SHT30_SENSOR
 
 #ifdef USE_MLX_SENSOR
 #include "mlx90614.h"

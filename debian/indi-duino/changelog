@@ -1,3 +1,9 @@
+indi-duino (1.21) jammy; urgency=medium
+
+  * SHT30 sensor support added to weatherradio firmware
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 10 Aug 2025 21:23:10 +0200
+
 indi-duino (1.20) jammy; urgency=medium
 
   * Support for AHT10 sensor added to weatherradio firmware
