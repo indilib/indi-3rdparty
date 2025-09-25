@@ -33,7 +33,7 @@ if(UNIX OR APPLE OR ANDROID)
   )
     set(SEC_COMP_FLAGS "-D_FORTIFY_SOURCE=2")
   endif()
-  set(SEC_COMP_FLAGS "${SEC_COMP_FLAGS} -fstack-protector-all -fPIE")
+  set(SEC_COMP_FLAGS "${SEC_COMP_FLAGS} -fstack-protector-all")
   # Make sure to add optimization flag. Some systems require this for _FORTIFY_SOURCE.
   if(
     NOT CMAKE_BUILD_TYPE MATCHES "MinSizeRel"
@@ -59,8 +59,9 @@ if(UNIX OR APPLE OR ANDROID)
       "${SEC_LINK_FLAGS} -Wl,-z,nodump -Wl,-z,noexecstack -Wl,-z,relro -Wl,-z,now"
     )
   endif()
+  # Add -pie only to executable linker flags
   if(NOT ANDROID AND NOT APPLE)
-    set(SEC_LINK_FLAGS "${SEC_LINK_FLAGS} -pie")
+    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pie")
   endif()
   set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${SEC_LINK_FLAGS}")
   set(
