@@ -211,6 +211,7 @@ option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
 option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
+option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -285,6 +286,7 @@ if (NO_PRE_BUILT)
     SET(WITH_SVBONY Off)
     SET(WITH_TOUPBASE Off)
     SET(WITH_ASTROASIS Off)
+    SET(WITH_OPENOGMA Off)
 endif(NO_PRE_BUILT)
 
 # If the Build Libs option is selected, it will just build the required libraries.
@@ -779,6 +781,11 @@ if (GPIOD_FOUND)
 add_subdirectory(indi-gpio)
 endif(GPIOD_FOUND)
 endif()
+
+# OpenOGMA
+if (WITH_OPENOGMA)
+  add_subdirectory(indi-openogma)
+endif(WITH_OPENOGMA)
 
 # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
 if (LIBRARIES_FOUND)
