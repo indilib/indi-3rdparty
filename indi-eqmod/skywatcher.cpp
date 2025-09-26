@@ -548,6 +548,9 @@ void Skywatcher::InquireBoardVersion(char **boardinfo)
         case 0x23:
             strcpy(boardinfo[0], "EQ6-R Pro");
             break;
+        case 0x24:
+            strcpy(boardinfo[0], "EQ6 Pro");
+            break;
         case 0x25:
             strcpy(boardinfo[0], "CQ350 Pro");
             break;
@@ -657,7 +660,7 @@ bool Skywatcher::HasPPEC()
 bool Skywatcher::HasSnapPort1()
 {
     return MountCode == 0x04 ||  MountCode == 0x05 ||  MountCode == 0x06 ||  MountCode == 0x0A || MountCode == 0x0C || MountCode == 0x23
-           || MountCode == 0xA5;
+           || MountCode == 0x24 || MountCode == 0xA5;
 }
 
 bool Skywatcher::HasSnapPort2()
