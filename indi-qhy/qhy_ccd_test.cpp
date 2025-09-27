@@ -60,6 +60,10 @@ int main(int argc, char *argv[])
     unsigned int roiSizeX = 0; // Will be set to maxImageSizeX later
     unsigned int roiSizeY = 0; // Will be set to maxImageSizeY later
 
+    bool gainSet = false;
+    bool offsetSet = false;
+    bool usbTrafficSet = false;
+
     double chipWidthMM;
     double chipHeightMM;
     double pixelWidthUM;
@@ -124,9 +128,11 @@ int main(int argc, char *argv[])
                 break;
             case 'g':
                 CHIP_GAIN = atoi(optarg);
+                gainSet = true;
                 break;
             case 'o':
                 CHIP_OFFSET = atoi(optarg);
+                offsetSet = true;
                 break;
             case 'b':
                 camBinX = atoi(optarg);
@@ -134,6 +140,7 @@ int main(int argc, char *argv[])
                 break;
             case 't':
                 USB_TRAFFIC = atoi(optarg);
+                usbTrafficSet = true;
                 break;
             case '?':
                 // getopt_long already printed an error message.
@@ -356,53 +363,62 @@ int main(int argc, char *argv[])
     }
 
     // check traffic
-    retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
-    if (QHYCCD_SUCCESS == retVal)
+    if (usbTrafficSet)
     {
-        retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, USB_TRAFFIC);
+        retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
         if (QHYCCD_SUCCESS == retVal)
         {
-            printf("SetQHYCCDParam CONTROL_USBTRAFFIC set to: %d, success.\n", USB_TRAFFIC);
-        }
-        else
-        {
-            printf("SetQHYCCDParam CONTROL_USBTRAFFIC failure, error: %d\n", retVal);
-            getchar();
-            return 1;
+            retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, USB_TRAFFIC);
+            if (QHYCCD_SUCCESS == retVal)
+            {
+                printf("SetQHYCCDParam CONTROL_USBTRAFFIC set to: %d, success.\n", USB_TRAFFIC);
+            }
+            else
+            {
+                printf("SetQHYCCDParam CONTROL_USBTRAFFIC failure, error: %d\n", retVal);
+                getchar();
+                return 1;
+            }
         }
     }
 
     // check gain
-    retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_GAIN);
-    if (QHYCCD_SUCCESS == retVal)
+    if (gainSet)
     {
-        retVal = SetQHYCCDParam(pCamHandle, CONTROL_GAIN, CHIP_GAIN);
-        if (retVal == QHYCCD_SUCCESS)
+        retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_GAIN);
+        if (QHYCCD_SUCCESS == retVal)
         {
-            printf("SetQHYCCDParam CONTROL_GAIN set to: %d, success\n", CHIP_GAIN);
-        }
-        else
-        {
-            printf("SetQHYCCDParam CONTROL_GAIN failure, error: %d\n", retVal);
-            getchar();
-            return 1;
+            retVal = SetQHYCCDParam(pCamHandle, CONTROL_GAIN, CHIP_GAIN);
+            if (retVal == QHYCCD_SUCCESS)
+            {
+                printf("SetQHYCCDParam CONTROL_GAIN set to: %d, success\n", CHIP_GAIN);
+            }
+            else
+            {
+                printf("SetQHYCCDParam CONTROL_GAIN failure, error: %d\n", retVal);
+                getchar();
+                return 1;
+            }
         }
     }
 
     // check offset
-    retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
-    if (QHYCCD_SUCCESS == retVal)
+    if (offsetSet)
     {
-        retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, CHIP_OFFSET);
+        retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
         if (QHYCCD_SUCCESS == retVal)
         {
-            printf("SetQHYCCDParam CONTROL_GAIN set to: %d, success.\n", CHIP_OFFSET);
-        }
-        else
-        {
-            printf("SetQHYCCDParam CONTROL_GAIN failed.\n");
-            getchar();
-            return 1;
+            retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, CHIP_OFFSET);
+            if (QHYCCD_SUCCESS == retVal)
+            {
+                printf("SetQHYCCDParam CONTROL_OFFSET set to: %d, success.\n", CHIP_OFFSET);
+            }
+            else
+            {
+                printf("SetQHYCCDParam CONTROL_OFFSET failed.\n");
+                getchar();
+                return 1;
+            }
         }
     }
 
