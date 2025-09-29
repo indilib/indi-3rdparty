@@ -31,5 +31,5 @@ Section: debug
 Architecture: any
 Depends: libfli2 (= ${binary:Version}), ${misc:Depends}
 Description: Finger Lakes Instruments (FLI) debug symbols.
-.
-This package contains debug symbols.
+  .
+  This package contains debug symbols.
