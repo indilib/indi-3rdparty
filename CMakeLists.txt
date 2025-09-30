@@ -2,6 +2,7 @@ cmake_minimum_required(VERSION 3.16)
 
 project(libindi-3rdparty CXX C)
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+list(APPEND TOUPTEK_REBRANDS TOUPCAM ALTAIRCAM BRESSERCAM MALLINCAM MEADECAM NNCAM OGMACAM OMEGONPROCAM STARSHOOTG TSCAM SVBONYCAM)
 
 include(GNUInstallDirs)
 
@@ -429,49 +430,15 @@ if(BUILD_LIBS)
   endif(WITH_PENTAX)
 
   #toupbase dependencies
-  if(WITH_TOUPCAM)
-    add_subdirectory(libtoupcam)
-  endif(WITH_TOUPCAM)
+  foreach(BRAND IN LISTS TOUPTEK_REBRANDS)
+    set(BRAND_CONDITIONAL "WITH_${BRAND}")
+    string(TOLOWER ${BRAND} LIBNAME)
+    set(BRAND_LIB "lib${LIBNAME}")
 
-  if(WITH_MEADECAM)
-    add_subdirectory(libmeadecam)
-  endif(WITH_MEADECAM)
-
-  if(WITH_ALTAIRCAM)
-    add_subdirectory(libaltaircam)
-  endif(WITH_ALTAIRCAM)
-
-  if(WITH_BRESSERCAM)
-    add_subdirectory(libbressercam)
-  endif(WITH_BRESSERCAM)
-
-  if(WITH_OGMACAM)
-    add_subdirectory(libogmacam)
-  endif(WITH_OGMACAM)
-
-  if(WITH_STARSHOOTG)
-    add_subdirectory(libstarshootg)
-  endif(WITH_STARSHOOTG)
-
-  if(WITH_NNCAM)
-    add_subdirectory(libnncam)
-  endif(WITH_NNCAM)
-
-  if(WITH_MALLINCAM)
-    add_subdirectory(libmallincam)
-  endif(WITH_MALLINCAM)
-
-  if(WITH_OMEGONPROCAM)
-    add_subdirectory(libomegonprocam)
-  endif(WITH_OMEGONPROCAM)
-
-  if(WITH_TSCAM)
-    add_subdirectory(libtscam)
-  endif(WITH_TSCAM)
-
-  if(WITH_SVBONYCAM)
-    add_subdirectory(libsvbonycam)
-  endif(WITH_SVBONYCAM)
+    if(${BRAND_CONDITIONAL})
+      add_subdirectory(${BRAND_LIB})
+    endif()
+  endforeach()
 
   #libsvbiny
   if(WITH_SVBONY)
@@ -595,115 +562,23 @@ else(BUILD_LIBS)
 
   set(ADD_TOUPBASE FALSE)
   ## TOUPBASE driver pack
-  if(WITH_TOUPCAM)
-    find_package(TOUPCAM)
-    if(TOUPCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(TOUPCAM_FOUND)
-      add_subdirectory(libtoupcam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(TOUPCAM_FOUND)
-  endif(WITH_TOUPCAM)
+  foreach(BRAND IN LISTS TOUPTEK_REBRANDS)
+    set(BRAND_CONDITIONAL "WITH_${BRAND}")
+    set(BRAND_LIB_FOUND "${BRAND}_FOUND")
+    string(TOLOWER ${BRAND} LIBNAME)
+    set(BRAND_LIB "lib${LIBNAME}")
 
-  if(WITH_ALTAIRCAM)
-    find_package(ALTAIRCAM)
-    if(ALTAIRCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(ALTAIRCAM_FOUND)
-      add_subdirectory(libaltaircam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(ALTAIRCAM_FOUND)
-  endif(WITH_ALTAIRCAM)
-  
-  if(WITH_BRESSERCAM)
-    find_package(BRESSERCAM)
-    if(BRESSERCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(BRESSERCAM_FOUND)
-      add_subdirectory(bressercam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(BRESSERCAM_FOUND)
-  endif(WITH_BRESSERCAM)
+    if(${BRAND_CONDITIONAL})
+      find_package(${BRAND})
 
-  if(WITH_OGMACAM)
-    find_package(OGMACAM)
-    if(OGMACAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(OGMACAM_FOUND)
-      add_subdirectory(ogmacam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(OGMACAM_FOUND)
-  endif(WITH_OGMACAM)
-
-  if(WITH_TSCAM)
-    find_package(TSCAM)
-    if(TSCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(TSCAM_FOUND)
-      add_subdirectory(tscam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(TSCAM_FOUND)
-  endif(WITH_TSCAM)
-
-  if(WITH_SVBONYCAM)
-    find_package(SVBONYCAM)
-    if(SVBONYCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(SVBONYCAM_FOUND)
-      add_subdirectory(svbonycam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(SVBONYCAM_FOUND)
-  endif(WITH_SVBONYCAM)
-
-  if(WITH_STARSHOOTG)
-    find_package(STARSHOOTG)
-    if(STARSHOOTG_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(STARSHOOTG_FOUND)
-      add_subdirectory(starshootg)
-      set(LIBRARIES_FOUND FALSE)
-    endif(STARSHOOTG_FOUND)
-  endif(WITH_STARSHOOTG)
-
-  if(WITH_NNCAM)
-    find_package(NNCAM)
-    if(NNCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(NNCAM_FOUND)
-      add_subdirectory(nncam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(NNCAM_FOUND)
-  endif(WITH_NNCAM)
-
-  if(WITH_MALLINCAM)
-    find_package(MALLINCAM)
-    if(MALLINCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(MALLINCAM_FOUND)
-      add_subdirectory(mallincam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(MALLINCAM_FOUND)
-  endif(WITH_MALLINCAM)
-
-  if(WITH_OMEGONPROCAM)
-    find_package(OMEGONPROCAM)
-    if(OMEGONPROCAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(OMEGONPROCAM_FOUND)
-      add_subdirectory(omegonprocam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(OMEGONPROCAM_FOUND)
-  endif(WITH_OMEGONPROCAM)
-
-  if(WITH_MEADECAM)
-    find_package(MEADECAM)
-    if(MEADECAM_FOUND)
-      set(ADD_TOUPBASE TRUE)
-    else(MEADECAM_FOUND)
-      add_subdirectory(meadecam)
-      set(LIBRARIES_FOUND FALSE)
-    endif(MEADECAM_FOUND)
-  endif(WITH_MEADECAM)
+      if(${BRAND_LIB_FOUND})
+        set(ADD_TOUPBASE TRUE)
+      else()
+        add_subdirectory(${BRAND_LIB})
+        set(LIBRARIES_FOUND FALSE)
+      endif()
+    endif()
+  endforeach()
 
   if(ADD_TOUPBASE AND LIBRARIES_FOUND)
     add_subdirectory(indi-toupbase)
@@ -1002,82 +877,19 @@ else(BUILD_LIBS)
       )
     endif(WITH_ATIK AND NOT ATIK_FOUND)
 
-    if(WITH_TOUPCAM AND NOT TOUPCAM_FOUND)
-      message(
-        STATUS
-        "libtoupcam was not found and will now be built. Please install libtoupcam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_TOUPCAM AND NOT TOUPCAM_FOUND)
+    foreach(BRAND IN LISTS TOUPTEK_REBRANDS)
+      set(BRAND_CONDITIONAL "WITH_${BRAND}")
+      set(BRAND_LIB_FOUND "${BRAND}_FOUND")
+      string(TOLOWER ${BRAND} LIBNAME)
+      set(BRAND_LIB "lib${LIBNAME}")
 
-    if(WITH_ALTAIRCAM AND NOT ALTAIRCAM_FOUND)
-      message(
-        STATUS
-        "libaltaircam was not found and will now be built. Please install libaltaircam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_ALTAIRCAM AND NOT ALTAIRCAM_FOUND)
-
-    if(WITH_BRESSERCAM AND NOT BRESSERCAM_FOUND)
-      message(
-        STATUS
-        "libbressercam was not found and will now be built. Please install libbressercam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_BRESSERCAM AND NOT BRESSERCAM_FOUND)
-
-    if(WITH_OGMACAM AND NOT OGMACAM_FOUND)
-      message(
-        STATUS
-        "libogmacam was not found and will now be built. Please install libogmacam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_OGMACAM AND NOT OGMACAM_FOUND)
-
-    if(WITH_TSCAM AND NOT TSCAM_FOUND)
-      message(
-        STATUS
-        "libtscam was not found and will now be built. Please install libtscam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_TSCAM AND NOT TSCAM_FOUND)
-
-    if(WITH_SVBONYCAM AND NOT SVBONYCAM_FOUND)
-      message(
-        STATUS
-        "libsvbonycam was not found and will now be built. Please install libsvbonycam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_SVBONYCAM AND NOT SVBONYCAM_FOUND)
-
-    if(WITH_STARSHOOTG AND NOT STARSHOOTG_FOUND)
-      message(
-        STATUS
-        "libstarshootg was not found and will now be built. Please install libstarshootg first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_STARSHOOTG AND NOT STARSHOOTG_FOUND)
-
-    if(WITH_NNCAM AND NOT NNCAM_FOUND)
-      message(
-        STATUS
-        "libnncam was not found and will now be built. Please install libnncam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_NNCAM AND NOT NNCAM_FOUND)
-
-    if(WITH_MALLINCAM AND NOT MALLINCAM_FOUND)
-      message(
-        STATUS
-        "libmallincam was not found and will now be built. Please install libmallincam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_MALLINCAM AND NOT MALLINCAM_FOUND)
-
-    if(WITH_OMEGONPROCAM AND NOT OMEGONPROCAM_FOUND)
-      message(
-        STATUS
-        "libomegonprocam was not found and will now be built. Please install libomegonprocam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_OMEGONPROCAM AND NOT OMEGONPROCAM_FOUND)
-
-    if(WITH_OMEGONPROCAM AND NOT MEADECAM_FOUND)
-      message(
-        STATUS
-        "libmeadecam was not found and will now be built. Please install libmeadecam first before running cmake again to install indi-toupbase."
-      )
-    endif(WITH_OMEGONPROCAM AND NOT MEADECAM_FOUND)
+      if(${BRAND_CONDITIONAL} AND NOT ${BRAND_LIB_FOUND})
+        message(
+          STATUS
+          "${BRAND_LIB} was not found and will now be built. Please install ${BRAND_LIB} first before running cmake again to install indi-${LIBNAME}."
+        )
+      endif()
+    endforeach()
 
     if(WITH_INOVAPLX AND NOT INOVASDK_FOUND)
       message(
