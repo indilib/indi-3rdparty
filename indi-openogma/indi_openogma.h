@@ -2,7 +2,7 @@
 
 #pragma once
 
-#include "libindi/defaultdevice.h"
+#include <indifilterwheel.h>
 #include "libindi/indicom.h"
 #include "libindi/connectionplugins/connectionserial.h"
 #include "libindi/indipropertytext.h"
@@ -22,11 +22,11 @@ enum class CommandType { MOVE_TO_SLOT, CALIBRATE };
 struct QueuedCommand {
     CommandType type;
     int target_slot;  // Used for MOVE_TO_SLOT, ignored for CALIBRATE
-    
+
     QueuedCommand(CommandType t, int slot = 0) : type(t), target_slot(slot) {}
 };
 
-class openogma : public INDI::DefaultDevice
+class openogma : public INDI::FilterWheel
 {
 public:
     openogma();
@@ -38,10 +38,12 @@ protected:
     // INDI lifecycle
     bool initProperties() override;
     bool updateProperties() override;
-    bool Connect() override;
-    bool Disconnect() override;
     void TimerHit() override;
     bool Handshake();
+
+    // FilterWheel virtual methods
+    bool SelectFilter(int position) override;
+    int QueryFilter() override;
 
     // Property handlers
     bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
@@ -88,34 +90,31 @@ private:
     void processQueuedCommands();
     bool isDeviceBusy() const { return fwState != FWState::IDLE; }
     void clearCommandQueue();
-    
+
     // ---- Sticky bounds and auto-refresh ----
     int clampSlot(int slot) const;
     void updateSlotBounds(int newTotalSlots);
     void updateFilterNames(int newTotalSlots);  // Manage filter name properties dynamically
-    
+
     // ---- Hot-plug / stale FD resilience ----
     bool attemptReconnect();
     bool isSerialError(int tty_result) const;
     void preserveConnectionSettings();
     void restoreConnectionSettings();
-    
+
     // ---- USB disconnect recovery ----
     void beginRecovery(const char* reason);
     bool doRecovery();
     void drainCommandQueue();
 
     // ---- State ----
-    INDI::PropertyNumber FilterSlotNP {1};
-    INDI::PropertyText   FilterNameTP {8};
-    INDI::PropertySwitch ConnectionSP {2};
     INDI::PropertySwitch CalibrationSP {1};
 
     int totalSlots = 0;
     int currentSlot = 0;  // 1-based for INDI consistency
     int targetSlot = 0;
     FWState fwState = FWState::ERROR;
-    
+
     // Position normalization helpers and state
     // Map firmware pos (0-based; 0xFF = unknown) -> UI (1-based; -1 = unknown)
     inline int fwPosToUi(int fwPos0, int slots) {
@@ -128,7 +127,7 @@ private:
         if (uiPos1 <= 0) return -1;               // caller handles 0 as "calibrate"
         return uiPos1 - 1;
     }
-    
+
     // Remember last good position to avoid showing garbage while moving
     int lastKnownSlot = 0; // 1-based; 0 means none yet
 
@@ -144,22 +143,23 @@ private:
     // Adaptive polling for marginal communication links
     int pollMS = 200;              // Current polling interval (ms)
     static const int FAST_POLL_MS = 150;       // Fast polling during motion
-    static const int NORMAL_POLL_MS = 200;     // Normal polling rate  
+    static const int NORMAL_POLL_MS = 200;     // Normal polling rate
     static const int BACKOFF_POLL_MS = 350;    // Slower rate during comm issues
     bool commBackoff = false;      // True when we're in backoff mode
-    
+
     // Hot-plug resilience state
     bool reconnectInProgress = false;     // Prevent recursive reconnect attempts
     bool reconnectNeeded = false;         // Flag serious errors for reconnect attempt
     std::vector<std::string> savedFilterNames;  // Preserve filter names
-    
+
     // USB disconnect recovery state
     enum class RecoveryState { NONE, IN_PROGRESS, WAIT_CALIBRATION } recoveryState = RecoveryState::NONE;
     time_t recoveryStartTime = 0;         // When recovery began
     static constexpr int RECOVERY_TIMEOUT_SEC = 60;  // Give up after 60s
     bool waitingForCalibration = false;   // True when firmware is auto-calibrating after reconnect
     int consecutiveCommFailures = 0;      // Track repeated communication failures
-    
+    bool suppressStartupSlotApply = false; // Swallow first FILTER_SLOT echo after connect
+
     // Protocol upgrade tracking
     time_t lastUpgradeAttempt = 0;
     static constexpr time_t UPGRADE_ATTEMPT_INTERVAL = 300; // Try upgrade every 5 minutes when idle
