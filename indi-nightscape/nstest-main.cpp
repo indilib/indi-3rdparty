@@ -65,7 +65,6 @@ void usage(char * prog)
 
 int main(int argc, char **argv)
 {
-    int ftd = 1;
     //char eeprom [128];
     int  i;
     //int baudrate = 115200;
@@ -82,7 +81,7 @@ int main(int argc, char **argv)
     //long imgszmax = 3448*2574*2 + DEFAULT_CHUNK_SIZE;
     int zonestart = 0;
     int zoneend = 0;
-    int lcount = 0;
+    //int lcount = 0;
     int scount = 0;
     int in_exp = 0;
     int old_busy_flag = 0;
@@ -156,7 +155,6 @@ int main(int argc, char **argv)
         cn = new NsChannelU(camnum);
     }
 #else
-    ftd = 0;
     cn = new NsChannelU(camnum);
 #endif
     if (cn->open() < 0) exit (-1);
@@ -254,7 +252,7 @@ int main(int argc, char **argv)
         {
             usleep(2000);
         }
-        lcount++;
+        //lcount++;
         if (!interrupted && scount  == 1 && !done_first)
         {
             fprintf(stderr, "settemp %f\n", temp);

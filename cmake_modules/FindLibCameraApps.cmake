@@ -16,7 +16,7 @@ if (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
 else (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
 
-    find_library(LibCameraApps_LIBRARY NAMES camera_app
+    find_library(LibCameraApps_LIBRARY NAMES rpicam_app
       PATHS
       ${_obLinkDir}
       ${GNUWIN32_DIR}/lib
@@ -40,7 +40,7 @@ else (LibCameraApps_INCLUDE_DIR AND LibCameraApps_LIBRARY)
     endif (NOT LibCameraApps_FIND_QUIETLY)
   else (LibCameraApps_FOUND)
     if (LibCameraApps_FIND_REQUIRED)
-      message(FATAL_ERROR "LIBCAMERAAPPS Library not found. Please install rpicam-apps")
+      message(FATAL_ERROR "LIBCAMERAAPPS Library not found. Please install librpicam-app-dev")
     endif (LibCameraApps_FIND_REQUIRED)
   endif (LibCameraApps_FOUND)
 

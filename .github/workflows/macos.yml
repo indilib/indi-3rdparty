@@ -28,10 +28,10 @@ jobs:
         run: $(command -v sudo) bsdtar -xvf packages/indi-core-package.tar --strip-components=1 -C / || true
 
       - name: Build INDI 3rd Party Libraries
-        run: indi-3rdparty/scripts/indi-3rdparty-libs-build.sh
+        run: export CMAKE_OSX_ARCHITECTURES="arm64"; indi-3rdparty/scripts/indi-3rdparty-libs-build.sh
 
       - name: Install INDI 3rd Party Libraries
-        run: indi-3rdparty/scripts/indi-3rdparty-libs-install.sh
+        run: export CMAKE_OSX_ARCHITECTURES="arm64"; indi-3rdparty/scripts/indi-3rdparty-libs-install.sh
 
       - name: Build INDI 3rd Party Drivers
         run: indi-3rdparty/scripts/indi-3rdparty-build.sh

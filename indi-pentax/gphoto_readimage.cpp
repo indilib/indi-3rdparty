@@ -88,11 +88,10 @@ int dcraw_parse_header_info(const char *filename, struct dcraw_header *header)
     char *cmd, timestr[10], month[10], daystr[10];
     int day, year;
     float r, g, b, gp;
-    int ret = 0;
 
     memset(header, 0, sizeof(struct dcraw_header));
-    ret = asprintf(&cmd, "%s -i -t 0 -v %s 2> /dev/null", dcraw_cmd, filename);
-    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "%s", cmd);
+    int ret = asprintf(&cmd, "%s -i -t 0 -v %s 2> /dev/null", dcraw_cmd, filename);
+    DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "%s (%d)", cmd, ret);
     handle = popen(cmd, "r");
     free(cmd);
     if (handle == nullptr)

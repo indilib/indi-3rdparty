@@ -99,7 +99,7 @@ if(${GLIBC_MAJOR_VERSION} GREATER_EQUAL 2 AND ${GLIBC_MINOR_VERSION} GREATER_EQU
     install(TARGETS indi_kepler_ccd RUNTIME DESTINATION bin)
 
     add_executable(test_kepler_merged test_kepler_merged.cpp)
-    target_link_libraries(test_kepler_merged ${FLIPRO_LIBRARIES} usb-1.0)
+    target_link_libraries(test_kepler_merged ${FLIPRO_LIBRARIES} ${CFITSIO_LIBRARIES} usb-1.0)
 
     install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_flipro.xml DESTINATION ${INDI_DATA_DIR})
 else()

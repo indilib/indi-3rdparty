@@ -17,11 +17,13 @@ The following classes of devices are supported in the INDI 3rd party repository:
 - Mounts.
 - Focusers.
 - Filter Wheels.
+- Rotators.
 - Domes.
 - GPS.
 - Adaptive Optics.
 - Radio Astronomy Receivers.
 - Spectrometers.
+- Power Controllers.
 - Weather Stations.
 - Auxiliary drivers.
 
@@ -49,13 +51,25 @@ Before building INDI 3rd party drivers. [INDI Core Library](https://github.com/i
 On Debian/Ubuntu:
 
 ```
-sudo apt-get -y install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev libavcodec-dev libavdevice-dev libudev-dev
+sudo apt-get -y install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libfftw3-dev libftdi-dev libgps-dev libraw-dev libdc1394-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev libavcodec-dev libavdevice-dev libzmq3-dev libudev-dev
 ```
 
 You may also add libindi-dev if needed :
 
 ```
 sudo apt-get -y install libindi-dev
+```
+
+On Arch Linux:
+
+```
+sudo pacman -S --needed base-devel cmake git libnova cfitsio libusb zlib gsl libjpeg libcurl libtiff fftw ftdi libgps libraw libdc1394 libgphoto2 boost rtlsdr limesuite libftdi ffmpeg zeromq
+```
+
+You may also add indi if needed :
+
+```
+sudo pacman -S --needed indi
 ```
 
 ## Create Project Directory
@@ -102,7 +116,7 @@ sudo make install
 The complete list of system dependancies for all drivers on Debian / Ubuntu
 
 ```
-sudo apt-get install libnova-dev libcfitsio-dev libusb-1.0-0-dev zlib1g-dev libgsl-dev build-essential cmake git libjpeg-dev libcurl4-gnutls-dev libtiff-dev libftdi-dev libgps-dev libraw-dev libdc1394-dev libgphoto2-dev libboost-dev libboost-regex-dev librtlsdr-dev liblimesuite-dev libftdi1-dev libgps-dev libavcodec-dev libavdevice-dev libzmq3-dev
+
 ```
 
 You may also add libindi-dev if needed :
@@ -190,7 +204,7 @@ If you would like to make cleaner PR (recommended!) please read this [tutorial](
 
 ### Driver Documentation
 
-When submitting a new driver, the driver user **documentation** is required as part of the submission process.
+When submitting a new driver, the driver user **documentation** is required as part of the submission process. Please refer to the [CONTRIBUTING.md](CONTRIBUTING.md) file for full requirements for contributing drivers and documentation.
 
 - Installation: Driver name, executable name, version, required INDI version.
 - Features: What features does it support exactly?

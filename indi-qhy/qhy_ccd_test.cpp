@@ -2,6 +2,7 @@
  QHY Test CCD
 
  Copyright (C) 2017 Jan Soldan
+ Copyright (C) 2026 Jasem Mutlaq
 
  This library is free software; you can redistribute it and/or
  modify it under the terms of the GNU Lesser General Public
@@ -22,29 +23,51 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <getopt.h>
 #include <qhyccd.h>
 
-#define VERSION 1.00
+#define VERSION 1.10
 
-int main(int, char **)
+void usage(const char *progName)
 {
+    printf("Usage: %s [OPTIONS]\n", progName);
+    printf("Options:\n");
+    printf("  -x, --roi-start-x <value>    ROI Start X (default: 0)\n");
+    printf("  -y, --roi-start-y <value>    ROI Start Y (default: 0)\n");
+    printf("  -w, --roi-width <value>      ROI Width (default: maxImageSizeX)\n");
+    printf("  -h, --roi-height <value>     ROI Height (default: maxImageSizeY)\n");
+    printf("  -e, --exposure <value>       Exposure time in seconds (default: 1)\n");
+    printf("  -r, --readout-mode <value>   Readout mode index (default: 0)\n");
+    printf("  -g, --gain <value>           Gain (default: 10)\n");
+    printf("  -o, --offset <value>         Offset (default: 140)\n");
+    printf("  -b, --binning <value>        Binning mode (e.g., 1 for 1x1, 2 for 2x2) (default: 1)\n");
+    printf("  -t, --usb-traffic <value>    USB Traffic (default: 10)\n");
+    printf("  --help                       Display this help message\n");
+}
 
+int main(int argc, char *argv[])
+{
     int USB_TRAFFIC = 10;
     int CHIP_GAIN = 10;
     int CHIP_OFFSET = 140;
-    int EXPOSURE_TIME = 1;
+    int EXPOSURE_TIME = 1; // in seconds
     int camBinX = 1;
     int camBinY = 1;
+    int readoutMode = 0; // Default readout mode
+
+    unsigned int roiStartX = 0;
+    unsigned int roiStartY = 0;
+    unsigned int roiSizeX = 0; // Will be set to maxImageSizeX later
+    unsigned int roiSizeY = 0; // Will be set to maxImageSizeY later
+
+    bool gainSet = false;
+    bool offsetSet = false;
+    bool usbTrafficSet = false;
 
     double chipWidthMM;
     double chipHeightMM;
     double pixelWidthUM;
     double pixelHeightUM;
-
-    unsigned int roiStartX;
-    unsigned int roiStartY;
-    unsigned int roiSizeX;
-    unsigned int roiSizeY;
 
     unsigned int overscanStartX;
     unsigned int overscanStartY;
@@ -62,6 +85,79 @@ int main(int, char **)
     unsigned int channels;
 
     unsigned char *pImgData = 0;
+
+    static struct option long_options[] =
+    {
+        {"roi-start-x", required_argument, 0, 'x'},
+        {"roi-start-y", required_argument, 0, 'y'},
+        {"roi-width", required_argument, 0, 'w'},
+        {"roi-height", required_argument, 0, 'h'},
+        {"exposure", required_argument, 0, 'e'},
+        {"readout-mode", required_argument, 0, 'r'},
+        {"gain", required_argument, 0, 'g'},
+        {"offset", required_argument, 0, 'o'},
+        {"binning", required_argument, 0, 'b'},
+        {"usb-traffic", required_argument, 0, 't'},
+        {"help", no_argument, 0, 0},
+        {0, 0, 0, 0}
+    };
+
+    int c;
+    int option_index = 0;
+    while ((c = getopt_long(argc, argv, "x:y:w:h:e:r:g:o:b:t:", long_options, &option_index)) != -1)
+    {
+        switch (c)
+        {
+            case 'x':
+                roiStartX = (unsigned int)atoi(optarg);
+                break;
+            case 'y':
+                roiStartY = (unsigned int)atoi(optarg);
+                break;
+            case 'w':
+                roiSizeX = (unsigned int)atoi(optarg);
+                break;
+            case 'h':
+                roiSizeY = (unsigned int)atoi(optarg);
+                break;
+            case 'e':
+                EXPOSURE_TIME = atoi(optarg);
+                break;
+            case 'r':
+                readoutMode = atoi(optarg);
+                break;
+            case 'g':
+                CHIP_GAIN = atoi(optarg);
+                gainSet = true;
+                break;
+            case 'o':
+                CHIP_OFFSET = atoi(optarg);
+                offsetSet = true;
+                break;
+            case 'b':
+                camBinX = atoi(optarg);
+                camBinY = atoi(optarg);
+                break;
+            case 't':
+                USB_TRAFFIC = atoi(optarg);
+                usbTrafficSet = true;
+                break;
+            case '?':
+                // getopt_long already printed an error message.
+                usage(argv[0]);
+                return 1;
+            case 0:
+                // Long option for --help
+                if (strcmp("help", long_options[option_index].name) == 0)
+                {
+                    usage(argv[0]);
+                    return 0;
+                }
+                break;
+            default:
+                abort();
+        }
+    }
 
     printf("QHY Test CCD using SingleFrameMode, Version: %.2f\n", VERSION);
 
@@ -142,6 +238,18 @@ int main(int, char **)
     else
     {
         printf("SetQHYCCDStreamMode: %d failure, error: %d\n", mode, retVal);
+        return 1;
+    }
+
+    // Set readout mode
+    retVal = SetQHYCCDReadMode(pCamHandle, readoutMode);
+    if (QHYCCD_SUCCESS == retVal)
+    {
+        printf("SetQHYCCDReadMode set to: %d, success.\n", readoutMode);
+    }
+    else
+    {
+        printf("SetQHYCCDReadMode: %d failure, error: %d\n", readoutMode, retVal);
         return 1;
     }
 
@@ -229,11 +337,15 @@ int main(int, char **)
         return 1;
     }
 
-    // set ROI
-    roiStartX = 0;
-    roiStartY = 0;
-    roiSizeX = maxImageSizeX;
-    roiSizeY = maxImageSizeY;
+    // Set default ROI if not provided by command line
+    if (roiSizeX == 0)
+    {
+        roiSizeX = maxImageSizeX;
+    }
+    if (roiSizeY == 0)
+    {
+        roiSizeY = maxImageSizeY;
+    }
 
     // check color camera
     retVal = IsQHYCCDControlAvailable(pCamHandle, CAM_COLOR);
@@ -251,104 +363,109 @@ int main(int, char **)
     }
 
     // check traffic
-    retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
-    if (QHYCCD_SUCCESS == retVal)
+    if (usbTrafficSet)
     {
-        retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, USB_TRAFFIC);
+        retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_USBTRAFFIC);
         if (QHYCCD_SUCCESS == retVal)
         {
-            printf("SetQHYCCDParam CONTROL_USBTRAFFIC set to: %d, success.\n", USB_TRAFFIC);
-        }
-        else
-        {
-            printf("SetQHYCCDParam CONTROL_USBTRAFFIC failure, error: %d\n", retVal);
-            getchar();
-            return 1;
+            retVal = SetQHYCCDParam(pCamHandle, CONTROL_USBTRAFFIC, USB_TRAFFIC);
+            if (QHYCCD_SUCCESS == retVal)
+            {
+                printf("SetQHYCCDParam CONTROL_USBTRAFFIC set to: %d, success.\n", USB_TRAFFIC);
+            }
+            else
+            {
+                printf("SetQHYCCDParam CONTROL_USBTRAFFIC failure, error: %d\n", retVal);
+                getchar();
+                return 1;
+            }
         }
     }
 
     // check gain
-    retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_GAIN);
-    if (QHYCCD_SUCCESS == retVal)
+    if (gainSet)
     {
-        retVal = SetQHYCCDParam(pCamHandle, CONTROL_GAIN, CHIP_GAIN);
-        if (retVal == QHYCCD_SUCCESS)
+        retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_GAIN);
+        if (QHYCCD_SUCCESS == retVal)
         {
-            printf("SetQHYCCDParam CONTROL_GAIN set to: %d, success\n", CHIP_GAIN);
-        }
-        else
-        {
-            printf("SetQHYCCDParam CONTROL_GAIN failure, error: %d\n", retVal);
-            getchar();
-            return 1;
+            retVal = SetQHYCCDParam(pCamHandle, CONTROL_GAIN, CHIP_GAIN);
+            if (retVal == QHYCCD_SUCCESS)
+            {
+                printf("SetQHYCCDParam CONTROL_GAIN set to: %d, success\n", CHIP_GAIN);
+            }
+            else
+            {
+                printf("SetQHYCCDParam CONTROL_GAIN failure, error: %d\n", retVal);
+                getchar();
+                return 1;
+            }
         }
     }
 
     // check offset
-    retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
-    if (QHYCCD_SUCCESS == retVal)
+    if (offsetSet)
     {
-        retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, CHIP_OFFSET);
+        retVal = IsQHYCCDControlAvailable(pCamHandle, CONTROL_OFFSET);
         if (QHYCCD_SUCCESS == retVal)
         {
-            printf("SetQHYCCDParam CONTROL_GAIN set to: %d, success.\n", CHIP_OFFSET);
-        }
-        else
-        {
-            printf("SetQHYCCDParam CONTROL_GAIN failed.\n");
-            getchar();
-            return 1;
+            retVal = SetQHYCCDParam(pCamHandle, CONTROL_OFFSET, CHIP_OFFSET);
+            if (QHYCCD_SUCCESS == retVal)
+            {
+                printf("SetQHYCCDParam CONTROL_OFFSET set to: %d, success.\n", CHIP_OFFSET);
+            }
+            else
+            {
+                printf("SetQHYCCDParam CONTROL_OFFSET failed.\n");
+                getchar();
+                return 1;
+            }
         }
     }
 
     // check read mode in QHY42
-    uint32_t currentReadMode = 0;
-    char *modeName = (char *)malloc((200) * sizeof(char));;
-    retVal = GetQHYCCDReadMode(pCamHandle, &currentReadMode);
+    char *modeName = (char *)malloc((200) * sizeof(char));
+    if (modeName == NULL)
+    {
+        printf("Failed to allocate memory for modeName.\n");
+        return 1;
+    }
+
+    retVal = GetQHYCCDReadModeName(pCamHandle, readoutMode, modeName);
     if (QHYCCD_SUCCESS == retVal)
     {
-        printf("Default read mode: %d \n", currentReadMode);
-        retVal = GetQHYCCDReadModeName(pCamHandle, currentReadMode, modeName);
-        if (QHYCCD_SUCCESS == retVal)
-        {
-            printf("Default read mode name %s \n", modeName);
-        }
-        else
-        {
-            printf("Error reading mode name \n");
-            getchar();
-            return 1;
-        }
+        printf("Selected read mode: %d, name: %s \n", readoutMode, modeName);
+    }
+    else
+    {
+        printf("Error reading name for selected mode %d \n", readoutMode);
+        free(modeName);
+        return 1;
+    }
 
-        // Set read modes and read resolution for each one
-        uint32_t readModes = 0;
-        uint32_t imageRMw, imageRMh;
-        uint32_t i = 0;
-        retVal = GetQHYCCDNumberOfReadModes(pCamHandle, &readModes);
-        for(i = 0; i < readModes; i++)
+    // Set read modes and read resolution for each one (for informational purposes)
+    uint32_t numberOfReadModes = 0;
+    uint32_t imageRMw, imageRMh;
+    retVal = GetQHYCCDNumberOfReadModes(pCamHandle, &numberOfReadModes);
+    if (QHYCCD_SUCCESS == retVal)
+    {
+        printf("Available Read Modes:\n");
+        for(uint32_t i = 0; i < numberOfReadModes; i++)
         {
-            // Set read mode and get resolution
-            retVal = SetQHYCCDReadMode(pCamHandle, i);
+            retVal = GetQHYCCDReadModeName(pCamHandle, i, modeName);
             if (QHYCCD_SUCCESS == retVal)
             {
-                // Get resolution
-                retVal = GetQHYCCDReadModeName(pCamHandle, i, modeName);
-                if (QHYCCD_SUCCESS == retVal)
-                {
-                    printf("Read mode name %s \n", modeName);
-                }
-                else
-                {
-                    printf("Error reading mode name \n");
-                    getchar();
-                    return 1;
-                }
                 retVal = GetQHYCCDReadModeResolution(pCamHandle, i, &imageRMw, &imageRMh);
-                printf("GetQHYCCDChipInfo in this ReadMode: imageW: %d imageH: %d \n", imageRMw, imageRMh);
+                printf("  Mode %d: %s, Resolution: %d x %d\n", i, modeName, imageRMw, imageRMh);
             }
         }
-
     }
+    else
+    {
+        printf("Error getting number of read modes.\n");
+        free(modeName);
+        return 1;
+    }
+    free(modeName);
 
 
     // set exposure time

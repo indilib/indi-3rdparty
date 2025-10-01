@@ -5,6 +5,8 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 
 include(GNUInstallDirs)
 
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
+
 ## Some files like libnova.h and libusb.h are in in subdirectories of the include directory
 ## For the CMAKE Modules, they find the subdirectory, so then something like ln_types.h should be #include ln_types.h
 ## But some packages and drivers write their header files like this: #include libnova/ln_types.h
@@ -245,7 +247,7 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_AHP_GT Off)
     set(WITH_TICFOCUSER-NG Off)
     # The drivers below are not yet compatible with Apple Silicon since their libraries are not universal binaries
-    if(CMAKE_SYSTEM_PROCESSOR STREQUAL "arm64")
+    if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
         SET(WITH_ASICAM Off)
         SET(WITH_SBIG Off)
         SET(WITH_ATIK Off)
@@ -272,6 +274,7 @@ if (NO_PRE_BUILT)
     SET(WITH_DSI Off)
     SET(WITH_DUINO Off)
     SET(WITH_FISHCAMP Off)
+    SET(WITH_FLI Off)
     SET(WITH_INOVAPLX Off)
     SET(WITH_MI Off)
     SET(WITH_PENTAX Off)
@@ -381,7 +384,7 @@ ELSE(BUILD_LIBS)
 
 ## TicFocuser-ng
 if (WITH_TICFOCUSER-NG)
-add_subdirectory(indi-TicFocuser-ng)
+add_subdirectory(indi-ticfocuser-ng)
 endif(WITH_TICFOCUSER-NG)
 
 ## EQMod

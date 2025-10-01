@@ -800,6 +800,8 @@ void DownloadtToMicroBlaze(int camNum)
     static char srecBuffer[513];
     int /*index,*/ retVal, msgSize, transferred;
     UInt16 vendor, rawProduct, finalProduct, release;
+    INDI_UNUSED(finalProduct);
+    INDI_UNUSED(release);
     struct libusb_device_handle *USBdev;
     
 
@@ -1835,7 +1837,6 @@ void fcImage_do_hotPixel_kernel(UInt16 imageHeight, UInt16 imageWidth, UInt16 *f
     size_t size;
     UInt16 brightestNeighbor;
     UInt16 thisPixel;
-    int numHotPixels;
 
     // this routine will work 'in place'.  We will first allocate a temporary image buffer
     // we copy the image to it and then fill the original buffer with the filtered image
@@ -1845,7 +1846,6 @@ void fcImage_do_hotPixel_kernel(UInt16 imageHeight, UInt16 imageWidth, UInt16 *f
 
     if (tempBuffer != NULL)
     {
-        numHotPixels = 0;
 
         // copy the image buffer to my local storage
         memcpy(tempBuffer, frameBuffer, size);
@@ -1925,7 +1925,6 @@ void fcImage_do_hotPixel_kernel(UInt16 imageHeight, UInt16 imageWidth, UInt16 *f
 
                 if (floatCenterPixel > floatBrightPixel)
                 {
-                    numHotPixels++;
                     // substitute average
                     *outputPtr = (UInt16)accumPixel;
                 }
@@ -2245,6 +2244,7 @@ int fcUsb_FindCameras(void)
     int i;
 	//int j, k, l;
     int retValue, err;
+    INDI_UNUSED(err);
 
     UInt16 vendor;
     UInt16 product;
@@ -2698,6 +2698,7 @@ int fcUsb_cmd_nop(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_nop\n");
@@ -2727,6 +2728,7 @@ int fcUsb_cmd_rst(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_rst\n");
@@ -2756,6 +2758,7 @@ int fcUsb_cmd_getinfo(int camNum, fc_camInfo *camInfo)
 {
     UInt32 msgSize;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     fc_no_param myParameters;
     UInt16 *wordPtr1;
     UInt16 *wordPtr2;
@@ -2849,6 +2852,7 @@ int fcUsb_cmd_setRegister(int camNum, UInt16 regAddress, UInt16 dataValue)
     UInt32 msgSize;
     fc_setReg_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     // print out the information
@@ -2886,6 +2890,7 @@ UInt16 fcUsb_cmd_getRegister(int camNum, UInt16 regAddress)
     UInt32 msgSize;
     fc_getReg_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 retValue;
     fc_regInfo myRegInfo;
     //
@@ -2946,6 +2951,7 @@ int fcUsb_cmd_setIntegrationTime(int camNum, UInt32 theTime)
     UInt32 msgSize;
     fc_setIntTime_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     UInt16 aWord;
     int maxBytes;
 
@@ -3003,6 +3009,7 @@ int fcUsb_cmd_setGuiderIntegrationTime(int camNum, UInt32 theTime)
     UInt32 msgSize;
     fc_setIntTime_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     UInt16 aWord;
     int maxBytes;
 
@@ -3048,6 +3055,7 @@ int fcUsb_cmd_startExposure(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_startExposure\n");
@@ -3078,6 +3086,7 @@ int fcUsb_cmd_startGuiderExposure(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_startGuiderExposure\n");
@@ -3111,6 +3120,7 @@ int fcUsb_cmd_abortExposure(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_abortExposure\n");
@@ -3143,6 +3153,7 @@ int fcUsb_cmd_abortGuiderExposure(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_abortGuiderExposure\n");
@@ -3176,6 +3187,7 @@ UInt16 fcUsb_cmd_getState(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 retValue;
     fc_regInfo myRegInfo;
     int maxBytes;
@@ -3226,6 +3238,7 @@ UInt16 fcUsb_cmd_getGuiderState(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 retValue;
     fc_regInfo myRegInfo;
     int maxBytes;
@@ -3278,6 +3291,7 @@ int fcUsb_cmd_setFrameGrabberTestPattern(int camNum, UInt16 state)
     UInt32 msgSize;
     fc_setFgTp_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 retValue;
     int maxBytes;
 
@@ -3308,6 +3322,7 @@ int fcUsb_cmd_rdScanLine(int camNum, UInt16 lineNum, UInt16 Xmin, UInt16 Xmax, U
 {
     UInt32 msgSize;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     fc_rdScanLine_param myParameters;
     UInt16 dataOdd;
     UInt16 dataEven;
@@ -3371,6 +3386,7 @@ int fcUsb_cmd_setRoi(int camNum, UInt16 left, UInt16 top, UInt16 right, UInt16 b
     UInt32 msgSize;
     fc_setRoi_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     int maxBytes;
 
@@ -3437,6 +3453,7 @@ int fcUsb_cmd_setBin(int camNum, UInt16 binMode)
     UInt32 msgSize;
     fc_setBin_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     int maxBytes;
 
@@ -3472,6 +3489,7 @@ int fcUsb_cmd_setRelay(int camNum, int whichRelay)
     UInt32 msgSize;
     fc_setClrRelay_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     int maxBytes;
 
@@ -3503,6 +3521,7 @@ int fcUsb_cmd_clearRelay(int camNum, int whichRelay)
     UInt32 msgSize;
     fc_setClrRelay_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     int maxBytes;
 
@@ -3536,6 +3555,7 @@ int fcUsb_cmd_pulseRelay(int camNum, int whichRelay, int onMs, int offMs, bool r
     UInt32 msgSize;
     fc_pulseRelay_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     int maxBytes;
 
@@ -3574,6 +3594,7 @@ int fcUsb_cmd_setTemperature(int camNum, SInt16 theTemp)
     UInt32 msgSize;
     fc_setTemp_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     if (gDoSimulation)
@@ -3604,6 +3625,7 @@ SInt16 fcUsb_cmd_getTemperature(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     fc_tempInfo myTemperatureInfo;
     float theCurTemperature;
@@ -3644,6 +3666,7 @@ UInt16 fcUsb_cmd_getTECPowerLevel(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     fc_tempInfo myTemperatureInfo;
     
@@ -3683,6 +3706,7 @@ bool fcUsb_cmd_getTECInPowerOK(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     //UInt16 regVal;
     fc_tempInfo myTemperatureInfo;
     int maxBytes;
@@ -3720,6 +3744,7 @@ int fcUsb_cmd_turnOffCooler(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_turnOffCooler\n");
@@ -3853,6 +3878,7 @@ int fcUsb_cmd_setCameraGain(int camNum, UInt16 theGain)
     UInt32 msgSize;
     fc_setGain_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_setCameraGain\n");
@@ -3893,6 +3919,7 @@ int fcUsb_cmd_setCameraOffset(int camNum, UInt16 theOffset)
     UInt32 msgSize;
     fc_setOffset_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     Starfish_Log("fcUsb_cmd_setCameraOffset\n");
@@ -3933,6 +3960,7 @@ int fcUsb_cmd_setReadMode(int camNum, int DataXfrReadMode, int DataFormat)
     UInt32 msgSize;
     fc_setReadMode_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     bool DoOffsetCorrection;
     bool ReadBlack;
     int maxBytes;
@@ -4064,6 +4092,7 @@ UInt16 fcUsb_cmd_getBlackPedestal(int camNum)
     UInt32 msgSize;
     fc_no_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     fc_blackPedestal myPedestalInfo;
     
     UInt16 retValue;
@@ -4131,6 +4160,7 @@ void fcUsb_cmd_setCameraProperty(int camNum, int propertyType, int propertyValue
     UInt32 msgSize;
     fc_setProperty_param myParameters;
     UInt32 numBytesRead;
+    INDI_UNUSED(numBytesRead);
     int maxBytes;
 
     // print out the information

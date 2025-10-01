@@ -82,7 +82,7 @@ set_target_properties(lib PROPERTIES
 )
 
 target_link_libraries (lib
-  PUBLIC usbp # <--- Ajout de la cible CMake 'usbp' que vous construisez localement
+  PUBLIC usbp-1 # <--- Ajout de la cible CMake 'usbp' que vous construisez localement
   # Les LDFLAGS du pkg-config ne sont généralement pas nécessaires si nous lions à une cible
   # mais les garder ne devrait pas nuire si la cible 'usbp' ne les propage pas automatiquement.
   # PRIVATE "${LIBUSBP_LDFLAGS}" # Mettre en PRIVATE si usbp n'est pas une dépendance transitive

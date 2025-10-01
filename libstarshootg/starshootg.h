@@ -1,7 +1,7 @@
 ﻿#ifndef __starshootg_h__
 #define __starshootg_h__
 
-/* Version: 59.29176.20250806 */
+/* Version: 59.29465.20250907 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -14,9 +14,9 @@
        (4) Linux: kernel 2.6.27 or above
               (a) x64: GLIBC 2.14 or above
               (b) x86: CPU supports SSE3 instruction set or above; GLIBC 2.8 or above
-              (c) arm64: GLIBC 2.17 or above; built by toolchain aarch64-linux-gnu (version 5.4.0)
-              (d) armhf: GLIBC 2.8 or above; built by toolchain arm-linux-gnueabihf (version 5.4.0)
-              (e) armel: GLIBC 2.8 or above; built by toolchain arm-linux-gnueabi (version 5.4.0)
+              (c) arm64: GLIBC 2.17 or above
+              (d) armhf: GLIBC 2.8 or above
+              (e) armel: GLIBC 2.8 or above
        (5) Android: __ANDROID_API__ >= 24 (Android 7.0); built by android-ndk-r18b; see https://developer.android.com/ndk/guides/abis
               (a) arm64: arm64-v8a
               (b) arm: armeabi-v7a
@@ -33,6 +33,13 @@
     Please distinguish between camera ID (camId) and camera SN:
         (a) SN is unique and persistent, fixed inside the camera and remains unchanged, and does not change with connection or system restart.
         (b) Camera ID (camId) may change due to connection or system restart. Enumerate the cameras to get the camera ID, and then call the Open function to pass in the camId parameter to open the camera.
+*/
+
+/*
+    Coordinate:
+        (a) Functions with coordinate parameters, such as Starshootg_put_Roi, Starshootg_put_AEAuxRect, etc., the coordinate is always relative to the original resolution,
+            even that the image has been flipped, rotated, digital binning, ROI, or combination of the previous operations.
+        (b) Exception: if the image is upside down (see here), the coordinate must be also upsize down.
 */
 
 #if defined(_WIN32)
@@ -181,8 +188,9 @@ typedef struct Starshootg_t { int unused; } *HStarshootg;
 #define STARSHOOTG_FLAG_RAW11                0x0080000000000000  /* pixel format, RAW 11bits */
 #define STARSHOOTG_FLAG_GHOPTO               0x0100000000000000  /* ghopto sensor */
 #define STARSHOOTG_FLAG_RAW10PACK            0x0200000000000000  /* pixel format, RAW 10bits packed */
-#define STARSHOOTG_FLAG_USB32                0x0400000000000000  /* usb3.2 */
-#define STARSHOOTG_FLAG_USB32_OVER_USB30     0x0800000000000000  /* usb3.2 camera connected to usb3.0 port */
+#define STARSHOOTG_FLAG_USB32                0x0400000000000000  /* USB 3.2 Gen 2 */
+#define STARSHOOTG_FLAG_USB32_OVER_USB30     0x0800000000000000  /* USB 3.2 Gen 2 camera connected to usb3.0 port */
+#define STARSHOOTG_FLAG_LINESCAN             0x1000000000000000  /* line scan camera */
 
 #define STARSHOOTG_EXPOGAIN_DEF              100     /* exposure gain, default value */
 #define STARSHOOTG_EXPOGAIN_MIN              100     /* exposure gain, minimum value */
@@ -303,7 +311,7 @@ typedef struct {
 } StarshootgDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 59.29176.20250806
+    get the version of this dll/so/dylib, which is: 59.29465.20250907
 */
 #if defined(_WIN32)
 STARSHOOTG_API(const wchar_t*)   Starshootg_Version();
@@ -624,13 +632,13 @@ typedef void (__stdcall* PISTARSHOOTG_PROGRESS)(int percent, void* ctxProgress);
 typedef void (__stdcall* PISTARSHOOTG_HISTOGRAM_CALLBACKV2)(const unsigned* aHist, unsigned nFlag, void* ctxHistogramV2);
 
 /*
-* bAutoExposure:
+* mode:
 *   0: disable auto exposure
 *   1: auto exposure continue mode
 *   2: auto exposure once mode
 */
-STARSHOOTG_API(HRESULT)  Starshootg_get_AutoExpoEnable(HStarshootg h, int* bAutoExposure);
-STARSHOOTG_API(HRESULT)  Starshootg_put_AutoExpoEnable(HStarshootg h, int bAutoExposure);
+STARSHOOTG_API(HRESULT)  Starshootg_get_AutoExpoEnable(HStarshootg h, int* mode);
+STARSHOOTG_API(HRESULT)  Starshootg_put_AutoExpoEnable(HStarshootg h, int mode);
 
 STARSHOOTG_API(HRESULT)  Starshootg_get_AutoExpoTarget(HStarshootg h, unsigned short* Target);
 STARSHOOTG_API(HRESULT)  Starshootg_put_AutoExpoTarget(HStarshootg h, unsigned short Target);
@@ -879,7 +887,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_Option(HStarshootg h, unsigned iOption, 
 #define STARSHOOTG_OPTION_NOFRAME_TIMEOUT        0x01       /* [RW] no frame timeout: 0 => disable, positive value (>= STARSHOOTG_NOFRAME_TIMEOUT_MIN) => timeout milliseconds. default: disable */
 #define STARSHOOTG_OPTION_THREAD_PRIORITY        0x02       /* [RW] set the priority of the internal thread which grab data from the usb device.
                                                              Win: iValue: 0 => THREAD_PRIORITY_NORMAL; 1 => THREAD_PRIORITY_ABOVE_NORMAL; 2 => THREAD_PRIORITY_HIGHEST; 3 => THREAD_PRIORITY_TIME_CRITICAL; default: 1; see: https://docs.microsoft.com/en-us/windows/win32/api/processthreadsapi/nf-processthreadsapi-setthreadpriority
-                                                             Linux & macOS: The high 16 bits for the scheduling policy, and the low 16 bits for the priority; see: https://linux.die.net/man/3/pthread_setschedparam
+                                                             Linux & macOS: similar to Win
                                                          */
 #define STARSHOOTG_OPTION_PROCESSMODE            0x03       /* [RW] obsolete & useless, noop. 0 = better image quality, more cpu usage. this is the default value; 1 = lower image quality, less cpu usage */
 #define STARSHOOTG_OPTION_RAW                    0x04       /* [RW]
@@ -1397,6 +1405,11 @@ STARSHOOTG_API(HRESULT)  Starshootg_read_UART(HStarshootg h, unsigned char* pBuf
 typedef void (__stdcall* PSTARSHOOTG_HOTPLUG)(void* ctxHotPlug);
 STARSHOOTG_API(HRESULT)  Starshootg_GigeEnable(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug);
 
+/* opt: semicolon separated options:
+*        "wifi": Enable WiFi adapter support
+*/
+STARSHOOTG_API(HRESULT)  Starshootg_GigeEnableV2(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug, const char* opt);
+
 /* Initialize support for PCIe cameras. If online/offline notifications are not required, the callback function can be set to NULL */
 STARSHOOTG_API(HRESULT)  Starshootg_PciEnable(PSTARSHOOTG_HOTPLUG funHotPlug, void* ctxHotPlug);
 
@@ -1404,9 +1417,9 @@ STARSHOOTG_API(HRESULT)  Starshootg_PciEnable(PSTARSHOOTG_HOTPLUG funHotPlug, vo
 * (1) ctiPath = NULL means all *.cti in GENICAM_GENTL64_PATH/GENICAM_GENTL32_PATH
 * or
 * (2) ctiPath[] = {
-            "/full/path/to/file.cti"
-            ...
-            NULLL
+            "/full/path/to/file.cti",
+            ...,
+            NULLL      // Use NULL pointer to indicate the end of the array
         }
 */
 #if defined(_WIN32)
@@ -1452,7 +1465,7 @@ STARSHOOTG_API(HRESULT)  Starshootg_get_Name(const char* camId, char name[64]);
 typedef struct {
     unsigned short lensID;
     unsigned char  lensType;
-    unsigned char  statusAfmf;      /* LENS_AF = 0x00,  LENS_MF = 0x80 */
+    unsigned char  statusAfmf;      /* LENS_AF = 0x00, LENS_MF = 0x80 */
 
     unsigned short maxFocalLength;
     unsigned short curFocalLength;

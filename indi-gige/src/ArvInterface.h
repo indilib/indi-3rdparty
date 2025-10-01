@@ -73,7 +73,7 @@ class min_max_property
 class ArvCamera
 {
   public:
-    ArvCamera(void *camera_device) {}
+    ArvCamera([[maybe_unused]] void *camera_device) {}
     virtual bool connect()      = 0;
     virtual bool disconnect()   = 0;
     virtual bool is_connected() = 0;
