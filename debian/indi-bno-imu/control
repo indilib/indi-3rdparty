@@ -1,0 +1,23 @@
+Source: indi-bno-imu
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 10), cdbs, cmake, libindi-dev
+Standards-Version: 3.9.2
+
+Package: indi-bno-imu
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI BNO-IMU Driver
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.  The driver interacts with a BNO-IMU sensor.
+
+Package: indi-bno-imu-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-bno-imu (= ${binary:Version}), ${misc:Depends}
+Description: INDI BNO-IMU Driver.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for the this driver, useful to investigate problems in INDI.
