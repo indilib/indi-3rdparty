@@ -2,7 +2,7 @@ Source: indi-bno-imu
 Section: science
 Priority: extra
 Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
-Build-Depends: debhelper (>= 10), cdbs, cmake, libindi-dev, libgpiod-dev, libbno08x
+Build-Depends: debhelper (>= 10), cdbs, cmake, libindi-dev, libgpiod-dev, libbno08x-dev
 Standards-Version: 3.9.2
 
 Package: indi-bno-imu
