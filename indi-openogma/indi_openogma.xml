@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <driversList>
-  <device label="OpenOGMA Filter Wheel" manufacturer="OGMAVision">
-    <driver name="OpenOGMA Filter Wheel">indi_openogma</driver>
+  <device label="OpenOGMA EFW" manufacturer="OGMAVision">
+    <driver name="OpenOGMA EFW">indi_openogma</driver>
     <version>1.0</version>
     <interface>wheel</interface>
     <family>Filter Wheels</family>
