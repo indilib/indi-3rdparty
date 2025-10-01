@@ -1,4 +1,5 @@
-indi-aok (2.0) bionic; urgency=low (overhaul for firmware 21 of TCS)
+indi-aok (2.0) bionic; urgency=low
+  * overhaul for firmware 21 of TCS
   * cleaned up structure of source code
   * improved documentation and parser for JSON response
   * added lunar tracking mode
