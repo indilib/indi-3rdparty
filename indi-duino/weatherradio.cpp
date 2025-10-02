@@ -1111,7 +1111,7 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         setParameterValue(WEATHER_TEMPERATURE, weatherCalculator->calibrate(weatherCalculator->temperatureCalibration, value));
     else if (currentSensors.pressure == sensor)
     {
-        double elevation = LocationN[LOCATION_ELEVATION].value;
+        double elevation = LocationNP[LOCATION_ELEVATION].getValue();
 
         double temp = 15.0; // default value
 

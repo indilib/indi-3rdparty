@@ -134,7 +134,8 @@ bool AAGCloudWatcher::initProperties()
 
 IPState AAGCloudWatcher::updateWeather()
 {
-    cwc->setElevation(LocationN[INDI::Weather::LOCATION_ELEVATION].value); // in case elevation updated as GPS gets a better fix
+     // in case elevation updated as GPS gets a better fix
+    cwc->setElevation(LocationNP[INDI::Weather::LOCATION_ELEVATION].getValue());
 
     if (!sendData())
     {
