@@ -34,6 +34,7 @@
 #include <fstream>
 #include <iostream>
 #include <regex>
+#include <vector>
 
 #include <limits.h>
 
@@ -1198,14 +1199,14 @@ float CloudWatcherController::aggregateFloats(float values[], int numberOfValues
 
 int CloudWatcherController::aggregateInts(int values[], int numberOfValues)
 {
-    float newValues[numberOfValues];
+    std::vector<float> newValues(numberOfValues);
 
     for (int i = 0; i < numberOfValues; i++)
     {
         newValues[i] = (float)values[i];
     }
 
-    return (int)aggregateFloats(newValues, numberOfValues);
+    return (int)aggregateFloats(newValues.data(), numberOfValues);
 }
 
 void CloudWatcherController::trimString(char *str)
