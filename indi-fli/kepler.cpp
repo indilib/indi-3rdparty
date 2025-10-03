@@ -289,11 +289,8 @@ bool Kepler::initProperties()
                                IPS_IDLE);
 
     // Merge Planes
-    MergePlanesSP[to_underlying(
-                      FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)].fill("to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)", "Both", ISS_ON);
-    MergePlanesSP[to_underlying(
-                      FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)].fill("to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)", "Low Only",
-                              ISS_OFF);
+    MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_BOTH)].fill("HWMERGE_FRAME_HIGHONLYE", "Both", ISS_ON);
+    MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_LOWONLY)].fill("HWMERGE_FRAME_LOWONLY", "Low Only", ISS_OFF);
     MergePlanesSP[to_underlying(FPRO_HWMERGEFRAMES::HWMERGE_FRAME_HIGHONLY)].fill("HWMERGE_FRAME_HIGHONLYE", "High Only",
             ISS_OFF);
     MergePlanesSP.fill(getDeviceName(), "MERGE_PLANES", "Merging", IMAGE_SETTINGS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
