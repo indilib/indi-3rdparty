@@ -1,0 +1,16 @@
+# udev rules for OpenOGMA Filter Wheel (VID 0x2E8A, PID 0x10ED)
+# Allows non-root access to the USB serial device for INDI.
+# The install script will copy this file to /etc/udev/rules.d
+# If you change this file after install, unplug and replug.
+
+# Rule for USB-level (parent) access (e.g., for libusb in the INDI driver, like HID or bulk transfer)
+# Lets the logged-in user access it.
+SUBSYSTEM=="usb", ATTR{idVendor}=="2e8a", ATTR{idProduct}=="10ed", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+# Rule for the serial port (tty subsystem - child)
+
+## Permanent:
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="10ed", SYMLINK+="openogma", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
+
+## Temporary:
+ACTION=="add", SUBSYSTEM=="tty", ATTRS{idVendor}=="2e8a", ATTRS{idProduct}=="000a", SYMLINK+="openogmafw", TAG+="uaccess", ENV{ID_MM_DEVICE_IGNORE}="1"
