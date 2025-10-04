@@ -80,22 +80,30 @@ static void save_merged_fits_file(const char *fileName, void *buffer, int width,
 }
 
 #include <getopt.h> // Required for command-line argument parsing
+#include <string>   // Required for std::stoi
+#include <iostream> // Required for std::cerr
 
 int main(int argc, char *argv[])
 {
     bool captureLowGain = false;
     bool captureHighGain = false;
     bool captureMerged = true; // Default to merged
+    int lowGainIndex = -1;
+    int highGainIndex = -1;
+    double exposureTime = 1.0; // Default exposure time to 1 second
 
     int opt;
     static struct option long_options[] =
     {
         {"low", no_argument, 0, 'l'},
         {"high", no_argument, 0, 'h'},
+        {"low-gain-index", required_argument, 0, 'L'},
+        {"high-gain-index", required_argument, 0, 'H'},
+        {"exposure", required_argument, 0, 'E'},
         {0, 0, 0, 0}
     };
 
-    while ((opt = getopt_long(argc, argv, "lh", long_options, NULL)) != -1)
+    while ((opt = getopt_long(argc, argv, "lhL:H:E:", long_options, NULL)) != -1)
     {
         switch (opt)
         {
@@ -109,11 +117,69 @@ int main(int argc, char *argv[])
                 captureLowGain = false;
                 captureMerged = false;
                 break;
+            case 'L':
+                try
+                {
+                    lowGainIndex = std::stoi(optarg);
+                }
+                catch (const std::invalid_argument& ia)
+                {
+                    std::cerr << "Invalid argument for --low-gain-index: " << ia.what() << '\n';
+                    return 1;
+                }
+                catch (const std::out_of_range& oor)
+                {
+                    std::cerr << "Out of range for --low-gain-index: " << oor.what() << '\n';
+                    return 1;
+                }
+                break;
+            case 'H':
+                try
+                {
+                    highGainIndex = std::stoi(optarg);
+                }
+                catch (const std::invalid_argument& ia)
+                {
+                    std::cerr << "Invalid argument for --high-gain-index: " << ia.what() << '\n';
+                    return 1;
+                }
+                catch (const std::out_of_range& oor)
+                {
+                    std::cerr << "Out of range for --high-gain-index: " << oor.what() << '\n';
+                    return 1;
+                }
+                break;
+            case 'E':
+                try
+                {
+                    exposureTime = std::stod(optarg);
+                    if (exposureTime <= 0)
+                    {
+                        std::cerr << "Exposure time must be a positive value.\n";
+                        return 1;
+                    }
+                }
+                catch (const std::invalid_argument& ia)
+                {
+                    std::cerr << "Invalid argument for --exposure: " << ia.what() << '\n';
+                    return 1;
+                }
+                catch (const std::out_of_range& oor)
+                {
+                    std::cerr << "Out of range for --exposure: " << oor.what() << '\n';
+                    return 1;
+                }
+                break;
             default:
-                fprintf(stderr, "Usage: %s [--low] [--high]\n", argv[0]);
+                fprintf(stderr,
+                        "Usage: %s [--low] [--high] [--low-gain-index <index>] [--high-gain-index <index>] [--exposure <seconds>]\n", argv[0]);
                 return 1;
         }
     }
+
+    // Shift argv to remove parsed options
+    argc -= optind;
+    argv += optind;
 
     FPRODEVICEINFO camerasDeviceInfo[FLI_MAX_SUPPORTED_CAMERAS];
     uint32_t detectedCamerasCount = FLI_MAX_SUPPORTED_CAMERAS;
@@ -153,6 +219,112 @@ int main(int argc, char *argv[])
     printf("  Low Gain Table Size: %u\n", caps[(uint32_t)FPROCAPS::FPROCAP_LOW_GAIN_TABLE_SIZE]);
     printf("  High Gain Table Size: %u\n", caps[(uint32_t)FPROCAPS::FPROCAP_HIGH_GAIN_TABLE_SIZE]);
 
+    // Set Low Gain if specified
+    if (lowGainIndex != -1)
+    {
+        uint32_t lowGainTableSize = caps[(uint32_t)FPROCAPS::FPROCAP_LOW_GAIN_TABLE_SIZE];
+        if (lowGainTableSize > 0)
+        {
+            FPROGAINVALUE *lowGainTable = new FPROGAINVALUE[lowGainTableSize];
+            uint32_t count = lowGainTableSize;
+            result = FPROSensor_GetGainTable(cameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_LOW_CHANNEL, lowGainTable, &count);
+            if (result >= 0)
+            {
+                if (lowGainIndex >= 0 && lowGainIndex < static_cast<int>(count))
+                {
+                    result = FPROSensor_SetGainIndex(cameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_LOW_CHANNEL,
+                                                     lowGainTable[lowGainIndex].uiDeviceIndex);
+                    if (result >= 0)
+                    {
+                        printf("Low Gain set to index %d (value %.2f).\n", lowGainIndex,
+                               static_cast<double>(lowGainTable[lowGainIndex].uiValue) / FPRO_GAIN_SCALE_FACTOR);
+                    }
+                    else
+                    {
+                        printf("Failed to set Low Gain to index %d: %d\n", lowGainIndex, result);
+                        delete[] lowGainTable;
+                        FPROCam_Close(cameraHandle);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    printf("Invalid Low Gain index: %d. Must be between 0 and %u.\n", lowGainIndex, count - 1);
+                    delete[] lowGainTable;
+                    FPROCam_Close(cameraHandle);
+                    return -1;
+                }
+            }
+            else
+            {
+                printf("Failed to get Low Gain table: %d\n", result);
+                delete[] lowGainTable;
+                FPROCam_Close(cameraHandle);
+                return -1;
+            }
+            delete[] lowGainTable;
+        }
+        else
+        {
+            printf("Low Gain index specified, but camera does not support Low Gain.\n");
+            FPROCam_Close(cameraHandle);
+            return -1;
+        }
+    }
+
+    // Set High Gain if specified
+    if (highGainIndex != -1)
+    {
+        uint32_t highGainTableSize = caps[(uint32_t)FPROCAPS::FPROCAP_HIGH_GAIN_TABLE_SIZE];
+        if (highGainTableSize > 0)
+        {
+            FPROGAINVALUE *highGainTable = new FPROGAINVALUE[highGainTableSize];
+            uint32_t count = highGainTableSize;
+            result = FPROSensor_GetGainTable(cameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_HIGH_CHANNEL, highGainTable, &count);
+            if (result >= 0)
+            {
+                if (highGainIndex >= 0 && highGainIndex < static_cast<int>(count))
+                {
+                    result = FPROSensor_SetGainIndex(cameraHandle, FPROGAINTABLE::FPRO_GAIN_TABLE_HIGH_CHANNEL,
+                                                     highGainTable[highGainIndex].uiDeviceIndex);
+                    if (result >= 0)
+                    {
+                        printf("High Gain set to index %d (value %.2f).\n", highGainIndex,
+                               static_cast<double>(highGainTable[highGainIndex].uiValue) / FPRO_GAIN_SCALE_FACTOR);
+                    }
+                    else
+                    {
+                        printf("Failed to set High Gain to index %d: %d\n", highGainIndex, result);
+                        delete[] highGainTable;
+                        FPROCam_Close(cameraHandle);
+                        return -1;
+                    }
+                }
+                else
+                {
+                    printf("Invalid High Gain index: %d. Must be between 0 and %u.\n", highGainIndex, count - 1);
+                    delete[] highGainTable;
+                    FPROCam_Close(cameraHandle);
+                    return -1;
+                }
+            }
+            else
+            {
+                printf("Failed to get High Gain table: %d\n", result);
+                delete[] highGainTable;
+                FPROCam_Close(cameraHandle);
+                return -1;
+            }
+            delete[] highGainTable;
+        }
+        else
+        {
+            printf("High Gain index specified, but camera does not support High Gain.\n");
+            FPROCam_Close(cameraHandle);
+            return -1;
+        }
+    }
+
     FPRO_REFFRAMES refFrames;
     memset(&refFrames, 0, sizeof(refFrames));
     refFrames.uiWidth = caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_WIDTH];
@@ -164,7 +336,6 @@ int main(int argc, char *argv[])
         FPROCam_Close(cameraHandle);
         return -1;
     }
-
     result = FPROFrame_SetImageArea(cameraHandle, 0, 0, caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_WIDTH],
                                     caps[(uint32_t)FPROCAPS::FPROCAP_MAX_PIXEL_HEIGHT]);
     if (result < 0)
@@ -174,16 +345,16 @@ int main(int argc, char *argv[])
         return -1;
     }
 
-    // Set 1 second exposure
-    result = FPROCtrl_SetExposure(cameraHandle, 1e9, 0, false);
+    // Set exposure
+    result = FPROCtrl_SetExposure(cameraHandle, exposureTime * 1e9, 0, false);
     if (result < 0)
     {
-        printf("Failed to set exposure.\n");
+        printf("Failed to set exposure to %.2f seconds.\n", exposureTime);
         FPROCam_Close(cameraHandle);
         return -1;
     }
 
-    printf("Exposure set to 1 second.\n");
+    printf("Exposure set to %.2f seconds.\n", exposureTime);
 
     uint32_t frameSize = FPROFrame_ComputeFrameSize(cameraHandle);
     uint8_t *frameBuffer = (uint8_t *)malloc(frameSize);
