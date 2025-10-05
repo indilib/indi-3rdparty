@@ -41,9 +41,13 @@ void updateAHT10() {
 
 void serializeAHT10(JsonObject& doc) {
   if (!aht10Data.status) return;
-  JsonObject aht = doc.createNestedObject("AHT10");
-  aht["Temp"] = aht10Data.temperature;
-  aht["Hum"] = aht10Data.humidity;
+  JsonObject data = doc.createNestedObject("AHT10");
+  data["init"] = aht10Data.status;
+
+  if (aht10Data.status) {
+    data["Temp"] = aht10Data.temperature;
+    data["Hum"] = aht10Data.humidity;
+  }
 }
 
 
