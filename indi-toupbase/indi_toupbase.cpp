@@ -505,7 +505,7 @@ bool ToupBase::Connect()
     {
         int taillight = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
-        m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+        m_SupportTailLight = SUCCEEDED(rc);
     }
 
     // Get min/max exposures
@@ -677,6 +677,28 @@ void ToupBase::setupParams()
     rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
     if (FAILED(rc))
         LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
+
+    // Set tail light status
+    if (m_SupportTailLight)
+    {
+        int currentTailLightValue, configuredTailLightValue = 0;
+        rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
+        if (FAILED(rc))
+        {
+            LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
+        }
+        configuredTailLightValue = m_TailLightSP.findOnSwitchIndex();
+        if (currentTailLightValue != configuredTailLightValue)
+        {
+            rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), configuredTailLightValue));
+            if (FAILED(rc))
+            {
+                m_TailLightSP.setState(IPS_ALERT);
+                LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
+                m_TailLightSP.apply();
+            }
+        }
+    }
 
     // Get CCD Controls values
     int conversionGain = 0;
