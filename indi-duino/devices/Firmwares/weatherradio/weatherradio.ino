@@ -341,11 +341,6 @@ String getCurrentConfig() {
   dhtdata["type"] = DHTTYPE;
 #endif
 
-#ifdef USE_AHT10_SENSOR
-  JsonObject aht = doc.createNestedObject("AHT10");
-  aht["interface"] = "I2C";
-#endif
-
 #ifdef USE_DAVIS_SENSOR
   JsonObject davisdata               = doc.createNestedObject("Davis Anemometer");
   davisdata["wind speed pin"]        = ANEMOMETER_WINDSPEEDPIN;
