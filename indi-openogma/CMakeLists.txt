@@ -4,6 +4,8 @@ project(indi-openogma C CXX)
 # Install layout helpers and (optional) shared cmake from the 3rdparty tree
 include(GNUInstallDirs)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+
 # INDI headers use std::any → require C++17
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -63,7 +65,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_openogma.xml
         DESTINATION ${_INDI_DATA_DIR} COMPONENT openogma)
 
 # Install udev rules
-if (EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/99-openogma.rules")
+if (INDI_INSTALL_UDEV_RULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/99-openogma.rules")
   install(FILES 99-openogma.rules DESTINATION /lib/udev/rules.d)
 endif()
 
