@@ -17,6 +17,7 @@
 #   - INDI_FOUND             : were all of your specified components found (include dependencies)?
 #   - INDI_WEBSOCKET         : was INDI compiled with websocket support?
 #   - INDI_JSONLIB           : was INDI compiled with bundled json library?
+#   - INDI_HIDAPILIB         : was INDI compiled with bundled hid library?
 #   - INDI_INCLUDE_DIR       : INDI include directory
 #   - INDI_DATA_DIR          : INDI include directory
 #   - INDI_LIBRARIES         : INDI libraries
@@ -213,6 +214,21 @@ if (BUNDLED_JSONLIB)
     SET(INDI_JSONLIB TRUE)
 else()
     SET(INDI_JSONLIB FALSE)
+endif()
+
+find_path(
+    BUNDLED_HIDAPILIB
+    indi_hidapi.h
+    PATH_SUFFIXES libindi
+    ${PC_INDI_INCLUDE_DIR}
+    ${_obIncDir}
+    ${GNUWIN32_DIR}/include
+)
+
+if (BUNDLED_HIDAPILIB)
+    SET(INDI_HIDAPILIB TRUE)
+else()
+    SET(INDI_HIDAPILIB FALSE)
 endif()
 
 find_path(${INDI_PUBLIC_VAR_NS}_DATA_DIR
