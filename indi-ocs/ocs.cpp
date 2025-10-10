@@ -65,7 +65,7 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 3);
+    setVersion(1, 4);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -346,7 +346,7 @@ void OCS::GetCapabilites()
         int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
                                                                                 measurement_command);
         if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") != 0 &&
-            strcmp(measurement_reponse, "NAN") != 0 && strcmp(measurement_reponse, "0") != 0) {
+            strcmp(measurement_reponse, "nan") != 0 && strcmp(measurement_reponse, "0") != 0) {
             weather_enabled[measurement] = 1;
         } else {
             weather_enabled[measurement] = 0;
