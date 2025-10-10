@@ -176,6 +176,10 @@ bool WeatherRadio::initProperties()
     deviceConfig["BME280"]["Hum"]       = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["DHT"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["DHT"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["AHT10"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["AHT10"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["SHT30"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["SHT30"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["MLX90614"]["T amb"]   = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["MLX90614"]["T obj"]   = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["TSL237"]["Frequency"] = {"Frequency", INTERNAL_SENSOR, "%.0f", 0.0, 100000.0, 1.0};
@@ -354,6 +358,15 @@ bool WeatherRadio::updateProperties()
         deleteProperty(FirmwareConfigTP.name);
 
         result = INDI::Weather::updateProperties();
+
+        // deleteProperty() does not reset widgets, so we do it manually.
+        // TODO - shift this logic to INDI::Weather
+        INDI::Weather::critialParametersLP.resize(0);
+        for (auto  &oneProperty : INDI::Weather::ParametersRangeNP )
+            oneProperty.resize(0);
+        INDI::Weather::ParametersNP.resize(0);
+        // clear array of "ParametersRangeNP"
+        INDI::Weather::ParametersRangeNP.clear();
 
         // clear firmware configuration so that #handleFirmwareVersion() recongnizes an initialisation
         FirmwareConfigTP.tp = nullptr;
@@ -619,6 +632,8 @@ void WeatherRadio::addSensorSelection(ISwitchVectorProperty *sensor, std::vector
     IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, OPTIONS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(sensor);
+    // set the configured selection for this weather property
+    loadConfig(true, name);
 }
 
 /**************************************************************************************
