@@ -242,7 +242,7 @@ class ToupBase : public INDI::CCD
             TC_CAMERA_SN,
             TC_CAMERA_FW_VERSION,
             TC_CAMERA_HW_VERSION,
-			TC_CAMERA_FPGA_VERSION,
+            TC_CAMERA_FPGA_VERSION,
             TC_CAMERA_REV
         };
 
@@ -259,7 +259,7 @@ class ToupBase : public INDI::CCD
             TIMEOUT_FACTOR
         };
 
-        INDI::PropertySwitch m_GainConversionSP {3};
+        INDI::PropertySwitch m_ConversionGainSP{ 3 };
         enum
         {
             GAIN_LOW,

@@ -21,6 +21,7 @@
 
 #include "indi_toupbase.h"
 #include "config.h"
+#include "indiapi.h"
 #include <stream/streammanager.h>
 #include <unordered_map>
 #include <unistd.h>
@@ -253,16 +254,16 @@ bool ToupBase::initProperties()
         /// Conversion Gain
         ///////////////////////////////////////////////////////////////////////////////////
         int nsp = 2;
-        m_GainConversionSP[GAIN_LOW].fill("GAIN_LOW", "Low", ISS_OFF);
-        m_GainConversionSP[GAIN_HIGH].fill("GAIN_HIGH", "High", ISS_OFF);
+        m_ConversionGainSP[GAIN_LOW].fill("GAIN_LOW", "Low", ISS_OFF);
+        m_ConversionGainSP[GAIN_HIGH].fill("GAIN_HIGH", "High", ISS_OFF);
         if (m_Instance->model->flag & CP(FLAG_CGHDR))
         {
-            m_GainConversionSP[GAIN_HDR].fill("GAIN_HDR", "HDR", ISS_OFF);
+            m_ConversionGainSP[GAIN_HDR].fill("GAIN_HDR", "HDR", ISS_OFF);
             ++nsp;
         }
-        m_GainConversionSP.resize(nsp);
-        m_GainConversionSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
-                                IPS_IDLE);
+        m_ConversionGainSP.resize(nsp);
+        m_ConversionGainSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW,
+                                ISR_1OFMANY, 60, IPS_IDLE);
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -389,7 +390,7 @@ bool ToupBase::updateProperties()
             defineProperty(m_HeatSP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
-            defineProperty(m_GainConversionSP);
+            defineProperty(m_ConversionGainSP);
 
         if (m_SupportTailLight)
             defineProperty(m_TailLightSP);
@@ -442,7 +443,7 @@ bool ToupBase::updateProperties()
             deleteProperty(m_HeatSP);
 
         if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
-            deleteProperty(m_GainConversionSP);
+            deleteProperty(m_ConversionGainSP);
 
         if (m_SupportTailLight)
             deleteProperty(m_TailLightSP);
@@ -505,7 +506,7 @@ bool ToupBase::Connect()
     {
         int taillight = 0;
         HRESULT rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &taillight));
-        m_SupportTailLight = SUCCEEDED(rc) ? true : false;
+        m_SupportTailLight = SUCCEEDED(rc);
     }
 
     // Get min/max exposures
@@ -577,9 +578,9 @@ void ToupBase::setupParams()
     FP(get_HwVersion(m_Handle, tmpBuffer));
     m_CameraTP[TC_CAMERA_HW_VERSION].setText(tmpBuffer);
     if (FP(get_FpgaVersion(m_Handle, tmpBuffer)) >= 0)
-		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
-	else
-		m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");	
+        m_CameraTP[TC_CAMERA_FPGA_VERSION].setText(tmpBuffer);
+    else
+        m_CameraTP[TC_CAMERA_FPGA_VERSION].setText("NA");
     FP(get_Revision(m_Handle, &pRevision));
     snprintf(tmpBuffer, 32, "%d", pRevision);
     m_CameraTP[TC_CAMERA_REV].setText(tmpBuffer);
@@ -676,12 +677,74 @@ void ToupBase::setupParams()
     // Set trigger mode to software
     rc = FP(put_Option(m_Handle, CP(OPTION_TRIGGER), m_CurrentTriggerMode));
     if (FAILED(rc))
+    {
         LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
+    }
+
+    // Set tail light status
+    int currentTailLightValue, configuredTailLightValue = 0;
+
+    if (m_SupportTailLight)
+    {
+        rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
+        if (FAILED(rc))
+        {
+            LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
+        }
+        configuredTailLightValue = m_TailLightSP.findOnSwitchIndex();
+        if (currentTailLightValue != configuredTailLightValue)
+        {
+            rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), configuredTailLightValue));
+            if (FAILED(rc))
+            {
+                m_TailLightSP.setState(IPS_ALERT);
+                LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
+                m_TailLightSP.apply();
+            }
+        }
+    }
+
+    // Set tail light status
+    if (m_SupportTailLight)
+    {
+        int currentTailLightValue, configuredTailLightValue = 0;
+        rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
+        if (FAILED(rc))
+        {
+            LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
+        }
+        configuredTailLightValue = m_TailLightSP.findOnSwitchIndex();
+        if (currentTailLightValue != configuredTailLightValue)
+        {
+            rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), configuredTailLightValue));
+            if (FAILED(rc))
+            {
+                m_TailLightSP.setState(IPS_ALERT);
+                LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
+                m_TailLightSP.apply();
+            }
+        }
+    }
 
     // Get CCD Controls values
-    int conversionGain = 0;
-    FP(get_Option(m_Handle, CP(OPTION_CG), &conversionGain));
-    m_GainConversionSP[conversionGain].setState(ISS_ON);
+    int currentConversionGain, configuredConversionGain = 0;
+
+    rc = FP(get_Option(m_Handle, CP(OPTION_CG), &currentConversionGain));
+    if (FAILED(rc))
+    {
+        LOGF_ERROR("Failed to get camera gain conversion setting. %s", errorCodes(rc).c_str());
+    }
+    configuredConversionGain = m_ConversionGainSP.findOnSwitchIndex();
+    if (currentConversionGain != configuredConversionGain)
+    {
+        rc = FP(put_Option(m_Handle, CP(OPTION_CG), configuredConversionGain));
+        if (FAILED(rc))
+        {
+            m_ConversionGainSP.setState(IPS_ALERT);
+            LOGF_ERROR("Failed to set camera gain conversion setting. %s", errorCodes(rc).c_str());
+            m_ConversionGainSP.apply();
+        }
+    }
 
     uint16_t nMax = 0, nDef = 0;
     // Gain
@@ -1287,20 +1350,20 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         //////////////////////////////////////////////////////////////////////
         /// Conversion Gain
         //////////////////////////////////////////////////////////////////////
-        if (m_GainConversionSP.isNameMatch(name))
+        if (m_ConversionGainSP.isNameMatch(name))
         {
-            if (m_GainConversionSP.isUpdated(states, names, n))
+            if (m_ConversionGainSP.isUpdated(states, names, n))
             {
-                m_GainConversionSP.update(states, names, n);
-                m_GainConversionSP.setState(IPS_OK);
-                FP(put_Option(m_Handle, CP(OPTION_CG), m_GainConversionSP.findOnSwitchIndex()));
-                m_GainConversionSP.apply();
-                saveConfig(m_GainConversionSP);
+                m_ConversionGainSP.update(states, names, n);
+                m_ConversionGainSP.setState(IPS_OK);
+                FP(put_Option(m_Handle, CP(OPTION_CG), m_ConversionGainSP.findOnSwitchIndex()));
+                m_ConversionGainSP.apply();
+                saveConfig(m_ConversionGainSP);
             }
             else
             {
-                m_GainConversionSP.setState(IPS_OK);
-                m_GainConversionSP.apply();
+                m_ConversionGainSP.setState(IPS_OK);
+                m_ConversionGainSP.apply();
                 return true;
             }
             return true;
@@ -2040,7 +2103,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
         m_TailLightSP.save(fp);
     m_AutoExposureSP.save(fp);
     if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
-        m_GainConversionSP.save(fp);
+        m_ConversionGainSP.save(fp);
     m_BBAutoSP.save(fp);
     if (m_Instance->model->flag & CP(FLAG_HEAT))
         m_HeatSP.save(fp);
