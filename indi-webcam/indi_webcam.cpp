@@ -101,8 +101,12 @@ void indi_webcam::findAVFoundationVideoSources()
     //Need to disconnect the source to probe the streams
     if(isConnected())
     {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 0) // FFmpeg 4.x and older
         avcodec_close(pCodecCtx);
         avcodec_free_context(&pCodecCtx);
+#else // FFmpeg 5.0 and newer
+        avcodec_free_context(&pCodecCtx);
+#endif
         avformat_close_input(&pFormatCtx);
     }
     else
@@ -116,8 +120,12 @@ void indi_webcam::findAVFoundationVideoSources()
             DEBUG(INDI::Logger::DBG_SESSION, "Briefly connecting to avfoundation to update the source list");
             if(ConnectToSource("avfoundation", "default", frameRate, videoSize, inputPixelFormat, "Not using IP Camera"))
                 DEBUG(INDI::Logger::DBG_SESSION, "Source List Updated");
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 0) // FFmpeg 4.x and older
             avcodec_close(pCodecCtx);
             avcodec_free_context(&pCodecCtx);
+#else // FFmpeg 5.0 and newer
+            avcodec_free_context(&pCodecCtx);
+#endif
             avformat_close_input(&pFormatCtx);
         }
     }
@@ -242,7 +250,8 @@ bool indi_webcam::Connect()
 }
 
 //This is the code that we use for FFMpeg to set up an input, connect to it, and set up the correct codecs.
-bool indi_webcam::ConnectToSource(std::string device, std::string source, int framerate, std::string videosize, std::string inputpixelformat,
+bool indi_webcam::ConnectToSource(std::string device, std::string source, int framerate, std::string videosize,
+                                  std::string inputpixelformat,
                                   std::string urlSource)
 {
     char stringFrameRate[16];
@@ -251,8 +260,12 @@ bool indi_webcam::ConnectToSource(std::string device, std::string source, int fr
     snprintf(stringffmpegTimeout, 16, "%.0f", ffmpegTimeout);
     if(isConnected())
     {
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 0) // FFmpeg 4.x and older
         avcodec_close(pCodecCtx);
         avcodec_free_context(&pCodecCtx);
+#else // FFmpeg 5.0 and newer
+        avcodec_free_context(&pCodecCtx);
+#endif
         avformat_close_input(&pFormatCtx);
     }
 
@@ -357,7 +370,8 @@ bool indi_webcam::reconnectSource()
 //This is the method that should be called to change the streaming device, source, framerate, or video size
 //If it was already connected, it will attempt a connection with the new settings and if it is not successful, it will revert to the old ones.
 //It should be safe to use while streaming or between image captures because it will pause them and return them to normal afterwards.
-bool indi_webcam::ChangeSource(std::string newDevice, std::string newSource, int newFramerate, std::string newInputPixelFormat, std::string newVideosize)
+bool indi_webcam::ChangeSource(std::string newDevice, std::string newSource, int newFramerate,
+                               std::string newInputPixelFormat, std::string newVideosize)
 {
     //This will pause the streaming while it attempts the new connection settings.
     bool was_streaming = false;
@@ -411,8 +425,9 @@ bool indi_webcam::ChangeSource(std::string newDevice, std::string newSource, int
 //This is the method that should be called to change the streaming device, source, framerate, or video size
 //If it was already connected, it will attempt a connection with the new settings and if it is not successful, it will revert to the old ones.
 //It should be safe to use while streaming or between image captures because it will pause them and return them to normal afterwards.
-bool indi_webcam::ChangeOnlineSource(std::string newProtocol, std::string newIPAddress, std::string newPort, std::string newUserName,
-                                   std::string newPassword)
+bool indi_webcam::ChangeOnlineSource(std::string newProtocol, std::string newIPAddress, std::string newPort,
+                                     std::string newUserName,
+                                     std::string newPassword)
 {
     std::string newURL;
 
@@ -493,8 +508,12 @@ bool indi_webcam::Disconnect()
     if (isConnected())
     {
         // Close the codecs
+#if LIBAVCODEC_VERSION_INT < AV_VERSION_INT(59, 0, 0) // FFmpeg 4.x and older
         avcodec_close(pCodecCtx);
         avcodec_free_context(&pCodecCtx);
+#else // FFmpeg 5.0 and newer
+        avcodec_free_context(&pCodecCtx);
+#endif
 
         // Close the video file
         avformat_close_input(&pFormatCtx);
@@ -544,16 +563,16 @@ bool indi_webcam::initProperties()
                        MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(&OutputFormatSelection);
 
-    IUFillNumber(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT", "FFMPEG", "%.0f", 0 , 100000000, 1, ffmpegTimeout);
-    IUFillNumber(&TimeoutOptionsT[1], "BUFFER_TIMEOUT", "Buffer", "%.0f", 0 , 10000000, 1, bufferTimeout);
+    IUFillNumber(&TimeoutOptionsT[0], "FFMPEG_TIMEOUT", "FFMPEG", "%.0f", 0, 100000000, 1, ffmpegTimeout);
+    IUFillNumber(&TimeoutOptionsT[1], "BUFFER_TIMEOUT", "Buffer", "%.0f", 0, 10000000, 1, bufferTimeout);
     IUFillNumberVector(&TimeoutOptionsTP, TimeoutOptionsT, NARRAY(TimeoutOptionsT), getDeviceName(), "TIMEOUT_OPTIONS",
-                     "Timeouts (us)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+                       "Timeouts (us)", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     defineProperty(&TimeoutOptionsTP);
 
-    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (µm)", "%.3f", 0 , 50, 0.1, pixelSize);
+    IUFillNumber(&PixelSizeT[0], "PIXEL_SIZE_um", "Pixel Size (µm)", "%.3f", 0, 50, 0.1, pixelSize);
     IUFillNumberVector(&PixelSizeTP, PixelSizeT, NARRAY(PixelSizeT), getDeviceName(), "PIXEL_SIZE",
-                     "Pixel Size", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+                       "Pixel Size", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
 
     defineProperty(&PixelSizeTP);
 
@@ -576,7 +595,7 @@ bool indi_webcam::initProperties()
 
     IUFillSwitchVector(&PixelSizeSelection, PixelSizes, 15, getDeviceName(), "PIXEL_SIZE_SELECTION", "Camera Pixel Sizes (µm)",
                        OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-     defineProperty(&PixelSizeSelection);
+    defineProperty(&PixelSizeSelection);
 
     IUFillSwitch(&RefreshS[0], "Scan Ports", "Scan Sources", ISS_OFF);
     IUFillSwitchVector(&RefreshSP, RefreshS, 1, getDeviceName(), "INPUT_SCAN", "Refresh", CONNECTION_TAB, IP_RW, ISR_ATMOST1,
@@ -1355,7 +1374,7 @@ void indi_webcam::TimerHit()
 
         // The time left in the "exposure" is less than the time it takes to make an actual exposure
         // or the time left is less than the polling period, so get it now.
-        if (timeleft < (1 / frameRate) || timeleft < getCurrentPollingPeriod()/1000.0)
+        if (timeleft < (1 / frameRate) || timeleft < getCurrentPollingPeriod() / 1000.0)
         {
             if(webcamStacking)
                 copyFinalStackToPrimaryFrameBuffer();
@@ -1868,33 +1887,33 @@ bool indi_webcam::getStreamFrame()
 
 //This will clear out the frame buffer of any unread frames.
 //That way we are sure to get the latest frames when exposing
- bool indi_webcam::flush_frame_buffer()
- {
-     int packetReceiveTime = -1;
-     int num = 0;
-     while(packetReceiveTime < bufferTimeout)
-     {
-         num++;
-         struct timeval then;
-         gettimeofday(&then, nullptr);
-         AVPacket packet;
-         int ret = av_read_frame(pFormatCtx, &packet);
-         if(ret != 0) // Return value less than 0 means error
-         {
-             if(ret == -35) //Leave the loop since the device is not available to give frames.
-                 break;
-             char errbuff[200];
-             av_make_error_string(errbuff, 200, ret);
-             DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Error while clearing buffer: %s.", errbuff);
-         }
-         struct timeval now;
-         gettimeofday(&now, nullptr);
-         packetReceiveTime = now.tv_usec - then.tv_usec;
-         av_packet_unref(&packet);
-     }
-     DEBUGF(INDI::Logger::DBG_SESSION, "Buffer Cleared of %u stale frames.", num);
-     return true;  //Buffer Cleared
- }
+bool indi_webcam::flush_frame_buffer()
+{
+    int packetReceiveTime = -1;
+    int num = 0;
+    while(packetReceiveTime < bufferTimeout)
+    {
+        num++;
+        struct timeval then;
+        gettimeofday(&then, nullptr);
+        AVPacket packet;
+        int ret = av_read_frame(pFormatCtx, &packet);
+        if(ret != 0) // Return value less than 0 means error
+        {
+            if(ret == -35) //Leave the loop since the device is not available to give frames.
+                break;
+            char errbuff[200];
+            av_make_error_string(errbuff, 200, ret);
+            DEBUGF(INDI::Logger::DBG_SESSION, "FFMPEG Error while clearing buffer: %s.", errbuff);
+        }
+        struct timeval now;
+        gettimeofday(&now, nullptr);
+        packetReceiveTime = now.tv_usec - then.tv_usec;
+        av_packet_unref(&packet);
+    }
+    DEBUGF(INDI::Logger::DBG_SESSION, "Buffer Cleared of %u stale frames.", num);
+    return true;  //Buffer Cleared
+}
 
 //This frees up the resources used for streaming/exposing
 void indi_webcam::freeMemory()

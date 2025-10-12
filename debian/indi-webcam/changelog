@@ -1,3 +1,9 @@
+indi-webcam (1.1) bionic; urgency=low
+
+  * Compile on recent FFMPEG 5+
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 12 Oct 2025 21:00:00 +0300
+
 indi-webcam (1.0) bionic; urgency=low
 
   * Initial Release.
