@@ -7,13 +7,13 @@
     </device>
   </devGroup>
   <devGroup group="Filter Wheels">
-    <device label="@LABEL@" mdpd="true" manufacturer="@MANUFACTURER@">
+    <device label="@LABEL@ EFW" mdpd="true" manufacturer="@MANUFACTURER@">
       <driver name="@DRIVER_NAME@">indi_@DRIVER_LIB_NAME@_wheel</driver>
       <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
     </device>
   </devGroup>
   <devGroup group="Focusers">
-    <device label="@LABEL@" mdpd="true" manufacturer="@MANUFACTURER@">
+    <device label="@LABEL@ AAF" mdpd="true" manufacturer="@MANUFACTURER@">
       <driver name="@DRIVER_NAME@">indi_@DRIVER_LIB_NAME@_focuser</driver>
       <version>@TOUPBASE_VERSION_MAJOR@.@TOUPBASE_VERSION_MINOR@</version>
     </device>
