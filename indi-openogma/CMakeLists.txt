@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.10)
 project(indi-openogma C CXX)
 
 # Install layout helpers and (optional) shared cmake from the 3rdparty tree
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
