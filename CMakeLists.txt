@@ -266,6 +266,7 @@ option(WITH_GPIO "Install GPIO Driver" On)
 option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
 option(WITH_LIBCAMERA "Install Libcamera Driver (Raspberry PI)" Off)
+option(WITH_BNO_IMU "Install BNO IMU Driver" Off)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -837,6 +838,11 @@ else(BUILD_LIBS)
   if (WITH_LIBCAMERA)
     add_subdirectory(indi-libcamera)
   endif(WITH_LIBCAMERA)
+
+  # BNO_IMU
+  if (WITH_BNO_IMU)
+    add_subdirectory(indi-bno-imu)
+  endif(WITH_BNO_IMU)
 
   # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
   if(LIBRARIES_FOUND)
