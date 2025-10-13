@@ -1,0 +1,24 @@
+Source: indi-openogma
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5), cdbs, cmake, libindi-dev, libogmacam-dev
+Standards-Version: 3.9.1
+
+Package: indi-openogma
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI driver for OpenOgma cameras
+ INDI driver for OpenOgma cameras.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-openogma-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-openogma (= ${binary:Version}), ${misc:Depends}
+Description: INDI driver for OpenOgma cameras (debug symbols)
+ INDI driver for OpenOgma cameras.
+ .
+ This package contains the debug symbols for this driver, useful to investigate problems in INDI.
