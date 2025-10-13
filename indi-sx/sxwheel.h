@@ -31,7 +31,11 @@
 #include <indifilterwheel.h>
 #include <indipropertyswitch.h>
 
-#include <hidapi.h>
+#ifdef _USE_SYSTEM_HIDAPILIB
+#include <hidapi/hidapi.h>
+#else
+#include <indi_hidapi.h>
+#endif
 
 class SXWHEEL : public INDI::FilterWheel
 {
