@@ -265,7 +265,7 @@ option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
 option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
-option(WITH_LIBCAMERA "Install LIBCAMERA Driver" Off)
+option(WITH_LIBCAMERA "Install Libcamera Driver (Raspberry PI)" Off)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
