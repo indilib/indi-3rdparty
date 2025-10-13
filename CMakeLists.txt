@@ -265,6 +265,7 @@ option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
 option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
+option(WITH_LIBCAMERA "Install OpenOGMA Driver" Off)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -831,6 +832,11 @@ else(BUILD_LIBS)
   if (WITH_OPENOGMA)
     add_subdirectory(indi-openogma)
   endif(WITH_OPENOGMA)
+
+  # LIBCAMERA
+  if (WITH_LIBCAMERA)
+    add_subdirectory(indi-libcamera)
+  endif(WITH_LIBCAMERA)
 
   # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
   if(LIBRARIES_FOUND)
