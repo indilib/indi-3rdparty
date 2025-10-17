@@ -195,12 +195,12 @@ bool AHPGTBase::updateProperties()
         GTDEConfigurationNP[GT_MOTOR_TEETH].setValue(ahp_gt_get_motor_teeth(1));
         GTDEConfigurationNP[GT_WORM_TEETH].setValue(ahp_gt_get_worm_teeth(1));
         GTDEConfigurationNP[GT_CROWN_TEETH].setValue(ahp_gt_get_crown_teeth(1));
-        GTDEConfigurationNP[GT_MAX_SPEED].setValue(get_max_speed(1));
-        GTDEConfigurationNP[GT_ACCELERATION].setValue(get_acceleration_angle(1) * 180.0 / M_PI);
+        GTDEConfigurationNP[GT_MAX_SPEED].setValue(ahp_gt_get_max_speed(1));
+        GTDEConfigurationNP[GT_ACCELERATION].setValue(ahp_gt_get_acceleration_angle(1) * 180.0 / M_PI);
         GTDEConfigurationNP.apply();
         for(int x = 0; x < GT_N_MOUNT_CONFIG; x++)
             GTMountConfigSP[x].setState(ISS_OFF);
-        int fork = (get_mount_flags() & isForkMount) ? 1 : 0;
+        int fork = (ahp_gt_get_mount_flags() & isForkMount) ? 1 : 0;
         int azeq = 0;
         azeq |= ((ahp_gt_get_features(0) & isAZEQ) != 0) ? 1 : 0;
         azeq |= ((ahp_gt_get_features(1) & isAZEQ) != 0) ? 1 : 0;
