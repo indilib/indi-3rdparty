@@ -25,122 +25,20 @@
 #include <unistd.h>
 #include <pwd.h>
 
+#include <hotplugmanager.h>
+#include "playerone_ccd_hotplug_handler.h"
 #include <map>
-//#define USE_SIMULATION
-
-#ifdef USE_SIMULATION
-static int _POAGetCameraCount()
-{
-    return 2;
-}
-
-static POAErrors _POAGetCameraProperties(POACameraProperties *pPOACameraInfo, int iCameraIndex)
-{
-    INDI_UNUSED(iCameraIndex);
-    strncpy(pPOACameraInfo->cameraModelName, "    SIMULATE", sizeof(pPOACameraInfo->cameraModelName));
-    return POA_OK;
-}
-#else
-# define _POAGetCameraCount POAGetCameraCount
-# define _POAGetCameraProperties POAGetCameraProperties
-#endif
 
 static class Loader
 {
-        INDI::Timer hotPlugTimer;
-        std::map<int, std::shared_ptr<POACCD>> cameras;
+        std::shared_ptr<PlayerOneCCDHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-            load(false);
-
-            // JM 2021-04-03: Some users reported camera dropping out since hotplug was introduced.
-            // Disabling it for now until more investigation is conduced.
-            //            hotPlugTimer.start(1000);
-            //            hotPlugTimer.callOnTimeout([&]
-            //            {
-            //                if (getCountOfConnectedCameras() != cameras.size())
-            //                {
-            //                    load(true);
-            //                }
-            //            });
+            hotPlugHandler = std::make_shared<PlayerOneCCDHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
-
-    public:
-        static size_t getCountOfConnectedCameras()
-        {
-            return size_t(std::max(_POAGetCameraCount(), 0));
-        }
-
-        static std::vector<POACameraProperties> getConnectedCameras()
-        {
-            std::vector<POACameraProperties> result(getCountOfConnectedCameras());
-            int i = 0;
-            for(auto &cameraInfo : result)
-                _POAGetCameraProperties(i++, &cameraInfo);
-            return result;
-        }
-
-    public:
-        void load(bool isHotPlug)
-        {
-            auto usedCameras = std::move(cameras);
-
-            UniqueName uniqueName(usedCameras);
-
-            for(const auto &cameraInfo : getConnectedCameras())
-            {
-                int id = cameraInfo.cameraID;
-
-                // camera already created
-                if (usedCameras.find(id) != usedCameras.end())
-                {
-                    std::swap(cameras[id], usedCameras[id]);
-                    continue;
-                }
-
-                std::string serialNumberStr = "";
-                if(POAOpenCamera(id) == POA_OK)
-                {
-                    POACameraProperties props;
-                    if (POAGetCameraPropertiesByID(id, &props) == POA_OK)
-                    {
-                        POACloseCamera(id);
-                        serialNumberStr = std::string(props.SN);
-                    }
-                }
-
-                POACCD *poaCcd = new POACCD(cameraInfo, uniqueName.make(cameraInfo), serialNumberStr);
-                cameras[id] = std::shared_ptr<POACCD>(poaCcd);
-                if (isHotPlug)
-                    poaCcd->ISGetProperties(nullptr);
-            }
-        }
-
-    public:
-        class UniqueName
-        {
-                std::map<std::string, bool> used;
-            public:
-                UniqueName() = default;
-                UniqueName(const std::map<int, std::shared_ptr<POACCD>> &usedCameras)
-                {
-                    for (const auto &camera : usedCameras)
-                        used[camera.second->getDeviceName()] = true;
-                }
-
-                std::string make(const POACameraProperties &cameraInfo)
-                {
-                    std::string cameraName = PLAYERONE_CCD_PREFIX + std::string(cameraInfo.cameraModelName);
-                    std::string uniqueName = cameraName;
-
-                    for (int index = 0; used[uniqueName] == true; )
-                        uniqueName = cameraName + " " + std::to_string(++index);
-
-                    used[uniqueName] = true;
-                    return uniqueName;
-                }
-        };
 } loader;
 
 namespace
@@ -330,4 +228,3 @@ POACCD::POACCD(const POACameraProperties &camInfo, const std::string &cameraName
     setDeviceName(cameraName.c_str());
     mCameraName = cameraName;
 }
-

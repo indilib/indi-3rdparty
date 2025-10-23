@@ -30,6 +30,7 @@ include(CMakeCommon)
 set(indi_playerone_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_ccd.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/playerone_ccd_hotplug_handler.cpp
    )
 
 add_executable(indi_playerone_ccd ${indi_playerone_SRCS})

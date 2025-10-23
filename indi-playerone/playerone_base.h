@@ -39,6 +39,11 @@ class POABase : public INDI::CCD
         POABase();
         ~POABase() override;
 
+        const POACameraProperties &getCameraInfo() const
+        {
+            return mCameraInfo;
+        }
+
         virtual const char *getDefaultName() override;
 
         virtual void ISGetProperties(const char *dev) override;
@@ -130,22 +135,22 @@ class POABase : public INDI::CCD
         /** Can the camera flip the image horizontally and vertically */
         bool hasFlipControl();
 
-	/** Set exposure */
+        /** Set exposure */
         bool setExposure(long expoUs, bool isAuto); //Microsecond
-						    
-	/** Get exposure */					    
+
+        /** Get exposure */
         long getExposure();
 
-	/** Start exposure */
+        /** Start exposure */
         bool startExposure();
 
-	/** Stop exposure */
-	bool stopExposure();
+        /** Stop exposure */
+        bool stopExposure();
 
         /** Check if image data is available */
         bool isImgDataAvailable();
 
-	/** Get Image Data */
+        /** Get Image Data */
         bool getImageData(unsigned char *pDataBuffer, unsigned long size);
 
         /** Compatibilities for ZWO cameras */
