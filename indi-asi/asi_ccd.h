@@ -29,6 +29,25 @@ class ASICCD : public ASIBase
     public:
         explicit ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
                         const std::string &serialNumber);
+
+        /**
+         * @brief Returns the serial number of the camera.
+         * @return The serial number as a string.
+         */
+        const std::string &getSerialNumber() const
+        {
+            return mSerialNumber;
+        }
+
+        /**
+         * @brief Returns the ASI_CAMERA_INFO structure for the camera.
+         * @return A const reference to the ASI_CAMERA_INFO structure.
+         */
+        const ASI_CAMERA_INFO &getCameraInfo() const
+        {
+            return mCameraInfo;
+        }
+
     protected:
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 

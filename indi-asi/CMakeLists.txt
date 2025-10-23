@@ -30,6 +30,7 @@ include(CMakeCommon)
 set(indi_asi_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/asi_ccd.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_ccd_hotplug_handler.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/usb_utils.cpp
    )
 
