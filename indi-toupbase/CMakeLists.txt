@@ -39,6 +39,7 @@ set(
   indi_toupbase_SRCS
   ${CMAKE_CURRENT_SOURCE_DIR}/indi_toupbase.cpp
   ${CMAKE_CURRENT_SOURCE_DIR}/libtoupbase.cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/toupbase_ccd_hotplug_handler.cpp
 )
 set(
   indi_wheel_SRCS

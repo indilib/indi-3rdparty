@@ -37,6 +37,17 @@ class ToupBase : public INDI::CCD
 
         virtual const char *getDefaultName() override;
 
+        std::string getCameraID() const
+        {
+            return std::string(m_Instance->id);
+        }
+
+        // Method to update the internal device instance pointer
+        void updateDeviceInfo(const XP(DeviceV2) *newInfo)
+        {
+            m_Instance = newInfo;
+        }
+
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
 

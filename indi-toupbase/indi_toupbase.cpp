@@ -27,6 +27,9 @@
 #include <unistd.h>
 #include <deque>
 
+#include <hotplugmanager.h>
+#include "toupbase_ccd_hotplug_handler.h"
+
 #define BITDEPTH_FLAG       (CP(FLAG_RAW10) | CP(FLAG_RAW12) | CP(FLAG_RAW14) | CP(FLAG_RAW16))
 #define CONTROL_TAB         "Control"
 
@@ -40,51 +43,13 @@
 
 static class Loader
 {
-        std::deque<std::unique_ptr<ToupBase >> cameras;
-        XP(DeviceV2) pCameraInfo[CP(MAX)];
+        std::shared_ptr<ToupbaseCCDHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-            const int iConnectedCount = FP(EnumV2(pCameraInfo));
-
-            // In case we have identical cameras we need to fix that.
-            // e.g. if we have Camera, Camera, it will become
-            // Camera, Camera #2
-            std::vector<std::string> names;
-            for (int i = 0; i < iConnectedCount; i++)
-            {
-                names.push_back(pCameraInfo[i].model->name);
-            }
-            if (iConnectedCount > 0)
-                fixDuplicates(names);
-
-            for (int i = 0; i < iConnectedCount; i++)
-            {
-                if ((CP(FLAG_CCD_INTERLACED) | CP(FLAG_CCD_PROGRESSIVE) | CP(FLAG_CMOS)) & pCameraInfo[i].model->flag)
-                    cameras.push_back(std::unique_ptr<ToupBase>(new ToupBase(&pCameraInfo[i], names[i])));
-            }
-            if (cameras.empty())
-                IDLog("No camera detected");
-        }
-
-        // If duplicate cameras are found, append a number to the camera to set it apart.
-        void fixDuplicates(std::vector<std::string> &strings)
-        {
-            std::unordered_map<std::string, int> stringCounts;
-
-            for (std::string &str : strings)
-            {
-                if (stringCounts.count(str) > 0)
-                {
-                    int count = stringCounts[str]++;
-                    str += " #" + std::to_string(count + 1);
-                    stringCounts[str]++;
-                }
-                else
-                {
-                    stringCounts[str] = 1;
-                }
-            }
+            hotPlugHandler = std::make_shared<ToupbaseCCDHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
 } loader;
 
