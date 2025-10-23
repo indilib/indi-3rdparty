@@ -46,6 +46,11 @@ class SVBONYBase : public INDI::CCD
         SVBONYBase();
         ~SVBONYBase() override;
 
+        const SVB_CAMERA_INFO &getCameraInfo() const
+        {
+            return mCameraInfo;
+        }
+
         virtual const char *getDefaultName() override;
 
         virtual bool initProperties() override;
