@@ -21,8 +21,10 @@
  */
 
 #include "qhy_ccd.h"
+#include "qhy_ccd_hotplug_handler.h"
 #include "config.h"
 #include <stream/streammanager.h>
+#include <hotplugmanager.h>
 
 #include <libnova/julian_day.h>
 #include <algorithm>
@@ -38,87 +40,17 @@
 
 static class Loader
 {
-        std::deque<std::unique_ptr<QHYCCD>> cameras;
+        std::shared_ptr<QHYCCDHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-#if !defined(USE_SIMULATION)
-            int ret = InitQHYCCDResource();
-
-            if (ret != QHYCCD_SUCCESS)
-            {
-                IDLog("Init QHYCCD SDK failed (%d)\n", ret);
-                return;
-            }
-#endif
-
-            //#if defined(__APPLE__)
-            //    char driverSupportPath[128];
-            //    if (getenv("INDIPREFIX") != nullptr)
-            //        sprintf(driverSupportPath, "%s/Contents/Resources", getenv("INDIPREFIX"));
-            //    else
-            //        strncpy(driverSupportPath, "/usr/local/lib/indi", 128);
-            //    strncat(driverSupportPath, "/DriverSupport/qhy/firmware", 128);
-            //    IDLog("QHY firmware path: %s\n", driverSupportPath);
-            //    OSXInitQHYCCDFirmware(driverSupportPath);
-            //#endif
-
-            // JM 2019-03-07: Use OSXInitQHYCCDFirmwareArray as recommended by QHY
-#if defined(__APPLE__)
-            OSXInitQHYCCDFirmwareArray();
-            // Wait a bit before calling GetDeviceIDs on MacOS
-            usleep(2000000);
-#endif
-
-            for (const auto &deviceId : GetDevicesIDs())
-            {
-                cameras.push_back(std::unique_ptr<QHYCCD>(new QHYCCD(deviceId.c_str())));
-            }
-        }
-
-        ~Loader()
-        {
-            ReleaseQHYCCDResource();
-        }
-
-    public:
-
-        // Scan for the available devices
-        std::vector<std::string> GetDevicesIDs()
-        {
-            char camid[MAXINDIDEVICE];
-            int deviceCount = 0;
-            std::vector<std::string> devices;
-
-#if defined(USE_SIMULATION)
-            deviceCount = 2;
-#else
-            deviceCount = ScanQHYCCD();
-#endif
-
-            for (int i = 0; i < deviceCount; i++)
-            {
-#if defined(USE_SIMULATION)
-                int ret = QHYCCD_SUCCESS;
-                snprintf(camid, MAXINDIDEVICE, "Model %d", i + 1);
-#else
-                int ret = GetQHYCCDId(i, camid);
-#endif
-                if (ret == QHYCCD_SUCCESS)
-                {
-                    devices.push_back(std::string(camid));
-                }
-                else
-                {
-                    IDLog("#%d GetQHYCCDId error (%d)\n", i, ret);
-                }
-            }
-
-            return devices;
+            hotPlugHandler = std::make_shared<QHYCCDHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
 } loader;
 
-QHYCCD::QHYCCD(const char *name) : FilterInterface(this)
+QHYCCD::QHYCCD(const char *name, const char *camID) : FilterInterface(this)
 {
     HasUSBTraffic = false;
     HasUSBSpeed   = false;
@@ -127,7 +59,7 @@ QHYCCD::QHYCCD(const char *name) : FilterInterface(this)
     HasFilters    = false;
 
     snprintf(this->m_Name, MAXINDINAME, "QHY CCD %.15s", name);
-    snprintf(this->m_CamID, MAXINDINAME, "%s", name);
+    snprintf(this->m_CamID, MAXINDINAME, "%s", camID);
     setDeviceName(this->m_Name);
 
     setVersion(INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
