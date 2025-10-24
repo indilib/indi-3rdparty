@@ -244,7 +244,7 @@ if(${INDI_PUBLIC_VAR_NS}_INCLUDE_DIR)
         message(FATAL_ERROR "INDI version header not found")
     endif()
 
-    if(${INDI_PRIVATE_VAR_NS}_VERSION_HEADER_CONTENTS MATCHES ".*INDI_VERSION ([0-9]+).([0-9]+).([0-9]+)")
+    if(${INDI_PRIVATE_VAR_NS}_VERSION_HEADER_CONTENTS MATCHES ".*INDI_VERSION \"?([0-9]+)\\.([0-9]+)\\.([0-9]+)\"?")
             set(${INDI_PUBLIC_VAR_NS}_MAJOR_VERSION "${CMAKE_MATCH_1}")
             set(${INDI_PUBLIC_VAR_NS}_MINOR_VERSION "${CMAKE_MATCH_2}")
             set(${INDI_PUBLIC_VAR_NS}_RELEASE_VERSION "${CMAKE_MATCH_3}")
