@@ -67,7 +67,7 @@ install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_openogma.xml
         DESTINATION ${_INDI_DATA_DIR} COMPONENT openogma)
 
 # Install udev rules
-if (UNIX AND NOT WIN32 AND INDI_INSTALL_UDEV_RULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/99-openogma.rules")
+if (UNIX AND NOT WIN32 AND NOT APPLE AND INDI_INSTALL_UDEV_RULES AND EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/99-openogma.rules")
   install(FILES 99-openogma.rules DESTINATION /lib/udev/rules.d)
 endif()
 
