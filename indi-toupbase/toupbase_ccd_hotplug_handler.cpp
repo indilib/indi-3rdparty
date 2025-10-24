@@ -56,17 +56,34 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     XP(DeviceV2) pDevs[CP(MAX)];
     int numCameras = FP(EnumV2(pDevs));
 
-    // Create a set of IDs from the currently enumerated devices for quick lookup
+    // Create a set of IDs from the currently enumerated devices for quick lookup,
+    // ignoring FILTERWHEEL and FOCUSER devices.
     std::set<std::string> currentEnumeratedDeviceIDs;
     for (int i = 0; i < numCameras; ++i)
     {
-        currentEnumeratedDeviceIDs.insert(std::string(pDevs[i].id));
+        std::string displayName = pDevs[i].displayname;
+        if (displayName != "FILTERWHEEL" && displayName != "FOCUSER")
+        {
+            currentEnumeratedDeviceIDs.insert(std::string(pDevs[i].id));
+        }
+        else
+        {
+            LOGF_DEBUG("Ignoring enumerated Toupbase device with display name: %s (ID: %s)", displayName.c_str(), pDevs[i].id);
+        }
     }
 
     // Build a new vector for connected devices, removing disconnected ones
+    // Also ensure that FILTERWHEEL and FOCUSER devices are not in the managed list.
     std::vector<XP(DeviceV2)> updatedConnectedDevices;
     for (const auto& device : m_connectedDevices)
     {
+        std::string displayName = device.displayname;
+        if (displayName == "FILTERWHEEL" || displayName == "FOCUSER")
+        {
+            LOGF_DEBUG("Removing previously connected Toupbase device with display name: %s (ID: %s)", displayName.c_str(), device.id);
+            continue; // Skip this device
+        }
+
         if (currentEnumeratedDeviceIDs.count(std::string(device.id)))
         {
             updatedConnectedDevices.push_back(device);
@@ -77,9 +94,16 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
         }
     }
 
-    // Add newly connected devices
+    // Add newly connected devices, ignoring FILTERWHEEL and FOCUSER devices
     for (int i = 0; i < numCameras; ++i)
     {
+        std::string displayName = pDevs[i].displayname;
+        if (displayName == "FILTERWHEEL" || displayName == "FOCUSER")
+        {
+            LOGF_DEBUG("Ignoring newly connected Toupbase device with display name: %s (ID: %s)", displayName.c_str(), pDevs[i].id);
+            continue; // Skip this device
+        }
+
         bool found = false;
         for (const auto& existingDevice : m_connectedDevices)
         {
