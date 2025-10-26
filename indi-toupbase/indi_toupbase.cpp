@@ -229,6 +229,7 @@ bool ToupBase::initProperties()
         m_ConversionGainSP.resize(nsp);
         m_ConversionGainSP.fill(getDeviceName(), "TC_CONVERSION_GAIN", "Conversion Gain", CONTROL_TAB, IP_RW,
                                 ISR_1OFMANY, 60, IPS_IDLE);
+        m_ConversionGainSP.load();
     }
 
     ///////////////////////////////////////////////////////////////////////////////////
@@ -242,6 +243,7 @@ bool ToupBase::initProperties()
     m_TailLightSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
     m_TailLightSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
     m_TailLightSP.fill(getDeviceName(), "TC_TAILLIGHT", "Tail Light", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    m_TailLightSP.load();
 
     ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
