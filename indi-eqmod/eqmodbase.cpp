@@ -2506,7 +2506,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
                 GuideNSNP.setState(IPS_IDLE);
                 GuideNSNP.apply();;
                 GuideWENP.setState(IPS_IDLE);
-                GuideWENP.apply();
+                GuideWENP.apply();                
                 LOG_WARN("Can not guide if not tracking.");
                 return true;
             }
@@ -2518,6 +2518,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
             GuideRateNP.update(values, names, n);
             GuideRateNP.setState(IPS_OK);
             GuideRateNP.apply();
+            saveConfig(GuideRateNP);
             LOGF_INFO("Setting Custom Tracking Rates - RA=%1.1f arcsec/s DE=%1.1f arcsec/s",
                       GuideRateNP.findWidgetByName("GUIDE_RATE_WE")->getValue(),
                       GuideRateNP.findWidgetByName("GUIDE_RATE_NS")->getValue());
@@ -2553,6 +2554,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
                 LEDBrightnessNP.update(values, names, n);
                 LEDBrightnessNP.setState(IPS_OK);
                 LEDBrightnessNP.apply();
+                saveConfig(LEDBrightnessNP);
                 mount->SetLEDBrightness(static_cast<uint8_t>(values[0]));
                 LOGF_INFO("Setting LED brightness to %.f", values[0]);
                 return true;
