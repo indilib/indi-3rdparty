@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libqhy)
 
-# QHY SDK 25.06.03
-set (LIBQHY_VERSION "25.06.03")
+# QHY SDK 25.10.29
+set (LIBQHY_VERSION "25.10.29")
 set (LIBQHY_SOVERSION "20")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)

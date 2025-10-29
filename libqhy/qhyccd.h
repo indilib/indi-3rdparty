@@ -46,6 +46,7 @@ EXPORTC void STDCALL EnableQHYCCDMessage(bool enable);
 EXPORTC void STDCALL set_histogram_equalization(bool enable);
 EXPORTC void STDCALL EnableQHYCCDLogFile(bool enable);
 
+EXPORTC uint32_t STDCALL SetQHYCCDArrayCamSync(qhyccd_handle* handle, bool onoff);
 
 /** \fn uint32_t SetQHYCCDSingleFrameTimeOut(qhyccd_handle *h,uint32_t time)
       \brief set single frame time out 
@@ -428,13 +429,13 @@ EXPORTC	uint32_t STDCALL GetQHYCCDCFWStatus(qhyccd_handle *handle,char *status);
 EXPORTC	uint32_t STDCALL IsQHYCCDCFWPlugged(qhyccd_handle *handle);
 
 //Get the number of triger mode for camera
-EXPORTC uint32_t STDCALL GetQHYCCDTrigerInterfaceNumber(qhyccd_handle *handle, uint32_t *modeNumber);
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerInterfaceNumber(qhyccd_handle *handle, uint32_t *interfaceNumber);
 //Get the name of for every triger mode 
-EXPORTC uint32_t STDCALL GetQHYCCDTrigerInterfaceName(qhyccd_handle *handle, uint32_t modeNumber, char *name);
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerInterfaceName(qhyccd_handle *handle, uint32_t interfaceIndex, char *name);
 //Setup triger interface
-EXPORTC uint32_t STDCALL SetQHYCCDTrigerInterface(qhyccd_handle *handle, uint32_t trigerMode);
-//Setup triger-in mode on/off
-EXPORTC uint32_t STDCALL SetQHYCCDTrigerFunction(qhyccd_handle *h,bool value);
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerInterface(qhyccd_handle *handle, uint32_t interfaceIndex);
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerModeNumber(qhyccd_handle* handle, uint32_t* modeNumber);
+EXPORTC uint32_t STDCALL GetQHYCCDTrigerModeName(qhyccd_handle* handle, uint32_t modeIndex, char* name);
 /**
  \fn   uint32_t SetQHYCCDTrigerMode(qhyccd_handle *handle,uint32_t trigerMode)
  \brief set camera triger mode
@@ -445,7 +446,11 @@ on success,return QHYCCD_SUCCESS \n
 another QHYCCD_ERROR code on other failures
 */
 //Setup triger mode for camera
-EXPORTC uint32_t STDCALL SetQHYCCDTrigerMode(qhyccd_handle *handle,uint32_t trigerMode);
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerMode(qhyccd_handle *handle,uint32_t modeIndex);
+//Setup triger-in mode on/off
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerFunction(qhyccd_handle *h,bool value);
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerInOnly(qhyccd_handle* h, bool value);
+EXPORTC uint32_t STDCALL SetQHYCCDTrigerOutOnly(qhyccd_handle* h, bool value);
 //Setup triger-out mode on/off
 EXPORTC uint32_t STDCALL EnableQHYCCDTrigerOut(qhyccd_handle *handle);
 EXPORTC uint32_t STDCALL EnableQHYCCDTrigerOutA(qhyccd_handle *handle);
@@ -818,6 +823,9 @@ EXPORTC uint32_t STDCALL QHYCCDLibusbBulkTransfer(qhyccd_handle *pDevHandle, uin
 
 EXPORTC uint32_t STDCALL GetQHYCCDSDKVersion(uint32_t *year,uint32_t *month,uint32_t *day,uint32_t *subday);
 
+EXPORTC uint32_t STDCALL GetQHYCCDPCIECardNum(uint32_t* num);
+EXPORTC uint32_t STDCALL GetQHYCCDPCIECardVer(uint32_t index, uint32_t* year, uint32_t* month, uint32_t* day, uint32_t* subday);
+
 
 
 
@@ -828,10 +836,12 @@ EXPORTC uint32_t STDCALL GetQHYCCDSDKVersion(uint32_t *year,uint32_t *month,uint
 
 
 EXPORTC uint32_t STDCALL GetQHYCCDNumberOfReadModes(qhyccd_handle *h,uint32_t *numModes);
+EXPORTC uint32_t STDCALL GetQHYCCDReadModeNumberFromID(char* id, uint32_t* numModes);
 // Get the maximum resolution for a read mode
 EXPORTC uint32_t STDCALL GetQHYCCDReadModeResolution(qhyccd_handle *h,uint32_t modeNumber, uint32_t* width, uint32_t* height);
 // Get the name of a read mode
 EXPORTC uint32_t STDCALL GetQHYCCDReadModeName(qhyccd_handle *h,uint32_t modeNumber, char* name);
+EXPORTC uint32_t STDCALL GetQHYCCDReadModeNameFromID(char* id, uint32_t modeNumber, char* name);
 // Set the read mode
 EXPORTC uint32_t STDCALL SetQHYCCDReadMode(qhyccd_handle *h,uint32_t modeNumber);
 // Get the read mode
@@ -850,11 +860,12 @@ EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenParam(
 EXPORTC uint32_t STDCALL GetQHYCCDBeforeOpenReadMode(QHYCamReadModeInfo *p);
 */
 EXPORTC uint32_t STDCALL EnableQHYCCDBurstMode(qhyccd_handle *h,bool i);
-EXPORTC uint32_t STDCALL SetQHYCCDBurstModeStartEnd(qhyccd_handle *h,unsigned short start,unsigned short end);
+EXPORTC uint32_t STDCALL SetQHYCCDBurstModeStartEnd(qhyccd_handle *h,uint32_t start,uint32_t end);
 EXPORTC uint32_t STDCALL EnableQHYCCDBurstCountFun(qhyccd_handle *h,bool i);
 EXPORTC uint32_t STDCALL ResetQHYCCDFrameCounter(qhyccd_handle *h);
 EXPORTC uint32_t STDCALL SetQHYCCDBurstIDLE(qhyccd_handle *h);
 EXPORTC uint32_t STDCALL ReleaseQHYCCDBurstIDLE(qhyccd_handle *h);
+EXPORTC uint32_t STDCALL RereadQHYCCDBurstFrame(qhyccd_handle* h);
 EXPORTC uint32_t STDCALL SetQHYCCDBurstModePatchNumber(qhyccd_handle *h,uint32_t value);
 EXPORTC uint32_t STDCALL SetQHYCCDEnableLiveModeAntiRBI(qhyccd_handle *h,uint32_t value);
 EXPORTC uint32_t STDCALL SetQHYCCDWriteFPGA(qhyccd_handle *h,uint8_t number,uint8_t regindex,uint8_t regvalue);
@@ -1097,4 +1108,8 @@ EXPORTFUNC uint32_t STDCALL QHYCCD_curveSystemGain(qhyccd_handle *handle,double 
 EXPORTFUNC uint32_t STDCALL QHYCCD_curveFullWell(qhyccd_handle *handle,double gainV,double *fullwell);
 EXPORTFUNC uint32_t STDCALL QHYCCD_curveReadoutNoise(qhyccd_handle *handle,double gainV,double *readoutnoise);
 
-EXPORTC uint32_t STDCALL GetQHYCCDFPGATemp(qhyccd_handle* handle, uint16_t* temp);
+EXPORTC uint32_t STDCALL GetQHYCCDFPGATemp(qhyccd_handle* handle, double* temp);
+
+EXPORTC char* STDCALL GetQHYCCDLastError();
+
+EXPORTC uint32_t STDCALL ClearQHYCCDImageQueue(qhyccd_handle* handle);
