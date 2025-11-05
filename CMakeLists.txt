@@ -267,6 +267,7 @@ option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
 option(WITH_LIBCAMERA "Install Libcamera Driver (Raspberry PI)" Off)
 option(WITH_BNO_IMU "Install BNO IMU Driver" Off)
+option(WITH_CELESTRON_ORIGIN "Install Celestron Origin Driver" Off)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -843,6 +844,11 @@ else(BUILD_LIBS)
   if (WITH_BNO_IMU)
     add_subdirectory(indi-bno-imu)
   endif(WITH_BNO_IMU)
+
+  # CELESTRON ORIGIN
+  if (WITH_CELSTRONi_ORIGIN)
+    add_subdirectory(indi-celestron-origin)
+  endif(WITH_CELESTRON_ORIGIN)
 
   # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
   if(LIBRARIES_FOUND)
