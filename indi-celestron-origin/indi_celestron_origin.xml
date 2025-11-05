@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driversList>
+  <devGroup group="Telescopes">
+    <device label="Origin Telescope" manufacturer="Celestron">
+      <driver name="indi_celestron_origin">indi_celestron_origin</driver>
+      <version>1.0</version>
+    </device>
+  </devGroup>
+  <devGroup group="CCDs">
+    <device label="Origin Camera" manufacturer="Celestron">
+      <driver name="indi_celestron_origin">indi_celestron_origin</driver>
+      <version>1.0</version>
+    </device>
+  </devGroup>
+</driversList>
