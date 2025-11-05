@@ -846,7 +846,7 @@ else(BUILD_LIBS)
   endif(WITH_BNO_IMU)
 
   # CELESTRON ORIGIN
-  if (WITH_CELSTRONi_ORIGIN)
+  if (WITH_CELESTRON_ORIGIN)
     add_subdirectory(indi-celestron-origin)
   endif(WITH_CELESTRON_ORIGIN)
 
