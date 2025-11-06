@@ -42,21 +42,21 @@ void scansolution(char* solution, char *flags, char *type, double *dms, enum rtk
     char status[6];
     sscanf(solution,"(%6c)",status);
 
-    if(!strcmp(status, RTKRCV_FIX_NONE))
+    if(!strncmp(status, RTKRCV_FIX_NONE, strlen(RTKRCV_FIX_NONE)))
         *fix = status_no_fix;
-    else if(!strcmp(status, RTKRCV_FIX))
+    else if(!strncmp(status, RTKRCV_FIX, strlen(RTKRCV_FIX)))
         *fix = status_fix;
-    else if(!strcmp(status, RTKRCV_FIX_FLOAT))
+    else if(!strncmp(status, RTKRCV_FIX_FLOAT, strlen(RTKRCV_FIX_FLOAT)))
         *fix = status_float;
-    else if(!strcmp(status, RTKRCV_FIX_SBAS))
+    else if(!strncmp(status, RTKRCV_FIX_SBAS, strlen(RTKRCV_FIX_SBAS)))
         *fix = status_sbas;
-    else if(!strcmp(status, RTKRCV_FIX_DGPS))
+    else if(!strncmp(status, RTKRCV_FIX_DGPS, strlen(RTKRCV_FIX_DGPS)))
         *fix = status_dgps;
-    else if(!strcmp(status, RTKRCV_FIX_SINGLE))
+    else if(!strncmp(status, RTKRCV_FIX_SINGLE, strlen(RTKRCV_FIX_SINGLE)))
         *fix = status_single;
-    else if(!strcmp(status, RTKRCV_FIX_PPP))
+    else if(!strncmp(status, RTKRCV_FIX_PPP, strlen(RTKRCV_FIX_PPP)))
         *fix = status_ppp;
-    else if(!strcmp(status, RTKRCV_FIX_UNKNOWN))
+    else if(!strncmp(status, RTKRCV_FIX_UNKNOWN, strlen(RTKRCV_FIX_UNKNOWN)))
         *fix = status_unknown;
 
     solflag = 0;

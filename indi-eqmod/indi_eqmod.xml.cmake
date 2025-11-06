@@ -29,5 +29,9 @@
                 <driver name="EQMod Mount">indi_eqmod_telescope</driver>
                 <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
         </device>
+        <device label="Wave 100i" manufacturer="SkyWatcher">
+                <driver name="EQMod Mount">indi_eqmod_telescope</driver>
+                <version>@EQMOD_VERSION_MAJOR@.@EQMOD_VERSION_MINOR@</version>
+        </device>
 </devGroup>
 </driversList>

@@ -1,7 +1,7 @@
 /*
     ASI CCD Driver
 
-    Copyright (C) 2015-2021 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2015-2026 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
     Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
 
@@ -162,6 +162,8 @@ class ASIBase : public INDI::CCD
             FLIP_HORIZONTAL,
             FLIP_VERTICAL
         };
+
+        INDI::PropertySwitch USBResetSP {2};
 
         std::string mCameraName, mCameraID, mSerialNumber, mNickname;
         ASI_CAMERA_INFO mCameraInfo;

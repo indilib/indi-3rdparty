@@ -1,0 +1,40 @@
+name: MacOS-Intel
+
+on: [push, pull_request, workflow_dispatch]
+
+jobs:
+  build:
+    runs-on: macos-13
+
+    steps:
+      - name: Get INDI Sources
+        uses: actions/checkout@v2
+        with:
+          path: indi-3rdparty
+
+      - name: Install Pre-requisites
+        run:  indi-3rdparty/scripts/requisites-install.sh
+
+      - name: Get INDI Core Package
+        uses: dawidd6/action-download-artifact@v6
+        with:
+          repo: indilib/indi
+          branch: master
+          workflow: macos-intel.yml
+          name: indi-core-package-macos-intel
+          path: ./packages/
+
+      - name: Install INDI Core
+        run: $(command -v sudo) bsdtar -xvf packages/indi-core-package.tar --strip-components=1 -C / || true
+
+      - name: Build INDI 3rd Party Libraries
+        run: indi-3rdparty/scripts/indi-3rdparty-libs-build.sh
+
+      - name: Install INDI 3rd Party Libraries
+        run: indi-3rdparty/scripts/indi-3rdparty-libs-install.sh
+
+      - name: Build INDI 3rd Party Drivers
+        run: indi-3rdparty/scripts/indi-3rdparty-build.sh
+
+      - name: Install INDI 3rd Party Drivers
+        run: indi-3rdparty/scripts/indi-3rdparty-install.sh

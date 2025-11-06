@@ -136,7 +136,7 @@ void AUXCommand::logCommand()
 /////////////////////////////////////////////////////////////////////////////////////
 void AUXCommand::setDebugInfo(const char *deviceName, uint8_t debugLevel)
 {
-    strncpy(DEVICE_NAME, deviceName, 64);
+    snprintf(DEVICE_NAME, sizeof(DEVICE_NAME), "%s", deviceName);
     DEBUG_LEVEL = debugLevel;
 }
 ////////////////////////////////////////////////
@@ -306,7 +306,7 @@ int AUXCommand::responseDataSize()
                 return 4;
             case MC_GET_MODEL:
                 return 2;
-	    case MC_SLEW_DONE:
+            case MC_SLEW_DONE:
             case MC_SEEK_DONE:
             case MC_LEVEL_DONE:
             case MC_POLL_CORDWRAP:

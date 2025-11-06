@@ -1,3 +1,15 @@
+indi-toupbase (2.4) jammy; urgency=low
+
+  * Fix AAF and EFW names
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 12 Oct 2025 09:00:00 +0300
+
+indi-toupbase (2.3) jammy; urgency=low
+
+  * Fix exposure timeout detection.
+
+ -- Eric Dejouhanet <eric.dejouhanet@gmail.com>  Wed, 28 May 2025 09:00:00 +0300
+
 indi-toupbase (2.2) jammy; urgency=low
 
   * Fix ST4 guiding.

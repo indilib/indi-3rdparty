@@ -1,13 +1,16 @@
 cmake_minimum_required(VERSION 3.16)
 project (libaltaircam)
 
-set (LIBALTAIRCAM_VERSION "57.27591")
-set (LIBALTAIRCAM_SOVERSION "57")
+set (LIBALTAIRCAM_VERSION "59.29465")
+set (LIBALTAIRCAM_SOVERSION "59")
 
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
+include(CMakeCommon)
 include (InstallImported)
+
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 add_library (altaircam SHARED IMPORTED)
 
@@ -32,8 +35,10 @@ elseif (UNIX AND NOT WIN32)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES 99-altaircam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  IF (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES 99-altaircam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  ENDIF()
 
 endif ()
 

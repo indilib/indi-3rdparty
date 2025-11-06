@@ -70,7 +70,7 @@ class QFocuser : public INDI::Focuser
         double targetPos{ 0 };
         bool isReboot = false;
 
-        uint8_t buff[USB_CDC_RX_LEN];
+        char buff[USB_CDC_RX_LEN];
 
         int32_t cmd_version;
         int32_t cmd_version_board;

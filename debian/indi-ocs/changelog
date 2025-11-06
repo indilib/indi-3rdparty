@@ -1,3 +1,25 @@
+indi-ocs (1.4) nobel; urgency=medium
+
+  * New release - Corrected inactive weather measurement check added incorrectly in V1.1
+
+indi-ocs (1.3) nobel; urgency=medium
+
+  * New release - fix for park state and typo
+
+-- Ed Lee <ed@thefamilee.co.uk> Sun, 08 Jun 2025 20:00:00 +0100
+
+indi-ocs (1.2) nobel; urgency=medium
+
+  * New release - adds support for shutter control on park/unpark & dome Az slaving
+
+-- Ed Lee <ed@thefamilee.co.uk>  Mon, 26 May 2025 15:15:00 +0100
+
+indi-ocs (1.1) nobel; urgency=medium
+
+  * New release - updates and bugfixes
+
+ -- Ed Lee <ed@thefamilee.co.uk>  Sun, 09 Mar 2025 12:00:00 +0000
+
 indi-ocs (1.0) jammy; urgency=low
 
   * Initial Release.

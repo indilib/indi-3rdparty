@@ -176,6 +176,10 @@ bool WeatherRadio::initProperties()
     deviceConfig["BME280"]["Hum"]       = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["DHT"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["DHT"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["AHT10"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["AHT10"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
+    deviceConfig["SHT30"]["Temp"]         = {"Temperature (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
+    deviceConfig["SHT30"]["Hum"]          = {"Humidity (%)", HUMIDITY_SENSOR, "%.1f", 0., 100.0, 1.0};
     deviceConfig["MLX90614"]["T amb"]   = {"Ambient Temp. (°C)", TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["MLX90614"]["T obj"]   = {"Sky Temp. (°C)", OBJECT_TEMPERATURE_SENSOR, "%.1f", -100.0, 100.0, 1.0};
     deviceConfig["TSL237"]["Frequency"] = {"Frequency", INTERNAL_SENSOR, "%.0f", 0.0, 100000.0, 1.0};
@@ -355,6 +359,15 @@ bool WeatherRadio::updateProperties()
 
         result = INDI::Weather::updateProperties();
 
+        // deleteProperty() does not reset widgets, so we do it manually.
+        // TODO - shift this logic to INDI::Weather
+        INDI::Weather::critialParametersLP.resize(0);
+        for (auto  &oneProperty : INDI::Weather::ParametersRangeNP )
+            oneProperty.resize(0);
+        INDI::Weather::ParametersNP.resize(0);
+        // clear array of "ParametersRangeNP"
+        INDI::Weather::ParametersRangeNP.clear();
+
         // clear firmware configuration so that #handleFirmwareVersion() recongnizes an initialisation
         FirmwareConfigTP.tp = nullptr;
         free(FirmwareConfigT);
@@ -469,7 +482,7 @@ IPState WeatherRadio::handleFirmwareConfig(JsonValue jvalue)
     for (deviceIter = begin(jvalue); deviceIter != end(jvalue); ++deviceIter)
     {
         char *device {new char[strlen(deviceIter->key) + 1] {0}};
-        strncpy(device, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+        snprintf(device, strlen(deviceIter->key) + 1, "%s", deviceIter->key);
 
         if (strcmp(device, WIFI_DEVICE) == 0)
             hasWiFi = true;
@@ -482,7 +495,7 @@ IPState WeatherRadio::handleFirmwareConfig(JsonValue jvalue)
             char *name {new char[strlen(configIter->key) + 1] {0}};
 
             // copy single setting
-            strncpy(name, configIter->key, static_cast<size_t>(strlen(configIter->key)));
+            snprintf(name, strlen(configIter->key) + 1, "%s", configIter->key);
             std::string value;
             double number;
 
@@ -619,6 +632,8 @@ void WeatherRadio::addSensorSelection(ISwitchVectorProperty *sensor, std::vector
     IUFillSwitchVector(sensor, switches, static_cast<int>(sensors.size()), getDeviceName(), name, label, OPTIONS_TAB, IP_RW,
                        ISR_1OFMANY, 60, IPS_IDLE);
     defineProperty(sensor);
+    // set the configured selection for this weather property
+    loadConfig(true, name);
 }
 
 /**************************************************************************************
@@ -1007,7 +1022,7 @@ void WeatherRadio::handleWeatherData(JsonValue value)
     for (deviceIter = begin(value); deviceIter != end(value); ++deviceIter)
     {
         char *name {new char[strlen(deviceIter->key) + 1] {0}};
-        strncpy(name, deviceIter->key, static_cast<size_t>(strlen(deviceIter->key)));
+        snprintf(name, strlen(deviceIter->key) + 1, "%s", deviceIter->key);
 
         JsonIterator sensorIter;
         INumberVectorProperty *deviceProp = findRawDeviceProperty(name);
@@ -1111,7 +1126,7 @@ void WeatherRadio::updateWeatherParameter(WeatherRadio::sensor_name sensor, doub
         setParameterValue(WEATHER_TEMPERATURE, weatherCalculator->calibrate(weatherCalculator->temperatureCalibration, value));
     else if (currentSensors.pressure == sensor)
     {
-        double elevation = LocationN[LOCATION_ELEVATION].value;
+        double elevation = LocationNP[LOCATION_ELEVATION].getValue();
 
         double temp = 15.0; // default value
 

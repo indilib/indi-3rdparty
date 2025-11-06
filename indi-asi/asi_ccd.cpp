@@ -24,6 +24,8 @@
 #include <unistd.h>
 #include <pwd.h>
 
+#include <hotplugmanager.h>
+#include "asi_ccd_hotplug_handler.h"
 #include <map>
 //#define USE_SIMULATION
 
@@ -46,105 +48,14 @@ static ASI_ERROR_CODE _ASIGetCameraProperty(ASI_CAMERA_INFO *pASICameraInfo, int
 
 static class Loader
 {
-        INDI::Timer hotPlugTimer;
-        std::map<int, std::shared_ptr<ASICCD>> cameras;
+        std::shared_ptr<INDI::ASICCDHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-            load(false);
-
-            // JM 2021-04-03: Some users reported camera dropping out since hotplug was introduced.
-            // Disabling it for now until more investigation is conduced.
-            //            hotPlugTimer.start(1000);
-            //            hotPlugTimer.callOnTimeout([&]
-            //            {
-            //                if (getCountOfConnectedCameras() != cameras.size())
-            //                {
-            //                    load(true);
-            //                }
-            //            });
+            hotPlugHandler = std::make_shared<INDI::ASICCDHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
-
-    public:
-        static size_t getCountOfConnectedCameras()
-        {
-            return size_t(std::max(_ASIGetNumOfConnectedCameras(), 0));
-        }
-
-        static std::vector<ASI_CAMERA_INFO> getConnectedCameras()
-        {
-            std::vector<ASI_CAMERA_INFO> result(getCountOfConnectedCameras());
-            int i = 0;
-            for(auto &cameraInfo : result)
-                _ASIGetCameraProperty(&cameraInfo, i++);
-            return result;
-        }
-
-    public:
-        void load(bool isHotPlug)
-        {
-            auto usedCameras = std::move(cameras);
-
-            UniqueName uniqueName(usedCameras);
-
-            for(const auto &cameraInfo : getConnectedCameras())
-            {
-                int id = cameraInfo.CameraID;
-
-                // camera already created
-                if (usedCameras.find(id) != usedCameras.end())
-                {
-                    std::swap(cameras[id], usedCameras[id]);
-                    continue;
-                }
-
-                ASI_SN serialNumber;
-                std::string serialNumberStr = "";
-                if(ASIOpenCamera(cameraInfo.CameraID) == ASI_SUCCESS)
-                {
-                    if (ASIGetSerialNumber(cameraInfo.CameraID, &serialNumber) == ASI_SUCCESS)
-                    {
-                        ASICloseCamera(cameraInfo.CameraID);
-                        char snChars[100];
-                        auto &sn = serialNumber;
-                        sprintf(snChars, "%02x%02x%02x%02x%02x%02x%02x%02x", sn.id[0], sn.id[1],
-                                sn.id[2], sn.id[3], sn.id[4], sn.id[5], sn.id[6], sn.id[7]);
-                        snChars[16] = 0;
-                        serialNumberStr = std::string(snChars);
-                    }
-                }
-
-                ASICCD *asiCcd = new ASICCD(cameraInfo, uniqueName.make(cameraInfo), serialNumberStr);
-                cameras[id] = std::shared_ptr<ASICCD>(asiCcd);
-                if (isHotPlug)
-                    asiCcd->ISGetProperties(nullptr);
-            }
-        }
-
-    public:
-        class UniqueName
-        {
-                std::map<std::string, bool> used;
-            public:
-                UniqueName() = default;
-                UniqueName(const std::map<int, std::shared_ptr<ASICCD>> &usedCameras)
-                {
-                    for (const auto &camera : usedCameras)
-                        used[camera.second->getDeviceName()] = true;
-                }
-
-                std::string make(const ASI_CAMERA_INFO &cameraInfo)
-                {
-                    std::string cameraName = "ZWO CCD " + std::string(cameraInfo.Name + 4);
-                    std::string uniqueName = cameraName;
-
-                    for (int index = 0; used[uniqueName] == true; )
-                        uniqueName = cameraName + " " + std::to_string(++index);
-
-                    used[uniqueName] = true;
-                    return uniqueName;
-                }
-        };
 } loader;
 
 namespace
@@ -308,11 +219,10 @@ bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *n
 ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
                const std::string &serialNumber) : ASIBase()
 {
-    mCameraInfo = camInfo;
     mSerialNumber = serialNumber;
-
+    mCameraInfo = camInfo;
     loadNicknames();
-    if (!serialNumber.empty())
+    if (!mSerialNumber.empty())
     {
         auto nickname = mNicknames[mSerialNumber];
         if (!nickname.empty())

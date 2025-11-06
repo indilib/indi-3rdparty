@@ -13,7 +13,7 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(PLAYERONE_VERSION_MAJOR 1)
-set(PLAYERONE_VERSION_MINOR 18)
+set(PLAYERONE_VERSION_MINOR 20)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)
@@ -30,6 +30,7 @@ include(CMakeCommon)
 set(indi_playerone_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_base.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_ccd.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/playerone_ccd_hotplug_handler.cpp
    )
 
 add_executable(indi_playerone_ccd ${indi_playerone_SRCS})

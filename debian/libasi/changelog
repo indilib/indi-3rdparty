@@ -1,3 +1,9 @@
+libasi (1.390) jammy; urgency=medium
+
+  * ASI Camera SDK 1.39 release
+
+ -- Kevin Hester <kevinh@geeksville.com>  Tue, 27 Aug 2025 17:00:00 +0300
+
 libasi (1.370) jammy; urgency=medium
 
   * ASI Rotator CAA SDK 1.0 release

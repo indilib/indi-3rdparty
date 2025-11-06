@@ -454,7 +454,7 @@ StarbookTen::sxfmt(double x) {
 
     int w = (int)x;
     double frac = x-w;
-    double mins = frac * 60.0;
+    double mins = fabs(frac) * 60.0;
 
     snprintf(buf, sizeof(buf)-1, "%d+%02.5lf", w, mins);
 

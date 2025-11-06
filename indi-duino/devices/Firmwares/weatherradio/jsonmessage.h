@@ -19,9 +19,9 @@ enum message_type {
 
 // Translate a message into JSON representation
 String JsonMessage(String message, message_type code) {
-  const int docSize = JSON_OBJECT_SIZE(1) + // one element
-                      JSON_OBJECT_SIZE(2);  // message
-  StaticJsonDocument <docSize> doc;
+  // const int docSize = JSON_OBJECT_SIZE(1) + // one element
+  //                     JSON_OBJECT_SIZE(2);  // message
+  StaticJsonDocument <64> doc;
   JsonObject msg = doc.createNestedObject("message");
   msg["text"] = message.c_str();
   switch (code) {

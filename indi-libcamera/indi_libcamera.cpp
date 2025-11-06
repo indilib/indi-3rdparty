@@ -48,7 +48,7 @@
 
 static class Loader
 {
-        std::map<int, std::shared_ptr<INDILibCamera>> cameras;
+        std::map<int, std::shared_ptr<INDILibCamera >> cameras;
     public:
         Loader()
         {
@@ -137,7 +137,7 @@ void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, dou
     try
     {
         app.OpenCamera();
-        app.ConfigureVideo(getColorspaceFlags(options->codec));
+        app.ConfigureVideo(getColorspaceFlags(options->Get().codec));
         app.StartEncoder();
         app.StartCamera();
     }
@@ -266,7 +266,7 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
     auto payload = std::get<CompletedRequestPtr>(msg.payload);
     StreamInfo info = app.GetStreamInfo(stream);
     BufferReadSync r(&app, payload->buffers[stream]);
-    const std::vector<libcamera::Span<uint8_t>> mem = r.Get();
+    const std::vector<libcamera::Span<uint8_t >> mem = r.Get();
 
     try
     {
@@ -453,7 +453,17 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
             }
             else
             {
-                read(fd, memptr, memsize);
+                ssize_t bytesRead = read(fd, memptr, memsize);
+                if (bytesRead == -1 || static_cast<size_t>(bytesRead) < memsize)
+                {
+                    LOGF_ERROR("Error reading file %s: %s or incomplete read (%zd/%zu bytes)", filename, strerror(errno), bytesRead, memsize);
+                    PrimaryCCD.setExposureFailed();
+                    app.StopCamera();
+                    app.Teardown();
+                    app.CloseCamera();
+                    close(fd);
+                    return;
+                }
             }
             // Close file
             close(fd);
@@ -629,32 +639,34 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
     char *argv[] = {};
     options->Parse(argc, argv);
 
-    options->camera = m_CameraIndex;
-    options->nopreview = true;
-    options->immediate = true;
-    options->quality = 100;
-    options->restart = true;
-    options->thumb_quality = 0;
-    options->shutter = tv;
+    options->Set().camera = m_CameraIndex;
+    options->Set().nopreview = true;
+    options->Set().immediate = true;
+    options->Set().quality = 100;
+    options->Set().restart = 0; // restart is unsigned int, not bool
+    options->Set().thumb_width = 0; // thumb_quality is now thumb_width, thumb_height, thumb_quality
+    options->Set().thumb_height = 0;
+    options->Set().thumb_quality = 0;
+    options->Set().shutter = tv;
 
-    options->brightness = AdjustmentNP[AdjustBrightness].getValue();
-    options->contrast = AdjustmentNP[AdjustContrast].getValue();
-    options->saturation = AdjustmentNP[AdjustSaturation].getValue();
-    options->sharpness = AdjustmentNP[AdjustSharpness].getValue();
-    options->quality = AdjustmentNP[AdjustQuality].getValue();
-    options->ev = AdjustmentNP[AdjustExposureValue].getValue();
-    options->awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
-    options->awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
+    options->Set().brightness = AdjustmentNP[AdjustBrightness].getValue();
+    options->Set().contrast = AdjustmentNP[AdjustContrast].getValue();
+    options->Set().saturation = AdjustmentNP[AdjustSaturation].getValue();
+    options->Set().sharpness = AdjustmentNP[AdjustSharpness].getValue();
+    options->Set().quality = AdjustmentNP[AdjustQuality].getValue();
+    options->Set().ev = AdjustmentNP[AdjustExposureValue].getValue();
+    options->Set().awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
+    options->Set().awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
 
-    options->gain = GainNP[0].getValue();
+    options->Set().gain = GainNP[0].getValue();
 
-    options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
-    options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
-    options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
-    options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
+    options->Set().exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
+    options->Set().awb_index = AdjustAwbModeSP.findOnSwitchIndex();
+    options->Set().metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
+    options->Set().denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
 
-    options->width = PrimaryCCD.getSubW();
-    options->height = PrimaryCCD.getSubH();
+    options->Set().width = PrimaryCCD.getSubW();
+    options->Set().height = PrimaryCCD.getSubH();
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -667,25 +679,25 @@ void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerat
     char *argv[] = {};
     options->Parse(argc, argv);
 
-    options->camera = m_CameraIndex;
-    options->nopreview = true;
+    options->Set().camera = m_CameraIndex;
+    options->Set().nopreview = true;
 
-    options->codec = "mjpeg";
-    options->brightness = AdjustmentNP[AdjustBrightness].getValue();
-    options->contrast = AdjustmentNP[AdjustContrast].getValue();
-    options->saturation = AdjustmentNP[AdjustSaturation].getValue();
-    options->sharpness = AdjustmentNP[AdjustSharpness].getValue();
-    options->quality = AdjustmentNP[AdjustQuality].getValue();
-    options->ev = AdjustmentNP[AdjustExposureValue].getValue();
-    options->awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
-    options->awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
+    options->Set().codec = "mjpeg";
+    options->Set().brightness = AdjustmentNP[AdjustBrightness].getValue();
+    options->Set().contrast = AdjustmentNP[AdjustContrast].getValue();
+    options->Set().saturation = AdjustmentNP[AdjustSaturation].getValue();
+    options->Set().sharpness = AdjustmentNP[AdjustSharpness].getValue();
+    options->Set().quality = AdjustmentNP[AdjustQuality].getValue();
+    options->Set().ev = AdjustmentNP[AdjustExposureValue].getValue();
+    options->Set().awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
+    options->Set().awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
 
-    options->gain = GainNP[0].getValue();
+    options->Set().gain = GainNP[0].getValue();
 
-    options->exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
-    options->awb_index = AdjustAwbModeSP.findOnSwitchIndex();
-    options->metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
-    options->denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
+    options->Set().exposure_index = AdjustExposureModeSP.findOnSwitchIndex();
+    options->Set().awb_index = AdjustAwbModeSP.findOnSwitchIndex();
+    options->Set().metering_index = AdjustMeteringModeSP.findOnSwitchIndex();
+    options->Set().denoise = AdjustDenoiseModeSP.findOnSwitch()->getName();
 }
 
 /////////////////////////////////////////////////////////////////////////////

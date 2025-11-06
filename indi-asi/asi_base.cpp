@@ -1,7 +1,7 @@
 /*
     ASI Camera Base
 
-    Copyright (C) 2015 Jasem Mutlaq (mutlaqja@ikarustech.com)
+    Copyright (C) 2015-2026 Jasem Mutlaq (mutlaqja@ikarustech.com)
     Copyright (C) 2018 Leonard Bottleman (leonard@whiteweasel.net)
     Copyright (C) 2021 Pawel Soja (kernel32.pl@gmail.com)
 
@@ -274,59 +274,68 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
                 return;
             }
 
-            LOGF_WARN("Exposure failed after %d attempts. Attempting USB reset...", mExposureRetry);
-            ASIStopExposure(mCameraInfo.CameraID);
-            ASICloseCamera(mCameraInfo.CameraID);
-
-            LOGF_INFO("Attempting USB reset for device %s...", mCameraInfo.Name);
-            resetUSBDevice();
-
-            LOG_INFO("Reopening camera after reset...");
-            ASI_ERROR_CODE ret = ASIOpenCamera(mCameraInfo.CameraID);
-            if (ret != ASI_SUCCESS)
+            // If USB reset is enabled
+            if (USBResetSP[INDI_ENABLED].getState() == ISS_ON)
             {
-                LOGF_ERROR("Failed to reopen camera after USB reset (%s)", Helpers::toString(ret));
+                LOGF_WARN("Exposure failed after %d attempts. Attempting USB reset...", mExposureRetry);
+                ASIStopExposure(mCameraInfo.CameraID);
+                ASICloseCamera(mCameraInfo.CameraID);
+
+                LOGF_INFO("Attempting USB reset for device %s...", mCameraInfo.Name);
+                resetUSBDevice();
+
+                LOG_INFO("Reopening camera after reset...");
+                ASI_ERROR_CODE ret = ASIOpenCamera(mCameraInfo.CameraID);
+                if (ret != ASI_SUCCESS)
+                {
+                    LOGF_ERROR("Failed to reopen camera after USB reset (%s)", Helpers::toString(ret));
+                    PrimaryCCD.setExposureFailed();
+                    return;
+                }
+
+                LOG_INFO("Reinitializing camera...");
+                ret = ASIInitCamera(mCameraInfo.CameraID);
+                if (ret != ASI_SUCCESS)
+                {
+                    LOGF_ERROR("Failed to reinitialize camera after USB reset (%s)", Helpers::toString(ret));
+                    PrimaryCCD.setExposureFailed();
+                    return;
+                }
+
+                // Restore previous settings
+                ASI_IMG_TYPE currentType = getImageType();
+                ret = ASISetROIFormat(mCameraInfo.CameraID,
+                                      PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
+                                      PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
+                                      PrimaryCCD.getBinX(), currentType);
+                if (ret != ASI_SUCCESS)
+                {
+                    LOGF_ERROR("Failed to restore ROI format after USB reset (%s)", Helpers::toString(ret));
+                    PrimaryCCD.setExposureFailed();
+                    return;
+                }
+
+                ret = ASISetStartPos(mCameraInfo.CameraID,
+                                     PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
+                                     PrimaryCCD.getSubY() / PrimaryCCD.getBinY());
+                if (ret != ASI_SUCCESS)
+                {
+                    LOGF_ERROR("Failed to restore start position after USB reset (%s)", Helpers::toString(ret));
+                    PrimaryCCD.setExposureFailed();
+                    return;
+                }
+
+                // Try one more time after reset
+                LOG_INFO("Attempting exposure again after USB reset...");
+                ASIStopExposure(mCameraInfo.CameraID);
+                workerExposure(isAboutToQuit, duration);
+                return;
+            }
+            else
+            {
                 PrimaryCCD.setExposureFailed();
                 return;
             }
-
-            LOG_INFO("Reinitializing camera...");
-            ret = ASIInitCamera(mCameraInfo.CameraID);
-            if (ret != ASI_SUCCESS)
-            {
-                LOGF_ERROR("Failed to reinitialize camera after USB reset (%s)", Helpers::toString(ret));
-                PrimaryCCD.setExposureFailed();
-                return;
-            }
-
-            // Restore previous settings
-            ASI_IMG_TYPE currentType = getImageType();
-            ret = ASISetROIFormat(mCameraInfo.CameraID,
-                                  PrimaryCCD.getSubW() / PrimaryCCD.getBinX(),
-                                  PrimaryCCD.getSubH() / PrimaryCCD.getBinY(),
-                                  PrimaryCCD.getBinX(), currentType);
-            if (ret != ASI_SUCCESS)
-            {
-                LOGF_ERROR("Failed to restore ROI format after USB reset (%s)", Helpers::toString(ret));
-                PrimaryCCD.setExposureFailed();
-                return;
-            }
-
-            ret = ASISetStartPos(mCameraInfo.CameraID,
-                                 PrimaryCCD.getSubX() / PrimaryCCD.getBinX(),
-                                 PrimaryCCD.getSubY() / PrimaryCCD.getBinY());
-            if (ret != ASI_SUCCESS)
-            {
-                LOGF_ERROR("Failed to restore start position after USB reset (%s)", Helpers::toString(ret));
-                PrimaryCCD.setExposureFailed();
-                return;
-            }
-
-            // Try one more time after reset
-            LOG_INFO("Attempting exposure again after USB reset...");
-            ASIStopExposure(mCameraInfo.CameraID);
-            workerExposure(isAboutToQuit, duration);
-            return;
         }
     }
     while (status != ASI_EXP_SUCCESS);
@@ -389,6 +398,11 @@ bool ASIBase::initProperties()
     FlipSP[FLIP_VERTICAL].fill("FLIP_VERTICAL", "Vertical", ISS_OFF);
     FlipSP.fill(getDeviceName(), "FLIP", "Flip", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
     FlipSP.load();
+
+    USBResetSP[INDI_ENABLED].fill("INDI_ENABLED", "Enabled", ISS_OFF);
+    USBResetSP[INDI_DISABLED].fill("INDI_DISABLED", "Disabled", ISS_ON);
+    USBResetSP.fill(getDeviceName(), "USB_RESET", "USB Reset", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    USBResetSP.load();
 
     VideoFormatSP.fill(getDeviceName(), "CCD_VIDEO_FORMAT", "Format", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
@@ -536,39 +550,41 @@ bool ASIBase::updateProperties()
             defineProperty(SerialNumberTP);
             defineProperty(NicknameTP);
         }
+        defineProperty(USBResetSP);
     }
     else
     {
         if (HasCooler())
         {
-            deleteProperty(CoolerNP.getName());
-            deleteProperty(CoolerSP.getName());
+            deleteProperty(CoolerNP);
+            deleteProperty(CoolerSP);
         }
         else
             deleteProperty(TemperatureNP);
 
         if (!ControlNP.isEmpty())
-            deleteProperty(ControlNP.getName());
+            deleteProperty(ControlNP);
 
         if (!ControlSP.isEmpty())
-            deleteProperty(ControlSP.getName());
+            deleteProperty(ControlSP);
 
         if (hasFlipControl())
         {
-            deleteProperty(FlipSP.getName());
+            deleteProperty(FlipSP);
         }
 
         if (!VideoFormatSP.isEmpty())
-            deleteProperty(VideoFormatSP.getName());
+            deleteProperty(VideoFormatSP);
 
-        deleteProperty(BlinkNP.getName());
-        deleteProperty(SDKVersionSP.getName());
+        deleteProperty(BlinkNP);
+        deleteProperty(SDKVersionSP);
         if (!mSerialNumber.empty())
         {
-            deleteProperty(SerialNumberTP.getName());
-            deleteProperty(NicknameTP.getName());
+            deleteProperty(SerialNumberTP);
+            deleteProperty(NicknameTP);
         }
-        deleteProperty(ADCDepthNP.getName());
+        deleteProperty(ADCDepthNP);
+        deleteProperty(USBResetSP);
     }
 
     return true;
@@ -971,6 +987,17 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             }
 
             saveConfig(VideoFormatSP);
+            return true;
+        }
+
+        // USB reset on timeout
+        if (USBResetSP.isNameMatch(name))
+        {
+            updateProperty(USBResetSP, states, names, n, [this, names]()
+            {
+                LOGF_INFO("USB reset on camera exposure timeout is %s.", USBResetSP[INDI_ENABLED].isNameMatch(names[0]) ? "enabled" : "disabled");
+                return true;
+            }, true);
             return true;
         }
     }
@@ -1665,6 +1692,8 @@ bool ASIBase::saveConfigItems(FILE *fp)
         VideoFormatSP.save(fp);
 
     BlinkNP.save(fp);
+
+    USBResetSP.save(fp);
 
     return true;
 }

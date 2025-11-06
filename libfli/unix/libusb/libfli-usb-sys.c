@@ -384,7 +384,7 @@ int libusb_fli_get_serial(libusb_device *usb_dev, char *serial, size_t max_seria
 
 int libusb_fli_create_name(libusb_device *usb_dev, char *name, size_t max_name)
 {
-  uint8_t addr, port_nums[7];
+  uint8_t port_nums[7];
   int numports;
   size_t len = 0;
   char name_prefix[] = "FLI-";
@@ -397,7 +397,6 @@ int libusb_fli_create_name(libusb_device *usb_dev, char *name, size_t max_name)
   }
 
   numports = libusb_get_port_numbers(usb_dev, port_nums, sizeof(port_nums));
-  addr = libusb_get_device_address(usb_dev);
 
   if ( (size_t)numports > sizeof(port_nums) )
   {

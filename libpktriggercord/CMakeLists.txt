@@ -1,4 +1,4 @@
-cmake_minimum_required (VERSION 3.0.2)
+cmake_minimum_required (VERSION 3.12)
 project (libpktriggercord C)
 
 set (PK_VERSION 0.85.03)
@@ -12,6 +12,7 @@ list (APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include (GNUInstallDirs)
 find_package(INDI REQUIRED)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
 # Build library
@@ -60,7 +61,7 @@ add_custom_command (
 add_custom_target (udev_rules ALL DEPENDS 95-pentax.rules 95-samsung.rules)
 
 # Install udev rules
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND INDI_INSTALL_UDEV_RULES)
   install (FILES ${CMAKE_CURRENT_BINARY_DIR}/95-pentax.rules ${CMAKE_CURRENT_BINARY_DIR}/95-samsung.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
   install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/src/pentax_settings.json DESTINATION ${PK_DATADIR})
 endif()

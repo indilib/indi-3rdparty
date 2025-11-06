@@ -2,6 +2,8 @@
 #ifndef RICOH_CAMERA_SDK_HPP_
 #define RICOH_CAMERA_SDK_HPP_
 
+#include <cstdint>
+
 #include <ricoh_camera_sdk/point.hpp>
 #include <ricoh_camera_sdk/camera_device.hpp>
 #include <ricoh_camera_sdk/camera_storage.hpp>

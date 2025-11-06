@@ -25,99 +25,20 @@
 #include <unistd.h>
 #include <pwd.h>
 
+#include <hotplugmanager.h>
+#include "svbony_ccd_hotplug_handler.h"
 #include <map>
 
 static class Loader
 {
-        INDI::Timer hotPlugTimer;
-        std::map<int, std::shared_ptr<SVBONYCCD>> cameras;
+        std::shared_ptr<INDI::SVBONYCCDHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-            load(false);
+            hotPlugHandler = std::make_shared<INDI::SVBONYCCDHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
-
-    public:
-        static size_t getCountOfConnectedCameras()
-        {
-            return size_t(std::max(SVBGetNumOfConnectedCameras(), 0));
-        }
-
-        static std::vector<SVB_CAMERA_INFO> getConnectedCameras()
-        {
-            auto connectedCameras = getCountOfConnectedCameras();
-            std::vector<SVB_CAMERA_INFO> result(connectedCameras);
-            int i = 0;
-            for(auto &cameraInfo : result)
-                SVBGetCameraInfo(&cameraInfo, i++);
-            return result;
-        }
-
-    public:
-        void load(bool isHotPlug)
-        {
-            auto usedCameras = std::move(cameras);
-
-            UniqueName uniqueName(usedCameras);
-
-            for(const auto &cameraInfo : getConnectedCameras())
-            {
-                int id = cameraInfo.CameraID;
-
-                // camera already created
-                if (usedCameras.find(id) != usedCameras.end())
-                {
-                    std::swap(cameras[id], usedCameras[id]);
-                    continue;
-                }
-
-                SVB_SN serialNumber;
-                std::string serialNumberStr = "";
-                if(SVBOpenCamera(cameraInfo.CameraID) == SVB_SUCCESS)
-                {
-                    if (SVBGetSerialNumber(cameraInfo.CameraID, &serialNumber) == SVB_SUCCESS)
-                    {
-                        SVBCloseCamera(cameraInfo.CameraID);
-                        char snChars[100];
-                        auto &sn = serialNumber;
-                        sprintf(snChars, "%02x%02x%02x%02x%02x%02x%02x%02x", sn.id[0], sn.id[1],
-                                sn.id[2], sn.id[3], sn.id[4], sn.id[5], sn.id[6], sn.id[7]);
-                        snChars[16] = 0;
-                        serialNumberStr = std::string(snChars);
-                    }
-                }
-
-                auto camera = new class SVBONYCCD(cameraInfo, uniqueName.make(cameraInfo), serialNumberStr);
-                cameras[id] = std::shared_ptr<SVBONYCCD>(camera);
-                if (isHotPlug)
-                    camera->ISGetProperties(nullptr);
-            }
-        }
-
-    public:
-        class UniqueName
-        {
-                std::map<std::string, bool> used;
-            public:
-                UniqueName() = default;
-                UniqueName(const std::map<int, std::shared_ptr<SVBONYCCD>> &usedCameras)
-                {
-                    for (const auto &camera : usedCameras)
-                        used[camera.second->getDeviceName()] = true;
-                }
-
-                std::string make(const SVB_CAMERA_INFO &cameraInfo)
-                {
-                    std::string cameraName = "SVBONY CCD " + std::string(cameraInfo.FriendlyName + 7);
-                    std::string uniqueName = cameraName;
-
-                    for (int index = 0; used[uniqueName] == true; )
-                        uniqueName = cameraName + " " + std::to_string(++index);
-
-                    used[uniqueName] = true;
-                    return uniqueName;
-                }
-        };
 } loader;
 
 namespace

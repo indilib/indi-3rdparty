@@ -199,8 +199,8 @@ bool Talon6::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 
             if (SafetyS[0].s == ISS_OFF)
                 DEBUGF(INDI::Logger::DBG_SESSION, "Warning: Safety conditions are now disabled. You will"
-                       "be able  to freely open and close the roof manually from the driver,"
-                       "even if there is a safety condition active.This may cause damage to your equipment.", NULL);
+                                                  "be able  to freely open and close the roof manually from the driver,"
+                                                  "even if there is a safety condition active.This may cause damage to your equipment.", NULL);
             else
                 DEBUGF(INDI::Logger::DBG_SESSION,  "Safety Conditions are enabled", NULL);
 
@@ -822,8 +822,8 @@ IPState Talon6::DomeGoTo(int GoTo )
     std::string paddedHexTicks = std::string(5 - hexTicksString.length(), '0') + hexTicksString;
 
     //Transform to char and build command string formatted as to documentation
-    char hexTicksChar[paddedHexTicks.size() + 1];
-    strcpy(hexTicksChar, paddedHexTicks.c_str());
+    std::vector<char> hexTicksChar(paddedHexTicks.size() + 1);
+    strcpy(hexTicksChar.data(), paddedHexTicks.c_str());
     char commandString[8];
     commandString[0] = '&';
     commandString[1] = 'A';

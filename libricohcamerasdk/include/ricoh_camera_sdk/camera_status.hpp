@@ -2,6 +2,7 @@
 #ifndef RICOH_CAMERA_SDK_CAMERA_STATUS_HPP_
 #define RICOH_CAMERA_SDK_CAMERA_STATUS_HPP_
 
+#include <cstdint>
 #include <memory>
 
 #include <ricoh_camera_sdk/export.hpp>

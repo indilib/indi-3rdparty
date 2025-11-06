@@ -111,13 +111,12 @@ MICCD::MICCD(int camId, bool eth) : FilterInterface(this)
     {
         gxccd_get_last_error(cameraHandle, sp, sizeof(sp));
         IDLog("Error getting MI camera info: %s.\n", sp);
-        strncpy(name, "MI Camera", MAXINDIDEVICE);
+        snprintf(name, sizeof(name), "MI Camera");
     }
     else
     {
         rtrim(sp);
-        strncpy(name, "MI ", MAXINDINAME);
-        strncat(name, sp, MAXINDINAME - 3);
+        snprintf(name, sizeof(name), "MI %s", sp);
         IDLog("Detected camera: %s.\n", name);
     }
 
@@ -427,7 +426,7 @@ bool MICCD::setupParams()
     minExpTime = expTime / 1000000.0; // convert to seconds
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", minExpTime, 3600, 1, true);
 
-    if (!sim && maxGainValue == 0)
+    if (!sim && maxGainValue <= 0)
     {
         float gain = 0;
         if (gxccd_get_value(cameraHandle, GV_ADC_GAIN, &gain) < 0)
@@ -1016,12 +1015,12 @@ void MICCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRec
     if (numReadModes > 0)
     {
         ivalue = IUFindOnSwitchIndex(&ReadModeSP);
-        strncpy(svalue, ReadModeS[ivalue].label, sizeof(svalue));
+        snprintf(svalue, sizeof(svalue), "%s", ReadModeS[ivalue].label);
     }
     else
     {
         ivalue = 0;
-        strncpy(svalue, "No read mode", sizeof(svalue));
+        snprintf(svalue, sizeof(svalue), "No read mode");
     }
     fitsKeywords.push_back({"READMODE", ivalue, svalue});
 

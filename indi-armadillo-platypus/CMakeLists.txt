@@ -5,6 +5,8 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+
 SET(CMAKE_CXX_STANDARD 17)
 SET(RULES_INSTALL_DIR "/lib/udev/rules.d/")
 
@@ -79,6 +81,6 @@ install(TARGETS indi_platypus_focus RUNTIME DESTINATION bin )
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_lunatico.xml DESTINATION ${INDI_DATA_DIR})
 
-if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND INDI_INSTALL_UDEV_RULES)
 install(FILES 99-armadilloplatypus.rules DESTINATION ${RULES_INSTALL_DIR})
 endif()

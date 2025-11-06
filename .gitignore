@@ -10,6 +10,10 @@ build-*/
 # Gedit backup files
 *~
 
+# clangd
+.cache
+compile_commands.json
+
 .cmake
 nbproject/
 .directory

@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set(INDI_OCS_VERSION_MAJOR 1)
-set(INDI_OCS_VERSION_MINOR 1)
+set(INDI_OCS_VERSION_MINOR 4)
 
 find_package(INDI REQUIRED)
 find_package(Nova REQUIRED)

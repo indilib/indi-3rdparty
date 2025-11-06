@@ -133,7 +133,7 @@ static class Loader
                     {
                         if (strstr(model, camInfos[j].model))
                         {
-                            strncpy(prefix, camInfos[j].driver, MAXINDINAME);
+                            snprintf(prefix, sizeof(prefix), "%s", camInfos[j].driver);
 
                             // If if the model was already registered for a prior camera in case we are using
                             // two identical models
@@ -212,8 +212,8 @@ GPhotoCCD::GPhotoCCD() : FI(this)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 GPhotoCCD::GPhotoCCD(const char * model, const char * port) : FI(this)
 {
-    strncpy(this->port, port, MAXINDINAME);
-    strncpy(this->model, model, MAXINDINAME);
+    snprintf(this->port, sizeof(this->port), "%s", port);
+    snprintf(this->model, sizeof(this->model), "%s", model);
 
     gphotodrv        = nullptr;
     frameInitialized = false;
@@ -248,9 +248,13 @@ bool GPhotoCCD::initProperties()
 {
     // For now let's set name to default name. In the future, we need to to support multiple devices per one driver
     if (*getDeviceName() == '\0')
-        strncpy(name, getDefaultName(), MAXINDINAME);
+    {
+        snprintf(name, sizeof(name), "%s", getDefaultName());
+    }
     else
-        strncpy(name, getDeviceName(), MAXINDINAME);
+    {
+        snprintf(name, sizeof(name), "%s", getDeviceName());
+    }
 
     setDeviceName(this->name);
 
@@ -1053,7 +1057,11 @@ bool GPhotoCCD::StartExposure(float duration)
 bool GPhotoCCD::AbortExposure()
 {
     if (!isSimulation())
+    {
         gphoto_abort_exposure(gphotodrv);
+        // It is necessary to read out the data from the camera buffer, otherwise the camera will not respond to the next request.
+        gphoto_read_exposure_fd(gphotodrv, -1);
+    }
     InExposure = false;
     return true;
 }
@@ -1550,7 +1558,7 @@ void GPhotoCCD::createSwitch(INDI::PropertySwitch &property, const char *baseNam
     for (int i = 0; i < max_opts; i++)
     {
         snprintf(sw_name, MAXINDINAME, "%s%d", baseName, i);
-        strncpy(sw_label, options[i], MAXINDILABEL);
+        snprintf(sw_label, sizeof(sw_label), "%s", options[i]);
         sw_state = (i == setidx) ? ISS_ON : ISS_OFF;
 
         INDI::WidgetSwitch node;
@@ -1576,7 +1584,7 @@ ISwitch * GPhotoCCD::createLegacySwitch(const char * basestr, char ** options, i
     for (i = 0; i < max_opts; i++)
     {
         snprintf(sw_name, MAXINDINAME, "%s%d", basestr, i);
-        strncpy(sw_label, options[i], MAXINDILABEL);
+        snprintf(sw_label, sizeof(sw_label), "%s", options[i]);
         sw_state = (i == setidx) ? ISS_ON : ISS_OFF;
 
         IUFillSwitch(one_sw++, sw_name, sw_label, sw_state);

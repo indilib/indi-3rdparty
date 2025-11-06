@@ -1,12 +1,4 @@
 <INDIDriver>
-<defSwitchVector device="Arduino Servo" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
-    <defSwitch name="CONNECT" label="Connect">
-Off
-    </defSwitch>
-    <defSwitch name="DISCONNECT" label="Disconnect">
-On
-    </defSwitch>
-</defSwitchVector>
 
 <defNumberVector device="Arduino Servo" name="SERVO3" label="SERVO3" group="Main Control" state="Idle" perm="rw" timeout="0">
     <defNumber name="Servo3" label="Servo3" format="%4.0f" min="0" max="255" step="1">

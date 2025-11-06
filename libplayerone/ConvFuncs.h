@@ -44,7 +44,7 @@ POAErrors POAGetConfig(int nCameraID, POAConfig confID, long *pValue, POABool *p
 }
 
 
-//Get the current value of POAConfig with POAValueType is VAL_FLOAT, eg: POA_TEMPERATURE, POA_EGAIN
+//Get the current value of POAConfig with POAValueType is VAL_FLOAT, eg: POA_EXP, POA_TEMPERATURE, POA_EGAIN
 POAErrors POAGetConfig(int nCameraID, POAConfig confID, double *pValue, POABool *pIsAuto)
 {
     POAValueType pConfValueType;
@@ -121,7 +121,7 @@ POAErrors POASetConfig(int nCameraID, POAConfig confID, long nValue, POABool isA
 }
 
 
-//Set the POAConfig value, the POAValueType of POAConfig is VAL_FLOAT, Note: currently, there is no POAConfig which POAValueType is VAL_FLOAT needs to be set
+//Set the POAConfig value, the POAValueType of POAConfig is VAL_FLOAT, eg: POA_EXP
 POAErrors POASetConfig(int nCameraID, POAConfig confID, double fValue, POABool isAuto)
 {
     POAValueType pConfValueType;
@@ -169,7 +169,7 @@ POAErrors POASetConfig(int nCameraID, POAConfig confID, POABool isEnable)
 }
 
 
-//Get the range of a POAConfig, eg: exposure range[10us, 2000000000us], default is 10000us
+//Get the range of a POAConfig,the POAValueType is VAL_INT, eg: POA_EXPOSURE, range[10us, 2000000000us], default is 10000us
 POAErrors GetConfigRange(int nCameraID, POAConfig confID, long *pMax, long *pMin, long *pDefult)
 {
     if(!pMax || !pMin || !pDefult)
@@ -194,6 +194,36 @@ POAErrors GetConfigRange(int nCameraID, POAConfig confID, long *pMax, long *pMin
         *pMax = confAttri.maxValue.intValue;
         *pMin = confAttri.minValue.intValue;
         *pDefult = confAttri.defaultValue.intValue;
+    }
+
+    return error;
+}
+
+//Get the range of a POAConfig,the POAValueType is VAL_FLOAT, eg: POA_EXP, range[0.00001, 7200.0]s, default is 0.01s
+POAErrors GetConfigRange(int nCameraID, POAConfig confID, double *pMax, double *pMin, double *pDefult)
+{
+    if(!pMax || !pMin || !pDefult)
+    { return POA_ERROR_POINTER; }
+
+    POAValueType pConfValueType;
+    POAErrors error = POAGetConfigValueType(confID, &pConfValueType);
+    if (error == POA_OK)
+    {
+        if (pConfValueType != VAL_FLOAT)
+        { return POA_ERROR_INVALID_CONFIG; }
+    }
+    else
+    {
+        return error;
+    }
+
+    POAConfigAttributes confAttri;
+    error = POAGetConfigAttributesByConfigID(nCameraID, confID, &confAttri);
+    if(error == POA_OK)
+    {
+        *pMax = confAttri.maxValue.floatValue;
+        *pMin = confAttri.minValue.floatValue;
+        *pDefult = confAttri.defaultValue.floatValue;
     }
 
     return error;

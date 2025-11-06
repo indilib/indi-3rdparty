@@ -93,7 +93,7 @@ bool LX200Skywalker::Handshake()
     }
     else
     {
-        char strinfo[1][64] = {""};
+        char strinfo[1][65] = {""};
         sscanf(fwinfo, "%*[\"]%64[^\"]", strinfo[0]);
         strcpy(FirmwareVersionT[0].text, strinfo[0]);
         IDSetText(&FirmwareVersionTP, nullptr);

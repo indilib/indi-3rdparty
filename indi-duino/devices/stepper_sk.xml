@@ -1,14 +1,5 @@
 <INDIDriver>
 
-<defSwitchVector device="Arduino Stepper" name="CONNECTION" label="Connection" group="Main Control" state="Idle" perm="rw" rule="OneOfMany" timeout="60">
-    <defSwitch name="CONNECT" label="Connect">
-Off
-    </defSwitch>
-    <defSwitch name="DISCONNECT" label="Disconnect">
-On
-    </defSwitch>
-</defSwitchVector>
-
 <defNumberVector device="Arduino Stepper" name="CONFIG" label="CONFIG" group="Main Control" state="Idle" perm="rw" timeout="0">
 <defNumber name="SPEED" label="SPEED" format="%4.0f" min="0" max="4000" step="1">
     <indiduino pin="3" type="output" />

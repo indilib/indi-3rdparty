@@ -24,6 +24,8 @@
 struct {
   unsigned long bme_read;
   unsigned long dht_read;
+  unsigned long aht10_read;
+  unsigned long sht30_read;
   unsigned long mlx90614_read;
   unsigned long tsl237_read;
   unsigned long tsl2591_read;
@@ -51,6 +53,12 @@ void updateDisplayText() {
 #ifdef USE_DHT_SENSOR
   result += "DHT\n" + displayDHTParameters() + " \n";
 #endif //USE_DHT_SENSOR
+#ifdef USE_AHT10_SENSOR
+  result += "AHT10\n" + displayAHT10Parameters() + " \n";
+#endif //USE_AHT10_SENSOR
+#ifdef USE_SHT30_SENSOR
+  result += "SHT30\n" + displaySHT30Parameters() + " \n";
+#endif //USE_SHT30_SENSOR
 #ifdef USE_MLX_SENSOR
   result += "MLX90614\n" + displayMLXParameters() + " \n";
 #endif //USE_MLX_SENSOR
@@ -112,6 +120,18 @@ void updateSensorData() {
   sensor_read.dht_read = millis() - start;
 #endif //USE_DHT_SENSOR
 
+#ifdef USE_AHT10_SENSOR
+  start = millis();
+  updateAHT10();
+  sensor_read.aht10_read = millis() - start;
+#endif
+
+#ifdef USE_SHT30_SENSOR
+  start = millis();
+  updateSHT30();
+  sensor_read.sht30_read = millis() - start;
+#endif // USE_SHT30_SENSOR
+
 #ifdef USE_MLX_SENSOR
   start = millis();
   updateMLX();
@@ -146,17 +166,17 @@ void updateSensorData() {
    Send current sensor data as JSON document to Serial
 */
 String getSensorData(bool pretty) {
-  const int docSize = JSON_OBJECT_SIZE(9) + // max 9 sensors
-                      JSON_OBJECT_SIZE(1) + // token data
-                      JSON_OBJECT_SIZE(4) + // BME280 sensor
-                      JSON_OBJECT_SIZE(3) + // DHT sensors
-                      JSON_OBJECT_SIZE(3) + // MLX90614 sensor
-                      JSON_OBJECT_SIZE(3) + // TSL237 sensor
-                      JSON_OBJECT_SIZE(7) + // TSL2591 sensor
-                      JSON_OBJECT_SIZE(6) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(2) + // Water sensor
-                      2 * JSON_OBJECT_SIZE(4);  // Rain sensors
-  StaticJsonDocument <docSize> root;
+  // const int docSize = JSON_OBJECT_SIZE(9) + // max 9 sensors
+  //                     JSON_OBJECT_SIZE(1) + // token data
+  //                     JSON_OBJECT_SIZE(4) + // BME280 sensor
+  //                     JSON_OBJECT_SIZE(3) + // DHT sensors
+  //                     JSON_OBJECT_SIZE(3) + // MLX90614 sensor
+  //                     JSON_OBJECT_SIZE(3) + // TSL237 sensor
+  //                     JSON_OBJECT_SIZE(7) + // TSL2591 sensor
+  //                     JSON_OBJECT_SIZE(6) + // Davis Anemometer
+  //                     JSON_OBJECT_SIZE(2) + // Water sensor
+  //                     2 * JSON_OBJECT_SIZE(4);  // Rain sensors
+  StaticJsonDocument <2048> root;
   JsonObject weatherDoc = root.createNestedObject("weather");
 
   unsigned long start = 0;
@@ -180,6 +200,14 @@ String getSensorData(bool pretty) {
 #ifdef USE_DHT_SENSOR
   serializeDHT(weatherDoc);
 #endif //USE_DHT_SENSOR
+
+#ifdef USE_AHT10_SENSOR
+  serializeAHT10(weatherDoc);
+#endif
+
+#ifdef USE_SHT30_SENSOR
+  serializeSHT30(weatherDoc);
+#endif
 
 #ifdef USE_MLX_SENSOR
   serializeMLX(weatherDoc);
@@ -208,7 +236,7 @@ String getSensorData(bool pretty) {
 
 
 String getCurrentVersion() {
-  StaticJsonDocument <JSON_OBJECT_SIZE(1)> doc;
+  StaticJsonDocument <32> doc;
   doc["version"] = WEATHERRADIO_VERSION;
 
   String result = "";
@@ -218,9 +246,9 @@ String getCurrentVersion() {
 }
 
 String getReadDurations() {
-  const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(9);  // max 9 sensors
-  StaticJsonDocument <docSize> root;
+  // const int docSize = JSON_OBJECT_SIZE(1) + // top level
+  //                     JSON_OBJECT_SIZE(9);  // max 9 sensors
+  StaticJsonDocument <512> root;
   JsonObject doc = root.createNestedObject("durations");
 #ifdef USE_BME_SENSOR
   if (bmeData.status)        doc["BME"]              = sensor_read.bme_read;
@@ -228,6 +256,9 @@ String getReadDurations() {
 #ifdef USE_DHT_SENSOR
   if (dhtData.status)        doc["DHT"]              = sensor_read.dht_read;
 #endif //USE_DHT_SENSOR
+#ifdef USE_AHT10_SENSOR
+  if (aht10Data.status)      doc["AHT10"]            = sensor_read.aht10_read;
+#endif
 #ifdef USE_MLX_SENSOR
   if (mlxData.status)        doc["MLX90614"]         = sensor_read.mlx90614_read;
 #endif //USE_MLX_SENSOR
@@ -259,17 +290,17 @@ String getReadDurations() {
 
 // translate the sensor configurations to a JSON document
 String getCurrentConfig() {
-  const int docSize = JSON_OBJECT_SIZE(1) + // top level
-                      JSON_OBJECT_SIZE(7) + // max 7 configurations
-                      JSON_OBJECT_SIZE(2) + // DHT sensors
-                      JSON_OBJECT_SIZE(3) + // Davis Anemometer
-                      JSON_OBJECT_SIZE(1) + // Water sensor
-                      2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
-                      JSON_OBJECT_SIZE(6) + // WiFi parameters
-                      JSON_OBJECT_SIZE(1) + // Arduino
-                      JSON_OBJECT_SIZE(5) + // Dew heater
-                      JSON_OBJECT_SIZE(2);  // buffer
-  StaticJsonDocument <docSize> root;
+  // const int docSize = JSON_OBJECT_SIZE(1) + // top level
+  //                     JSON_OBJECT_SIZE(7) + // max 7 configurations
+  //                     JSON_OBJECT_SIZE(2) + // DHT sensors
+  //                     JSON_OBJECT_SIZE(3) + // Davis Anemometer
+  //                     JSON_OBJECT_SIZE(1) + // Water sensor
+  //                     2 * JSON_OBJECT_SIZE(3) + // Rain Sensor
+  //                     JSON_OBJECT_SIZE(6) + // WiFi parameters
+  //                     JSON_OBJECT_SIZE(1) + // Arduino
+  //                     JSON_OBJECT_SIZE(5) + // Dew heater
+  //                     JSON_OBJECT_SIZE(2);  // buffer
+  StaticJsonDocument <1200> root;
   JsonObject doc = root.createNestedObject("config");
 
 #ifdef USE_WIFI
@@ -282,7 +313,7 @@ String getCurrentConfig() {
   switch (getWiFiStatus()) {
     case WIFI_CONNECTED:
       wifidata["status"]    = "connected";
-      wifidata["IP"]        = WiFi.localIP();
+      wifidata["IP"]        = WiFi.localIP().toString();
       wifidata["rssi"]      = WiFi.RSSI();
       wifidata["ping (ms)"] = networkData.avg_response_time;
       wifidata["loss"]      = networkData.loss;
@@ -403,6 +434,18 @@ void setup() {
 #ifdef USE_TSL237_SENSOR
   initTSL237();
 #endif //USE_TSL237_SENSOR
+
+#ifdef USE_TSL2591_SENSOR
+  initTSL2591();
+#endif //USE_TSL2591_SENSOR
+
+#ifdef USE_AHT10_SENSOR
+  initAHT10();
+#endif
+
+#ifdef USE_SHT30_SENSOR
+  initSHT30();
+#endif
 
 #ifdef USE_WIFI
   initWiFi();

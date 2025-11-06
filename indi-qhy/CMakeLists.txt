@@ -48,10 +48,12 @@ SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 IF (APPLE)
     SET(indiqhy_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd.cpp
-        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_fw.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_fw.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_hotplug_handler.cpp)
 ELSE ()
     SET(indiqhy_SRCS
-        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd.cpp)
+        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_hotplug_handler.cpp)
     # Force linking all referenced libraries because the recent libqhy versions are not linked against libpthread
     SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 ENDIF ()

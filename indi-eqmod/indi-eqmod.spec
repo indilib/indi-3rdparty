@@ -1,6 +1,6 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-eqmod
-Version:2.1.0.git
+Version:2.1.3.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
@@ -19,7 +19,6 @@ BuildRequires: gphoto2-devel
 BuildRequires: LibRaw-devel
 BuildRequires: indi-libs
 BuildRequires: indi-devel
-BuildRequires: libahp-gt
 BuildRequires: libtiff-devel
 BuildRequires: cfitsio-devel
 BuildRequires: zlib-devel

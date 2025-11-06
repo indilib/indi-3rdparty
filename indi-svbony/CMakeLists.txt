@@ -30,6 +30,7 @@ include(CMakeCommon)
 set(svbonyccd_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/svbony_base.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/svbony_ccd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/svbony_ccd_hotplug_handler.cpp
 )
 
 SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -pthread")

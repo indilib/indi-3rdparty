@@ -1,13 +1,15 @@
 cmake_minimum_required(VERSION 3.16)
 project (libasi)
 
-# Using ASI Camera SDK Version 1.37 updated on 2024-12-03
+# Using ASI Camera SDK Version 1.39 updated on 2025-08-26
 # Using ASI EFW SDK Version 1.7 updated on 2021-05-17
 # Using ASI ST4 SDK Version 1.0 updated on 2018-07-23
 # Using ASI EAF SDK Version 1.6 updated on 2023-03-16
 # Using ASI CAA SDK Version 1.0 updated on 2025-01-09
 
-set (ASICAM_VERSION "1.37")
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
+
+set (ASICAM_VERSION "1.39")
 set (ASICAM_SOVERSION "1")
 
 set (ASIEFW_VERSION "1.7")
@@ -82,8 +84,10 @@ elseif (UNIX AND NOT WIN32)
   endif ()
 
   # Install udev rules
-  set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-  install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-asi.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  if (INDI_INSTALL_UDEV_RULES)
+    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-asi.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 
 endif ()
 

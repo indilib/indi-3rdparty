@@ -234,7 +234,8 @@ bool FLICFW::setupParams()
 
     FilterSlotNP[0].setMin(1);
     FilterSlotNP[0].setMax(FLIFilter.count);
-    FilterSlotNP[0].setValue(FLIFilter.raw_pos + 1);
+    if (FLIFilter.raw_pos >= 0)
+        FilterSlotNP[0].setValue(FLIFilter.raw_pos + 1);
 
     return true;
 }

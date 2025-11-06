@@ -703,6 +703,7 @@ bool EQMod::Handshake()
                 && tcpConnection->connectionType() == Connection::TCP::TYPE_UDP)
         {
             tty_set_generic_udp_format(1);
+            tty_set_auto_reset_udp_session(1);
         }
 
         mount->setPortFD(PortFD);
@@ -833,6 +834,8 @@ bool EQMod::ReadScopeStatus()
         DEBUGF(DBG_SCOPE_STATUS, "Current encoders RA=%ld DE=%ld", static_cast<long>(currentRAEncoder),
                static_cast<long>(currentDEEncoder));
         EncodersToRADec(currentRAEncoder, currentDEEncoder, lst, &currentRA, &currentDEC, &currentHA, &pierSide);
+        if (getPierSide() != pierSide)
+            LOGF_INFO("Pier side changed to %s", getPierSideStr(pierSide));
         setPierSide(pierSide);
 
         alignedRA    = currentRA;
@@ -2503,7 +2506,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
                 GuideNSNP.setState(IPS_IDLE);
                 GuideNSNP.apply();;
                 GuideWENP.setState(IPS_IDLE);
-                GuideWENP.apply();
+                GuideWENP.apply();                
                 LOG_WARN("Can not guide if not tracking.");
                 return true;
             }
@@ -2515,6 +2518,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
             GuideRateNP.update(values, names, n);
             GuideRateNP.setState(IPS_OK);
             GuideRateNP.apply();
+            saveConfig(GuideRateNP);
             LOGF_INFO("Setting Custom Tracking Rates - RA=%1.1f arcsec/s DE=%1.1f arcsec/s",
                       GuideRateNP.findWidgetByName("GUIDE_RATE_WE")->getValue(),
                       GuideRateNP.findWidgetByName("GUIDE_RATE_NS")->getValue());
@@ -2550,6 +2554,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
                 LEDBrightnessNP.update(values, names, n);
                 LEDBrightnessNP.setState(IPS_OK);
                 LEDBrightnessNP.apply();
+                saveConfig(LEDBrightnessNP);
                 mount->SetLEDBrightness(static_cast<uint8_t>(values[0]));
                 LOGF_INFO("Setting LED brightness to %.f", values[0]);
                 return true;

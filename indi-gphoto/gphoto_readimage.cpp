@@ -41,7 +41,7 @@ enum
 
 void gphoto_read_set_debug(const char *name)
 {
-    strncpy(device, name, 64);
+    snprintf(device, sizeof(device), "%s", name);
 }
 
 void *tstrealloc(void *ptr, size_t size)

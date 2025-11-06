@@ -1,3 +1,14 @@
+libplayerone (1.16) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.9.0
+
+libplayerone (1.15) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.8.1
+  * Update PlayerOnePW SDK to v1.2.2
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sat, 5 Apr 2025 08:00:00 +0900
+
 libplayerone (1.14) bionic; urgency=low
 
   * Update PlayerOneCamera SDK to v3.8.0

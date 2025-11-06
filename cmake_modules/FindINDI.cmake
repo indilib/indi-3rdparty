@@ -17,6 +17,7 @@
 #   - INDI_FOUND             : were all of your specified components found (include dependencies)?
 #   - INDI_WEBSOCKET         : was INDI compiled with websocket support?
 #   - INDI_JSONLIB           : was INDI compiled with bundled json library?
+#   - INDI_HIDAPILIB         : was INDI compiled with bundled hid library?
 #   - INDI_INCLUDE_DIR       : INDI include directory
 #   - INDI_DATA_DIR          : INDI include directory
 #   - INDI_LIBRARIES         : INDI libraries
@@ -215,6 +216,21 @@ else()
     SET(INDI_JSONLIB FALSE)
 endif()
 
+find_path(
+    BUNDLED_HIDAPILIB
+    indi_hidapi.h
+    PATH_SUFFIXES libindi
+    ${PC_INDI_INCLUDE_DIR}
+    ${_obIncDir}
+    ${GNUWIN32_DIR}/include
+)
+
+if (BUNDLED_HIDAPILIB)
+    SET(INDI_HIDAPILIB TRUE)
+else()
+    SET(INDI_HIDAPILIB FALSE)
+endif()
+
 find_path(${INDI_PUBLIC_VAR_NS}_DATA_DIR
     drivers.xml
     PATH_SUFFIXES share/indi
@@ -228,10 +244,10 @@ if(${INDI_PUBLIC_VAR_NS}_INCLUDE_DIR)
         message(FATAL_ERROR "INDI version header not found")
     endif()
 
-    if(${INDI_PRIVATE_VAR_NS}_VERSION_HEADER_CONTENTS MATCHES ".*INDI_VERSION ([0-9]+).([0-9]+).([0-9]+)")
-            set(${INDI_PUBLIC_VAR_NS}_MAJOR_VERSION "${CMAKE_MATCH_1}")
-            set(${INDI_PUBLIC_VAR_NS}_MINOR_VERSION "${CMAKE_MATCH_2}")
-            set(${INDI_PUBLIC_VAR_NS}_RELEASE_VERSION "${CMAKE_MATCH_3}")
+    if(${INDI_PRIVATE_VAR_NS}_VERSION_HEADER_CONTENTS MATCHES "INDI_VERSION[ ]+\"?([0-9]+)\\.([0-9]+)\\.([0-9]+)\"?")
+        set(${INDI_PUBLIC_VAR_NS}_MAJOR_VERSION "${CMAKE_MATCH_1}")
+        set(${INDI_PUBLIC_VAR_NS}_MINOR_VERSION "${CMAKE_MATCH_2}")
+        set(${INDI_PUBLIC_VAR_NS}_RELEASE_VERSION "${CMAKE_MATCH_3}")
     else()
         message(FATAL_ERROR "failed to detect INDI version")
     endif()

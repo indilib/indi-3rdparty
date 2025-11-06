@@ -198,8 +198,8 @@ long fli_camera_usb_open(flidev_t dev)
 			/* Hack to make old software happy */
 			DEVICE->devinfo.devnam = xcalloc(1, 32);
 			DEVICE->devinfo.model = xcalloc(1, 32);
-			strncpy(DEVICE->devinfo.devnam, (char *) buf, 30);
-			strncpy(DEVICE->devinfo.model, (char *) buf, 30);
+			snprintf(DEVICE->devinfo.devnam, 32, "%s", (char *) buf);
+			snprintf(DEVICE->devinfo.model, 32, "%s", (char *) buf);
 
 			rlen = 4; wlen = 2;
 			IOWRITE_U16(buf, 0, FLI_USBCAM_ARRAYSIZE);
@@ -2712,7 +2712,7 @@ long fli_camera_usb_get_camera_mode_string(flidev_t dev, flimode_t camera_mode, 
 			if (camera_mode > 0)
 				r = -EINVAL;
 			else
-				strncpy((char *) dest, "Default Mode", siz - 1);
+				snprintf((char *) dest, siz, "Default Mode");
 		}
 		break;
 
@@ -2724,7 +2724,7 @@ long fli_camera_usb_get_camera_mode_string(flidev_t dev, flimode_t camera_mode, 
 				if (camera_mode > 0)
 					r = -EINVAL;
 				else
-					strncpy((char *) dest, "Default Mode", siz - 1);
+				snprintf((char *) dest, siz, "Default Mode");
 			}
 			else
 			{
@@ -2733,7 +2733,7 @@ long fli_camera_usb_get_camera_mode_string(flidev_t dev, flimode_t camera_mode, 
 				IOWRITE_U16(buf, 2, camera_mode);
 				IO(dev, buf, &wlen, &rlen);
 
-				strncpy((char *) dest, (char *) buf, MIN(siz - 1, 31));
+				snprintf((char *) dest, siz, "%s", (char *) buf);
 				if (dest[0] == '\0')
 					r = -EINVAL;
 			}
@@ -2943,7 +2943,6 @@ long fli_camera_usb_read_eeprom(flidev_t dev, long loc, long address, long lengt
 {
 	iobuf_t buf[IOBUF_MAX_SIZ];
 	long rlen, wlen;
-	long r = 0;
 
 	int ret = 0;
 	long addr;
@@ -2954,7 +2953,7 @@ long fli_camera_usb_read_eeprom(flidev_t dev, long loc, long address, long lengt
 		/* MaxCam and IMG cameras */
 		case FLIUSB_CAM_ID:
 		{
-			r = -EFAULT;
+			ret = -EFAULT;
 		}
 		break;
 
@@ -2999,8 +2998,6 @@ long fli_camera_usb_write_eeprom(flidev_t dev, long loc, long address, long leng
 {
 	iobuf_t buf[IOBUF_MAX_SIZ];
 	long rlen, wlen;
-	long r = 0;
-
 	int ret = 0;
 	long addr;
 	int pagesize = 32;
@@ -3010,7 +3007,7 @@ long fli_camera_usb_write_eeprom(flidev_t dev, long loc, long address, long leng
 		/* MaxCam and IMG cameras */
 		case FLIUSB_CAM_ID:
 		{
-			r = -EFAULT;
+			ret = -EFAULT;
 		}
 		break;
 

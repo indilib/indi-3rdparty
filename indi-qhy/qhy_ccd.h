@@ -33,7 +33,7 @@
 class QHYCCD : public INDI::CCD, public INDI::FilterInterface
 {
     public:
-        QHYCCD(const char *m_Name);
+        QHYCCD(const char *m_Name, const char *m_CamID);
         virtual ~QHYCCD() override = default;
 
         virtual void ISGetProperties(const char *dev) override;
@@ -46,6 +46,11 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
             return m_Name;
         }
 
+        const char *getCameraID() const
+        {
+            return m_CamID;
+        }
+
         INumberVectorProperty getLEDStartPosNP() const;
         void setLEDStartPosNP(const INumberVectorProperty &value);
 
@@ -56,7 +61,9 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
 
         // Connection
         virtual bool Connect() override;
+    public: // Making Disconnect public for hotplug handler
         virtual bool Disconnect() override;
+    protected:
 
         // Temperature
         virtual int SetTemperature(double temperature) override;
@@ -490,7 +497,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         pthread_mutex_t condMutex = PTHREAD_MUTEX_INITIALIZER;
 
         void logQHYMessages(const std::string &message);
-        std::function<void(const std::string &)> m_QHYLogCallback;
+        std::function < void(const std::string &) > m_QHYLogCallback;
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values

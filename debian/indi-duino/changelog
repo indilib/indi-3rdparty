@@ -1,3 +1,15 @@
+indi-duino (1.21) jammy; urgency=medium
+
+  * SHT30 sensor support added to weatherradio firmware
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Sun, 10 Aug 2025 21:23:10 +0200
+
+indi-duino (1.20) jammy; urgency=medium
+
+  * Support for AHT10 sensor added to weatherradio firmware
+
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Mon, 04 Aug 2025 18:29:40 +0200
+
 indi-duino (1.17) buster; urgency=medium
 
   * New firmware for an Arduino based power box
@@ -7,7 +19,7 @@ indi-duino (1.17) buster; urgency=medium
   * Bug fix for updating RRD file with empty list
   * Bug fix loading configuration already during handshake
 
- -- Wolfgang Reissenberger <wolfgang@debian10.localdomain>  Tue, 07 Jun 2022 20:45:12 +0200
+ -- Wolfgang Reissenberger <sterne-jaeger@openfuture.de>  Tue, 07 Jun 2022 20:45:12 +0200
 
 indi-duino (1.16) buster; urgency=medium
 

@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.16)
-project(indi-bresserexos2 VERSION 0.901)
+project(indi-bresserexos2 VERSION 0.953)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")

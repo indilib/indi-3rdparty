@@ -79,7 +79,7 @@ MISFW::MISFW(int _wheelId, bool eth)
     if (isSimulation())
     {
         numFilters = 9;
-        strncpy(name, "MI SFW Simulator", MAXINDINAME);
+        snprintf(name, sizeof(name), "MI SFW Simulator");
     }
     else
     {
@@ -99,14 +99,13 @@ MISFW::MISFW(int _wheelId, bool eth)
         char sp[MAXINDINAME];
         if (gxfw_get_string_parameter(wheelHandle, FW_GSP_DESCRIPTION, sp, sizeof(sp)) < 0)
         {
-            strncpy(name, "MI SFW", MAXINDIDEVICE);
+            snprintf(name, sizeof(name), "MI SFW");
             gxfw_get_last_error(wheelHandle, sp, sizeof(sp));
             IDLog("Error getting MI SFW info: %s.\n", sp);
         }
         else
         {
-            strncpy(name, "MI ", MAXINDINAME);
-            strncat(name, sp, MAXINDINAME - 3);
+            snprintf(name, sizeof(name), "MI %s", sp);
             IDLog("Detected SFW: %s.\n", name);
         }
 
