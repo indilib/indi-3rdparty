@@ -3,7 +3,21 @@ project(celestron_origin CXX)
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_AUTOMOC ON)
 
-find_package(Qt5 COMPONENTS Core Network Gui REQUIRED)  # Removed WebSockets
+# Try Qt6 first, fallback to Qt5
+find_package(Qt6 COMPONENTS Core Gui Network QUIET)
+
+if(Qt6_FOUND)
+    set(QT_VERSION_MAJOR 6)
+    set(QT_LIBRARIES Qt6::Core Qt6::Gui Qt6::Network)
+    message(STATUS "Using Qt6")
+else()
+    find_package(Qt5 COMPONENTS Core Gui Network REQUIRED)
+    set(QT_VERSION_MAJOR 5)
+    set(QT_LIBRARIES Qt5::Core Qt5::Gui Qt5::Network)
+    message(STATUS "Using Qt5")
+endif()
+
+
 find_package(Threads REQUIRED)
 find_package(OpenSSL REQUIRED)  # ADD for base64 encoding
 find_package(TIFF REQUIRED)
@@ -29,7 +43,7 @@ message(STATUS "INDI_LIBRARIES:      ${INDI_LIBRARIES}")
 message(STATUS "INDI_CFLAGS:         ${INDI_CFLAGS}")
 message(STATUS "INDI_CFLAGS_OTHER:   ${INDI_CFLAGS_OTHER}")
 message(STATUS "======================================================")
-message(STATUS "")
+message(STATUS "QT_LIBABRIES: ${QT_LIBRARIES}")
 
 # Add include and library directories discovered by pkg-config
 include_directories(${INDI_INCLUDE_DIRS})
@@ -42,8 +56,10 @@ add_executable(indi-celestron-origin
 indi_origin.cpp OriginBackendSimple.cpp SimpleWebSocket.cpp TelescopeDataProcessor.cpp
 )
 
+target_compile_features(indi-celestron-origin PRIVATE cxx_std_17)
+
 # Link against libindi
-target_link_libraries(indi-celestron-origin PRIVATE ${INDI_LIBRARIES} ${TIFF_LIBRARIES} Qt5::Core Qt5::Network)
+target_link_libraries(indi-celestron-origin PRIVATE ${INDI_LIBRARIES} ${TIFF_LIBRARIES} ${QT_LIBRARIES})
 target_compile_options(indi-celestron-origin PRIVATE ${INDI_CFLAGS_OTHER})
 
 # --------------------------------------------------------------------
