@@ -1,5 +1,11 @@
 indi-rolloffino (1.3) jammy; urgency=low
 
+  * Rolloffino:  Arduino examples update, no driver changes
+
+ -- Tom Gibson <txgibson@proton.me>  Fri, 07 Nov 2025 17:47:00 -0400
+
+indi-rolloffino (1.3) jammy; urgency=low
+
   * Rolloffino:  Arduino sketches
 
  -- Tom Gibson <txgibson@proton.me>  Thu, 20 Mar 2025 14:42:00 -0400
