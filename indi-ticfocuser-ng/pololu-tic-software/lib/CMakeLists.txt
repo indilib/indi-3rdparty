@@ -81,13 +81,24 @@ set_target_properties(lib PROPERTIES
   DEFINE_SYMBOL TIC_EXPORTS
 )
 
-target_link_libraries (lib
-  PUBLIC usbp-1 # <--- Ajout de la cible CMake 'usbp' que vous construisez localement
-  # Les LDFLAGS du pkg-config ne sont généralement pas nécessaires si nous lions à une cible
-  # mais les garder ne devrait pas nuire si la cible 'usbp' ne les propage pas automatiquement.
-  # PRIVATE "${LIBUSBP_LDFLAGS}" # Mettre en PRIVATE si usbp n'est pas une dépendance transitive
-  PRIVATE "${LIBYAML_LDFLAGS}"
-)
+# Link against usbp-1, which could be either the system library or bundled target
+if(TARGET usbp-1)
+  # Using bundled usbp-1 target
+  target_link_libraries (lib
+    PUBLIC usbp-1
+    PRIVATE "${LIBYAML_LDFLAGS}"
+  )
+else()
+  # Using system libusbp-1 via pkg-config
+  target_link_libraries (lib
+    PUBLIC "${LIBUSBP_LDFLAGS}"
+    PRIVATE "${LIBYAML_LDFLAGS}"
+  )
+  # On Linux, explicitly link against udev since system libusbp-1 may not expose it
+  if(LINUX)
+    target_link_libraries (lib PUBLIC udev)
+  endif()
+endif()
 
 configure_file (
   "lib.pc.in"
