@@ -1,70 +1,77 @@
 /*
- * A controller example for roof motor controller from the INDI rolloffino roof driver.   
- * 
+ * A controller example for roof motor controller from the INDI rolloffino roof driver.
+ *
  * tg August 2018  Original
+ *
  * tg February 2020 Generalize to make less installation specific
  *                  Add unspecified usage AUX switch and relay
  *                  Communication protocol in terms of function not switches/relays
  *                  ~ 15KB 2% of Due, 50% of Nano
  *
- * tg November 2021 Break out commandReceived and requestReceived to make alernate actions more 
- *                  obvious/accessible, Remove Due specific code.
+ * tg November 2021 Break out commandReceived and requestReceived to make alternate
+ *                  actions more obvious/accessible, Remove Due specific code.
  *
- * tg July 2024     Add additional Actions. Indicate to the driver during handshake
- *                  that they are supported and the driver can issue them. The driver needs 
- *                  to be 2.1.3 or later
+ * tg January 2022  Add this example of using WiFi between the Arduino and the INDI
+ *                  rolloffino roof driver
+ *
+ * tg May 2025      Updated to use Uno R4 WiFi and add support for Actions. Indicate
+ *                  to the driver during handshake if Actions are supported and the driver
+ *                  can issue them. The driver needs to be 2.1.3 or later
  */
 
 /*
- * The driver can support up to 8 extra actions. The Arduino sketch indicates it can accept 
+ * This WiFi version of the rolloff.ino is for use with a "Arduino Uno R4 WIFI" using
+ * the WiFiS3 library. It is initialized for a network using WPA encryption.
+ * The file arduino_secrets.h found in the same directory as this rolloff.ino code is to
+ * be used to specify the network SSID and password that the Arduino should use.
+ *
+ * When using WiFi the serial monitor can be used for diagnostic messaging in the IDE,
+ * if the USB is also connected between the Arduino and the host.
+ * If there is difficulty getting the INDI roof driver to connect, need to establish that the
+ * WiFi network is working and that the Arduino is connected. Running the Arduino IDE and
+ * using its serial monitor can be helpful to see any diagnostic messages.
+ * INIT_DELAY_SECS can be defined to wait a number of seconds after starting the Arduino
+ * to have time to get the serial monitor display started and see network startup messages.
+ */
+
+#define INIT_DELAY_SECS 2
+
+#include <SPI.h>
+#include <WiFiS3.h>
+#include "arduino_secrets.h"
+
+/*
+ * The driver can support up to 8 extra actions. The Arduino sketch indicates it can accept
  * actions and how many during the initial connection request from the driver.
- *     Return version_id like "V1.3" which indicates the extra actions not supported.
- *     Return version_id like "V1.3 [ACT2]" if two extra actions are supported.
+ * Return version_id like "V1.3" which indicates the extra actions not supported.
+ * Return version_id like "V1.3 [ACT2]" if two extra actions are supported.
  *
  * Additional actions will typically be used to set extra relays. But this depends on the
- * Arduino implementation. Only indicate support for the number of additional actions the 
+ * Arduino implementation. Only indicate support for the number of additional actions the
  * sketch can recognise and support. For each additional action the Arduino requests, it needs
  * to be prepared to accept a corresponding request for completion status.
+ *
+ * Can use the extra actions but does not predefine or request them. This sketch is compatible with using a
+ * gate opener controller and the Arduino.cc relay shield without needing any code edits. Default roof
+ * open/close directed to a relay shield or to a four channel relay module wired to those same
+ * pins. The example rolloff.ino.relay-action is similar but does request the driver send Actions and
+ * includes a couple of Action examples using a relay shield plus a four channel relay module.
  */
- 
-// Standard example of Arduino with extra Actions replaces the previous rolloff.ino.standard. 
-// Can use the extra actions but does not predefine or request them. This sketch is compatible with using a 
-// gate opener controller and the Arduino.cc relay shield wihout needing any code edits. Default roof  
-// open/close directed to a relay shield or to a four channel relay module wired to those same 
-// pins. The example rolloff.ino.relay-action is similar but does request the driver send Actions and 
-// includes a couple of Action examples using a relay shield plus a four channel relay module. 
 
 //////////////////////////////////////////////////////////
 // Start of Definitions
 //////////////////////////////////////////////////////////
 
-#define VERSION_ID "V1.3"        // Action relays not connected
-// #define VERSION_ID "V1.3 [ACT4]"  // Action relay driver support enable
+#define VERSION_ID "V1.3"  // Action relays not connected
+//#define VERSION_ID "V1.3 [ACT2]"  // Action relay driver support enable
 
 //////////////////////////////////////////////////////////
 // Input sensor definitions
 //////////////////////////////////////////////////////////
 
-
 // Input Switch definition, indicates when input sensor switch is open the voltage on the pin will be
 // HIGH indicating off. Changing to LOW requires installation of external pull-down resistors.
 #define OPEN_CONTACT HIGH
-
-
-// The driver uses software switches to initiate output commands. Here switches usually refer
-// to local status input indicators like a roof fully opened detector. Implementation could
-// be in the form of an actual switch or a sensor of some kind. 
-// Note on the following Switch definitions
-// Define completion status like OPENED in terms of a sensor or switch name. In the normal
-// case if the response is to be used, set the switch name to the Arduino pin.
-// If there is no assigned switch, set the definition to 0. Then  any related driver
-// requests will be ignored.
-// You might not want a status request to be automatically handled by a status switch.
-// Before responding with a status switch the switch info will be passed to
-// "requestReceived" routine for any special handling. For example a generic example does
-// not know what an Action will be used for. By default there is no provision for any specific
-// operational differences. In the requestReceived routine you can match the sensor switch name
-// and add any pin specific condition handling code.
 
 // Define input sensor switch name to pin assignment
 #define SWITCH_1 A0
@@ -80,11 +87,11 @@
 #define SWITCH_OPENED SWITCH_1  // Fully opened is assigned to switch 1
 #define SWITCH_CLOSED SWITCH_2  // Fully closed is assigned to switch 2
 #define SWITCH_LOCKED SWITCH_3  // External lock
-#define SWITCH_AUX    SWITCH_4  // Auxiliary switch
+#define SWITCH_AUX SWITCH_4     // Auxiliary switch
 #define ACT1STATE 0
 #define ACT2STATE 0
-#define ACT3STATE 0       
-#define ACT4STATE 0 
+#define ACT3STATE 0
+#define ACT4STATE 0
 #define ACT5STATE 0
 #define ACT6STATE 0
 #define ACT7STATE 0
@@ -105,23 +112,11 @@
 #define RELAY_7 9
 #define RELAY_8 10
 
-// Note on the following FUNC definitions
-// Define commands like OPEN an terms of a relay. In the normal case if the command
-// is to be used, set the definition to the  corresponding relay pin name. If the
-// function is not being used, set the definition to 0. Then any related driver
-// requests will be ignored. There are times when you might not want a command to
-// be handled by a relay. If a command such as open does not use a relay set its
-// definition to 100. That will prevent attempts to initialize it like relay control
-// pin. It will pass through the dispatch code and you can pick it up in thev breakout
-// routines "commandReceived" for special handling.
-
 // Indirection to define a functional name in terms of a relay
 // There are 5 functions here, by default only 4 relays are allocated. Some
 // functions might map to the same relay. If open, close and stop all require
 // their own relay, then choose between use of AUX or LOCK. Or extend the relay definitions.
 // Use 0 if function not supported.  Set to 100 if there is special code added to handle it.
-//
-
 #define FUNC_OPEN RELAY_1
 #define FUNC_CLOSE RELAY_1  // For a single button controller might map this also to RELAY_1
 #define FUNC_ABORT RELAY_1  // For a single button controller might map this also to RELAY_1
@@ -164,7 +159,7 @@
 #define FUNC_ACT7_HOLD 1
 #define FUNC_ACT8_HOLD 1
 
-// For the relays define whether a HIGH or a LOW activates the relay.
+// Active polarity per function
 #define FUNC_OPEN_ACTIVE HIGH
 #define FUNC_CLOSE_ACTIVE HIGH
 #define FUNC_ABORT_ACTIVE HIGH
@@ -179,7 +174,7 @@
 #define FUNC_ACT7_ACTIVE LOW
 #define FUNC_ACT8_ACTIVE LOW
 
-// These delay settings normally work as is
+// Timing
 #define RELAY_PRIOR_DELAY 50
 #define RELAY_ON_DELAY 500
 #define RELAY_POST_DELAY 50
@@ -194,9 +189,12 @@
  * This makes the use of abort problematic. Could add something like an encoder in the
  * install to check if the roof is still moving. Otherwise try to avoid using the abort.
  */
- #define  ABORT_MAX_SEC 30
+#define ABORT_MAX_SEC 30
+#define BAUD_RATE 9600 // 38400
+#define INTERNET_ADDR 192,168,1,227   // Address being used by Arduino, match in INDI driver tab
+#define INTERNET_PORT 23              // Listen on telnet port, match in INDI driver tab
+                                      // Sensitive data is defined in 'arduino_secrets.h'
 
-#define BAUD_RATE 38400
 
 //////////////////////////////////////////////////////////
 // End of Definitions
@@ -270,7 +268,7 @@ relay_control relay_info[cmd_len] = {
 const char* ERROR1 = "The controller response message was too long";
 const char* ERROR2 = "The controller failure message was too long";
 const char* ERROR3 = "Command input request is too long";
-const char* ERROR4 = "Invalid command syntax, both start and end tokens missing";
+const char* ERROR4 = "Invalid command syntax, both start or end token missing";
 const char* ERROR5 = "Invalid command syntax, no start token found";
 const char* ERROR6 = "Invalid command syntax, no end token found";
 const char* ERROR7 = "Roof controller unable to parse command";
@@ -279,7 +277,14 @@ const char* ERROR9 = "Request not implemented in controller";
 const char* ERROR10 = "Abort ignored, roof already stationary, or time expired";
 const char* ERROR11 = "Unknown input, ";
 const char* ERROR12 = "Action directive incompatible with current state ";
+const char* ERROR13 = "Unable to read input";
 
+char ssid[] = SECRET_SSID;         // your network SSID (name)
+char pass[] = SECRET_PASS;         // your network password (use for WPA, or use as key for WEP)
+int keyIndex = 0;                  // your network key index number (needed only for WEP)
+IPAddress ip(INTERNET_ADDR);       // Arduino's local Internet address. Defined above
+WiFiServer server(INTERNET_PORT);  // Arduino server listening for connections on port specified
+WiFiClient client;                 // Connection to communicate with the indi driver
 
 // Buffer limits must match those in the driver
 #define MAX_INPUT 45
@@ -288,7 +293,6 @@ const char* ERROR12 = "Action directive incompatible with current state ";
 
 const char* version_id = VERSION_ID;
 
-uint32_t timeMove = 0;
 const int cLen = 15;
 const int tLen = 15;
 const int vLen = MAX_RESPONSE;
@@ -296,33 +300,49 @@ char command[cLen + 1];
 char target[tLen + 1];
 char value[vLen + 1];
 
-void sendAck(char* val) {
+// Movement timing for abort window
+int32_t timeMoveMs = 0;
+
+// Test:
+boolean diag = true; 
+int64_t tstart = 0;    // Start time testing timeouts
+int64_t ttime = 0;     // Elapsed time  
+
+
+// Return acknowledgement that command was received, or the result of the request
+void sendAck(const char* val) {
   char response[MAX_RESPONSE];
-  if (strlen(val) > MAX_MESSAGE)
+  int n = snprintf(response, sizeof(response), "(ACK:%s:%s)", target, val);
+  if (n <= 0 || n >= (int)sizeof(response)) {
     sendNak(ERROR1);
+  }
   else {
-    strcpy(response, "(ACK:");
-    strcat(response, target);
-    strcat(response, ":");
-    strcat(response, val);
-    strcat(response, ")");
-    Serial.println(response);
-    Serial.flush();
+    client.println(response);
+    ttime = millis();
+  }
+  if (diag) {
+    Serial.print(response);
+    Serial.print(" \t");
   }
 }
 
+
+// Return a failure to initiate a command or obtain status of a request
 void sendNak(const char* errorMsg) {
-  char buffer[MAX_RESPONSE];
-  if (strlen(errorMsg) > MAX_MESSAGE)
-    sendNak(ERROR2);
-  else {
-    strcpy(buffer, "(NAK:");
-    strcat(buffer, target);
-    strcat(buffer, ":");
-    strcat(buffer, errorMsg);
-    strcat(buffer, ")");
-    Serial.println(buffer);
-    Serial.flush();
+  char response[MAX_RESPONSE];
+  int n = snprintf(response, sizeof(response), "(NAK:%s:%s)", target, errorMsg);
+  if (n <= 0 || n >= (int)sizeof(response)) {
+    n = snprintf(response, sizeof(response), "(NAK:%s:%s)", target, ERROR2);
+    client.println(response);
+    return;
+  }
+  client.print(response);
+  ttime = millis();
+
+  if (diag) {
+    Serial.print(" * ");
+    Serial.print(response);
+    Serial.print(" * \t");
   }
 }
 
@@ -388,205 +408,186 @@ bool isSwitchOn(int id) {
   return false;
 }
 
-bool parseCommand()  // (command:target:value)
-{
-  bool start = false;
-  bool eof = false;
-  int recv_count = 0;
-  int wait = 0;
-  int offset = 0;
-  char startToken = '(';
-  char endToken = ')';
-  const int bLen = MAX_INPUT;
-  char inpBuf[bLen + 1];
+// (command:target:value)
+bool parseCommand() {
+  const char startToken = '(';
+  const char endToken = ')';
+  char inpBuf[MAX_INPUT + 1] = { 0 };
+  int32_t len = 0;
+  const uint32_t deadline = millis() + 2000;  // 2s read window
+  char* start = 0;
+  char* end = 0;
 
-  memset(inpBuf, 0, sizeof(inpBuf));
-  memset(command, 0, sizeof(command));
-  memset(target, 0, sizeof(target));
-  memset(value, 0, sizeof(value));
-
-  while (!eof && (wait < 20)) {
-    if (Serial.available() > 0) {
-      Serial.setTimeout(1000);
-      recv_count = Serial.readBytes((inpBuf + offset), 1);
-      if (recv_count == 1) {
-        offset++;
-        if (offset >= MAX_INPUT) {
-          sendNak(ERROR3);
-          return false;
-        }
-        if (inpBuf[offset - 1] == startToken) {
-          start = true;
-        }
-        if (inpBuf[offset - 1] == endToken) {
-          eof = true;
-          inpBuf[offset] = '\0';
-        }
-        continue;
-      }
-    }
-    wait++;
-    delay(100);
-  }
-
-  if (!start || !eof) {
-    if (!start && !eof)
-      sendNak(ERROR4);
-    else if (!start)
-      sendNak(ERROR5);
-    else if (!eof)
-      sendNak(ERROR6);
-    return false;
-  } else {
-    strcpy(command, strtok(inpBuf, "(:"));
-    strcpy(target, strtok(NULL, ":"));
-    strcpy(value, strtok(NULL, ")"));
-    if ((strlen(command) >= 3) && (strlen(target) >= 1) && (strlen(value) >= 1)) {
-      return true;
-    } else {
-      sendNak(ERROR7);
+  // Read the input until ')' or timeout
+  // Accept any leading noise while finding the initial '('
+  strcpy(target, "INPUT");
+  for (len = 0; len < MAX_INPUT-1; len++) {
+    if ((int32_t)(millis() - deadline) >= 0) {
+      sendNak(ERROR13);
       return false;
     }
+
+    int c = client.read();
+    if (c < 0) continue;
+    inpBuf[len] = (char)c;
+    if (inpBuf[len] == startToken) {
+      start = inpBuf+len;
+    }
+    else if (inpBuf[len] == endToken) {
+      end = inpBuf+len;
+      while (client.available()) {
+        client.read();
+      }
+      break;
+    }
   }
+  
+  inpBuf[len+1] = '\0';
+  if (start == 0 || end == 0) {
+    sendNak(ERROR13);
+    return false;
+  }
+
+  if (diag) {
+    Serial.print(start);
+    Serial.print("\t");
+    if (strncmp(start, "(SET", 4) == 0) {
+      Serial.print("*");
+    }
+    if (strlen(start) < 16)
+      Serial.print("\t");
+  }
+
+  // Remove start and end tokens
+  // Obtain separate values for command, target, value
+  start++;
+  char* cmd = strtok(start, ":");
+  char* tgt = strtok(nullptr, ":");
+  char* val = strtok(nullptr, ")");
+
+  if (!cmd || !tgt || !val) {
+    sendNak(ERROR7);
+    return false;
+  }
+  if (strlen(cmd) >= (size_t)cLen-1 || strlen(tgt) >= (size_t)tLen-1 || strlen(val) >= (size_t)vLen-1) {
+    sendNak(ERROR3);
+    return false;
+  }
+  strcpy(command, cmd);
+  strcpy(target, tgt);
+  strcpy(value, val);
+  return true;
 }
 
 /*
- * Use the parseCommand routine to decode message
- * Determine associated action in the message. Resolve the relay or switch associated 
- * pin with the target identity. Acknowledge any initial connection request. Return 
- * negative acknowledgement with message for any errors found.  Dispatch to commandReceived
- * or requestReceived routines to activate the command or get the requested switch state
+ * Decode message; dispatch to command or request handlers.
  */
-void readUSB() {
-  // Confirm there is input available, read and parse it.
-  if (Serial && (Serial.available() > 0)) {
-    if (parseCommand()) {
+void readInput() {
+  if (parseCommand()) {
+    int relay = -1;  // -1 = not found, 0 = not implemented, pin number = supported
+    int sw = -1;     //      "                 "                    "
+    unsigned int activate = HIGH;
+    unsigned int hold = 0;
+    char diag[MAX_MESSAGE];
+
+    // On initial connection return the version
+    if (strcmp(command, "CON") == 0) {
+      strcpy(value, version_id);  // Can be seen on host to confirm what is running
+      sendAck(value);
+      return;
+    }
+
+    // Handle command to set relay or perform local breakout functionality
+    // SET: OPEN, CLOSE, ABORT, LOCK, AUXSET, ACTn
+    else if (strcmp(command, "SET") == 0) {
       command_input = CMD_NONE;
-      int relay = -1;  // -1 = not found, 0 = not implemented, pin number = supported
-      int sw = -1;     //      "                 "                    "
-      bool connecting = false;
-      unsigned int activate = HIGH;
-      unsigned int hold;
-      char diag[MAX_MESSAGE];
-
-      // On initial connection return the version
-      if (strcmp(command, "CON") == 0) {
-        connecting = true;
-        strcpy(value, version_id);  // Can be seen on host to confirm what is running
-        sendAck(value);
-      }
-
-      // Handle command to set relay or perform local breakout functionality
-      // SET: OPEN, CLOSE, ABORT, LOCK, AUXSET, ACTn
-      else if (strcmp(command, "SET") == 0) {
-        for (int i = 0; i < cmd_len; i++) {
-          if (strcmp(target, relay_info[i].function) == 0) {
-            command_input = relay_info[i].cmd;
-            if (command_input == CMD_ABORT) {
-              if (!isStopAllowed()) {
-                sendNak(ERROR10);
-                return;
-              }
+      for (int i = 0; i < cmd_len; i++) {
+        if (strcmp(target, relay_info[i].function) == 0) {
+          command_input = relay_info[i].cmd;
+          if (command_input == CMD_ABORT) {
+            if (!isStopAllowed()) {
+              sendNak(ERROR10);
+              return;
             }
-            relay = relay_info[i].relay;
-            hold = relay_info[i].hold;
-            activate = relay_info[i].activate;
-            if (command_input == CMD_OPEN || command_input == CMD_CLOSE) {
-              timeMove = millis()/1000;
-            }
-            break;
           }
+          relay = relay_info[i].relay;
+          hold = relay_info[i].hold;
+          activate = relay_info[i].activate;
+          if (command_input == CMD_OPEN || command_input == CMD_CLOSE) {
+            timeMoveMs = millis();
+          }
+          break;
         }
       }
+    }
 
-      // Handle requests to obtain the status of switches
-      // GET: OPENED, CLOSED, LOCKED, AUXSTATE ACT1 - ACTn
-      else if (strcmp(command, "GET") == 0) {
-        for (int i = 0; i < switch_count; i++) {
-          if (strcmp(target, switch_info[i].function) == 0) {
-            sw = switch_info[i].source;
-            break;
-          }
+    // Handle requests to obtain the status of switches
+    // GET: OPENED, CLOSED, LOCKED, AUXSTATE ACT1 - ACTn
+    else if (strcmp(command, "GET") == 0) {
+      for (int i = 0; i < switch_count; i++) {
+        if (strcmp(target, switch_info[i].function) == 0) {
+          sw = switch_info[i].source;
+          break;
         }
       }
-      /*
-       * See if there was a valid command or request 
-       */
-      if (!connecting) {
-        if ((relay == -1) && (sw == -1)) {
-          strcpy(diag, ERROR11);
-          strcat(diag, target);
-          sendNak(diag);  // Unknown input
-        }
+    }
+  /*
+    * See if there was a valid command or request 
+    */
+    if ((relay == -1) && (sw == -1)) {
+      // Unknown input
+      int n = snprintf(diag, sizeof(diag), "%s%s", ERROR11, target);
+      if (n < 0 || n >= (int)sizeof(diag)) {
+        sendNak(ERROR7);
+      } else {
+        sendNak(diag);
+      }
+    }
 
-        // Command or Request not implemented
-        else if ((relay == 0 || relay == -1) && (sw == 0 || sw == -1)) {
-          strcpy(value, "OFF");  // Request Not implemented
-          sendAck(value);
-        }
+    // Command or Request not implemented
+    else if ((relay == 0 || relay == -1) && (sw == 0 || sw == -1)) {
+      strcpy(value, "OFF");  // Request Not implemented
+      sendAck(value);
+    }
 
-        // Valid input received
+    // Valid input received
 
-        // A command was received
-        // Set the relay associated with the command and send acknowlege to host
-        else if (relay > 0)  // Set Relay response
-        {
-          commandReceived(relay, activate, hold, value);
-        }
+    // A command was received
+    // Set the relay associated with the command and send acknowlege to host
+    else if (relay > 0)  // Set Relay response
+    {
+      commandReceived(relay, activate, hold, value);
+    }
 
-        // A get state request was received
-        else if (sw > 0)  // Get switch response
-        {
-          requestReceived(sw);
-        }
-      }  // end !connecting
-    }    // end command parsed
-  }      // end Serial input found
+    // A get state request was received
+    else if (sw > 0)  // Get switch response
+    {
+      requestReceived(sw);
+    }
+  }
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Abort movement command received, test to see if abort is allowed.
-// If not return false and an error message will be returned to the host. If yes
-// then return true. If either fully open or fully closed switches are on then
-// deny the request by returning false. If neither switch is on then if there is
-// a specific button (relay) assigned that can stop movement then return true
-// to allow it to do so.
-//
-// This implementation assumes a one button setup and one which does not know if
-// the roof is still moving or has hit something and already stopped. Before taking
-// action see how long it has been since movement was initiated. If it is longer
-// than the estimate to open or close the roof, assume motion has already stopped.
-// In that case avoid emulating the single button push because that would set the
-// roof moving again. If it seems that the roof could be moving then return true.
-//
-// Returning true will cause the Abort request to appear in the commandReceived
-// routine where it will activate the requested relay.
-//
 bool isStopAllowed() {
-  uint32_t timeNow = millis()/1000;
-  uint32_t timeBegin = timeMove;
-  timeMove = 0;
+  const uint32_t now = millis();
+  const uint32_t elapsedMs = now - timeMoveMs;  // rollover-safe
+  timeMoveMs = 0;
 
   // If the roof is either fully opened or fully closed, ignore the request.
-  if (isSwitchOn(SWITCH_OPENED) || isSwitchOn(SWITCH_CLOSED)) {
-    return false;
-  }
-
-  if (timeBegin == 0)
+  if (isSwitchOn(SWITCH_OPENED) || isSwitchOn(SWITCH_CLOSED))
     return false;
 
-  // If time since last open or closed is longer than time allowed return false
-  if ((timeNow - timeBegin) >= ABORT_MAX_SEC) {
+  if (elapsedMs == 0)
     return false;
-  } else
+
+  // If time since last open or closed is longer than time allowed refuse
+  if (elapsedMs >= (uint32_t)ABORT_MAX_SEC * 1000UL)
+    return false;
 
   // Stop will be attempted
-  {
-    return true;
-  }
+  return true;
 }
-
 
 ////////////////////////////////////////////////////////////////////////////////
 // Command received
@@ -622,31 +623,9 @@ void commandReceived(int relay, int activate, int hold, char* value) {
 // sw:     The switch's pin identifier.
 // value   getSwitch will read the pin and set this to "ON" or "OFF"
 void requestReceived(int sw) {
-  // Intervene here
-  
+  // Intervene here if needed
   getSwitch(sw, value);
   sendAck(value);  // Send result of reading pin associated with "target"
-}
-
-
-// One time initialization
-void setup() {
-  // Establish USB port.
-  Serial.begin(BAUD_RATE);  // Baud rate to match that in the driver
-
-  //////////////////////////
-  // Initialize the input sensors/switches
-  //
-  for (int i = 0; i < switch_count; i++) {
-    initInput(switch_info[i].source);
-  }
-
-  ////////////////////////
-  // Initialize the relays
-  //
-  for (int i = 1; i < cmd_len; i++) {
-    initRelay(relay_info[i].relay, relay_info[i].activate);
-  }
 }
 
 void initInput(int pin) {
@@ -662,25 +641,121 @@ void initInput(int pin) {
 void initRelay(unsigned int pin, unsigned int activate) {
   if (pin > 0 && pin < 100) {
     pinMode(pin, OUTPUT);
-
-    if (activate == HIGH) {
-      digitalWrite(pin, LOW);
-    } else
-      digitalWrite(pin, HIGH);
+    digitalWrite(pin, (activate == HIGH) ? LOW : HIGH);  // set to inactive level
   }
 }
 
-// Wait here for command or switch request from host
-void loop() {
-  while (Serial.available() <= 0) {
+// One time initialization
+void setup() {
+  // Establish USB port.
+  Serial.begin(BAUD_RATE);  // Baud rate to match that in the driver
+  
+  // Initialize the input sensors/switches
+  for (int i = 0; i < switch_count; i++) {
+    initInput(switch_info[i].source);
+  }
 
-    for (int cnt = 0; cnt < 60; cnt++) {
-      if (Serial.available() > 0)
-        break;
-      else {
-        delay(100);
-      }  
-    } 
-    readUSB();
+  // Initialize the relays
+  for (int i = 1; i < cmd_len; i++) {
+    initRelay(relay_info[i].relay, relay_info[i].activate);
+  }
+
+  delay(INIT_DELAY_SECS * 1000);  // diagnostic, allow time to get serial monitor displayed
+
+  // check for the WiFi module:
+  if (WiFi.status() == WL_NO_MODULE) {
+    Serial.println("Unable to contact the board's WiFi component!");
+    Serial.println("Try a WiFiS3 example to verify board/library setup.");
+    Serial.println("Unable to continue, will require a restart when problem corrected.");
+    while (true)
+      ;  // Don't continue
+  }
+  String fv = WiFi.firmwareVersion();  // Check the board's firmware against the installed library
+  if (fv < WIFI_FIRMWARE_LATEST_VERSION) {
+    Serial.println("Consider upgrading the firmware");
+  }
+}
+
+void connectWifi() {
+  // Connect to the WiFi network:
+  WiFi.config(ip);        // WiFi init (static IP)
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print("Connecting to the network ");
+    Serial.println(ssid);
+    // Connect to WPA/WPA2 network. Change if using open or WEP network:
+    WiFi.begin(ssid, pass);
+    for (int i = 0; i < 20; i++) {
+      delay(1000);
+      if (WiFi.status() == WL_CONNECTED)
+      {
+        return;
+      }
+    }
+  }
+}
+
+void printWifiStatus() {
+  // print the SSID of the network you're attached to:
+  Serial.print("SSID: ");
+  Serial.println(WiFi.SSID());
+  // print board's IP address:
+  IPAddress ip = WiFi.localIP();
+  Serial.print("IP Address: ");
+  Serial.println(ip);
+  // print the received signal strength:
+  long rssi = WiFi.RSSI();
+  Serial.print("signal strength (RSSI):");
+  Serial.print(rssi);
+  Serial.println(" dBm");
+  Serial.println("");
+  Serial.println("Network online.");
+}
+
+// Wait here for command or switch request from host
+boolean indiConnected = false;  // Driver has connected to local network
+void loop() {
+ // Connect to the Wifi
+  if (WiFi.status() != WL_CONNECTED) {
+    connectWifi();          // Wait until connected to WiFi
+    server.begin();
+    printWifiStatus();
+    Serial.println("Ready for driver connections.");
+  }
+
+  // Obtain client when INDI driver requests connection
+  client = server.available();
+  if (client) {
+    // Stay wih a single client while it remains connected
+    while (client.connected())
+    {
+      int count = 0;
+      // If this is a new driver connection
+      if (!indiConnected)
+      {
+        indiConnected = true;
+        Serial.println("New INDI driver connection");
+      }
+      // When there is input from the client, go process it
+      if ((count = client.available()) > 0)
+      {
+        tstart = millis();
+        readInput();
+        ttime = millis();
+        if (diag) {
+          Serial.print(ttime-tstart);
+          Serial.print(" ms\t");
+          //Serial.print("Input count: ");
+          //Serial.println(count);
+          Serial.println();
+        }
+      }
+    }
+    // Lost driver connection
+    client.stop();
+    if (indiConnected)  
+    {
+      indiConnected = false;
+      Serial.println("INDI Driver disconnected");      
+    }
   }
 }

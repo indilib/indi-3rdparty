@@ -61,19 +61,17 @@ It is the Arduino code along with hardware build that is responsible for control
 Using a commercial controller of some kind can simplify the design of the Arduino project. A controller can provide proper sizing of the motor for the size and weight of the roof. Provide obstruction protection, enforce range limits, variable force adjustments, slow start and slow stop to lessen the impact of sudden activation to get the roof moving. Some models will run off solar power and the choice of chain or track. With a controller that can be activated by a single or a pair of on/off button it is a simple job to wire a relay in parallel to emulate the pushing of a button. There is built in support in the example relay code to temporarily close a relay for a particular length of time. Such controllers have their own way of detecting the end of roof travel in order to stop movement. Additional switches are required to notify the Arduino when the roof is fully opened or fully closed. The Arduino can then relay that information to the driver when requested.
 
 ## Version Change
-In the INDI 2.1.3 release Aditional digital input and outputs were added to the driver. The driver provides for up to eight od each. Arduino code written before the additions were added can not support the action requests and would report errors if they were communicated from the driver. Whether the additional input/outputs can be used will be determined when the Arduino first connects to the Rolloff Ino driver. If the Arduino code is older it will not indicate support for them when it responds to the driver's connection. Current examples provided with what the Arduino code refers to as Actions will inform the driver how many it can support. Only the number of actions that are supported in software and hardware should be requested. This will reduce chances for errors and limit the communication trafic.
+In the INDI 2.1.3 release Aditional digital input and outputs were added to the driver. The driver provides for up to eight of each. Arduino code written before the additions were added can not support the action requests and would report errors if they were communicated from the driver. Whether the additional input/outputs can be used will be determined when the Arduino first connects to the Rolloff Ino driver. If the Arduino code is older it will not indicate support for them when it responds to the driver's connection. Current examples provided with what the Arduino code refers to as Actions will inform the driver how many it can support. Only the number of actions that are supported in software and hardware should be requested. This will reduce chances for errors and limit the communication trafic.
 
 
 ## Arduino Examples
 
-The following Arduino rolloff.ino examples have been removed: ar1450, linear_actuator, motor, and boutons.
-The following examples have been renamed for interim use, standard and wifi to standard.prev and wifi.prev. Arduino code based on removed examples can continue to be used but will not provide the additional input and output switches.
-The following rolloff.ino examples extended for the additional input/outputs have been updated. standard, relay, linear, syren. 
+The different type of examples all attempt to be functional by using the define statements at the start of the code to provide some flexibility. Outside that range they can provide a starting point. The following Arduino rolloff.ino examples that do not support the extra actions have been removed: ar1450, linear_actuator, motor, boutons, standard.prev and wifi.prev. Previously installed Arduino code based on removed examples can continue to be used but will not provide the additional input and output switches.
 
 Example Arduino code is provided as a starting point. The Arduino code examples provide communication with the driver and template code for reading switches and setting relays. The selected starting code will need to be moved to a directory for development. The name of the directory and the name of the Arduino sketch should be the same. The code name must have a .ino extension. For example ~/Projects/arduino/roof/roof.ino Then you work in the Arduino IDE to edit and load the code onto your Arduino device. The IDE can be downloaded and installed from the arduino.cc web site. You use the IDE to select the type of Arduino board you are working with and define the USB port connecting it. The IDE can be used to edit the code, run builds and load the built sketch onto the Arduino board. https://www.arduino.cc/en/software. Use the most recent Arduino IDE 2 release.
 
 ### rolloff.ino.standard
-General example as a starting point. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This is the Arduino code to use as a starting point. Its default pin assignments match the arduino.cc relay shield. Relay 1 to 4 being activated using pins 4, 7, 8, 12. If using a single button controller just relay 1 would need connection wiring. The default pins for the input switches is A0 through A3. The fully open switch connects to pin A0 and the fully closed switch is connected to pin A1. Another kind of controller might not provide the abiltiy to stop itself when end of travel is reached. In that case as well as sending the status back the driver would need to add activation of the stop. Includes potential support for Actions. No Actions are requested or implemented. An edit to the connection handshake will activate the requesting of Actions. 
+General example as a starting point. If an external controller solution is to be used such as a sliding gate or garage opener controller that provides its own control for stopping the motor when it reaches limits. This is the Arduino code to use as a starting point. Its default pin assignments match the arduino.cc relay shield. Relay 1 to 4 being activated using pins 4, 7, 8, 12. If using a single button controller just relay 1 would need connection wiring. The default pins for the input switches is A0 through A3. The fully open switch connects to pin A0 and the fully closed switch is connected to pin A1. Another kind of controller might not provide the abiltiy to stop itself when end of travel is reached. In that case as well as sending the status back the driver would need to add activation of the stop. Includes potential support for Actions. No Actions are requested or implemented. An edit to the connection handshake will activate the requesting of Actions.
 
 ### rolloff.ino.relay-action
 Like the standard but does indicate Actions accepted during the handshake with the driver. Uses both a relay shield and a four channel relay module. Provides two example Actions associated with the four channel relay module. The first Action sets a momentary relay (push button) and provide status feedback. The second action sets and holds a relay until manually released no status response provided.
@@ -89,17 +87,14 @@ selections match the Arduino.cc relay shield. A relay bank could be used instead
 Use of a separate four channel relay module and no relay shield. Two Linear Actuators operating in unison activated by the roof open and close buttons. A LN298N motor controller is used to operate the linear actuators. The LN298N PWM option is used to compensate for differences in performance between the linear actuators. Uses one of the relays to apply power to the LN298N when movement activated. Shows example of Actions using the ones from rolloff.ino.relay.
 
 ### rolloff.ino.syren.
-This example controls a 12 volt DC motor using a SyRen motor driver. This is an Arduino Mega example, no relays are used. Fully open and fully closed sensors are used to know when to stop the motor. Two extra sensors provide slow start and stop. The code uses a SyRen 50A motor driver to vary power to the motor and reverse polarity in order to change direction. It uses soft start and soft stop by ramping up and down the speed of the motor to open and close the roof. The SyRen powers the motor and can also supply 5 volts to power an Arduino. It includes code for using local buttons. Code is a subset from a working system with the extended Action edits made. It has not received testing in its presnt form. The SyRen documentation indicates that if using a power supply a 12V battery should also be used. The image shows a batery powered SyRen installation. The Arduino uses a separate power supply.
+This example controls a 12 volt DC motor using a SyRen motor driver. This is an Arduino Mega example, no relays are used. Fully open and fully closed sensors are used to know when to stop the motor. Two extra sensors provide slow start and stop. The code uses a SyRen 50A motor driver to vary power to the motor and reverse polarity in order to change direction. It uses soft start and soft stop by ramping up and down the speed of the motor to open and close the roof. The SyRen powers the motor and can also supply 5 volts to power an Arduino. It includes code for using local buttons. Code is a subset from a working system with the extended Action edits made. It has not received testing in its present form. The SyRen documentation indicates that if using a power supply a 12V battery should also be used. The image shows a batery powered SyRen installation. The Arduino uses a separate power supply.
 
-### rolloff.ino.standard.prev
-Example code undisturbed by the addition of Actions. Used for testing old Arduino to newer driver. Retained for a while. 
-
-### rolloff.ino.wifi.prev
-This now dated test code for using WiFi to connect to the driver. It requires an Arduino model that supports the WIFININA library, the example was for the Uno WiFi Rev2. The code is the rolloff.ino.standard modified to use WiFi instead of USB. Might be useful if the observatory computer is located on or next to the telescope. As coded it works on WiFi networks using WPA2 for security. If using an open or WEP secured network changes as outlined in the Arduino WIFININA documentation will be needed. It uses a permanently defined internet address and port that matches the definition in the rolloffino driver. The changes are identified by the conditional #USE_WIFI. If it was wanted to use WiFi with one of the other examples similar edits could be made. It is example code without user feedback. 
+### rolloff.ino.wifi
+This code for using WiFi to connect to the driver. It has been updated to use the Uno R4 WiFi board amd the WiFiS3 library. The code is the rolloff.ino.standard modified to use WiFi instead of USB. Might be useful if the observatory computer is located on or next to the telescope. As coded it works on WiFi networks using WPA for security. If using an open or WEP secured network changes as outlined in the Arduino library documentation will be needed. It uses a permanently defined internet address and port that matches the definition in the rolloffino driver. 
 
 ### rolloff.ino.stub.
 A sketch that could be used for initial testing of communication between the driver and an Arduino.
-When loaded it operates without any switch or relay connections. It simply accepts initial connect, and open/close commands from the driver. After a delay it returns fully open or fully closed status to the driver. 
+When loaded it operates as a simulator without any switch or relay connections. It simply accepts initial connect, and open/close commands from the driver. After a delay it returns fully open or fully closed status to the driver. 
 
 # Arduino Code Overview
 
@@ -191,6 +186,46 @@ Read a switch   (GET:OPENED:0)     >
                                    <  (ACK:OPENED:ON|OFF) | (NAK:ERROR:message)
 Set a relay     (SET:CLOSE:ON|OFF) > 
                                    <  (ACK:CLOSE:ON|OFF) | (NAK:ERROR:message)
+
+Extraction of the output from some trace code in the WiFi example, from the Arduino perspective:
+
+Received                Returned                Elapsed
+--------                --------                -------
+(CON:0:0)		(ACK:0:V1.3 [ACT2]) 	54 ms	
+(GET:OPENED:0)		(ACK:OPENED:OFF) 	57 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:ON) 	56 ms	
+(GET:LOCKED:0)		(ACK:LOCKED:OFF) 	55 ms	
+(GET:AUXSTATE:0)	(ACK:AUXSTATE:OFF) 	60 ms	
+(GET:OPENED:0)		(ACK:OPENED:OFF) 	56 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:ON) 	55 ms	
+(GET:LOCKED:0)		(ACK:LOCKED:OFF) 	56 ms	
+(GET:AUXSTATE:0)	(ACK:AUXSTATE:OFF) 	60 ms	
+(GET:OPENED:0)		(ACK:OPENED:OFF) 	57 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:ON) 	55 ms	
+(GET:LOCKED:0)		(ACK:LOCKED:OFF) 	55 ms	
+(GET:AUXSTATE:0)	(ACK:AUXSTATE:OFF) 	60 ms	
+(GET:ACT1STATE:0)	(ACK:ACT1STATE:OFF) 	62 ms	
+(GET:ACT2STATE:0)	(ACK:ACT2STATE:OFF) 	62 ms
+(GET:OPENED:0)		(ACK:OPENED:OFF) 	56 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:ON) 	55 ms	
+(GET:LOCKED:0)		(ACK:LOCKED:OFF) 	56 ms	
+(GET:AUXSTATE:0)	(ACK:AUXSTATE:OFF) 	59 ms	
+(GET:OPENED:0)		(ACK:OPENED:OFF) 	56 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:ON) 	55 ms	
+(GET:LOCKED:0)		(ACK:LOCKED:OFF) 	56 ms	
+(GET:AUXSTATE:0)	(ACK:AUXSTATE:OFF) 	60 ms	
+(GET:ACT1STATE:0)	(ACK:ACT1STATE:OFF) 	62 ms	
+(GET:ACT2STATE:0)	(ACK:ACT2STATE:OFF) 	62 ms
+
+(SET:OPEN:ON)	*	(ACK:OPEN:ON) 	        652 ms
+(GET:OPENED:0)		(ACK:OPENED:OFF) 	56 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:ON) 	52 ms	
+
+(GET:OPENED:0)		(ACK:OPENED:ON) 	54 ms	
+(GET:CLOSED:0)		(ACK:CLOSED:OFF) 	56 ms	
+
+INDI Driver disconnected
+
 ```
 
 # A project build example.

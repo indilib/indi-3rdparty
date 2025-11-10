@@ -68,7 +68,7 @@
  */
 #define ROOF_OPEN_MILLI 15000       
 
-#define SIMULATE_SEC 5  // simulated roof movement time for completion
+#define SIMULATE_SEC 30  // simulated roof movement time for completion
 #define SIMULATE_MS 0
 #define TIMED_NONE 0
 #define TIMED_OPEN 1    // In process of opening
@@ -490,10 +490,14 @@ bool isStopAllowed()
 //
 void commandReceived(int relay, int hold, char* value)
 {
-/*  
-  setRelay(relay, hold, value);
-  sendAck(value);         // Send acknowledgement that relay pin associated with "target" was activated to value requested
-*/
+  if (false)
+  {
+    setRelay(relay, hold, value);
+    sendAck(value);         // Send acknowledgement that relay pin associated with "target" was activated to value requested
+  }
+
+
+
   if (strcmp(target, "OPEN") == 0) 
   {
     timedState = TIMED_NONE;
@@ -528,10 +532,11 @@ void commandReceived(int relay, int hold, char* value)
 // value   getSwitch will read the pin and set this to "ON" or "OFF" 
 void requestReceived(int sw)
 {
-  /*
-  getSwitch(sw, value);
-  sendAck(value);            // Send result of reading pin associated with "target" 
-  */
+  if (false)
+  {
+    getSwitch(sw, value);
+    sendAck(value);            // Send result of reading pin associated with "target" 
+  }
 
   if (strcmp(target, "OPENED") == 0)  
   {
@@ -594,7 +599,7 @@ boolean timerElapsed()
   t_millisec = (t_millisec%1000);               // Retain remainder
   
   // Compare accumulated time with a limit
-  if ((t_millisec >= SIMULATE_MS) && (t_seconds >= SIMULATE_SEC)) 
+  if (t_seconds >= SIMULATE_SEC) 
     return true;
   else  
     return false;

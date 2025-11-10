@@ -744,16 +744,28 @@ void initRelay(unsigned int pin, unsigned int activate) {
 
 ////////////////////////////////////////////////////////////////////////////////
 // Wait here for command or switch request from host
+// Time intervals for various checks (in milliseconds)
+const unsigned long ROOF_CHECK_INTERVAL = 100;  // Check roof state every 100ms
+const unsigned long SERIAL_CHECK_INTERVAL = 10;   // Check serial more frequently
+
+// Variables to track last check times
+unsigned long lastRoofCheck = 0;
+unsigned long lastSerialCheck = 0;
+
 void loop() {
-  while (Serial.available() <= 0) {
-    for (int cnt = 0; cnt < 60; cnt++) {
-      if (Serial.available() > 0)
-        break;
-      else {
-        monitorRoofState();
-        delay(100);
-      }  
-    } 
-    readUSB();
+  unsigned long currentMillis = millis();
+
+  // Check roof state at regular intervals without blocking
+  if (currentMillis - lastRoofCheck >= ROOF_CHECK_INTERVAL) {
+    monitorRoofState();
+    lastRoofCheck = currentMillis;
+  }
+
+  // Check for serial data more frequently
+  if (currentMillis - lastSerialCheck >= SERIAL_CHECK_INTERVAL) {
+    if (Serial.available() > 0) {
+      readUSB();
+    }
+    lastSerialCheck = currentMillis;
   }
 }
