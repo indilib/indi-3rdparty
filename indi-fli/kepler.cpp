@@ -314,8 +314,13 @@ bool Kepler::initProperties()
     FanSP.fill(getDeviceName(), "FAN_CONTROL", "Fan", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Black Level
-    BlackLevelNP[0].fill("VALUE", "Value", "%.f", 0, 1000, 10, 0);
+    BlackLevelNP[0].fill("VALUE", "Value", "%.f", 0, 16383, 1000, 0);
     BlackLevelNP.fill(getDeviceName(), "BLACK_LEVEL", "Black Level", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
+
+    // Black Sun Adjust
+    BlackSunAdjustNP[0].fill("LDR", "LDR", "%.f", 0, 63, 1, 0);
+    BlackSunAdjustNP[1].fill("HDR", "HDR", "%.f", 0, 63, 1, 0);
+    BlackSunAdjustNP.fill(getDeviceName(), "BLACK_SUN_ADJUST", "Black Sun Adjust", IMAGE_SETTINGS_TAB, IP_RW, 60, IPS_IDLE);
 
     // GPS
     GPSStateLP[to_underlying(FPROGPSSTATE::FPRO_GPS_NOT_DETECTED)].fill("FPRO_GPS_NOT_DETECTED", "Not detected", IPS_IDLE);
@@ -403,6 +408,7 @@ bool Kepler::updateProperties()
         defineProperty(HighGainSP);
         defineProperty(FanSP);
         defineProperty(BlackLevelNP);
+        defineProperty(BlackSunAdjustNP);
         defineProperty(GPSStateLP);
         defineProperty(RequestStatSP);
     }
@@ -417,6 +423,7 @@ bool Kepler::updateProperties()
         deleteProperty(HighGainSP);
         deleteProperty(FanSP);
         deleteProperty(BlackLevelNP);
+        deleteProperty(BlackSunAdjustNP);
         deleteProperty(GPSStateLP);
         deleteProperty(RequestStatSP);
     }
@@ -445,6 +452,39 @@ bool Kepler::ISNewNumber(const char *dev, const char *name, double values[], cha
             else
                 BlackLevelNP.setState(IPS_ALERT);
             BlackLevelNP.apply();
+            saveConfig(BlackLevelNP);
+            return true;
+        }
+
+        // Black Sun Adjust
+        if (BlackSunAdjustNP.isNameMatch(name))
+        {
+            bool LDR = true, HDR = true;
+
+            // Set LDR channel if provided
+            for (int i = 0; i < n; i++)
+            {
+                if (!strcmp(names[i], "LDR"))
+                {
+                    LDR = FPROSensor_SetBlackSunAdjust(m_CameraHandle, FPROBLACKADJUSTCHAN::FPRO_BLACK_ADJUST_CHAN_LDR,
+                                                       static_cast<uint32_t>(values[i])) >= 0;
+                }
+                else if (!strcmp(names[i], "HDR"))
+                {
+                    HDR = FPROSensor_SetBlackSunAdjust(m_CameraHandle, FPROBLACKADJUSTCHAN::FPRO_BLACK_ADJUST_CHAN_HDR,
+                                                       static_cast<uint32_t>(values[i])) >= 0;
+                }
+            }
+
+            if (LDR && HDR)
+            {
+                BlackSunAdjustNP.update(values, names, n);
+                BlackSunAdjustNP.setState(IPS_OK);
+            }
+            else
+                BlackSunAdjustNP.setState(IPS_ALERT);
+            BlackSunAdjustNP.apply();
+            saveConfig(BlackSunAdjustNP);
             return true;
         }
 
@@ -873,6 +913,18 @@ bool Kepler::setup()
         BlackLevelNP[0].setValue(blackLevel);
         BlackLevelNP.setState(IPS_OK);
     }
+
+    // Black Sun Adjust
+    uint32_t blackSunAdjustLDR = 0, blackSunAdjustHDR = 0;
+    if (FPROSensor_GetBlackSunAdjust(m_CameraHandle, FPROBLACKADJUSTCHAN::FPRO_BLACK_ADJUST_CHAN_LDR, &blackSunAdjustLDR) >= 0)
+    {
+        BlackSunAdjustNP[0].setValue(blackSunAdjustLDR);
+    }
+    if (FPROSensor_GetBlackSunAdjust(m_CameraHandle, FPROBLACKADJUSTCHAN::FPRO_BLACK_ADJUST_CHAN_HDR, &blackSunAdjustHDR) >= 0)
+    {
+        BlackSunAdjustNP[1].setValue(blackSunAdjustHDR);
+    }
+    BlackSunAdjustNP.setState(IPS_OK);
 
 #ifdef LEGACY_MODE
     EncodeFormatSP.reset();
