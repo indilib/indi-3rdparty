@@ -1,3 +1,7 @@
+indi-playerone (1.21) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK v3.9.1
+
 indi-playerone (1.20) bionic; urgency=low
 
   * Update PlayerOneCamera SDK v3.9.0
