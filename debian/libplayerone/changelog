@@ -1,3 +1,7 @@
+libplayerone (1.17) bionic; urgency=low
+
+  * Update PlayerOneCamera SDK to v3.9.1
+
 libplayerone (1.16) bionic; urgency=low
 
   * Update PlayerOneCamera SDK to v3.9.0
