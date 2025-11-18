@@ -781,21 +781,19 @@ bool INDILibCamera::ISNewNumber(const char *dev, const char *name, double values
     {
         if (AdjustmentNP.isNameMatch(name))
         {
-            AdjustmentNP.update(values, names, n);
-            AdjustmentNP.setState(IPS_OK);
-            AdjustmentNP.apply();
-            saveConfig(AdjustmentNP);
-
-
-
+            updateProperty(AdjustmentNP, values, names, n, []()
+            {
+                return true;
+            }, true);
             return true;
         }
+        
         if (GainNP.isNameMatch(name))
         {
-            GainNP.update(values, names, n);
-            GainNP.setState(IPS_OK);
-            GainNP.apply();
-            saveConfig(GainNP);
+            updateProperty(GainNP, values, names, n, []()
+            {
+                return true;
+            }, true);
             return true;
         }
     }
@@ -813,40 +811,40 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
         // Adjust Exposure Mode
         if (AdjustExposureModeSP.isNameMatch(name))
         {
-            AdjustExposureModeSP.update(states, names, n);
-            AdjustExposureModeSP.setState(IPS_OK);
-            AdjustExposureModeSP.apply();
-            saveConfig(AdjustExposureModeSP);
+            updateProperty(AdjustExposureModeSP, states, names, n, []()
+            {
+                return true;
+            }, true);
             return true;
         }
 
         // Adjust AWB Mode
         if (AdjustAwbModeSP.isNameMatch(name))
         {
-            AdjustAwbModeSP.update(states, names, n);
-            AdjustAwbModeSP.setState(IPS_OK);
-            AdjustAwbModeSP.apply();
-            saveConfig(AdjustAwbModeSP);
+            updateProperty(AdjustAwbModeSP, states, names, n, []()
+            {
+                return true;
+            }, true);
             return true;
         }
 
         // Adjust Metering MOde
         if (AdjustMeteringModeSP.isNameMatch(name))
         {
-            AdjustMeteringModeSP.update(states, names, n);
-            AdjustMeteringModeSP.setState(IPS_OK);
-            AdjustMeteringModeSP.apply();
-            saveConfig(AdjustMeteringModeSP);
+            updateProperty(AdjustMeteringModeSP, states, names, n, []()
+            {
+                return true;
+            }, true);
             return true;
         }
 
         // Denoise
         if (AdjustDenoiseModeSP.isNameMatch(name))
         {
-            AdjustDenoiseModeSP.update(states, names, n);
-            AdjustDenoiseModeSP.setState(IPS_OK);
-            AdjustDenoiseModeSP.apply();
-            saveConfig(AdjustDenoiseModeSP);
+            updateProperty(AdjustDenoiseModeSP, states, names, n, []()
+            {
+                return true;
+            }, true);
             return true;
         }
     }
