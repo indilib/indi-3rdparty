@@ -43,7 +43,7 @@ set_target_properties (CAARotator  PROPERTIES VERSION ${ASICAA_VERSION} SOVERSIO
 
 if (APPLE)
 
-  set(source_mac_dir "mac")
+  set(source_mac_dir "mac_x64")
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
     set(source_mac_dir "mac_arm64")
   endif()
