@@ -43,17 +43,22 @@ set_target_properties (CAARotator  PROPERTIES VERSION ${ASICAA_VERSION} SOVERSIO
 
 if (APPLE)
 
-  set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "mac/libASICamera2.bin")
-  set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "mac/libEFWFilter.bin")
-  set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "mac/libUSB2ST4Conv.bin")
-  set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "mac/libEAFFocuser.bin")
-  set_property (TARGET CAARotator  PROPERTY IMPORTED_LOCATION "mac/libCAARotator.bin")
+  set(source_mac_dir "mac")
+  if (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
+    set(source_mac_dir "mac_arm64")
+  endif()
 
-  FIX_MACOS_LIBRARIES("libASICamera2" "mac/libASICamera2.bin" "ASI/ZWO")
-  FIX_MACOS_LIBRARIES("libEFWFilter" "mac/libEFWFilter.bin" "ASI/ZWO")
-  FIX_MACOS_LIBRARIES("libUSB2ST4Conv" "mac/libUSB2ST4Conv.bin" "ASI/ZWO")
-  FIX_MACOS_LIBRARIES("libEAFFocuser" "mac/libEAFFocuser.bin" "ASI/ZWO")
-  FIX_MACOS_LIBRARIES("libCAARotator" "mac/libCAARotator.bin" "ASI/ZWO")
+  set_property (TARGET ASICamera2  PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libASICamera2.bin")
+  set_property (TARGET EFWFilter   PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libEFWFilter.bin")
+  set_property (TARGET USB2ST4Conv PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libUSB2ST4Conv.bin")
+  set_property (TARGET EAFFocuser  PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libEAFFocuser.bin")
+  set_property (TARGET CAARotator  PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libCAARotator.bin")
+
+  FIX_MACOS_LIBRARIES("libASICamera2" "${source_mac_dir}/libASICamera2.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libEFWFilter" "${source_mac_dir}/libEFWFilter.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libUSB2ST4Conv" "${source_mac_dir}/libUSB2ST4Conv.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libEAFFocuser" "${source_mac_dir}/libEAFFocuser.bin" "ASI/ZWO")
+  FIX_MACOS_LIBRARIES("libCAARotator" "${source_mac_dir}/libCAARotator.bin" "ASI/ZWO")
 
 elseif (UNIX AND NOT WIN32)
 
