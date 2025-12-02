@@ -1,10 +1,36 @@
 #!/usr/bin/env python3
 """
 Scan and fix macOS dylibs in INDI 3rd party repository
-Automatically finds mac, mac_x64, and mac_arm64 directories
-Note: INDI stores macOS libraries with .bin extension
-Requires: pip install macholib
-Uses: /usr/bin/install_name_tool for modifications
+
+This script automatically finds and fixes macOS dynamic libraries (.bin and .dylib files)
+in the indi-3rdparty repository. It corrects install IDs and library dependencies to use
+@rpath for better portability.
+
+Requirements:
+    pip install macholib
+
+Usage:
+    # Scan only (no changes) - check for issues
+    python3 fix_macos_libs.py /path/to/indi-3rdparty
+
+    # Scan and automatically fix all issues
+    python3 fix_macos_libs.py /path/to/indi-3rdparty --fix
+
+    # Scan specific library directory with verbose output
+    python3 fix_macos_libs.py /path/to/indi-3rdparty/libqhy --verbose
+
+    # Show detailed file format information
+    python3 fix_macos_libs.py /path/to/indi-3rdparty --diagnose
+
+Common Issues Fixed:
+    - Versioned install IDs (e.g., @rpath/lib.20.dylib → @rpath/lib.dylib)
+    - Absolute paths in dependencies (e.g., /usr/local/lib/... → @rpath/...)
+    - Non-portable loader paths (@loader_path/... → @rpath/...)
+
+Technical Details:
+    - Uses macholib's rewriteDataForCommand() for safe Mach-O modifications
+    - Handles fat/universal binaries (x86_64 + arm64)
+    - Works on both Linux and macOS
 """
 
 import sys
@@ -113,17 +139,25 @@ def get_library_name_from_file(filename):
     Extract the library name from filename.
     Examples:
       libqhyccd.bin -> libqhyccd
+      libqhyccd.dylib -> libqhyccd
       libASICamera2.bin -> libASICamera2
-      libqhyccd.20.bin -> libqhyccd (strip version numbers)
+      libqhyccd.20.bin -> libqhyccd (strip version numbers from .bin files)
+      libqhyccd.20.dylib -> libqhyccd.20 (keep version for .dylib files)
     """
-    # Remove .bin extension
-    name = filename.replace('.bin', '')
-
-    # Check if there are version numbers (e.g., libqhyccd.20)
-    parts = name.split('.')
-    if len(parts) > 1 and any(c.isdigit() for c in parts[-1]):
-        # Has version number, remove it
-        name = '.'.join(parts[:-1])
+    # Remove .bin or .dylib extension
+    if filename.endswith('.bin'):
+        name = filename.replace('.bin', '')
+        # Check if there are version numbers (e.g., libqhyccd.20)
+        parts = name.split('.')
+        if len(parts) > 1 and any(c.isdigit() for c in parts[-1]):
+            # Has version number, remove it
+            name = '.'.join(parts[:-1])
+    elif filename.endswith('.dylib'):
+        # For .dylib files, just remove the extension
+        # Keep any version numbers as they might be part of the library name
+        name = filename.replace('.dylib', '')
+    else:
+        name = filename
 
     return name
 
@@ -725,10 +759,10 @@ def find_mac_directories(root_path):
     return sorted(mac_dirs)
 
 def find_dylibs_in_directory(directory):
-    """Find all .bin files (macOS libraries) in a directory"""
+    """Find all .bin and .dylib files (macOS libraries) in a directory"""
     dylibs = []
     for file in os.listdir(directory):
-        if file.endswith('.bin'):
+        if file.endswith('.bin') or file.endswith('.dylib'):
             full_path = os.path.join(directory, file)
             if os.path.isfile(full_path):
                 # Don't filter here - let check_dylib determine if it's valid

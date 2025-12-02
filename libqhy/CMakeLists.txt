@@ -21,21 +21,21 @@ if (APPLE)
 
   set (QHY_FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/qhy/firmware" CACHE STRING "QHY firmware installation directory")
 
-  set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd.dylib")
+  set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "mac_x64/libqhyccd.bin")
 
-  FIX_MACOS_LIBRARIES("libqhyccd" "libqhyccd.dylib" "QHY")
+  FIX_MACOS_LIBRARIES("libqhyccd" "mac_x64/libqhyccd.bin" "QHY")
 
 elseif (UNIX AND NOT WIN32)
 
   set (QHY_FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
-    set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd_armv6.bin")
+    set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "armv6/libqhyccd.bin")
   elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "aarch64")
-    set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd_armv8.bin")
-  elseif (CMAKE_SIZEOF_VOID_P MATCHES "8")
-    set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "libqhyccd_x86_64.bin")
-  else ()
+    set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "armv8/libqhyccd.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
+    set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "x64/libqhyccd.bin")
+  elseif (CMAKE_SYSTEM_PROCESSOR MATCHES "i[3-6]86")
     message (FATAL_ERROR "x86-32 architecture is not supported.")
   endif ()
 
