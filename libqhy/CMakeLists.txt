@@ -32,12 +32,14 @@ if(APPLE)
 
   fix_macos_libraries("libqhyccd" "mac_x64/libqhyccd.bin" "QHY")
 elseif(UNIX AND NOT WIN32)
-  set(
-    QHY_FIRMWARE_INSTALL_DIR
-    "/lib/firmware/qhy"
-    CACHE STRING
-    "QHY firmware installation directory"
-  )
+  if(NOT DEFINED QHY_FIRMWARE_INSTALL_DIR)
+    set(
+      QHY_FIRMWARE_INSTALL_DIR
+      "/usr/lib/firmware/qhy"
+      CACHE STRING
+      "QHY firmware installation directory"
+    )
+  endif()
 
   if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property(TARGET qhyccd PROPERTY IMPORTED_LOCATION "armv6/libqhyccd.bin")

@@ -27,12 +27,14 @@ if(APPLE)
 
   fix_macos_libraries("libsbig" "SBIGUDrvOSX.bin" "SBIG")
 elseif(UNIX AND NOT WIN32)
-  set(
-    FIRMWARE_INSTALL_DIR
-    "/lib/firmware"
-    CACHE STRING
-    "sbig firmware installation directory"
-  )
+  if(NOT DEFINED FIRMWARE_INSTALL_DIR)
+    set(
+      FIRMWARE_INSTALL_DIR
+      "/usr/lib/firmware"
+      CACHE STRING
+      "sbig firmware installation directory"
+    )
+  endif()
 
   if(CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property(TARGET sbig PROPERTY IMPORTED_LOCATION "libsbig_armhf.bin")
