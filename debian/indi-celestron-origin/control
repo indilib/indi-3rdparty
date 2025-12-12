@@ -1,0 +1,13 @@
+Source: indi-celestron-origin
+Section: science
+Priority: optional
+Maintainer: INDI Library <indi-devel@lists.sourceforge.net>
+Build-Depends: debhelper (>= 9), cdbs, cmake, libindi-dev, libcfitsio-dev, libnova-dev, libgsl-dev, zlib1g-dev
+Standards-Version: 3.9.8
+
+Package: indi-celestron-origin
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI driver for Celestron Origin telescope
+ This package provides the INDI driver for Celestron Origin intelligent
+ telescope system with integrated camera and plate solving.
