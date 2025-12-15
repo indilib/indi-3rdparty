@@ -640,10 +640,10 @@ bool OriginCamera::initProperties()
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0.000001, 3600, 0.000001, false);
     
     // Gain/ISO property - Origin supports 0-1600
-    // Match the simulator pattern exactly
-    GainNP[GAIN].fill("GAIN", "value", "%.f", 0, 1600, 1, 100);
+    GainNP[GAIN].fill("GAIN", "Gain", "%.0f", 100, 1600, 100, 200);
     //                                          ^  ^     ^  ^
     //                                        min max  step default
+    GainNP.fill(getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     
     // Preview/Full mode property
     StreamSP[STREAM_PREVIEW].fill("PREVIEW", "Preview (fast)", ISS_OFF);
