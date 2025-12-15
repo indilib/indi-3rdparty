@@ -12,6 +12,42 @@
 #include <QDir>
 #include <QFile>
 #include <QStandardPaths>
+#include <libnova/precession.h>
+#include <libnova/julian_day.h>
+
+// Convert J2000 to JNow (current epoch)
+void OriginTelescope::j2000ToJNow(double ra_j2000, double dec_j2000,
+                                   double *ra_jnow, double *dec_jnow)
+{
+    double jd = ln_get_julian_from_sys();
+    
+    ln_equ_posn pos_j2000, pos_jnow;
+    pos_j2000.ra = ra_j2000 * 15.0;   // Hours to degrees
+    pos_j2000.dec = dec_j2000;
+    
+    // Precess from J2000 (JD 2451545.0) to current epoch
+    ln_get_equ_prec2(&pos_j2000, 2451545.0, jd, &pos_jnow);
+    
+    *ra_jnow = pos_jnow.ra / 15.0;    // Degrees to hours
+    *dec_jnow = pos_jnow.dec;
+}
+
+// Convert JNow (current epoch) to J2000
+void OriginTelescope::jnowToJ2000(double ra_jnow, double dec_jnow,
+                                   double *ra_j2000, double *dec_j2000)
+{
+    double jd = ln_get_julian_from_sys();
+    
+    ln_equ_posn pos_jnow, pos_j2000;
+    pos_jnow.ra = ra_jnow * 15.0;     // Hours to degrees
+    pos_jnow.dec = dec_jnow;
+    
+    // Precess from current epoch to J2000 (JD 2451545.0)
+    ln_get_equ_prec2(&pos_jnow, jd, 2451545.0, &pos_j2000);
+    
+    *ra_j2000 = pos_j2000.ra / 15.0;  // Degrees to hours
+    *dec_j2000 = pos_j2000.dec;
+}
 
 // INDI requires these for driver registration
 std::unique_ptr<OriginTelescope> telescope(new OriginTelescope());
@@ -202,21 +238,22 @@ bool OriginTelescope::ReadScopeStatus()
 {
     if (!m_connected)
     {
-        qDebug() << ("ReadScopeStatus called but not connected");
+        qDebug() << "ReadScopeStatus called but not connected";
         return false;
     }
     
-    // Poll the backend to get latest data
     backend->poll();
-    
     auto status = backend->status();
     
-    if (false) qDebug() << "Backend status: RA=" <<
-      status.raPosition << " Dec=" << status.decPosition << "Tracking=" << status.isTracking << "Slewing=" << status.isSlewing;
+    // Mount reports J2000 coordinates
+    // INDI expects JNow coordinates (EQUATORIAL_EOD_COORD)
+    // Convert: J2000 → JNow
     
-    // Update coordinates
-    m_currentRA = status.raPosition;
-    m_currentDec = status.decPosition;
+    double ra_jnow, dec_jnow;
+    j2000ToJNow(status.raPosition, status.decPosition, &ra_jnow, &dec_jnow);
+    
+    m_currentRA = ra_jnow;
+    m_currentDec = dec_jnow;
     
     if (false) qDebug() << "Setting INDI coords: RA=" << m_currentRA << " Dec=" << m_currentDec;
     
@@ -258,9 +295,21 @@ bool OriginTelescope::Goto(double ra, double dec)
     if (!m_connected)
         return false;
     
-    qDebug() << "Slewing to RA:" << ra << " Dec:" << dec;
+    // INDI client sends JNow coordinates (EQUATORIAL_EOD_COORD)
+    // Origin mount expects J2000 coordinates
+    // Convert: JNow → J2000
     
-    if (backend->gotoPosition(ra, dec))
+    double ra_j2000, dec_j2000;
+    jnowToJ2000(ra, dec, &ra_j2000, &dec_j2000);
+    
+    qDebug() << "========================================";
+    qDebug() << "GOTO CONVERSION:";
+    qDebug() << "  Client sent (JNow):  RA=" << ra << "Dec=" << dec;
+    qDebug() << "  Sending to mount (J2000): RA=" << ra_j2000 << "Dec=" << dec_j2000;
+    qDebug() << "========================================";
+    
+    // Send J2000 coordinates to mount
+    if (backend->gotoPosition(ra_j2000, dec_j2000))
     {
         TrackState = SCOPE_SLEWING;
         return true;
@@ -274,9 +323,14 @@ bool OriginTelescope::Sync(double ra, double dec)
     if (!m_connected)
         return false;
     
-    qDebug() << "Syncing to RA:" << ra << " Dec:" << dec;
+    // Convert JNow → J2000
+    double ra_j2000, dec_j2000;
+    jnowToJ2000(ra, dec, &ra_j2000, &dec_j2000);
     
-    return backend->syncPosition(ra, dec);
+    qDebug() << "SYNC: JNow (" << ra << "," << dec << ") → J2000 (" 
+             << ra_j2000 << "," << dec_j2000 << ")";
+    
+    return backend->syncPosition(ra_j2000, dec_j2000);
 }
 
 bool OriginTelescope::Abort()
