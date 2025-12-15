@@ -1,3 +1,9 @@
+libtoupcam (59.30281.20251214) jammy; urgency=medium
+
+  * Upstream release
+
+ -- touptek <touptek@touptek.com>  Mon, 15 Dec 2025 08:24:13 +0800
+
 libtoupcam (59.29465.20250907) jammy; urgency=medium
 
   * Upstream release
