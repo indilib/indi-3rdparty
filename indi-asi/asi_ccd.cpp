@@ -113,7 +113,7 @@ std::string GetHomeDirectory()
 
 #define ROOTNODE "Nicknames"
 #define ENTRYNODE "Nickname"
-#define ATTRIBUTE "SerialNumber"
+#define ATTRIBUTE "id"
 
 void ASICCD::loadNicknames()
 {
