@@ -76,25 +76,27 @@ static class Loader
                     continue;
                 }
 
-                // Get the serial number from the device
+                // Try to get the serial number from the device
+                // This is a feature of full-sized EAFs and later firmware;
+                //   don't "continue" if not found, but print a warning
                 EAF_SN sn;
                 std::string serialStr = "Unknown";
                 result = EAFGetSerialNumber(id, &sn);
-                if (result != EAF_SUCCESS)
+                if (result == EAF_SUCCESS)
                 {
-                    IDLog("ERROR: ZWO EAF %d EAFGetSerialNumber error %d.", i + 1, result);
-                    continue;
+                    char buf[17];
+                    for (int b = 0; b < 8; b++)
+                        sprintf(buf + b * 2, "%02X", sn.id[b]);
+                    buf[16] = '\0';
+                    serialStr = buf;
+                }
+                else
+                {
+                    IDLog("WARNING: ZWO EAF %d EAFGetSerialNumber error %d.", i + 1, result);
                 }
 
                 // Close device
                 EAFClose(id);
-
-                // Parse the serial number
-                char buf[17];
-                for (int b = 0; b < 8; b++)
-                    sprintf(buf + b * 2, "%02X", sn.id[b]);
-                buf[16] = '\0';
-                serialStr = buf;
 
                 // Set the name of the device
                 std::string name = "ZWO EAF";
