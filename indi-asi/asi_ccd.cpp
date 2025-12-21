@@ -106,14 +106,14 @@ std::string GetHomeDirectory()
 // with NicknameTP. Since the device-name can't be changed once the driver is running,
 // changes to nicknames can only take effect at the next INDI startup.
 // <Nicknames>
-//  <Nickname id="serialNumber1">nickname1</Nickname>
-//  <Nickname id="serialNumber2">nickname2</Nickname>
-//  <Nickname id="serialNumber3">nickname3</Nickname>
+//  <Nickname SerialNumber="serialNumber1">nickname1</Nickname>
+//  <Nickname SerialNumber="serialNumber2">nickname2</Nickname>
+//  <Nickname SerialNumber="serialNumber3">nickname3</Nickname>
 // </Nicknames>
 
 #define ROOTNODE "Nicknames"
 #define ENTRYNODE "Nickname"
-#define ATTRIBUTE "id"
+#define ATTRIBUTE "SerialNumber"
 
 void ASICCD::loadNicknames()
 {
