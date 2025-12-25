@@ -90,7 +90,11 @@ INDILibCamera::INDILibCamera(uint8_t index, const libcamera::ControlList &list) 
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
-    auto fullName = std::string("LibCamera ") + list.get(properties::Model).value() + "-" + std::to_string(index);
+    auto model = list.get(properties::Model).value();
+    auto fullName = std::string("LibCamera ")
+              + std::string(model)
+              + "-"
+              + std::to_string(index);
     setDeviceName(fullName.c_str());
 }
 
