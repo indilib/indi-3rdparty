@@ -1764,7 +1764,6 @@ bool OCS::Sync(double az) {
 ************************************************************/
 bool OCS::Connect()
 {
-    SlowTimer.stop();
     bool status = INDI::Dome::Connect();
     return status;
 }
@@ -1774,7 +1773,7 @@ bool OCS::Connect()
 ************************************************************/
 bool OCS::Disconnect()
 {
-
+    SlowTimer.stop();
     bool status = INDI::Dome::Disconnect();
     return status;
 }
