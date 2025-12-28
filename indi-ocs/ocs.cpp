@@ -65,7 +65,7 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 4);
+    setVersion(1, 5);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
@@ -1764,6 +1764,7 @@ bool OCS::Sync(double az) {
 ************************************************************/
 bool OCS::Connect()
 {
+    SlowTimer.stop();
     bool status = INDI::Dome::Connect();
     return status;
 }
@@ -1773,6 +1774,7 @@ bool OCS::Connect()
 ************************************************************/
 bool OCS::Disconnect()
 {
+
     bool status = INDI::Dome::Disconnect();
     return status;
 }
