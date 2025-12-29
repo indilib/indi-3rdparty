@@ -1,3 +1,7 @@
+indi-ocs (1.5) nobel; urgency=medium
+
+  * New release - Fixed shutdown issue
+
 indi-ocs (1.4) nobel; urgency=medium
 
   * New release - Corrected inactive weather measurement check added incorrectly in V1.1
