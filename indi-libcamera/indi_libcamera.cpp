@@ -60,8 +60,8 @@ static class Loader
         void load()
         {
             RPiCamINDIApp app;
-            int argc = 0;
-            char *argv[] = {};
+            int argc = 1;
+            char *argv[] = { (char*)"indi_libcamera_ccd" };
             auto options = app.GetOptions();
             if (options->Parse(argc, argv))
             {
@@ -639,8 +639,8 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
     TimeVal<std::chrono::microseconds> tv;
     tv.set(std::to_string(duration) + "s");
 
-    int argc = 0;
-    char *argv[] = {};
+    int argc = 1;
+    char *argv[] = { (char*)"indi_libcamera_ccd" };
     options->Parse(argc, argv);
 
     options->Set().camera = m_CameraIndex;
@@ -678,9 +678,9 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerate)
 {
-    int argc = 0;
+    int argc = 1;
+    char *argv[] = { (char*)"indi_libcamera_ccd" };
     INDI_UNUSED(framerate);
-    char *argv[] = {};
     options->Parse(argc, argv);
 
     options->Set().camera = m_CameraIndex;
