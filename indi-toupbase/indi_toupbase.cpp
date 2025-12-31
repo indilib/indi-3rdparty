@@ -1873,6 +1873,11 @@ void ToupBase::TimerHit()
             LOG_ERROR("Exposure timed out waiting for image frame.");
             InExposure = false;
             PrimaryCCD.setExposureFailed();
+            LOG_ERROR("Exposure timed out - flushing to unlock camera.");
+            if(FAILED(FP(put_Option(m_Handle, CP(OPTION_FLUSH), 3))))
+            {
+                LOG_ERROR("Failed to flush camera after exposure timeout.");
+            }
         }
     }
 
