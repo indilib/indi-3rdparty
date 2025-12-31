@@ -28,6 +28,7 @@
 #include <deque>
 #include <memory>
 
+#include <pwd.h>
 #include <termios.h>
 #include <unistd.h>
 
@@ -74,8 +75,30 @@ static class Loader
                     IDLog("ERROR: ZWO EAF %d EAFGetProperty error %d.", i + 1, result);
                     continue;
                 }
+
+                // Try to get the serial number from the device
+                // This is a feature of full-sized EAFs and later firmware;
+                //   don't "continue" if not found, but print a warning
+                EAF_SN sn;
+                std::string serialStr = "Unknown";
+                result = EAFGetSerialNumber(id, &sn);
+                if (result == EAF_SUCCESS)
+                {
+                    char buf[17];
+                    for (int b = 0; b < 8; b++)
+                        sprintf(buf + b * 2, "%02X", sn.id[b]);
+                    buf[16] = '\0';
+                    serialStr = buf;
+                }
+                else
+                {
+                    IDLog("WARNING: ZWO EAF %d EAFGetSerialNumber error %d.", i + 1, result);
+                }
+
+                // Close device
                 EAFClose(id);
 
+                // Set the name of the device
                 std::string name = "ZWO EAF";
                 if (envDev && envDev[0])
                     name = envDev;
@@ -85,17 +108,151 @@ static class Loader
                 if (iAvailableFocusersCount > 1)
                     name += " " + std::to_string(i + 1);
 
-                focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str())));
+                focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str(), serialStr)));
                 iAvailableFocusersCount_ok++;
             }
             IDLog("%d ZWO EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
         }
 } loader;
 
-ASIEAF::ASIEAF(const EAF_INFO &info, const char *name)
+namespace
+{
+
+// trim from start (in place)
+static inline void ltrim(std::string &s)
+{
+    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
+    {
+        return !std::isspace(ch);
+    }));
+}
+
+// trim from end (in place)
+static inline void rtrim(std::string &s)
+{
+    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
+    {
+        return !std::isspace(ch);
+    }).base(), s.end());
+}
+
+// trim from both ends (in place)
+static inline void trim(std::string &s)
+{
+    ltrim(s);
+    rtrim(s);
+}
+
+std::string GetHomeDirectory()
+{
+    // Check first the HOME environmental variable
+    const char *HomeDir = getenv("HOME");
+
+    // ...otherwise get the home directory of the current user.
+    if (!HomeDir)
+    {
+        HomeDir = getpwuid(getuid())->pw_dir;
+    }
+    return (HomeDir ? std::string(HomeDir) : "");
+}
+
+}  // namespace
+
+// Nicknames are stored in an xml-format NICKNAME_FILE in a format like the below.
+// Nicknames are assoicated with the serial number of the camera, and are entered/changed
+// with NicknameTP. Since the device-name can't be changed once the driver is running,
+// changes to nicknames can only take effect at the next INDI startup.
+// <Nicknames>
+//  <Nickname SerialNumber="serialNumber1">nickname1</Nickname>
+//  <Nickname SerialNumber="serialNumber2">nickname2</Nickname>
+//  <Nickname SerialNumber="serialNumber3">nickname3</Nickname>
+// </Nicknames>
+
+#define ROOTNODE "Nicknames"
+#define ENTRYNODE "Nickname"
+#define ATTRIBUTE "SerialNumber"
+
+void ASIEAF::loadNicknames()
+{
+    const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
+    mNicknames.clear();
+
+    LilXML *xmlHandle = newLilXML();
+    XMLEle *rootXmlNode = nullptr;
+    char errorMessage[512] = {0};
+    FILE *file = fopen(filename.c_str(), "r");
+    if (file)
+    {
+        rootXmlNode = readXMLFile(file, xmlHandle, errorMessage);
+        fclose(file);
+    }
+    delLilXML(xmlHandle);
+
+    if (rootXmlNode == nullptr)
+        return;
+
+    XMLEle *currentXmlNode = nextXMLEle(rootXmlNode, 1);
+    while (currentXmlNode)
+    {
+        const char *id = findXMLAttValu(currentXmlNode, ATTRIBUTE);
+        if (id != nullptr)
+        {
+            std::string name = pcdataXMLEle(currentXmlNode);
+            if (!name.empty())
+                trim(name);
+            if (!name.empty())
+                mNicknames[id] = name;
+        }
+        currentXmlNode = nextXMLEle(rootXmlNode, 0);
+    }
+
+    delXMLEle(rootXmlNode);
+}
+
+void ASIEAF::saveNicknames()
+{
+    const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
+    XMLEle *rootXmlNode = nullptr;
+    XMLEle *oneElement = nullptr;
+
+    FILE *file = fopen(filename.c_str(), "w");
+
+    rootXmlNode = addXMLEle(nullptr, ROOTNODE);
+
+    for (const auto &kv : mNicknames)
+    {
+        oneElement = addXMLEle(rootXmlNode, ENTRYNODE);
+        addXMLAtt(oneElement, ATTRIBUTE, kv.first.c_str());
+        editXMLEle(oneElement, kv.second.c_str());
+    }
+
+    prXMLEle(file, rootXmlNode, 0);
+    fclose(file);
+    delXMLEle(rootXmlNode);
+}
+
+
+ASIEAF::ASIEAF(const EAF_INFO &info, const char *name, const std::string &serialNumber)
     : m_ID(info.ID)
     , m_MaxSteps(info.MaxStep)
 {
+    mSerialNumber = serialNumber;
+    loadNicknames();
+    if (!mSerialNumber.empty())
+    {
+        auto nickname = mNicknames[mSerialNumber];
+        if (!nickname.empty())
+        {
+            auto finalName = nickname;
+            if (finalName.find("ZWO EAF") != 0)
+                finalName = "ZWO EAF " + finalName;
+            setDeviceName(finalName.c_str());
+            mNickname = nickname;
+            LOGF_INFO("Using nickname %s for serial number %s.", finalName.c_str(), mSerialNumber.c_str());
+            return;
+        }
+    }
+
     setVersion(1, 2);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
@@ -132,6 +289,13 @@ bool ASIEAF::initProperties()
     VersionInfoSP[0].fill("VERSION_FIRMWARE", "Firmware", "Unknown");
     VersionInfoSP[1].fill("VERSION_SDK", "SDK", "Unknown");
     VersionInfoSP.fill(getDeviceName(), "VERSION", "Version", INFO_TAB, IP_RO, 60, IPS_IDLE);
+
+    // Device Serial Number and Nickname
+    SerialNumberTP[0].fill("SN", "SN", "Unknown");
+    SerialNumberTP.fill(getDeviceName(), "Serial Number", "Serial Number", INFO_TAB, IP_RO, 60, IPS_IDLE);
+
+    NicknameTP[0].fill("nickname", "nickname", "Unknown");
+    NicknameTP.fill(getDeviceName(), "NICKNAME", "Nickname", INFO_TAB, IP_RW, 60, IPS_IDLE);
 
     //
     // Temperature compensation
@@ -205,6 +369,10 @@ bool ASIEAF::updateProperties()
         VersionInfoSP[0].setText(firmware);
         VersionInfoSP[1].setText(EAFGetSDKVersion());
         defineProperty(VersionInfoSP);
+        SerialNumberTP[0].setText(mSerialNumber);
+        defineProperty(SerialNumberTP);
+        NicknameTP[0].setText(mNickname);
+        defineProperty(NicknameTP);
 
         //
         // Temperature compensation
@@ -224,7 +392,8 @@ bool ASIEAF::updateProperties()
             deleteProperty(TemperatureNP);
         deleteProperty(BeepSP);
         deleteProperty(VersionInfoSP);
-
+        deleteProperty(SerialNumberTP);
+        deleteProperty(NicknameTP);
         //
         // Temperature compensation
         deleteProperty(TempCSP);
@@ -513,6 +682,45 @@ bool ASIEAF::ISNewNumber(const char * dev, const char * name, double values[], c
 
     return INDI::Focuser::ISNewNumber(dev, name, values, names, n);
 }
+
+bool ASIEAF::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
+{
+    if (dev != nullptr && !strcmp(dev, getDeviceName()))
+    {
+        if (NicknameTP.isNameMatch(name))
+        {
+            NicknameTP.update(texts, names, n);
+            NicknameTP.setState(IPS_OK);
+            NicknameTP.apply();
+            if (!mSerialNumber.empty())
+            {
+                loadNicknames();  // another camera may have updated its nickname.
+                std::string newNickname = texts[0];
+                trim(newNickname);
+                if (newNickname.empty())
+                {
+                    mNicknames.erase(mSerialNumber);
+                    LOGF_INFO("Nickname for %s removed.", mSerialNumber.c_str());
+                }
+                else
+                {
+                    mNicknames[mSerialNumber] = newNickname;
+                    LOGF_INFO("Nickname for %s changed to %s.", mSerialNumber.c_str(), newNickname.c_str());
+                }
+                saveNicknames();
+                LOG_INFO("The driver must now be restarted for this change to take effect.");
+            }
+            else
+            {
+                LOG_INFO("Can't apply nickname change--serial number not known.");
+            }
+            NicknameTP.apply();
+            return true;
+        }
+    }
+    return INDI::Focuser::ISNewText(dev, name, texts, names, n);
+}
+
 
 void ASIEAF::GetFocusParams()
 {

@@ -28,8 +28,17 @@
 class ASIEAF : public INDI::Focuser
 {
     public:
-        ASIEAF(const EAF_INFO &info, const char *name);
+        ASIEAF(const EAF_INFO &info, const char *name, const std::string &serialNumber);
         virtual ~ASIEAF() override = default;
+
+        /**
+         * @brief Returns the serial number of the camera.
+         * @return The serial number as a string.
+         */
+        const std::string &getSerialNumber() const
+        {
+            return mSerialNumber;
+        }
 
         const char * getDefaultName() override;
         virtual bool initProperties() override;
@@ -70,6 +79,12 @@ class ASIEAF : public INDI::Focuser
         virtual bool SetFocuserBacklash(int32_t steps) override;
         virtual bool AbortFocuser() override;
         virtual void TimerHit() override;
+
+        virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
+
+        /** Additional Properties to INDI::Focuser */
+        INDI::PropertyText    SerialNumberTP {1};
+        INDI::PropertyText    NicknameTP {1};
 
     private:
         // Get initial focuser parameter when we first connect
@@ -138,4 +153,11 @@ class ASIEAF : public INDI::Focuser
 
         const uint8_t m_ID;
         const int m_MaxSteps;
+
+        // Nicknames and EAF serial number
+        void loadNicknames();
+        void saveNicknames();
+        const std::string NICKNAME_FILE = "/.indi/ZWONicknames.xml";
+        std::string mFocuserName, mFocuserID, mSerialNumber, mNickname;
+        std::map<std::string, std::string> mNicknames;
 };
