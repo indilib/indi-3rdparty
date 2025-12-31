@@ -956,7 +956,7 @@ bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
-    // TODO Add Gain
+    fitsKeywords.push_back({"GAIN", GainNP[0].getValue(), 3, "Gain"});
 }
 
 /////////////////////////////////////////////////////////////////////////////
