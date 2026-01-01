@@ -20,8 +20,11 @@ if (AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
   set(AHP_GT_FOUND TRUE)
   message(STATUS "Found AHP_GT: ${AHP_GT_LIBRARIES}")
 
-
 else (AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
+
+    set(AHP_GT_MIN_VERSION_MAJOR 1)
+    set(AHP_GT_MIN_VERSION_MINOR 7)
+    set(AHP_GT_MIN_VERSION_RELEASE 3)
 
     find_path(AHP_GT_INCLUDE_DIR ahp_gt.h
       PATH_SUFFIXES ahp
@@ -37,14 +40,24 @@ else (AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
     HINTS ${CMAKE_C_IMPLICIT_LINK_DIRECTORIES}
   )
 
-if(AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
-  set(AHP_GT_FOUND TRUE)
-else (AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
-  set(AHP_GT_FOUND FALSE)
-endif(AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
+    if(AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
+        set(AHP_GT_FOUND TRUE)
+    else(AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
+        set(AHP_GT_FOUND FALSE)
+    endif(AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
 
   if (AHP_GT_FOUND)
     if (NOT AHP_GT_FIND_QUIETLY)
+        if(AHP_GT_FOUND)
+            include(CheckCXXSourceCompiles)
+            include(CMakePushCheckState)
+            cmake_push_check_state(RESET)
+            set(CMAKE_REQUIRED_INCLUDES ${AHP_GT_INCLUDE_DIR})
+            set(CMAKE_REQUIRED_LIBRARIES ${AHP_GT_LIBRARIES})
+            check_cxx_source_compiles("#include <ahp_gt.h>
+            int main() { ahp_gt_get_version(); return 0; }" AHP_GT_HAS_AHP_GT_VERSION)
+            cmake_pop_check_state()
+        endif()
       message(STATUS "Found AHP_GT: ${AHP_GT_LIBRARIES}")
     endif (NOT AHP_GT_FIND_QUIETLY)
   else (AHP_GT_FOUND)
@@ -54,5 +67,5 @@ endif(AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
   endif (AHP_GT_FOUND)
 
   mark_as_advanced(AHP_GT_LIBRARIES)
-  
+
 endif (AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
