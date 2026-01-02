@@ -106,7 +106,6 @@ bool AHPGTBase::initProperties()
     GTDEGPIOConfigSP[GT_STEPDIR].fill("GT_STEPDIR", "Step/Dir", ISS_OFF);
     GTDEGPIOConfigSP.fill(getDeviceName(), "GT_DE_GPIO_CONFIG", "DE GPIO port", CONFIGURATION_TAB,
                           IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    GTConfigurationNP[GT_PWM_FREQ].fill("GT_PWM_FREQ", "PWM Freq (Hz)", "%.0f", 1500, 8200, 700, 6400);
     GTConfigurationNP.fill(getDeviceName(), "GT_PARAMS", "Advanced", CONFIGURATION_TAB,
                            IP_RW, 60, IPS_IDLE);
     GTMountConfigSP[GT_GEM].fill("GT_GEM", "German mount", ISS_ON);
@@ -211,11 +210,6 @@ bool AHPGTBase::updateProperties()
         else
             GTMountConfigSP[GT_GEM].setState(ISS_ON);
         GTMountConfigSP.apply();
-#if(AHP_GT_VERSION > 174)
-        GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency(0) * 700 + 1500);
-#else
-        GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency() * 700 + 1500);
-#endif
         GTConfigurationNP.apply();
     }
     else
@@ -259,17 +253,6 @@ bool AHPGTBase::ISNewNumber(const char *dev, const char *name, double values[], 
             ahp_gt_set_crown_teeth(1, GTDEConfigurationNP[GT_CROWN_TEETH].getValue());
             ahp_gt_set_max_speed(1, GTDEConfigurationNP[GT_MAX_SPEED].getValue());
             ahp_gt_set_acceleration_angle(1, GTDEConfigurationNP[GT_ACCELERATION].getValue() * M_PI / 180.0);
-            ahp_gt_write_values(1, &progress, &write_finished);
-            updateProperties();
-        }
-        if(!strcmp(GTConfigurationNP.getName(), name))
-        {
-#if(AHP_GT_VERSION > 174)
-            ahp_gt_set_pwm_frequency(0, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
-#else
-            ahp_gt_set_pwm_frequency((GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
-#endif
-            ahp_gt_write_values(0, &progress, &write_finished);
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
