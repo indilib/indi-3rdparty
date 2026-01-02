@@ -211,7 +211,11 @@ bool AHPGTBase::updateProperties()
         else
             GTMountConfigSP[GT_GEM].setState(ISS_ON);
         GTMountConfigSP.apply();
+#if(AHP_GT_VERSION > 174)
         GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency(0) * 700 + 1500);
+#else
+        GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency() * 700 + 1500);
+#endif
         GTConfigurationNP.apply();
     }
     else
@@ -260,7 +264,11 @@ bool AHPGTBase::ISNewNumber(const char *dev, const char *name, double values[], 
         }
         if(!strcmp(GTConfigurationNP.getName(), name))
         {
+#if(AHP_GT_VERSION > 174)
             ahp_gt_set_pwm_frequency(0, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+#else
+            ahp_gt_set_pwm_frequency((GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+#endif
             ahp_gt_write_values(0, &progress, &write_finished);
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
