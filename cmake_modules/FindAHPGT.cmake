@@ -56,6 +56,8 @@ else (AHP_GT_INCLUDE_DIR AND AHP_GT_LIBRARIES)
             set(CMAKE_REQUIRED_LIBRARIES ${AHP_GT_LIBRARIES})
             check_cxx_source_compiles("#include <ahp_gt.h>
             int main() { ahp_gt_get_version(); return 0; }" AHP_GT_HAS_AHP_GT_VERSION)
+            check_cxx_source_compiles("#include <ahp_gt.h>
+            int main() { return ahp_gt_get_version(); }" AHP_GT_VERSION)
             cmake_pop_check_state()
         endif()
       message(STATUS "Found AHP_GT: ${AHP_GT_LIBRARIES}")

@@ -56,6 +56,8 @@ else (AHP_XC_INCLUDE_DIR AND AHP_XC_LIBRARIES)
             set(CMAKE_REQUIRED_LIBRARIES ${AHP_XC_LIBRARIES})
             check_cxx_source_compiles("#include <ahp_xc.h>
             int main() { ahp_xc_get_version(); return 0; }" AHP_XC_HAS_AHP_XC_VERSION)
+            check_cxx_source_compiles("#include <ahp_xc.h>
+            int main() { return ahp_xc_get_version(); }" AHP_XC_VERSION)
             cmake_pop_check_state()
         endif()
       message(STATUS "Found AHP_XC: ${AHP_XC_LIBRARIES}")

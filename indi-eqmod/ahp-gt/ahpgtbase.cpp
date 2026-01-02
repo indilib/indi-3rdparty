@@ -281,12 +281,12 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 case GT_GEM:
                     ahp_gt_set_features(0, static_cast<SkywatcherFeature>(ahp_gt_get_features(0) & ~static_cast<int>(isAZEQ)));
                     ahp_gt_set_features(1, static_cast<SkywatcherFeature>(ahp_gt_get_features(1) & ~static_cast<int>(isAZEQ)));
-                    ahp_gt_set_mount_flags(static_cast<GTFlags>(0));
+                    ahp_gt_set_mount_flags(static_cast<GT1Flags>(0));
                     break;
                 case GT_AZEQ:
                     ahp_gt_set_features(0, static_cast<SkywatcherFeature>(ahp_gt_get_features(0) | static_cast<int>(isAZEQ)));
                     ahp_gt_set_features(1, static_cast<SkywatcherFeature>(ahp_gt_get_features(1) | static_cast<int>(isAZEQ)));
-                    ahp_gt_set_mount_flags(static_cast<GTFlags>(0));
+                    ahp_gt_set_mount_flags(static_cast<GT1Flags>(0));
                     break;
                 case GT_FORK:
                     ahp_gt_set_features(0, static_cast<SkywatcherFeature>(ahp_gt_get_features(0) & ~static_cast<int>(isAZEQ)));
@@ -308,19 +308,19 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         }
         if(!strcmp(GTRASteppingModeSP.getName(), name))
         {
-            ahp_gt_set_stepping_mode(0, static_cast<GTSteppingMode>(GTRASteppingModeSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_mode(0, static_cast<GT1SteppingMode>(GTRASteppingModeSP.findOnSwitchIndex()));
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTRAWindingSP.getName(), name))
         {
-            ahp_gt_set_stepping_conf(0, static_cast<GTSteppingConfiguration>(GTRAWindingSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_conf(0, static_cast<GT1SteppingConfiguration>(GTRAWindingSP.findOnSwitchIndex()));
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTRAGPIOConfigSP.getName(), name))
         {
-            ahp_gt_set_feature(0, static_cast<GTFeature>(GTRAGPIOConfigSP.findOnSwitchIndex()));
+            ahp_gt_set_feature(0, static_cast<GT1Feature>(GTRAGPIOConfigSP.findOnSwitchIndex()));
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
@@ -332,19 +332,19 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         }
         if(!strcmp(GTDESteppingModeSP.getName(), name))
         {
-            ahp_gt_set_stepping_mode(1, static_cast<GTSteppingMode>(GTDESteppingModeSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_mode(1, static_cast<GT1SteppingMode>(GTDESteppingModeSP.findOnSwitchIndex()));
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTDEWindingSP.getName(), name))
         {
-            ahp_gt_set_stepping_conf(1, static_cast<GTSteppingConfiguration>(GTDEWindingSP.findOnSwitchIndex()));
+            ahp_gt_set_stepping_conf(1, static_cast<GT1SteppingConfiguration>(GTDEWindingSP.findOnSwitchIndex()));
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
         if(!strcmp(GTDEGPIOConfigSP.getName(), name))
         {
-            ahp_gt_set_feature(1, static_cast<GTFeature>(GTDEGPIOConfigSP.findOnSwitchIndex()));
+            ahp_gt_set_feature(1, static_cast<GT1Feature>(GTDEGPIOConfigSP.findOnSwitchIndex()));
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
