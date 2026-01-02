@@ -1140,12 +1140,12 @@ void AHP_XC::TimerHit()
     return;
 }
 
-bool AHP_XC::Connect()
+bool AHP_XC::Handshake()
 {
     if(serialConnection->port() == nullptr)
         return false;
 
-    if(0 != ahp_xc_connect(serialConnection->port()))
+    if(0 != ahp_xc_connect_fd(PortFD))
     {
         ahp_xc_disconnect();
         return false;
