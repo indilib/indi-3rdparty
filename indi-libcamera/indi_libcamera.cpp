@@ -635,7 +635,6 @@ bool INDILibCamera::updateProperties()
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::configureStillOptions(StillOptions *options, double duration)
 {
-    auto us = std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::duration<double>(duration * 1000000));
     TimeVal<std::chrono::microseconds> tv;
     tv.set(std::to_string(duration) + "s");
 
