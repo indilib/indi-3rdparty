@@ -108,6 +108,7 @@ bool AHPGTBase::initProperties()
                           IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     GTConfigurationNP.fill(getDeviceName(), "GT_PARAMS", "Advanced", CONFIGURATION_TAB,
                            IP_RW, 60, IPS_IDLE);
+    GTConfigurationNP[GT_PWM_FREQ].fill("GT_PWM_FREQ", "PWM Freq (Hz)", "%.0f", 1500, 8200, 700, 6400);
     GTMountConfigSP[GT_GEM].fill("GT_GEM", "German mount", ISS_ON);
     GTMountConfigSP[GT_AZEQ].fill("GT_AZEQ", "AZ/EQ mount", ISS_OFF);
     GTMountConfigSP[GT_FORK].fill("GT_FORK", "Fork mount", ISS_OFF);
@@ -211,6 +212,8 @@ bool AHPGTBase::updateProperties()
             GTMountConfigSP[GT_GEM].setState(ISS_ON);
         GTMountConfigSP.apply();
         GTConfigurationNP.apply();
+        GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency(0) * 700 + 1500);
+        GTConfigurationNP.apply();
     }
     else
     {
@@ -256,6 +259,14 @@ bool AHPGTBase::ISNewNumber(const char *dev, const char *name, double values[], 
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
+    }
+    if(!strcmp(GTConfigurationNP.getName(), name))
+    {
+        ahp_gt_set_pwm_frequency(0, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+        ahp_gt_set_pwm_frequency(1, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+        ahp_gt_write_values(0, &progress, &write_finished);
+        ahp_gt_write_values(1, &progress, &write_finished);
+        updateProperties();
     }
     return EQMod::ISNewNumber(dev, name, values, names, n);
 }
