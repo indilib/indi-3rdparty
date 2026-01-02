@@ -640,7 +640,12 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
     tv.set(std::to_string(duration) + "s");
 
     int argc = 1;
-    char *argv[] = { (char*)"indi_libcamera_ccd" };
+    char *argv[] = { (char*)"indi_libcamera_ccd", nullptr };
+    if (isDebug())
+    {
+        argv[1] = (char*)"-v";
+        argc = 2;
+    }
     options->Parse(argc, argv);
 
     options->Set().camera = m_CameraIndex;
@@ -679,7 +684,12 @@ void INDILibCamera::configureStillOptions(StillOptions *options, double duration
 void INDILibCamera::configureVideoOptions(VideoOptions *options, double framerate)
 {
     int argc = 1;
-    char *argv[] = { (char*)"indi_libcamera_ccd" };
+    char *argv[] = { (char*)"indi_libcamera_ccd", nullptr };
+    if (isDebug())
+    {
+        argv[1] = (char*)"-v";
+        argc = 2;
+    }
     INDI_UNUSED(framerate);
     options->Parse(argc, argv);
 
