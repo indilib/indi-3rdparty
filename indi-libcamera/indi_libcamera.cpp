@@ -872,6 +872,7 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
 bool INDILibCamera::StartExposure(float duration)
 {
     Streamer->setPixelFormat(CaptureFormatSP.findOnSwitchIndex() == CAPTURE_JPG ? INDI_JPG : INDI_RGB);
+    PrimaryCCD.setExposureDuration(duration);
     m_Worker.start(std::bind(&INDILibCamera::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
