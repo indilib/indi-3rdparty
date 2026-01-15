@@ -32,86 +32,20 @@
 #include <termios.h>
 #include <unistd.h>
 
+#include <hotplugmanager.h>
+#include "asi_focuser_hotplug_handler.h"
+
 #define FOCUS_SETTINGS_TAB "Settings"
 
 static class Loader
 {
-        std::deque<std::unique_ptr<ASIEAF>> focusers;
+        std::shared_ptr<INDI::ASIEAFHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-            int iAvailableFocusersCount = EAFGetNum();
-
-            if (iAvailableFocusersCount <= 0)
-            {
-                IDLog("No ZWO EAF detected.");
-                return;
-            }
-
-            int iAvailableFocusersCount_ok = 0;
-            char *envDev = getenv("INDIDEV");
-            for (int i = 0; i < iAvailableFocusersCount; i++)
-            {
-                int id;
-                EAF_ERROR_CODE result = EAFGetID(i, &id);
-                if (result != EAF_SUCCESS)
-                {
-                    IDLog("ERROR: ZWO EAF %d EAFGetID error %d.", i + 1, result);
-                    continue;
-                }
-
-                // Open device
-                result = EAFOpen(id);
-                if (result != EAF_SUCCESS)
-                {
-                    IDLog("ERROR: ZWO EAF %d Failed to open device %d.", i + 1, result);
-                    continue;
-                }
-
-                EAF_INFO info;
-                result = EAFGetProperty(id, &info);
-                if (result != EAF_SUCCESS)
-                {
-                    IDLog("ERROR: ZWO EAF %d EAFGetProperty error %d.", i + 1, result);
-                    continue;
-                }
-
-                // Try to get the serial number from the device
-                // This is a feature of full-sized EAFs and later firmware;
-                //   don't "continue" if not found, but print a warning
-                EAF_SN sn;
-                std::string serialStr = "Unknown";
-                result = EAFGetSerialNumber(id, &sn);
-                if (result == EAF_SUCCESS)
-                {
-                    char buf[17];
-                    for (int b = 0; b < 8; b++)
-                        sprintf(buf + b * 2, "%02X", sn.id[b]);
-                    buf[16] = '\0';
-                    serialStr = buf;
-                }
-                else
-                {
-                    IDLog("WARNING: ZWO EAF %d EAFGetSerialNumber error %d.", i + 1, result);
-                }
-
-                // Close device
-                EAFClose(id);
-
-                // Set the name of the device
-                std::string name = "ZWO EAF";
-                if (envDev && envDev[0])
-                    name = envDev;
-
-                // If we only have a single device connected
-                // then favor the INDIDEV driver label over the auto-generated name above
-                if (iAvailableFocusersCount > 1)
-                    name += " " + std::to_string(i + 1);
-
-                focusers.push_back(std::unique_ptr<ASIEAF>(new ASIEAF(info, name.c_str(), serialStr)));
-                iAvailableFocusersCount_ok++;
-            }
-            IDLog("%d ZWO EAF attached out of %d detected.", iAvailableFocusersCount_ok, iAvailableFocusersCount);
+            hotPlugHandler = std::make_shared<INDI::ASIEAFHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
 } loader;
 
@@ -235,6 +169,7 @@ void ASIEAF::saveNicknames()
 ASIEAF::ASIEAF(const EAF_INFO &info, const char *name, const std::string &serialNumber)
     : m_ID(info.ID)
     , m_MaxSteps(info.MaxStep)
+    , mEAFInfo(info)
 {
     mSerialNumber = serialNumber;
     loadNicknames();

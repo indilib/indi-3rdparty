@@ -32,12 +32,21 @@ class ASIEAF : public INDI::Focuser
         virtual ~ASIEAF() override = default;
 
         /**
-         * @brief Returns the serial number of the camera.
+         * @brief Returns the serial number of the focuser.
          * @return The serial number as a string.
          */
         const std::string &getSerialNumber() const
         {
             return mSerialNumber;
+        }
+
+        /**
+         * @brief Returns the EAF_INFO structure for this focuser.
+         * @return The EAF_INFO structure.
+         */
+        const EAF_INFO &getEAFInfo() const
+        {
+            return mEAFInfo;
         }
 
         const char * getDefaultName() override;
@@ -153,6 +162,9 @@ class ASIEAF : public INDI::Focuser
 
         const uint8_t m_ID;
         const int m_MaxSteps;
+
+        // EAF Info structure
+        EAF_INFO mEAFInfo;
 
         // Nicknames and EAF serial number
         void loadNicknames();
