@@ -39,7 +39,7 @@
 #include <limits.h>
 
 
-#define READ_TIMEOUT 5
+#define READ_TIMEOUT 20
 
 /******************************************************************/
 /* PUBLIC MEMBERS                                                */

@@ -8,6 +8,7 @@
     <defNumber name="k4" label="K4" format="%.0f" min="-999" max="999" step="0">100</defNumber>
     <defNumber name="k5" label="K5" format="%.0f" min="-999" max="999" step="0">100</defNumber>
   </defNumberVector>
+
   
   <defNumberVector device="AAG Cloud Watcher NG" name="sqmLimit" label="SQM Limit" group="Options" state="Idle" perm="rw" timeout="0">
     <defNumber name="sqmLimit" label="SQM Limit" format="%.2f" min="0" max="30" step="0">19.6</defNumber>
@@ -55,10 +56,21 @@
     <defNumber name="tempHigh" label="Temperature High (ºC)" format="%.1f" min="-50" max="100" step="0">20</defNumber>
     <defNumber name="deltaLow" label="Delta Low" format="%.1f" min="0" max="50" step="0">6</defNumber>
     <defNumber name="deltaHigh" label="Delta High" format="%.1f" min="0" max="50" step="0">4</defNumber>
-    <defNumber name="min" label="Min (%)" format="%.1f" min="10" max="20" step="0">10</defNumber>
+    <defNumber name="min" label="Min (%)" format="%.1f" min="1" max="20" step="0">10</defNumber>
     <defNumber name="heatImpulseTemp" label="Impulse Temperature (ºC)" format="%.0f" min="1" max="30" step="0">10</defNumber>
     <defNumber name="heatImpulseDuration" label="Impulse Duration (s)" format="%.0f" min="0" max="600" step="0">60</defNumber>
     <defNumber name="heatImpulseCycle" label="Impulse Cycle (s)" format="%.0f" min="60" max="1000" step="0">600</defNumber>
+  </defNumberVector>
+
+  <defSwitchVector device="AAG Cloud Watcher NG" name="heatingAlgorithm" label="Rain Sensor Heating Algorithm" group="Rain Heater" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
+    <defSwitch name="original" label="Original">On</defSwitch>
+    <defSwitch name="pid" label="PID">Off</defSwitch>
+  </defSwitchVector>
+
+  <defNumberVector device="AAG Cloud Watcher NG" name="heaterPIDParameters" label="Rain Sensor Heating PID Parameters" group="Rain Heater" state="Idle" perm="rw" timeout="0">
+    <defNumber name="pidKp" label="PID Proportional factor (kP)" format="%.3f" min="0" max="1000" step="0">3.0</defNumber>
+    <defNumber name="pidKi" label="PID Integral factor (kI)" format="%.3f" min="0" max="1000" step="0">0.001</defNumber>
+    <defNumber name="pidKd" label="PID Differential factor (kD)" format="%.3f" min="0" max="1000" step="0">400</defNumber>
   </defNumberVector>
 
   <defSwitchVector device="AAG Cloud Watcher NG" name="heaterStatus" label="Heater Status" group="Rain Heater" state="Idle" perm="ro" rule="OneOfMany" timeout="0">

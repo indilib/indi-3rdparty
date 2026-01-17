@@ -85,6 +85,11 @@ private:
     double m_FirmwareVersion;
     int m_AnemometerStatus;
 
+    bool usePIDforHeating;
+    double pidSumError;
+    time_t pidLastTime;
+    double pidLastError;
+
     enum
     {
 	RAW_SENSOR_SUPPLY,
