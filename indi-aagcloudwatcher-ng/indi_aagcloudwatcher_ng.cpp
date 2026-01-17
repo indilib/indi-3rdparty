@@ -324,7 +324,7 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
 
     if (svp.isNameMatch("heatingAlgorithm"))
     {
-        IDLog("Changing heating algorithm to %s\n", names[0]);
+        LOGF_INFO("Changing heating algorithm to %s\n", names[0]);
         if (strcmp(names[0], "pid") == 0)
         {
             usePIDforHeating=true;
@@ -580,8 +580,8 @@ bool AAGCloudWatcher::heatingAlgorithm()
                     pidLastError=temperatureError;
                     pidLastTime=currTime;
 
-                    IDLog("PID: correction P: %f, correction I: %f, correction D: %f\n", correctionP, correctionI, correctionD);
-                    IDLog("PID: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C, Current heater power: %f %%, New heater power: %f %%\n", rainSensorTemperature, desiredSensorTemperature, temperatureError, globalRainSensorHeater, new_globalRainSensorHeater);
+                    LOGF_DEBUG("PID: correction P: %f, correction I: %f, correction D: %f\n", correctionP, correctionI, correctionD);
+                    LOGF_DEBUG("PID: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C, Current heater power: %f %%, New heater power: %f %%\n", rainSensorTemperature, desiredSensorTemperature, temperatureError, globalRainSensorHeater, new_globalRainSensorHeater);
 
                     globalRainSensorHeater=new_globalRainSensorHeater;
 	    }
@@ -624,13 +624,13 @@ bool AAGCloudWatcher::heatingAlgorithm()
             if (rainSensorTemperature > desiredSensorTemperature)
             {
                 // Lower heating
-                IDLog("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater / modifier);
+                LOGF_DEBUG("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater / modifier);
                 globalRainSensorHeater /= modifier;
             }
             else
             {
                 // increase heating
-                IDLog("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater * modifier);
+                LOGF_DEBUG("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater * modifier);
                 globalRainSensorHeater *= modifier;
             }
         }
