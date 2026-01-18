@@ -268,6 +268,7 @@ option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
 option(WITH_LIBCAMERA "Install Libcamera Driver (Raspberry PI)" Off)
 option(WITH_BNO_IMU "Install BNO IMU Driver" Off)
 option(WITH_CELESTRON_ORIGIN "Install Celestron Origin Driver" Off)
+option(WITH_STARTECH_HUB "Install StarTech Industrial USB Hub Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
@@ -849,6 +850,11 @@ else(BUILD_LIBS)
   if (WITH_CELESTRON_ORIGIN)
     add_subdirectory(indi-celestron-origin)
   endif(WITH_CELESTRON_ORIGIN)
+
+ # StarTech Industrial USB Hub
+  if(WITH_STARTECH_HUB)
+    add_subdirectory(indi-startech-hub)
+  endif(WITH_STARTECH_HUB)
 
   # Check if libraries are found. If not, we must build them, install them, THEN run CMake again to build and instal the drivers. If all the libraraies are installed, then we build and install the drivers only now.
   if(LIBRARIES_FOUND)

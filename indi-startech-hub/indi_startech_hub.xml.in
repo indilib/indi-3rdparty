@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<driversList>
+  <devGroup group="Auxiliary">
+    <device label="StarTech Industrial USB Hub" manufacturer="StarTech">
+      <driver name="StarTech Industrial Hub">indi_startech_hub</driver>
+      <version>@VERSION_MAJOR@.@VERSION_MINOR@</version>
+    </device>
+  </devGroup>
+</driversList>
