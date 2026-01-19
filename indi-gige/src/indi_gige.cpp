@@ -171,11 +171,7 @@ bool GigECCD::Connect()
 bool GigECCD::Disconnect()
 {
     LOGF_INFO("%s", __PRETTY_FUNCTION__);
-#if 0
-    //TODO: re-iterate and acquire proper camera from AvrFactory (based on ID?)
     return camera->disconnect();
-#endif
-    return true;
 }
 
 bool GigECCD::StartExposure(float duration)
