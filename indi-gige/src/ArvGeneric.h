@@ -19,6 +19,8 @@
 #ifndef CPP_ARV_GENERIC_H
 #define CPP_ARV_GENERIC_H
 
+#include <string>
+
 //#extern "C" {
 #include <stddef.h>
 #include <stdio.h>
@@ -32,52 +34,54 @@ using namespace arv;
 class ArvGeneric : public arv::ArvCamera
 {
   public:
-    ArvGeneric(void *camera_device);
-    ~ArvGeneric();
+    ArvGeneric(std::string device_id, std::string model_name);
+    virtual ~ArvGeneric();
 
-    bool is_connected();
-    bool is_exposing();
-    bool connect();
-    bool disconnect();
-    const char *vendor_name();
-    const char *model_name();
-    const char *device_id();
-    int get_frame_byte_size();
-    min_max_property<int> get_bin_x();
-    min_max_property<int> get_bin_y();
-    min_max_property<int> get_x_offset();
-    min_max_property<int> get_y_offset();
-    min_max_property<int> get_width();
-    min_max_property<int> get_height();
-    min_max_property<int> get_bpp();
-    min_max_property<double> get_pixel_pitch();
-    min_max_property<double> get_exposure();
-    min_max_property<double> get_gain();
-    min_max_property<double> get_frame_rate();
+    virtual bool is_connected() override;
+    virtual bool is_exposing() override;
+    virtual bool connect() override;
+    virtual bool disconnect() override;
+    virtual const char *vendor_name() override;
+    virtual const char *model_name() override;
+    virtual const char *device_id() override;
+    virtual int get_frame_byte_size() override;
+    virtual min_max_property<int> get_bin_x() override;
+    virtual min_max_property<int> get_bin_y() override;
+    virtual min_max_property<int> get_x_offset() override;
+    virtual min_max_property<int> get_y_offset() override;
+    virtual min_max_property<int> get_width() override;
+    virtual min_max_property<int> get_height() override;
+    virtual min_max_property<int> get_bpp() override;
+    virtual min_max_property<double> get_pixel_pitch() override;
+    virtual min_max_property<double> get_exposure() override;
+    virtual min_max_property<double> get_gain() override;
+    virtual min_max_property<double> get_frame_rate() override;
 
-    void set_bin(int const bin_x, int const bin_y);
-    void set_geometry(int const x, int const y, int const w, int const h);
-    void update_geometry(void);
-    void set_exposure_time(double const val);
-    void set_gain(double const val);
+    virtual void set_bin(int const bin_x, int const bin_y) override;
+    virtual void set_geometry(int const x, int const y, int const w, int const h) override;
+    virtual void update_geometry(void) override;
+    virtual void set_exposure_time(double const val) override;
+    virtual void set_gain(double const val) override;
 
-    void exposure_start(void);
-    void exposure_abort(void);
-    ARV_EXPOSURE_STATUS exposure_poll(void (*fn_image_callback)(void *const, uint8_t const *const, size_t),
-                                      void *const usr_ptr);
+    virtual void exposure_start(void) override;
+    virtual void exposure_abort(void) override;
+    virtual ARV_EXPOSURE_STATUS exposure_poll(void (*fn_image_callback)(void *const, uint8_t const *const, size_t),
+                                              void *const usr_ptr) override;
 
   protected:
     void _init(void);
-    bool _configure(void);
+    virtual bool _configure(void);
     void _test_exposure_and_abort(void);
+
+  private:
     template <typename T>
     bool _get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max, GError**), min_max_property<T> *prop);
     template <typename T>
     void _set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GError**), min_max_property<T> *prop, T const new_val);
 
-    const char *_str_val(const char *s);
-    bool _get_initial_config();
-    bool _set_initial_config();
+  protected:
+    virtual bool _get_initial_config();
+    virtual bool _set_initial_config();
     void _get_image(void (*fn_image_callback)(void *const, uint8_t const *const, size_t), void *const usr_ptr);
 
     /* aravis library state variables */
@@ -113,9 +117,9 @@ class ArvGeneric : public arv::ArvCamera
         min_max_property<double> gain;
         min_max_property<double> frame_rate;
 
-        const char *vendor_name;
-        const char *model_name;
-        const char *device_id;
+        std::string vendor_name;
+        std::string model_name;
+        std::string device_id;
     } cam;
 };
 

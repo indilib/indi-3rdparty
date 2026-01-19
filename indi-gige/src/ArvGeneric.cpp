@@ -18,23 +18,28 @@
  */
 #include "ArvGeneric.h"
 
+#include <string>
+
 using namespace arv;
 
-const char *ArvGeneric::_str_val(const char *s)
-{
-    return (s ? s : "None");
+namespace {
+    inline const char *_str_val(const std::string & s)
+    {
+        return (s != "" ? s.c_str() : "None");
+    }
 }
+
 const char *ArvGeneric::vendor_name()
 {
-    return this->_str_val(this->cam.vendor_name);
+    return _str_val(this->cam.vendor_name);
 }
 const char *ArvGeneric::model_name()
 {
-    return this->_str_val(this->cam.model_name);
+    return _str_val(this->cam.model_name);
 }
 const char *ArvGeneric::device_id()
 {
-    return this->_str_val(this->cam.device_id);
+    return _str_val(this->cam.device_id);
 }
 min_max_property<int> ArvGeneric::get_bin_x()
 {
@@ -103,45 +108,40 @@ bool ArvGeneric::_stream_active()
     return this->stream_active;
 }
 
-ArvGeneric::ArvGeneric(void *camera_device) : ArvCamera(camera_device)
+ArvGeneric::ArvGeneric(std::string device_id, std::string model_name)
+: ArvCamera(device_id, model_name)
 {
     this->_init();
-    this->camera = (::ArvCamera *)camera_device;
-    this->dev    = arv_camera_get_device(this->camera);
-
-    this->cam.model_name  = arv_camera_get_model_name(this->camera, &(this->error));
-    this->cam.vendor_name = arv_camera_get_vendor_name(this->camera, &(this->error));
-    this->cam.device_id   = arv_camera_get_device_id(this->camera, &(this->error));
+    /* device_id and model name must be available to INDI before Connect */
+    this->cam.device_id = device_id;
+    this->cam.model_name  = model_name;
 }
 
 ArvGeneric::~ArvGeneric()
 {
-    if (this->is_connected())
-    {
-        this->disconnect();
-    }
-    this->_init();
+    this->disconnect();
 }
 
 bool ArvGeneric::connect()
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     /* (Re-)connect by means of the device-id */
     if (!this->camera)
     {
-        this->camera = ::arv_camera_new(this->cam.device_id, &(this->error));
+        this->camera = ::arv_camera_new(this->cam.device_id.c_str(), &(this->error));
         if (!this->camera)
             return false;
 
         this->dev             = arv_camera_get_device(this->camera);
-        this->cam.model_name  = arv_camera_get_model_name(this->camera, &(this->error));
         this->cam.vendor_name = arv_camera_get_vendor_name(this->camera, &(this->error));
-        this->cam.device_id   = arv_camera_get_device_id(this->camera, &(this->error));
     }
+    this->_configure();
     return true;
 }
 
 bool ArvGeneric::_configure(void)
 {
+    printf("%s\n", __PRETTY_FUNCTION__);
     this->_set_initial_config();
     return this->_get_initial_config();
 }
@@ -192,10 +192,6 @@ bool ArvGeneric::_get_initial_config()
     this->_get_bounds<double>(arv_camera_get_frame_rate_bounds, &this->cam.frame_rate);
     this->_get_bounds<double>(arv_camera_get_exposure_time_bounds, &this->cam.exposure);
     this->_get_bounds<double>(arv_camera_get_gain_bounds, &this->cam.gain);
-
-    this->cam.vendor_name = arv_camera_get_vendor_name(camera, &error);
-    this->cam.model_name  = arv_camera_get_model_name(camera, &error);
-    this->cam.device_id   = arv_camera_get_device_id(camera, &error);
 
     /* No GVCP call for this..., specialize if necessary */
     this->cam.pixel_pitch.set_single(1.0);

@@ -28,21 +28,25 @@
 
 arv::ArvCamera *ArvFactory::find_first_available(void)
 {
-    GError *error = NULL;
-    ::ArvCamera *camera    = arv_camera_new(nullptr, &error);
-    const char *model_name = arv_camera_get_model_name(camera, &error);
+    /* We first ensure the library knows of all available devices and info */
+    arv_update_device_list();
 
-    if ((camera == nullptr) || (model_name == nullptr))
+    if (arv_get_n_devices() == 0)
+        /* no devices found */
         return nullptr;
+
+
+    const char *device_id = arv_get_device_serial_nbr(0);
+    const char *model_name = arv_get_device_model(0);
 
     if (memmem(model_name, strlen(model_name), BLACKFLY_MODEL, strlen(BLACKFLY_MODEL)))
     {
-        printf("Creating BlackFly...\n");
-        return new BlackFly((void *)camera);
+        printf("Creating BlackFly... for %s-%s\n", model_name, device_id);
+        return new BlackFly(device_id, model_name);
     }
     else
     {
-        printf("Creating Generic...\n");
-        return new ArvGeneric((void *)camera);
+        printf("Creating Generic... for %s-%s\n", model_name, device_id);
+        return new ArvGeneric(device_id, model_name);
     }
 }

@@ -22,6 +22,8 @@
 #include <stdint.h>
 #include <stddef.h>
 
+#include <string>
+
 namespace arv
 {
 typedef enum {
@@ -73,7 +75,8 @@ class min_max_property
 class ArvCamera
 {
   public:
-    ArvCamera([[maybe_unused]] void *camera_device) {}
+    ArvCamera([[maybe_unused]] std::string device_id, [[maybe_unused]] std::string model_name) {}
+    virtual ~ArvCamera() = default;
     virtual bool connect()      = 0;
     virtual bool disconnect()   = 0;
     virtual bool is_connected() = 0;

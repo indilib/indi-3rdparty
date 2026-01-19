@@ -19,17 +19,18 @@
 #ifndef CPP_ARV_BLACKFLY_H
 #define CPP_ARV_BLACKFLY_H
 
+#include <string>
+
 class BlackFly : public ArvGeneric
 {
   public:
-    BlackFly(void *camera_device);
-    bool connect();
-    void exposure_start(void);
+    BlackFly(std::string device_id, std::string model_name);
+    virtual ~BlackFly() = default;
+    virtual void exposure_start(void) override;
 
   protected:
-    bool _configure(void);
-    bool _get_initial_config();
-    bool _set_initial_config();
+    virtual bool _get_initial_config() override;
+    virtual bool _set_initial_config() override;
 
   private:
     bool _custom_settings();
