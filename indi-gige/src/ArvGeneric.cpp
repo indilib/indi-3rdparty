@@ -87,6 +87,7 @@ bool ArvGeneric::_get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max
     T min, max;
     fn_arv_bounds(this->camera, &min, &max, &(this->error));
     prop->update(min, max);
+    return true;
 }
 
 bool ArvGeneric::is_exposing()
@@ -163,6 +164,7 @@ bool ArvGeneric::disconnect()
         g_clear_object(&this->camera);
     }
     this->_init();
+    return true;
 }
 
 bool ArvGeneric::_set_initial_config()
@@ -342,7 +344,7 @@ void ArvGeneric::_get_image(void (*fn_image_callback)(void *const, uint8_t const
         if (fn_image_callback != nullptr)
         {
             size_t size;
-            uint8_t const *const data = (uint8_t const *const)arv_buffer_get_data(this->buffer, &size);
+            uint8_t const * data = (uint8_t const *)arv_buffer_get_data(this->buffer, &size);
             fn_image_callback(usr_ptr, data, size);
         }
     }

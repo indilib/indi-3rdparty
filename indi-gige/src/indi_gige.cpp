@@ -93,8 +93,8 @@ bool GigECCD::_update_geometry(void)
                         this->camera->get_width().val(), this->camera->get_height().val());
 
     /* Sanity checks, reserve buffers */
-    int const width           = this->camera->get_width().val();
-    int const height          = this->camera->get_height().val();
+    [[maybe_unused]] int const width           = this->camera->get_width().val();
+    [[maybe_unused]] int const height          = this->camera->get_height().val();
     int const frame_byte_size = this->camera->get_frame_byte_size();
     int const indi_bufsize    = PrimaryCCD.getSubW() * PrimaryCCD.getSubH() * PrimaryCCD.getBPP() / 8;
 
@@ -109,6 +109,7 @@ bool GigECCD::_update_geometry(void)
         LOGF_INFO("Reserving INDI image buffer size %i bytes", indi_bufsize);
         PrimaryCCD.setFrameBufferSize(frame_byte_size);
     }
+    return true;
 }
 
 void GigECCD::_update_indi_properties(void)
@@ -207,7 +208,7 @@ void GigECCD::_update_image(uint8_t const *const data, size_t size)
     if ((size == frame_buf_size) && (data != nullptr))
     {
         uint8_t *const image = PrimaryCCD.getFrameBuffer();
-        memcpy(image, (void *const)data, frame_buf_size);
+        memcpy(image, (void const*)data, frame_buf_size);
         this->ExposureComplete(&PrimaryCCD);
     }
     else
@@ -220,7 +221,7 @@ void GigECCD::_update_image(uint8_t const *const data, size_t size)
 
 void GigECCD::_receive_image_hook(void *const class_ptr, uint8_t const *const data, size_t size)
 {
-    GigECCD *const cls = static_cast<GigECCD *const>(class_ptr);
+    GigECCD * cls = static_cast<GigECCD *>(class_ptr);
     cls->_update_image(data, size);
 }
 
