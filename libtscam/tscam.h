@@ -1,7 +1,7 @@
 ﻿#ifndef __tscam_h__
 #define __tscam_h__
 
-/* Version: 59.30281.20251214 */
+/* Version: 59.30594.20260120 */
 /*
    Platform & Architecture:
        (1) Win32:
@@ -44,10 +44,8 @@
         (c) Exception: hardware binning.
 */
 
-#if defined(_WIN32)
-#ifndef _INC_WINDOWS
+#if defined(_WIN32) && (!defined(_INC_WINDOWS))
 #include <windows.h>
-#endif
 #endif
 
 #ifdef __cplusplus
@@ -194,6 +192,8 @@ typedef struct Tscam_t { int unused; } *HTscam;
 #define TSCAM_FLAG_USB32                0x0400000000000000  /* USB 3.2 Gen 2 */
 #define TSCAM_FLAG_USB32_OVER_USB30     0x0800000000000000  /* USB 3.2 Gen 2 camera connected to usb3.0 port */
 #define TSCAM_FLAG_LINESCAN             0x1000000000000000  /* line scan camera */
+#define TSCAM_FLAG_25GIGE               0x2000000000000000  /* 2.5 Gigabit GigE */
+#define TSCAM_FLAG_RAW14PACK            0x4000000000000000  /* pixel format, RAW 14bits packed */
 
 #define TSCAM_EXPOGAIN_DEF              100     /* exposure gain, default value */
 #define TSCAM_EXPOGAIN_MIN              100     /* exposure gain, minimum value */
@@ -329,7 +329,7 @@ typedef struct {
 } TscamDeviceV2; /* device instance for enumerating */
 
 /*
-    get the version of this dll/so/dylib, which is: 59.30281.20251214
+    get the version of this dll/so/dylib, which is: 59.30594.20260120
 */
 #if defined(_WIN32)
 TSCAM_API(const wchar_t*)   Tscam_Version();
@@ -1255,6 +1255,7 @@ TSCAM_API(HRESULT)  Tscam_get_Option(HTscam h, unsigned iOption, int* piValue);
 #define TSCAM_PIXELFORMAT_HDR12HL           0x11   /* HDR, Bitdepth: 12, Conversion Gain: High + Low */
 #define TSCAM_PIXELFORMAT_HDR14HL           0x12   /* HDR, Bitdepth: 14, Conversion Gain: High + Low */
 #define TSCAM_PIXELFORMAT_RAW10PACK         0x13
+#define TSCAM_PIXELFORMAT_RAW14PACK         0x14
 
 /*
 * cmd: input
@@ -1834,7 +1835,7 @@ TSCAM_API(HRESULT)  Tscam_get_VignetAmountInt(HTscam h, int* nAmount);
 TSCAM_API(HRESULT)  Tscam_put_VignetMidPointInt(HTscam h, int nMidPoint);
 TSCAM_API(HRESULT)  Tscam_get_VignetMidPointInt(HTscam h, int* nMidPoint);
 
-/* obsolete flags */
+/* obsolete pixel format alias */
 #define TSCAM_FLAG_BITDEPTH10    TSCAM_FLAG_RAW10  /* pixel format, RAW 10bits */
 #define TSCAM_FLAG_BITDEPTH12    TSCAM_FLAG_RAW12  /* pixel format, RAW 12bits */
 #define TSCAM_FLAG_BITDEPTH14    TSCAM_FLAG_RAW14  /* pixel format, RAW 14bits */
