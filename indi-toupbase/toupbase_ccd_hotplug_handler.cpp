@@ -61,14 +61,13 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     std::set<std::string> currentEnumeratedDeviceIDs;
     for (int i = 0; i < numCameras; ++i)
     {
-        std::string displayName = pDevs[i].displayname;
-        if (displayName != "FILTERWHEEL" && displayName != "FOCUSER")
+        if (pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
             currentEnumeratedDeviceIDs.insert(std::string(pDevs[i].id));
         }
         else
         {
-            LOGF_DEBUG("Ignoring enumerated Toupbase device with display name: %s (ID: %s)", displayName.c_str(), pDevs[i].id);
+            LOGF_DEBUG("Ignoring enumerated Toupbase device with display name: %s (ID: %s)", pDevs[i].displayname, pDevs[i].id);
         }
     }
 
@@ -77,10 +76,9 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     std::vector<XP(DeviceV2)> updatedConnectedDevices;
     for (const auto& device : m_connectedDevices)
     {
-        std::string displayName = device.displayname;
-        if (displayName == "FILTERWHEEL" || displayName == "FOCUSER")
+        if (device.model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
-            LOGF_DEBUG("Removing previously connected Toupbase device with display name: %s (ID: %s)", displayName.c_str(), device.id);
+            LOGF_DEBUG("Removing previously connected Toupbase device with display name: %s (ID: %s)", device.displayname, device.id);
             continue; // Skip this device
         }
 
@@ -97,10 +95,9 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     // Add newly connected devices, ignoring FILTERWHEEL and FOCUSER devices
     for (int i = 0; i < numCameras; ++i)
     {
-        std::string displayName = pDevs[i].displayname;
-        if (displayName == "FILTERWHEEL" || displayName == "FOCUSER")
+        if (pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
-            LOGF_DEBUG("Ignoring newly connected Toupbase device with display name: %s (ID: %s)", displayName.c_str(), pDevs[i].id);
+            LOGF_DEBUG("Ignoring newly connected Toupbase device with display name: %s (ID: %s)", pDevs[i].displayname, pDevs[i].id);
             continue; // Skip this device
         }
 
@@ -150,7 +147,7 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     return identifiers;
 }
 
-std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(const std::string & identifier)
+std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(const std::string& identifier)
 {
     // Find the camera info in our persistent storage
     XP(DeviceV2)* cameraInfoPtr = nullptr;
