@@ -130,6 +130,7 @@ bool QFocuser::initProperties()
 /////////////////////////////////////////////////////////////////////////////
 bool QFocuser::updateProperties()
 {
+    LOG_INFO("=== QFocuser updateProperties() called ===");
     INDI::Focuser::updateProperties();
 
     if (isConnected())
@@ -137,21 +138,13 @@ bool QFocuser::updateProperties()
         LOG_INFO("=== QFocuser updateProperties: Connected ===");
 
         // Always define external temperature switch
+        // Note: TemperatureNP will be defined later in Handshake() after loadConfig() is called
         LOG_INFO("Defining ExternalTempSP (外部温度) switch");
-        defineProperty(ExternalTempSP);
-        LOGF_INFO("ExternalTempSP defined: SHOW=%s, HIDE=%s",
+        LOGF_INFO("Before defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
                   ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
-
-        // Only define temperature if switch is on "显示"
-        if (ExternalTempSP[0].getState() == ISS_ON)
-        {
-            defineProperty(TemperatureNP);
-            LOG_INFO("External temperature display enabled");
-        }
-        else
-        {
-            LOG_INFO("External temperature display disabled (default)");
-        }
+        defineProperty(ExternalTempSP);
+        LOGF_INFO("After defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
+                  ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
 
         defineProperty(TemperatureChipNP);
         defineProperty(VoltageNP);
@@ -468,6 +461,23 @@ bool QFocuser::Handshake()
     // Always update hold current visibility based on voltage
     LOG_INFO("Calling updateHoldCurrentVisibility()...");
     updateHoldCurrentVisibility();
+
+    // Check if external temperature should be displayed
+    // This is done here (after loadConfig() has been called) to ensure the saved state is loaded
+    LOG_INFO("Checking ExternalTempSP state after config load...");
+    LOGF_INFO("ExternalTempSP state: SHOW=%s, HIDE=%s",
+              ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
+
+    if (ExternalTempSP[0].getState() == ISS_ON)
+    {
+        defineProperty(TemperatureNP);
+        LOG_INFO("External temperature display enabled (from saved config)");
+    }
+    else
+    {
+        LOG_INFO("External temperature display disabled (default or from saved config)");
+    }
+
     LOG_INFO("=== QFocuser Handshake Complete ===");
 
     if(cmd_voltage == 0)
@@ -493,6 +503,10 @@ void QFocuser::TimerHit()
 {
     if (!isConnected())
         return;
+
+    // Always ensure hold force permissions are correctly set based on voltage
+    // updateHoldCurrentVisibility() will only update if permission needs to change
+    updateHoldCurrentVisibility();
 
     double prevPos = FocusAbsPosNP[0].getValue();
     double newPos  = 0;
@@ -878,6 +892,16 @@ void QFocuser::GetFocusParams()
 void QFocuser::updateHoldCurrentVisibility()
 {
     double voltage = VoltageNP[0].getValue();
+    IPerm currentPermission = HoldForceSP.getPermission();
+    IPerm desiredPermission = (voltage > VOLTAGE_THRESHOLD) ? IP_RW : IP_RO;
+
+    // Only update if permission needs to change
+    if (currentPermission == desiredPermission)
+    {
+        LOGF_DEBUG("Hold force permission already correct (%d), skipping update", currentPermission);
+        return;
+    }
+
     LOGF_INFO("=== updateHoldCurrentVisibility: voltage=%.1f, threshold=%.1f ===",
                voltage, VOLTAGE_THRESHOLD);
 
