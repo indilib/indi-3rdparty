@@ -57,6 +57,7 @@ class QFocuser : public INDI::Focuser
         virtual bool ReverseFocuser(bool enabled) override;
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool saveConfigItems(FILE *fp) override;
 
     private:
         int SendCommand(char *cmd_line);
@@ -76,6 +77,7 @@ class QFocuser : public INDI::Focuser
 
         double targetPos{ 0 };
         bool isReboot = false;
+        bool configRestored = false;  // Flag to track if config has been restored
 
         char buff[USB_CDC_RX_LEN];
 

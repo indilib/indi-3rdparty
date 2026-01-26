@@ -168,6 +168,9 @@ bool QFocuser::updateProperties()
         deleteProperty(BOARDVersionNP);
         deleteProperty(HoldCurrentNP);
         deleteProperty(HoldForceSP);
+
+        // Reset flag for next connection
+        configRestored = false;
     }
 
     return true;
@@ -462,22 +465,6 @@ bool QFocuser::Handshake()
     LOG_INFO("Calling updateHoldCurrentVisibility()...");
     updateHoldCurrentVisibility();
 
-    // Check if external temperature should be displayed
-    // This is done here (after loadConfig() has been called) to ensure the saved state is loaded
-    LOG_INFO("Checking ExternalTempSP state after config load...");
-    LOGF_INFO("ExternalTempSP state: SHOW=%s, HIDE=%s",
-              ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
-
-    if (ExternalTempSP[0].getState() == ISS_ON)
-    {
-        defineProperty(TemperatureNP);
-        LOG_INFO("External temperature display enabled (from saved config)");
-    }
-    else
-    {
-        LOG_INFO("External temperature display disabled (default or from saved config)");
-    }
-
     LOG_INFO("=== QFocuser Handshake Complete ===");
 
     if(cmd_voltage == 0)
@@ -503,6 +490,106 @@ void QFocuser::TimerHit()
 {
     if (!isConnected())
         return;
+
+    // On first timer hit after connection, restore configuration
+    // This ensures that loadConfig() has been called and properties are restored
+    if (!configRestored)
+    {
+        LOG_INFO("First timer hit - restoring configuration...");
+
+        // Restore External Temperature display state
+        LOGF_INFO("ExternalTempSP state: SHOW=%s, HIDE=%s",
+                  ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
+
+        if (ExternalTempSP[0].getState() == ISS_ON)
+        {
+            // User wants to show external temperature
+            defineProperty(TemperatureNP);
+            LOG_INFO("External temperature display enabled (restored from config)");
+        }
+        else
+        {
+            LOG_INFO("External temperature display disabled (restored from config)");
+        }
+
+        // Restore Hold Current values (IHOLD and IRUN)
+        LOGF_INFO("HoldCurrentNP values: IHOLD=%.0f, IRUN=%.0f",
+                  HoldCurrentNP[0].getValue(), HoldCurrentNP[1].getValue());
+
+        // Check if voltage is sufficient before restoring hold current
+        if (VoltageNP[0].getValue() > VOLTAGE_THRESHOLD)
+        {
+            int ihold = static_cast<int>(HoldCurrentNP[0].getValue());
+            int irun = static_cast<int>(HoldCurrentNP[1].getValue());
+
+            if (setHoldCurrent(ihold, irun))
+            {
+                LOGF_INFO("Hold Current restored: IHOLD=%d, IRUN=%d (applied to hardware)", ihold, irun);
+            }
+            else
+            {
+                LOG_WARN("Failed to restore Hold Current to hardware");
+            }
+        }
+        else
+        {
+            LOGF_INFO("Voltage (%.1fV) too low to restore Hold Current values", VoltageNP[0].getValue());
+        }
+
+        // Restore Hold Force state
+        LOGF_INFO("HoldForceSP state: ENABLE=%s, DISABLE=%s",
+                  HoldForceSP[0].getStateAsString(), HoldForceSP[1].getStateAsString());
+
+        // Check if voltage is sufficient before restoring hold force
+        if (VoltageNP[0].getValue() > VOLTAGE_THRESHOLD)
+        {
+            if (HoldForceSP[0].getState() == ISS_ON)
+            {
+                // User wants hold force enabled, send command to hardware
+                char ret_cmd[MAX_CMD] = {0};
+                std::string command = "{\"cmd_id\":12,\"force\":1}";
+                LOGF_DEBUG("<CMD> %s", command.c_str());
+
+                auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+                if (ret_chk >= 0)
+                {
+                    int cmd_id = 0;
+                    ReadResponse(ret_cmd, cmd_id);
+                    LOG_INFO("Hold Force enabled (restored from config and applied to hardware)");
+                }
+                else
+                {
+                    LOG_WARN("Failed to restore Hold Force to hardware");
+                }
+            }
+            else
+            {
+                // User wants hold force disabled, send command to hardware
+                char ret_cmd[MAX_CMD] = {0};
+                std::string command = "{\"cmd_id\":12,\"force\":0}";
+                LOGF_DEBUG("<CMD> %s", command.c_str());
+
+                auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+                if (ret_chk >= 0)
+                {
+                    int cmd_id = 0;
+                    ReadResponse(ret_cmd, cmd_id);
+                    LOG_INFO("Hold Force disabled (restored from config and applied to hardware)");
+                }
+                else
+                {
+                    LOG_WARN("Failed to restore Hold Force to hardware");
+                }
+            }
+        }
+        else
+        {
+            LOGF_INFO("Voltage (%.1fV) too low to restore Hold Force state", VoltageNP[0].getValue());
+        }
+
+        configRestored = true;
+        LOG_INFO("Configuration restored successfully");
+    }
 
     // Always ensure hold force permissions are correctly set based on voltage
     // updateHoldCurrentVisibility() will only update if permission needs to change
@@ -1146,5 +1233,32 @@ bool QFocuser::setPdnMode(int pdn)
     }
 
     LOGF_DEBUG("setPdnMode %d completed", pdn);
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Save configuration items
+/////////////////////////////////////////////////////////////////////////////
+bool QFocuser::saveConfigItems(FILE *fp)
+{
+    // Call parent class to save standard focuser properties
+    INDI::Focuser::saveConfigItems(fp);
+
+    // Save External Temperature display switch state
+    // This allows the driver to remember if the user wants to show or hide external temperature
+    ExternalTempSP.save(fp);
+    LOG_INFO("Saved External Temperature display state");
+
+    // Save Hold Force switch state (Enable/Disable)
+    // This allows the driver to remember the user's preference for hold force
+    HoldForceSP.save(fp);
+    LOG_INFO("Saved Hold Force state");
+
+    // Save Hold Current values (IHOLD and IRUN)
+    // This allows the driver to remember the user's custom hold current settings
+    HoldCurrentNP.save(fp);
+    LOG_INFO("Saved Hold Current values");
+
+    LOG_INFO("Configuration saved successfully");
     return true;
 }
