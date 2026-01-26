@@ -33,7 +33,7 @@
 #include <fstream>
 
 #define USB_CDC_RX_LEN      128
-#define VOLTAGE_THRESHOLD   12.0
+#define VOLTAGE_THRESHOLD   11.5
 
 class QFocuser : public INDI::Focuser
 {
@@ -91,7 +91,6 @@ class QFocuser : public INDI::Focuser
         double lastOutTemp { 0 };
         double lastChipTemp { 0 };
         double lastVoltage { 0 };
-        bool holdCurrentVisible { false };
 
         INDI::PropertyNumber TemperatureNP{1};
 
@@ -102,6 +101,9 @@ class QFocuser : public INDI::Focuser
         INDI::PropertyNumber FOCUSVersionNP{1};
 
         INDI::PropertyNumber BOARDVersionNP{1};
+
+        // External temperature display switch
+        INDI::PropertySwitch ExternalTempSP{2};
 
         // Hold force enable switch
         INDI::PropertySwitch HoldForceSP{2};
