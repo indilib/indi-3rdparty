@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libstarshootg)
 
-set (LIBSTARSHOOTG_VERSION "59.30281")
+set (LIBSTARSHOOTG_VERSION "59.30594")
 set (LIBSTARSHOOTG_SOVERSION "59")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
