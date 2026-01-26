@@ -41,7 +41,8 @@
 
 using namespace INDI::AlignmentSubsystem;
 
-static constexpr double MIN_TRACK_RATE_FACTOR = 0.1; // Factor to ensure track rate doesn't go below a certain threshold of predicted rate
+static constexpr double MIN_TRACK_RATE_FACTOR =
+    0.1; // Factor to ensure track rate doesn't go below a certain threshold of predicted rate
 
 static std::unique_ptr<CelestronAUX> telescope_caux(new CelestronAUX());
 
@@ -359,7 +360,8 @@ bool CelestronAUX::initProperties()
     // Approach Direction
     ApproachDirectionSP[APPROACH_TRACKING_VECTOR].fill("APPROACH_TRACKING_VECTOR", "Tracking vector", ISS_ON);
     ApproachDirectionSP[APPROACH_CONSTANT_OFFSET].fill("APPROACH_CONSTANT_OFFSET", "Constant offset", ISS_OFF);
-    ApproachDirectionSP.fill(getDeviceName(), "APPROACH_DIRECTION", "Approach Direction", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    ApproachDirectionSP.fill(getDeviceName(), "APPROACH_DIRECTION", "Approach Direction", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60,
+                             IPS_IDLE);
 
     /////////////////////////////////////////////////////////////////////////////////////
     /// Guide Tab
@@ -431,12 +433,14 @@ bool CelestronAUX::initProperties()
     // Adaptive PID Tuning Toggles
     AdaptiveTuningAzSP[INDI_ENABLED].fill("ADAPTIVE_AZ_ENABLE", "Enabled", ISS_OFF);
     AdaptiveTuningAzSP[INDI_DISABLED].fill("ADAPTIVE_AZ_DISABLE", "Disabled", ISS_ON);
-    AdaptiveTuningAzSP.fill(getDeviceName(), "ADAPTIVE_TUNING_AZ", "Adaptive Tuning AZ", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    AdaptiveTuningAzSP.fill(getDeviceName(), "ADAPTIVE_TUNING_AZ", "Adaptive Tuning AZ", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60,
+                            IPS_IDLE);
     AdaptiveTuningAzSP.load();
 
     AdaptiveTuningAlSP[INDI_ENABLED].fill("ADAPTIVE_AL_ENABLE", "Enabled", ISS_OFF);
     AdaptiveTuningAlSP[INDI_DISABLED].fill("ADAPTIVE_AL_DISABLE", "Disabled", ISS_ON);
-    AdaptiveTuningAlSP.fill(getDeviceName(), "ADAPTIVE_TUNING_AL", "Adaptive Tuning AL", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    AdaptiveTuningAlSP.fill(getDeviceName(), "ADAPTIVE_TUNING_AL", "Adaptive Tuning AL", MOUNTINFO_TAB, IP_RW, ISR_1OFMANY, 60,
+                            IPS_IDLE);
     AdaptiveTuningAlSP.load();
 
     // Firmware Info
@@ -1693,7 +1697,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     double encOffsetForGoto = 0.0;
     double az_dir = 1.0;  // Default direction multiplier for AZ
     double alt_dir = 1.0; // Default direction multiplier for ALT
-    
+
     // Only apply offset for the initial fast slew, not for iterative approaches
     if (ScopeStatus != APPROACH)
     {
@@ -1702,26 +1706,26 @@ bool CelestronAUX::Goto(double ra, double dec)
             // Time-based tracking vector approach
             const double deltaT_seconds = 60.0; // Time in seconds to rewind the position
             double julianOffsetForGoto = -deltaT_seconds / (24.0 * 60 * 60); // Convert to Julian days
-            
+
             // Calculate tracking direction
             TelescopeDirectionVector TDV_now, TDV_offset;
             if (TransformCelestialToTelescope(ra, dec, 0.0, TDV_now) &&
-                TransformCelestialToTelescope(ra, dec, julianOffsetForGoto, TDV_offset))
+                    TransformCelestialToTelescope(ra, dec, julianOffsetForGoto, TDV_offset))
             {
                 INDI::IHorizontalCoordinates now {0, 0}, offset {0, 0};
                 AltitudeAzimuthFromTelescopeDirectionVector(TDV_now, now);
                 AltitudeAzimuthFromTelescopeDirectionVector(TDV_offset, offset);
-                
+
                 // Calculate direction coefficients based on tracking motion
                 az_dir = (offset.azimuth > now.azimuth) ? -1.0 : 1.0;
                 alt_dir = (offset.altitude > now.altitude) ? -1.0 : 1.0;
             }
         }
-        
+
         // Set the base offset (0.5 degrees in steps) for both approaches
         encOffsetForGoto = 0.5 * STEPS_PER_DEGREE;
     }
-    
+
     // Transform Celestial to Telescope coordinates.
     // We have no good way to estimate how long will the mount takes to reach target (with deceleration,
     // and not just speed). So we will use iterative GOTO once the first GOTO is complete.
@@ -1794,7 +1798,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     // We approach from the selected/calculated direction
     if (ScopeStatus != APPROACH)
     {
-        DEBUGF(INDI::Logger::DBG_DEBUG, "Applying offset - az_dir: %.1f, alt_dir: %.1f, offset: %.2f steps", 
+        DEBUGF(INDI::Logger::DBG_DEBUG, "Applying offset - az_dir: %.1f, alt_dir: %.1f, offset: %.2f steps",
                az_dir, alt_dir, encOffsetForGoto);
     }
     slewTo(AXIS_AZ, axis1Steps - (az_dir * encOffsetForGoto), ScopeStatus != APPROACH);
@@ -2096,8 +2100,8 @@ void CelestronAUX::TimerHit()
                 predRate[AXIS_ALT] = 3600 * predRate[AXIS_ALT] * 1024;
 
                 // Now add the guiding offsets.
-                    targetMountAxisCoordinates.azimuth += m_GuideOffset[AXIS_AZ];
-                    targetMountAxisCoordinates.altitude += m_GuideOffset[AXIS_ALT];
+                targetMountAxisCoordinates.azimuth += m_GuideOffset[AXIS_AZ];
+                targetMountAxisCoordinates.altitude += m_GuideOffset[AXIS_ALT];
 
                 // If we had guiding pulses active, mark them as complete
                 if (GuideWENP.getState() == IPS_BUSY)
@@ -2164,7 +2168,7 @@ void CelestronAUX::TimerHit()
                                offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
 #ifdef DEBUG_PID
                     LOGF_DEBUG("Tracking AZ P: %8.1f I: %8.1f D: %8.1f O: %8.1f",
-                               m_Controllers[AXIS_AZ]->propotionalTerm(),
+                               m_Controllers[AXIS_AZ]->proportionalTerm(),
                                m_Controllers[AXIS_AZ]->integralTerm(),
                                m_Controllers[AXIS_AZ]->derivativeTerm(),
                                trackRates[AXIS_AZ] - predRate[AXIS_AZ]);
@@ -2214,7 +2218,7 @@ void CelestronAUX::TimerHit()
                                offsetSteps[AXIS_ALT], trackRates[AXIS_ALT]);
 #ifdef DEBUG_PID
                     LOGF_DEBUG("Tracking AL P: %8.1f I: %8.1f D: %8.1f O: %8.1f",
-                               m_Controllers[AXIS_ALT]->propotionalTerm(),
+                               m_Controllers[AXIS_ALT]->proportionalTerm(),
                                m_Controllers[AXIS_ALT]->integralTerm(),
                                m_Controllers[AXIS_ALT]->derivativeTerm(),
                                trackRates[AXIS_ALT] - predRate[AXIS_ALT]);
@@ -3391,17 +3395,17 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         // search for packet preamble (0x3b)
         do
         {
-            if (aux_tty_read((char*)buf, 1, READ_TIMEOUT, &n) != TTY_OK)
+            if (aux_tty_read((char * )buf, 1, READ_TIMEOUT, &n) != TTY_OK)
                 return false;
         }
         while (buf[0] != 0x3b);
 
         // packet preamble is found, now read packet length.
-        if (aux_tty_read((char*)(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
+        if (aux_tty_read((char * )(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
             return false;
 
         // now packet length is known, read the rest of the packet.
-        if (aux_tty_read((char*)(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
+        if (aux_tty_read((char * )(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
                 != TTY_OK || n != buf[1] + 1)
         {
             LOG_DEBUG("Did not got whole packet. Dropping out.");
@@ -3542,7 +3546,7 @@ int CelestronAUX::sendBuffer(AUXBuffer buf)
     {
         int n;
 
-        if (aux_tty_write((char*)buf.data(), buf.size(), CTS_TIMEOUT, &n) != TTY_OK)
+        if (aux_tty_write((char * )buf.data(), buf.size(), CTS_TIMEOUT, &n) != TTY_OK)
             return 0;
 
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
@@ -3673,7 +3677,7 @@ bool CelestronAUX::detectHC(char *version, size_t size)
 
     // read response
     int n;
-    if (aux_tty_read((char*)buf, 3, READ_TIMEOUT, &n) != TTY_OK)
+    if (aux_tty_read((char * )buf, 3, READ_TIMEOUT, &n) != TTY_OK)
         return false;
 
     // non error response must end with '#'

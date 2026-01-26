@@ -27,7 +27,7 @@ else(INDI_HIDAPILIB)
 endif(INDI_HIDAPILIB)
 
 set(ASI_VERSION_MAJOR 2)
-set(ASI_VERSION_MINOR 6)
+set(ASI_VERSION_MINOR 7)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_asi.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_asi.xml)
@@ -62,7 +62,12 @@ add_executable(indi_asi_single_ccd ${indi_asi_single_SRCS})
 target_link_libraries(indi_asi_single_ccd ${INDI_LIBRARIES} ${HIDAPILIB} ${CFITSIO_LIBRARIES} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_asi_wheel ###########
-add_executable(indi_asi_wheel ${CMAKE_CURRENT_SOURCE_DIR}/asi_wheel.cpp)
+set(indi_asi_wheel_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_wheel.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_wheel_hotplug_handler.cpp
+   )
+
+add_executable(indi_asi_wheel ${indi_asi_wheel_SRCS})
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
 target_link_libraries(indi_asi_wheel ${INDI_LIBRARIES} ${HIDAPILIB} ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
@@ -80,7 +85,12 @@ target_link_libraries(indi_asi_st4 ${INDI_LIBRARIES} ${HIDAPILIB} ${ASI_LIBRARIE
 ENDIF()
 
 ########### indi_asi_focuser ###########
-add_executable(indi_asi_focuser ${CMAKE_CURRENT_SOURCE_DIR}/asi_focuser.cpp)
+set(indi_asi_focuser_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_focuser.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_focuser_hotplug_handler.cpp
+   )
+
+add_executable(indi_asi_focuser ${indi_asi_focuser_SRCS})
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
 target_link_libraries(indi_asi_focuser ${INDI_LIBRARIES} ${HIDAPILIB} ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})

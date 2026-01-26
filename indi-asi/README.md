@@ -50,6 +50,31 @@ changed, a flushing mechanism is employed. It looks OK, but if you
 find any problem with parameters changes not being immediately applied
 please report.
 
+NICKNAMES
+
+The ASI SDK exposes device serial numbers for at least CCDs and EAFs.
+You may associate nicknames with specific serial numbers to make, *e.g.*,
+setups with multiple identical devices reliably associate the same name
+with the same device across restarts.
+
+Nicknames are stored in an xml-format file in a format like the below.
+The hard-wired location for this file is ``~/.indi/ZWONicknames.xml``.
+Nicknames are assoicated with the serial number of the camera, and are
+entered/changed with the NicknameTP text property. Since the device-name
+can't be changed once the driver is running, changes to nicknames can
+only take effect at the next INDI startup.
+
+You may mix CCD and EAF nicknames in the same file, using the format:
+
+```
+<?xml version="1.0"?>
+<Nicknames>
+  <Nickname SerialNumber="serialNumber1">nickname1</Nickname>
+  <Nickname SerialNumber="serialNumber2">nickname2</Nickname>
+  <Nickname SerialNumber="serialNumber3">nickname3</Nickname>
+</Nicknames>
+```
+
 CREDITS
 
 The origianl INDI driver was written by Chrstian Pellegrin <chripell@gmail.com> based on ASI SDK v1.0+
