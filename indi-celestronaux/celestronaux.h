@@ -488,8 +488,8 @@ class CelestronAUX :
         // Rate based on geometric analysis and testing against SkySafari 7, simulator and real mount:
         // Logical unit for guiding commands is 1/1024 arcsec/sec.
         // Steps per arcsecond = 16777216 / (360 * 3600) = 16777216 / 1296000
-        // Scaling Factor (Units -> Steps/sec) = (1/1024) * (16777216 / 1296000)
-        // Factor = 16777216 / (1024 * 1296000) = 16777216 / 1327104000
+        // Scaling Factor (Units -> Steps/sec) = 1024 * (1296000 / 16777216)
+        // Factor = (1024 * 1296000) / 16777216  = 1327104000 / 16777216
         // Simplified Rational Factor = 10125 / 128
         // Steps/sec = Value * (10125 / 128) = Value * 79.1015625
         static constexpr double GAIN_STEPS {10125.0 / 128};
