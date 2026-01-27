@@ -25,7 +25,7 @@
 
 #include <HeaterPID.h>
 #include <time.h>
-#include <cmath>
+#include <algorithm>
 
 HeaterPID::HeaterPID(double kp, double ki, double kd, double minoutput, double maxoutput) :
 	Kp(kp),
