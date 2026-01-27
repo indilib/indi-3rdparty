@@ -980,6 +980,11 @@ void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI
     fitsKeywords.push_back({"GAIN", GainNP[0].getValue(), 3, "Gain"});
     fitsKeywords.push_back({"CSI_BIT_DEPTH", static_cast<int64_t>(m_bit_depth), "CSI Bit Depth"});
     fitsKeywords.push_back({"CSI_PACKED", m_csi_format_packed ? "P" : "U", "CSI Packed Format"});
+
+    float awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
+    fitsKeywords.push_back({"WB_R", awb_gain_r, 3, "White Balance - Red"});
+    float awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
+    fitsKeywords.push_back({"WB_B", awb_gain_b, 3, "White Balance - Blue"});
 }
 
 /////////////////////////////////////////////////////////////////////////////
