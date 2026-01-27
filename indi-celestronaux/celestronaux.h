@@ -490,9 +490,9 @@ class CelestronAUX :
         // Steps per arcsecond = 16777216 / (360 * 3600) = 16777216 / 1296000
         // Scaling Factor (Units -> Steps/sec) = (1/1024) * (16777216 / 1296000)
         // Factor = 16777216 / (1024 * 1296000) = 16777216 / 1327104000
-        // Simplified Rational Factor = 128 / 10125
-        // Steps/sec = Value * (128 / 10125) = Value * 79.1015625
-        static constexpr double GAIN_STEPS {128 / 10125.0};
+        // Simplified Rational Factor = 10125 / 128
+        // Steps/sec = Value * (10125 / 128) = Value * 79.1015625
+        static constexpr double GAIN_STEPS {10125.0 / 128};
 
         // MC_SET_POS_GUIDERATE & MC_SET_NEG_GUIDERATE use 24bit number rate in
         static constexpr uint8_t RATE_PER_ARCSEC {4};
