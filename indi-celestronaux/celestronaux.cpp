@@ -2168,7 +2168,7 @@ void CelestronAUX::TimerHit()
                                offsetSteps[AXIS_AZ], trackRates[AXIS_AZ]);
 #ifdef DEBUG_PID
                     LOGF_DEBUG("Tracking AZ P: %8.1f I: %8.1f D: %8.1f O: %8.1f",
-                               m_Controllers[AXIS_AZ]->proportionalTerm(),
+                               m_Controllers[AXIS_AZ]->propotionalTerm(),
                                m_Controllers[AXIS_AZ]->integralTerm(),
                                m_Controllers[AXIS_AZ]->derivativeTerm(),
                                trackRates[AXIS_AZ] - predRate[AXIS_AZ]);
@@ -2218,7 +2218,7 @@ void CelestronAUX::TimerHit()
                                offsetSteps[AXIS_ALT], trackRates[AXIS_ALT]);
 #ifdef DEBUG_PID
                     LOGF_DEBUG("Tracking AL P: %8.1f I: %8.1f D: %8.1f O: %8.1f",
-                               m_Controllers[AXIS_ALT]->proportionalTerm(),
+                               m_Controllers[AXIS_ALT]->propotionalTerm(),
                                m_Controllers[AXIS_ALT]->integralTerm(),
                                m_Controllers[AXIS_ALT]->derivativeTerm(),
                                trackRates[AXIS_ALT] - predRate[AXIS_ALT]);
