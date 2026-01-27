@@ -55,14 +55,13 @@ AAGCloudWatcher::AAGCloudWatcher()
 
     usePIDforHeating = false;
 
-    pidSumError  = 0;
-    pidLastTime  = 0;
-    pidLastError = 0;
+    heaterPID = new HeaterPID(0,0,0,10,100);
 
 }
 
 AAGCloudWatcher::~AAGCloudWatcher()
 {
+    delete (heaterPID);
     delete (cwc);
 }
 
@@ -561,30 +560,26 @@ bool AAGCloudWatcher::heatingAlgorithm()
     {
         if (usePIDforHeating)
         {
+            // Update PID parameters
+            heaterPID->setParameters(pidKp,pidKi,pidKd,min,100);
+
+            // Calculate new heating power percentage
+            double new_globalRainSensorHeater=heaterPID->calculate(desiredSensorTemperature,rainSensorTemperature);
+
+            // Print key variables for debugging/PID tuning
             double temperatureError = desiredSensorTemperature - rainSensorTemperature;
+            double pidCorrP = heaterPID->getLastCorrectionP();
+            double pidCorrI = heaterPID->getLastCorrectionI();
+            double pidCorrD = heaterPID->getLastCorrectionD();
+            double pidSumError = heaterPID->getSumError();
 
-            time_t currTime = time(nullptr);
+            LOGF_DEBUG("RainSensor: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C\n", rainSensorTemperature, desiredSensorTemperature, temperatureError);
+            LOGF_DEBUG("RainSensor: PID integrated error: %f\n", pidSumError);
+            LOGF_DEBUG("RainSensor: PID terms: P: %f, I: %f, D: %f\n", pidCorrP, pidCorrI, pidCorrD);
+            LOGF_DEBUG("RainSensor: Current heater power: %f %%, New heater power: %f %%\n", globalRainSensorHeater, new_globalRainSensorHeater);
 
-            if (pidLastTime==0) {
-                    pidLastTime=currTime;
-                    pidLastError=0;
-            } else {
-                    if (globalRainSensorHeater>min && globalRainSensorHeater<100.0) /* Anti windup */
-                            pidSumError+=temperatureError*(currTime-pidLastTime);
-
-                    float correctionP = pidKp*temperatureError;
-                    float correctionI = pidKi*(pidSumError);
-                    float correctionD = pidKd*(temperatureError-pidLastError)/(currTime-pidLastTime);
-                    float new_globalRainSensorHeater=globalRainSensorHeater+correctionP+correctionI+correctionD;
-
-                    pidLastError=temperatureError;
-                    pidLastTime=currTime;
-
-                    LOGF_DEBUG("PID: correction P: %f, correction I: %f, correction D: %f\n", correctionP, correctionI, correctionD);
-                    LOGF_DEBUG("PID: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C, Current heater power: %f %%, New heater power: %f %%\n", rainSensorTemperature, desiredSensorTemperature, temperatureError, globalRainSensorHeater, new_globalRainSensorHeater);
-
-                    globalRainSensorHeater=new_globalRainSensorHeater;
-	    }
+            // Set new heating power percentage
+            globalRainSensorHeater=new_globalRainSensorHeater;
         } else {
             // Check desired temperature and act accordingly
             // Obtain the difference in temperature and modifier

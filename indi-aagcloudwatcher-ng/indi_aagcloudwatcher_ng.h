@@ -29,6 +29,8 @@
 #include "indiweather.h"
 #include "connectionplugins/connectionserial.h"
 
+#include "HeaterPID.h"
+
 enum HeatingAlgorithmStatus
 {
     normal,
@@ -86,9 +88,7 @@ private:
     int m_AnemometerStatus;
 
     bool usePIDforHeating;
-    double pidSumError;
-    time_t pidLastTime;
-    double pidLastError;
+    HeaterPID *heaterPID {nullptr};
 
     enum
     {
