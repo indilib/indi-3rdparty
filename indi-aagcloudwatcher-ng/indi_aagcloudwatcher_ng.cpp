@@ -53,10 +53,15 @@ AAGCloudWatcher::AAGCloudWatcher()
     desiredSensorTemperature = 0;
     globalRainSensorHeater   = -1;
 
+    usePIDforHeating = false;
+
+    heaterPID = new HeaterPID(0,0,0,10,100);
+
 }
 
 AAGCloudWatcher::~AAGCloudWatcher()
 {
+    delete (heaterPID);
     delete (cwc);
 }
 
@@ -168,9 +173,18 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
         return false;
     }
 
+    if (nvp.isNameMatch("WEATHER_UPDATE") || nvp.isNameMatch("WEATHER_RAIN"))
+    {
+        nvp.update(values, names, n);
+        nvp.setState(IPS_OK);
+        nvp.apply();
+
+        return true;
+    }
+
     if (nvp.isNameMatch("heaterParameters"))
     {
-        for (int i = 0; i < 8; i++)
+        for (int i = 0; i < n; i++)
         {
             if ((strcmp(names[i], "tempLow") == 0) || (strcmp(names[i], "tempHigh") == 0))
             {
@@ -198,9 +212,9 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
 
             if ((strcmp(names[i], "min") == 0))
             {
-                if (values[i] < 10)
+                if (values[i] < 1)
                 {
-                    values[i] = 10;
+                    values[i] = 1;
                 }
                 else if (values[i] > 20)
                 {
@@ -245,6 +259,17 @@ bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double valu
             }
         }
 
+
+
+        nvp.update(values, names, n);
+        nvp.setState(IPS_OK);
+        nvp.apply();
+
+        return true;
+    }
+
+    if (nvp.isNameMatch("heaterPIDParameters"))
+    {
         nvp.update(values, names, n);
         nvp.setState(IPS_OK);
         nvp.apply();
@@ -294,6 +319,20 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
     if (!svp)
     {
         return false;
+    }
+
+    if (svp.isNameMatch("heatingAlgorithm"))
+    {
+        LOGF_INFO("Changing heating algorithm to %s\n", names[0]);
+        if (strcmp(names[0], "pid") == 0)
+        {
+            usePIDforHeating=true;
+        }
+        else
+        {
+            usePIDforHeating=false;
+        }
+	return false;
     }
 
     int error = 0;
@@ -402,7 +441,8 @@ bool AAGCloudWatcher::isWetRain()
 
 bool AAGCloudWatcher::heatingAlgorithm()
 {
-    auto heaterParameters = getNumber("heaterParameters");
+    auto  heaterParameters                  = getNumber("heaterParameters");
+    auto  heaterPIDParameters               = getNumber("heaterPIDParameters");
     float tempLow                           = getNumberValueFromVector(heaterParameters, "tempLow");
     float tempHigh                          = getNumberValueFromVector(heaterParameters, "tempHigh");
     float deltaLow                          = getNumberValueFromVector(heaterParameters, "deltaLow");
@@ -411,10 +451,13 @@ bool AAGCloudWatcher::heatingAlgorithm()
     float heatImpulseDuration               = getNumberValueFromVector(heaterParameters, "heatImpulseDuration");
     float heatImpulseCycle                  = getNumberValueFromVector(heaterParameters, "heatImpulseCycle");
     float min                               = getNumberValueFromVector(heaterParameters, "min");
+    float pidKp                             = getNumberValueFromVector(heaterPIDParameters, "pidKp");
+    float pidKi                             = getNumberValueFromVector(heaterPIDParameters, "pidKi");
+    float pidKd                             = getNumberValueFromVector(heaterPIDParameters, "pidKd");
 
-    auto sensors = getNumber("sensors");
-    float ambient                  = getNumberValueFromVector(sensors, "ambientTemperatureSensor");
-    float rainSensorTemperature    = getNumberValueFromVector(sensors, "rainSensorTemperature");
+    auto sensors                            = getNumber("sensors");
+    float ambient                           = getNumberValueFromVector(sensors, "ambientTemperatureSensor");
+    float rainSensorTemperature             = getNumberValueFromVector(sensors, "rainSensorTemperature");
 
     // XXX FIXME: when the automatic refresh is disabled the refresh period is set to 0, however we can be called in a manual fashion.
     // this is needed as we divide by refresh later...
@@ -515,53 +558,78 @@ bool AAGCloudWatcher::heatingAlgorithm()
 
     if ((heatingStatus == normal) || (heatingStatus == pulse))
     {
-        // Check desired temperature and act accordingly
-        // Obtain the difference in temperature and modifier
-        float dif             = fabs(desiredSensorTemperature - rainSensorTemperature);
-        float refreshModifier = sqrt(WI::UpdatePeriodNP[0].getValue() / 10.0);
-        float modifier        = 1;
+        if (usePIDforHeating)
+        {
+            // Update PID parameters
+            heaterPID->setParameters(pidKp,pidKi,pidKd,min,100);
 
-        if (dif > 8)
-        {
-            modifier = (1.4 / refreshModifier);
-        }
-        else if (dif > 4)
-        {
-            modifier = (1.2 / refreshModifier);
-        }
-        else if (dif > 3)
-        {
-            modifier = (1.1 / refreshModifier);
-        }
-        else if (dif > 2)
-        {
-            modifier = (1.06 / refreshModifier);
-        }
-        else if (dif > 1)
-        {
-            modifier = (1.04 / refreshModifier);
-        }
-        else if (dif > 0.5)
-        {
-            modifier = (1.02 / refreshModifier);
-        }
-        else if (dif > 0.3)
-        {
-            modifier = (1.01 / refreshModifier);
+            // Calculate new heating power percentage
+            double new_globalRainSensorHeater=heaterPID->calculate(desiredSensorTemperature,rainSensorTemperature);
+
+            // Print key variables for debugging/PID tuning
+            double temperatureError = desiredSensorTemperature - rainSensorTemperature;
+            double pidCorrP = heaterPID->getLastCorrectionP();
+            double pidCorrI = heaterPID->getLastCorrectionI();
+            double pidCorrD = heaterPID->getLastCorrectionD();
+            double pidSumError = heaterPID->getSumError();
+
+            LOGF_DEBUG("RainSensor: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C\n", rainSensorTemperature, desiredSensorTemperature, temperatureError);
+            LOGF_DEBUG("RainSensor: PID integrated error: %f\n", pidSumError);
+            LOGF_DEBUG("RainSensor: PID terms: P: %f, I: %f, D: %f\n", pidCorrP, pidCorrI, pidCorrD);
+            LOGF_DEBUG("RainSensor: Current heater power: %f %%, New heater power: %f %%\n", globalRainSensorHeater, new_globalRainSensorHeater);
+
+            // Set new heating power percentage
+            globalRainSensorHeater=new_globalRainSensorHeater;
+        } else {
+            // Check desired temperature and act accordingly
+            // Obtain the difference in temperature and modifier
+            float dif             = fabs(desiredSensorTemperature - rainSensorTemperature);
+            float refreshModifier = sqrt(WI::UpdatePeriodNP[0].getValue() / 10.0);
+            float modifier        = 1;
+
+            if (dif > 8)
+            {
+                modifier = (1.4 / refreshModifier);
+            }
+            else if (dif > 4)
+            {
+                modifier = (1.2 / refreshModifier);
+            }
+            else if (dif > 3)
+            {
+                modifier = (1.1 / refreshModifier);
+            }
+            else if (dif > 2)
+            {
+                modifier = (1.06 / refreshModifier);
+            }
+            else if (dif > 1)
+            {
+                modifier = (1.04 / refreshModifier);
+            }
+            else if (dif > 0.5)
+            {
+                modifier = (1.02 / refreshModifier);
+            }
+            else if (dif > 0.3)
+            {
+                modifier = (1.01 / refreshModifier);
+            }
+
+            if (rainSensorTemperature > desiredSensorTemperature)
+            {
+                // Lower heating
+                LOGF_DEBUG("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater / modifier);
+                globalRainSensorHeater /= modifier;
+            }
+            else
+            {
+                // increase heating
+                LOGF_DEBUG("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater * modifier);
+                globalRainSensorHeater *= modifier;
+            }
         }
 
-        if (rainSensorTemperature > desiredSensorTemperature)
-        {
-            // Lower heating
-            //   IDLog("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater / modifier);
-            globalRainSensorHeater /= modifier;
-        }
-        else
-        {
-            // increase heating
-            //   IDLog("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater * modifier);
-            globalRainSensorHeater *= modifier;
-        }
     }
 
     if (globalRainSensorHeater < min)
