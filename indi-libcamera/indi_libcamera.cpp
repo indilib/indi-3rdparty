@@ -543,7 +543,7 @@ void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char
 
 bool INDILibCamera::initProperties()
 {
-    LOGF_INFO("Initializing properties for %s", getDeviceName());
+    LOGF_DEBUG("Initializing properties for %s", getDeviceName());
     INDI::CCD::initProperties();
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 3600, 1, false);
@@ -609,7 +609,7 @@ bool INDILibCamera::initProperties()
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::updateProperties()
 {
-    LOGF_INFO("Updating properties for %s", getDeviceName());
+    LOGF_DEBUG("Updating properties for %s", getDeviceName());
     INDI::CCD::updateProperties();
 
     if (isConnected())
@@ -975,7 +975,7 @@ bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
-    LOGF_INFO("Adding FITS keywords for %s", getDeviceName());
+    LOGF_DEBUG("Adding FITS keywords for %s", getDeviceName());
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
     fitsKeywords.push_back({"GAIN", GainNP[0].getValue(), 3, "Gain"});
     fitsKeywords.push_back({"CSI_BIT_DEPTH", static_cast<int64_t>(m_bit_depth), "CSI Bit Depth"});
