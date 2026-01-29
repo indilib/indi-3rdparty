@@ -64,15 +64,14 @@ case "$OS" in
                     boost-devel \
                     zeromq-devel libudev-devel
                 ;;
-            centos)
-                # CentOS 8 dont have libnova-devel package
-                $(command -v sudo) yum install -y epel-release
-                $(command -v sudo) yum upgrade -y
-                $(command -v sudo) yum install -y \
+            arch)
+                $(command -v sudo) pacman -Syu --noconfirm
+                $(command -v sudo) pacman -S --noconfirm \
                     git \
-                    cmake gcc-c++ zlib-devel \
-                    cfitsio-devel libnova-devel libusb-devel libcurl-devel \
-                    gsl-devel libjpeg-devel fftw-devel opencv-devel zeromq-devel libudev-devel
+                    cmake base-devel \
+                    cfitsio libnova libusb curl \
+                    gsl libjpeg-turbo fftw rtl-sdr libev \
+                    qt5-base
                 ;;
             opensuse-tumbleweed)
                 # broken git/openssh package
