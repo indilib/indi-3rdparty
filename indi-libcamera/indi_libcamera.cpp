@@ -130,6 +130,7 @@ int INDILibCamera::getColorspaceFlags(std::string const &codec)
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::workerStreamVideo(const std::atomic_bool &isAboutToQuit, double framerate)
 {
+    LOGF_INFO("Starting video stream at %.2f fps", framerate);
     RPiCamEncoder app;
     auto options = app.GetOptions();
     configureVideoOptions(options, framerate);
@@ -227,6 +228,7 @@ void INDILibCamera::metadataReady(libcamera::ControlList &metadata)
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
+    LOGF_INFO("Starting exposure for %.3f seconds", duration);
     RPiCamINDIApp app;
     auto options = app.GetOptions();
     configureStillOptions(options, duration);
@@ -310,6 +312,9 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
                 BayerTP[2].setText(bayer_pattern);
                 BayerTP.apply();
+                m_csi_format_packed = options->Get().mode.packed;
+                m_bit_depth = options->Get().mode.bit_depth;
+                LOGF_INFO("Acquired image, mode: %s%d%s", bayer_pattern, m_bit_depth, m_csi_format_packed ? "P" : "U");
             }
             else
             {
@@ -538,6 +543,7 @@ void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char
 
 bool INDILibCamera::initProperties()
 {
+    LOGF_DEBUG("Initializing properties for %s", getDeviceName());
     INDI::CCD::initProperties();
 
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 3600, 1, false);
@@ -603,6 +609,7 @@ bool INDILibCamera::initProperties()
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::updateProperties()
 {
+    LOGF_DEBUG("Updating properties for %s", getDeviceName());
     INDI::CCD::updateProperties();
 
     if (isConnected())
@@ -726,7 +733,7 @@ void INDILibCamera::default_signal_handler(int signal_number)
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::Connect()
 {
-
+    LOGF_INFO("Connecting to %s", getDeviceName());
     auto pas = m_ControlList.get(properties::PixelArraySize);
     // no idea why the IMX290 returns an uneven number of pixels, so just round down
     auto width = 2.0 * (pas->width / 2);
@@ -741,6 +748,8 @@ bool INDILibCamera::Connect()
     PrimaryCCD.setPixelSize(ucsWidth, ucsHeight);
     PrimaryCCD.setBPP(8);
 
+    LOGF_INFO("Camera connected, pixel size: %.3f x %.3f um", ucsWidth, ucsHeight);
+
     return true;
 }
 
@@ -749,6 +758,7 @@ bool INDILibCamera::Connect()
 /////////////////////////////////////////////////////////////////////////////
 bool INDILibCamera::Disconnect()
 {
+    LOGF_INFO("Disconnecting from %s", getDeviceName());
     m_Worker.quit();
     return true;
 }
@@ -965,8 +975,16 @@ bool INDILibCamera::UpdateCCDBin(int binx, int biny)
 /////////////////////////////////////////////////////////////////////////////
 void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FITSRecord> &fitsKeywords)
 {
+    LOGF_DEBUG("Adding FITS keywords for %s", getDeviceName());
     INDI::CCD::addFITSKeywords(targetChip, fitsKeywords);
     fitsKeywords.push_back({"GAIN", GainNP[0].getValue(), 3, "Gain"});
+    fitsKeywords.push_back({"CSI_BIT_DEPTH", static_cast<int64_t>(m_bit_depth), "CSI Bit Depth"});
+    fitsKeywords.push_back({"CSI_PACKED", m_csi_format_packed ? "P" : "U", "CSI Packed Format"});
+
+    float awb_gain_r = AdjustmentNP[AdjustAwbRed].getValue();
+    fitsKeywords.push_back({"WB_R", awb_gain_r, 3, "White Balance - Red"});
+    float awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
+    fitsKeywords.push_back({"WB_B", awb_gain_b, 3, "White Balance - Blue"});
 }
 
 /////////////////////////////////////////////////////////////////////////////
