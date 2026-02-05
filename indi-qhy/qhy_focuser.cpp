@@ -130,7 +130,7 @@ bool QFocuser::initProperties()
 /////////////////////////////////////////////////////////////////////////////
 bool QFocuser::updateProperties()
 {
-    LOG_INFO("=== QFocuser updateProperties() called ===");
+    LOG_DEBUG("=== QFocuser updateProperties() called ===");
     INDI::Focuser::updateProperties();
 
     if (isConnected())
@@ -139,11 +139,11 @@ bool QFocuser::updateProperties()
 
         // Always define external temperature switch
         // Note: TemperatureNP will be defined later in Handshake() after loadConfig() is called
-        LOG_INFO("Defining ExternalTempSP (外部温度) switch");
-        LOGF_INFO("Before defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
+        LOG_DEBUG("Defining ExternalTempSP (外部温度) switch");
+        LOGF_DEBUG("Before defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
                   ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
         defineProperty(ExternalTempSP);
-        LOGF_INFO("After defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
+        LOGF_DEBUG("After defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
                   ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
 
         defineProperty(TemperatureChipNP);
@@ -151,10 +151,10 @@ bool QFocuser::updateProperties()
         defineProperty(FOCUSVersionNP);
         defineProperty(BOARDVersionNP);
         // Always define HoldForceSP and HoldCurrentNP, but they will be disabled if voltage is low
-        LOG_INFO("Defining HoldForceSP and HoldCurrentNP properties (initially read-only)");
+        LOG_DEBUG("Defining HoldForceSP and HoldCurrentNP properties (initially read-only)");
         defineProperty(HoldForceSP);
         defineProperty(HoldCurrentNP);
-        LOGF_INFO("HoldForceSP permission: %d, HoldCurrentNP permission: %d",
+        LOGF_DEBUG("HoldForceSP permission: %d, HoldCurrentNP permission: %d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
     }
     else
@@ -1000,19 +1000,19 @@ void QFocuser::updateHoldCurrentVisibility()
         bool pdnOk = setPdnMode(1);
         LOGF_DEBUG("setPdnMode(1) returned %s", pdnOk ? "true" : "false");
 
-        LOGF_INFO("Before setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+        LOGF_DEBUG("Before setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
 
         HoldForceSP.setPermission(IP_RW);
         HoldCurrentNP.setPermission(IP_RW);
 
-        LOGF_INFO("After setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+        LOGF_DEBUG("After setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
 
         HoldForceSP.apply();
         HoldCurrentNP.apply();
 
-        LOGF_INFO("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
+        LOGF_DEBUG("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
         LOG_INFO("Hold force settings enabled (IP_RW).");
     }
@@ -1022,19 +1022,19 @@ void QFocuser::updateHoldCurrentVisibility()
         LOGF_INFO("Voltage (%.1fV) <= threshold (%.1fV), disabling hold force settings",
                   voltage, VOLTAGE_THRESHOLD);
 
-        LOGF_INFO("Before setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+        LOGF_DEBUG("Before setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
 
         HoldForceSP.setPermission(IP_RO);
         HoldCurrentNP.setPermission(IP_RO);
 
-        LOGF_INFO("After setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+        LOGF_DEBUG("After setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
 
         HoldForceSP.apply();
         HoldCurrentNP.apply();
 
-        LOGF_INFO("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
+        LOGF_DEBUG("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
         LOG_INFO("Hold force settings disabled (IP_RO).");
         LOGF_INFO("Requires > %.0fV to operate.", VOLTAGE_THRESHOLD);
