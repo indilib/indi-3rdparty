@@ -135,8 +135,6 @@ bool QFocuser::updateProperties()
 
     if (isConnected())
     {
-        LOG_INFO("=== QFocuser updateProperties: Connected ===");
-
         // Always define external temperature switch
         // Note: TemperatureNP will be defined later in Handshake() after loadConfig() is called
         LOG_DEBUG("Defining ExternalTempSP (外部温度) switch");
@@ -159,7 +157,6 @@ bool QFocuser::updateProperties()
     }
     else
     {
-        LOG_INFO("=== QFocuser updateProperties: Disconnected ===");
         deleteProperty(ExternalTempSP);
         deleteProperty(TemperatureNP);
         deleteProperty(TemperatureChipNP);
@@ -388,7 +385,6 @@ int QFocuser::ReadResponse(char *buf, int &cmd_id)
 /////////////////////////////////////////////////////////////////////////////
 bool QFocuser::Handshake()
 {
-    LOG_INFO("=== QFocuser Handshake Start ===");
     LOGF_INFO("Driver version: %d.%d", INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
 
     // TODO: Any initial communciation needed with our focuser, we have an active connection.
@@ -462,10 +458,7 @@ bool QFocuser::Handshake()
     LOGF_INFO("Voltage threshold for hold force: %.1f V", VOLTAGE_THRESHOLD);
 
     // Always update hold current visibility based on voltage
-    LOG_INFO("Calling updateHoldCurrentVisibility()...");
     updateHoldCurrentVisibility();
-
-    LOG_INFO("=== QFocuser Handshake Complete ===");
 
     if(cmd_voltage == 0)
     {
@@ -989,7 +982,7 @@ void QFocuser::updateHoldCurrentVisibility()
         return;
     }
 
-    LOGF_INFO("=== updateHoldCurrentVisibility: voltage=%.1f, threshold=%.1f ===",
+    LOGF_DEBUG("=== updateHoldCurrentVisibility: voltage=%.1f, threshold=%.1f ===",
                voltage, VOLTAGE_THRESHOLD);
 
     if (voltage > VOLTAGE_THRESHOLD)
@@ -1037,7 +1030,7 @@ void QFocuser::updateHoldCurrentVisibility()
         LOGF_DEBUG("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
         LOG_INFO("Hold force settings disabled (IP_RO).");
-        LOGF_INFO("Requires > %.0fV to operate.", VOLTAGE_THRESHOLD);
+        LOGF_WARNING("Requires > %.0fV to operate.", VOLTAGE_THRESHOLD);
     }
 }
 
@@ -1247,18 +1240,13 @@ bool QFocuser::saveConfigItems(FILE *fp)
     // Save External Temperature display switch state
     // This allows the driver to remember if the user wants to show or hide external temperature
     ExternalTempSP.save(fp);
-    LOG_INFO("Saved External Temperature display state");
 
     // Save Hold Force switch state (Enable/Disable)
     // This allows the driver to remember the user's preference for hold force
     HoldForceSP.save(fp);
-    LOG_INFO("Saved Hold Force state");
 
     // Save Hold Current values (IHOLD and IRUN)
     // This allows the driver to remember the user's custom hold current settings
     HoldCurrentNP.save(fp);
-    LOG_INFO("Saved Hold Current values");
-
-    LOG_INFO("Configuration saved successfully");
     return true;
 }
