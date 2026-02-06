@@ -65,18 +65,17 @@ static class Loader
             auto options = app.GetOptions();
             if (options->Parse(argc, argv))
             {
-                auto new_cameras = app.GetCameras();
+                auto rpi_cameras = app.GetCameras();
 
-                if (new_cameras.size() == 0)
+                if (rpi_cameras.size() == 0)
                 {
                     IDLog("No cameras detected.");
                     return;
                 }
 
-                for (size_t i = 0; i < new_cameras.size(); i++)
+                for (size_t i = 0; i < rpi_cameras.size(); i++)
                 {
-                    auto newCamera = new INDILibCamera(i, new_cameras[i]->properties());
-                    cameras[i] = std::shared_ptr<INDILibCamera>(newCamera);
+                    cameras[i] = std::make_shared<INDILibCamera>(i, rpi_cameras[i]);
                 }
             }
         }
@@ -86,11 +85,11 @@ static class Loader
 ///////////////////////////////////////////////////////////////////////
 /// Generic constructor
 ///////////////////////////////////////////////////////////////////////
-INDILibCamera::INDILibCamera(uint8_t index, const libcamera::ControlList &list) : m_CameraIndex(index), m_ControlList(list)
+INDILibCamera::INDILibCamera(uint8_t index, std::shared_ptr<libcamera::Camera> cam) : m_CameraIndex(index), m_ControlList(cam->properties())
 {
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
-    auto model = list.get(properties::Model).value();
+    auto model = m_ControlList.get(properties::Model).value();
     auto fullName = std::string("LibCamera ")
               + std::string(model)
               + "-"
@@ -541,46 +540,199 @@ void INDILibCamera::initSwitch(INDI::PropertySwitch &switchSP, int n, const char
 
 }
 
+/**
+ * Get libcamera Camera controls (which we map to INDI Properties)
+ * by instantiating an RpiCam instance and acquiring a Camera instance.
+ * 'sane' defaults are returned if it fails to find or acquire the cam.
+ */
+RpiCamProperties INDILibCamera::getAvailableCamProperties()
+{
+    RpiCamProperties props; // Initialized with defaults
+
+    // now get the controls by instantiating an app instance and 
+    // acquiring a libcamera Camera instance
+    RPiCamINDIApp tempApp;
+    int argc = 1;
+    char *argv[] = { (char*)"indi_libcamera_ccd" };
+    auto options = tempApp.GetOptions();
+    
+    if (!options->Parse(argc, argv)) {
+        LOG_WARN("Failed to parse temporary app options, using default camera properties");
+        return props;
+    }
+    
+    auto cameras = tempApp.GetCameras();
+    
+    if (m_CameraIndex >= cameras.size() || !cameras[m_CameraIndex])
+    {
+        LOGF_WARN("Camera index %zu not available, using default camera properties", m_CameraIndex);
+        return props;
+    }
+    
+    auto cam = cameras[m_CameraIndex];
+    
+    if (cam->acquire() != 0)
+    {
+        LOGF_WARN("Failed to acquire camera %zu, using default camera properties", m_CameraIndex);
+        return props;
+    }
+    
+    auto config = cam->generateConfiguration({ libcamera::StreamRole::StillCapture });
+    if (!config)
+    {
+        LOGF_WARN("Failed to generate configuration for camera %zu, using default camera properties", m_CameraIndex);
+        cam->release();
+        return props;
+    }
+    
+    config->validate();
+    cam->configure(config.get());
+    
+    const auto &controls = cam->controls();
+    
+    auto bright_it = controls.find(&libcamera::controls::Brightness);
+    if (bright_it != controls.end())
+    {
+        props.brightness.min = bright_it->second.min().get<float>();
+        props.brightness.max = bright_it->second.max().get<float>();
+        props.brightness.def = bright_it->second.def().get<float>();
+        LOGF_DEBUG("Found Brightness control: min=%.2f max=%.2f def=%.2f",
+                    props.brightness.min, props.brightness.max, props.brightness.def);
+    }
+    
+    auto contrast_it = controls.find(&libcamera::controls::Contrast);
+    if (contrast_it != controls.end())
+    {
+        props.contrast.min = contrast_it->second.min().get<float>();
+        props.contrast.max = contrast_it->second.max().get<float>();
+        props.contrast.def = contrast_it->second.def().get<float>();
+        LOGF_DEBUG("Found Contrast control: min=%.2f max=%.2f def=%.2f",
+                    props.contrast.min, props.contrast.max, props.contrast.def);
+    }
+
+    auto sat_it = controls.find(&libcamera::controls::Saturation);
+    if (sat_it != controls.end())
+    {
+        props.saturation.min = sat_it->second.min().get<float>();
+        props.saturation.max = sat_it->second.max().get<float>();
+        props.saturation.def = sat_it->second.def().get<float>();
+        LOGF_DEBUG("Found Saturation control: min=%.2f max=%.2f def=%.2f",
+                    props.saturation.min, props.saturation.max, props.saturation.def);
+    }
+    
+    auto sharp_it = controls.find(&libcamera::controls::Sharpness);
+    if (sharp_it != controls.end())
+    {
+        props.sharpness.min = sharp_it->second.min().get<float>();
+        props.sharpness.max = sharp_it->second.max().get<float>();
+        props.sharpness.def = sharp_it->second.def().get<float>();
+        LOGF_DEBUG("Found Sharpness control: min=%.2f max=%.2f def=%.2f",
+                    props.sharpness.min, props.sharpness.max, props.sharpness.def);
+    }
+    
+    auto gain_it = controls.find(&libcamera::controls::AnalogueGain);
+    if (gain_it != controls.end())
+    {
+        props.gain.min = gain_it->second.min().get<float>();
+        props.gain.max = gain_it->second.max().get<float>();
+        props.gain.def = gain_it->second.def().get<float>();
+        LOGF_DEBUG("Found AnalogueGain control: min=%.2f max=%.2f def=%.2f",
+                    props.gain.min, props.gain.max, props.gain.def);
+    }
+    
+    // ColourGains - special handling
+    // ColourGains is Span<const float, 2> - array of [red_gain, blue_gain]
+    auto cg_it = controls.find(&libcamera::controls::ColourGains);
+    if (cg_it != controls.end())
+    {
+        const auto& min_val = cg_it->second.min();
+        const auto& max_val = cg_it->second.max();
+        props.colourGains.min = min_val.get<float>();
+        props.colourGains.max = max_val.get<float>();
+        props.colourGains.def = 1.0f;
+        LOGF_DEBUG("Found ColourGains control: min=%.2f max=%.2f def=%.2f",
+                    props.colourGains.min, props.colourGains.max, props.colourGains.def);
+    }
+            
+    auto exp_it = controls.find(&libcamera::controls::ExposureTime);
+    if (exp_it != controls.end())
+    {
+        props.exposureTime.min = static_cast<float>(exp_it->second.min().get<int32_t>()) / 1000000.0f; // convert from us to s
+        props.exposureTime.max = static_cast<float>(exp_it->second.max().get<int32_t>()) / 1000000.0f;
+        props.exposureTime.def = static_cast<float>(exp_it->second.def().get<int32_t>()) / 1000000.0f;
+        LOGF_DEBUG("Found ExposureTime control: min=%.6f max=%.6f def=%.6f",
+                    props.exposureTime.min, props.exposureTime.max, props.exposureTime.def);
+    }
+
+    auto ev_it = controls.find(&libcamera::controls::ExposureValue);
+    if (ev_it != controls.end())
+    {
+        props.exposureValue.min = ev_it->second.min().get<float>();
+        props.exposureValue.max = ev_it->second.max().get<float>();
+        props.exposureValue.def = ev_it->second.def().get<float>();
+        LOGF_DEBUG("Found ExposureValue control: min=%.2f max=%.2f def=%.2f",
+                    props.exposureValue.min, props.exposureValue.max, props.exposureValue.def);
+    }
+    
+    cam->release();
+    
+    return props;
+}
+
 bool INDILibCamera::initProperties()
 {
+    LOGF_DEBUG("Reading available properties from %s", getDeviceName());
+    RpiCamProperties props = getAvailableCamProperties();
+
     LOGF_DEBUG("Initializing properties for %s", getDeviceName());
     INDI::CCD::initProperties();
 
-    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", 0, 3600, 1, false);
+    PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", props.exposureTime.min, props.exposureTime.max, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
 
     const char *IMAGE_CONTROLS_TAB = MAIN_CONTROL_TAB;
-    AdjustExposureModeSP.fill(getDeviceName(), "ExposureMode", "Exposure Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60,
-                              IPS_IDLE);
+    
+    AdjustExposureModeSP.fill(getDeviceName(), "ExposureMode", "Exposure Mode", IMAGE_CONTROLS_TAB, 
+                              IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     const char *exposureModes[] = {"normal", "sport", "short", "long", "custom"};
     initSwitch(AdjustExposureModeSP, 5, exposureModes);
 
-    AdjustAwbModeSP.fill(getDeviceName(), "AwbMode", "Awb Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
-    const char *awbModes[] = { "auto", "normal", "incandescent", "tungsten", "fluorescent", "indoor", "daylight", "cloudy", "custom"};
+    AdjustAwbModeSP.fill(getDeviceName(), "AwbMode", "Awb Mode", IMAGE_CONTROLS_TAB, 
+                         IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *awbModes[] = {"auto", "normal", "incandescent", "tungsten", "fluorescent", 
+                              "indoor", "daylight", "cloudy", "custom"};
     initSwitch(AdjustAwbModeSP, 9, awbModes);
 
-    AdjustMeteringModeSP.fill(getDeviceName(), "MeteringMode", "Metering Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60,
-                              IPS_IDLE);
-    const char *meteringModes[] = { "centre", "spot", "average", "matrix", "custom"};
+    AdjustMeteringModeSP.fill(getDeviceName(), "MeteringMode", "Metering Mode", IMAGE_CONTROLS_TAB, 
+                              IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *meteringModes[] = {"centre", "spot", "average", "matrix", "custom"};
     initSwitch(AdjustMeteringModeSP, 5, meteringModes);
 
-    AdjustDenoiseModeSP.fill(getDeviceName(), "DenoiseMode", "Denoise Mode", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60,
-                             IPS_IDLE);
-    const char *denoiseModes[] = { "off", "cdn_off", "cdn_fast", "cdn_hq"};
+    AdjustDenoiseModeSP.fill(getDeviceName(), "DenoiseMode", "Denoise Mode", IMAGE_CONTROLS_TAB, 
+                             IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *denoiseModes[] = {"off", "cdn_off", "cdn_fast", "cdn_hq"};
     initSwitch(AdjustDenoiseModeSP, 4, denoiseModes);
 
-    AdjustmentNP[AdjustBrightness].fill("Brightness", "Brightness", "%.2f", -1.00, 1.00, 0.1, 0.00);
-    AdjustmentNP[AdjustContrast].fill("Contrast", "Contrast", "%.2f", 0.00, 2.00, 0.1, 1.00);
-    AdjustmentNP[AdjustSaturation].fill("Saturation", "Saturation", "%.2f", 0.00, 1.00, 0.1, 1.00);
-    AdjustmentNP[AdjustSharpness].fill("Sharpness", "Sharpness", "%.2f", 0.00, 16.00, 1.00, 1.00);
+    // Use extracted properties for ranges
+    AdjustmentNP[AdjustBrightness].fill("Brightness", "Brightness", "%.2f", 
+                                        props.brightness.min, props.brightness.max, 0.1, props.brightness.def);
+    AdjustmentNP[AdjustContrast].fill("Contrast", "Contrast", "%.2f", 
+                                      props.contrast.min, props.contrast.max, 0.1, props.contrast.def);
+    AdjustmentNP[AdjustSaturation].fill("Saturation", "Saturation", "%.2f", 
+                                        props.saturation.min, props.saturation.max, 0.1, props.saturation.def);
+    AdjustmentNP[AdjustSharpness].fill("Sharpness", "Sharpness", "%.2f", 
+                                       props.sharpness.min, props.sharpness.max, 1.00, props.sharpness.def);
     AdjustmentNP[AdjustQuality].fill("Quality", "Quality", "%.2f", 0.00, 100.00, 1.00, 100.00);
-    AdjustmentNP[AdjustExposureValue].fill("ExposureValue", "Exposure Value", "%.2f", -8.00, 8.00, .25, 0.00);
-    AdjustmentNP[AdjustAwbRed].fill("AwbRed", "AWB Red", "%.2f", 0.00, 2.00, .1, 0.00);
-    AdjustmentNP[AdjustAwbBlue].fill("AwbBlue", "AWB Blue", "%.2f", 0.00, 2.00, .1, 0.00);
+    AdjustmentNP[AdjustExposureValue].fill("ExposureValue", "Exposure Value", "%.2f", 
+                                           props.exposureValue.min, props.exposureValue.max, .25, 0.00);
+    AdjustmentNP[AdjustAwbRed].fill("AwbRed", "AWB Red", "%.2f", 
+                                    props.colourGains.min, props.colourGains.max, .1, 0.00);
+    AdjustmentNP[AdjustAwbBlue].fill("AwbBlue", "AWB Blue", "%.2f", 
+                                     props.colourGains.min, props.colourGains.max, .1, 0.00);
     AdjustmentNP.fill(getDeviceName(), "Adjustments", "Adjustments", IMAGE_CONTROLS_TAB, IP_RW, 60, IPS_IDLE);
 
-    GainNP[0].fill("GAIN", "Gain", "%.2f", 0.00, 100.00, 1.00, 0.00);
+    GainNP[0].fill("GAIN", "Gain", "%.2f", props.gain.min, props.gain.max, 1.00, props.gain.def);
     GainNP.fill(getDeviceName(), "CCD_GAIN", "Gain", IMAGE_CONTROLS_TAB, IP_RW, 60, IPS_IDLE);
 
     uint32_t cap = 0;
