@@ -1030,7 +1030,7 @@ void QFocuser::updateHoldCurrentVisibility()
         LOGF_DEBUG("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
                   HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
         LOG_INFO("Hold force settings disabled (IP_RO).");
-        LOGF_WARNING("Requires > %.0fV to operate.", VOLTAGE_THRESHOLD);
+        LOGF_WARN("Requires > %.0fV to operate.", VOLTAGE_THRESHOLD);
     }
 }
 
