@@ -61,13 +61,15 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     std::set<std::string> currentEnumeratedDeviceIDs;
     for (int i = 0; i < numCameras; ++i)
     {
-        if (pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
+        if (!(pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL))))
         {
             currentEnumeratedDeviceIDs.insert(std::string(pDevs[i].id));
+            LOGF_DEBUG("Tracking enumerated Toupbase camera with display name: %s (ID: %s)", pDevs[i].displayname, pDevs[i].id);
         }
         else
         {
-            LOGF_DEBUG("Ignoring enumerated Toupbase device with display name: %s (ID: %s)", pDevs[i].displayname, pDevs[i].id);
+            LOGF_DEBUG("Ignoring enumerated Toupbase FILTERWHEEL/FOCUSER device with display name: %s (ID: %s)", pDevs[i].displayname,
+                       pDevs[i].id);
         }
     }
 
