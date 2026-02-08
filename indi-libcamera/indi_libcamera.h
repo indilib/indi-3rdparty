@@ -51,7 +51,7 @@ struct RpiCamProperties
     ControlRange<float> saturation    = {0.0f, 15.99f, 1.0f};
     ControlRange<float> sharpness     = {0.0f, 16.0f, 1.0f};
     ControlRange<float> gain          = {0.0f, 100.0f, 0.0f};
-    ControlRange<float> colourGains   = {0.0f, 32.0f, 0.0f};
+    ControlRange<float> colourGains   = {0.0f, 32.0f, 1.0f};
     ControlRange<float> exposureTime  = {0.000014, 3600.0, 0.02}; // in seconds
     ControlRange<float> exposureValue = {-8.0f, 8.0f, 0.0f};
 };
