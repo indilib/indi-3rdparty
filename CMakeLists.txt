@@ -429,13 +429,13 @@ if(BUILD_LIBS)
   #libahp-xc
   if(WITH_AHP_XC)
     execute_process(COMMAND git clone https://github.com/ahp-electronics/libahp-xc ${CMAKE_CURRENT_BINARY_DIR}/libahp-xc)
-  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/libahp-xc ${CMAKE_CURRENT_BINARY_DIR}/build-libahp-xc)
+  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/libahp-xc ${CMAKE_CURRENT_BINARY_DIR}/build_libahp-xc)
   endif(WITH_AHP_XC)
 
   #libahp-gt
   if(WITH_AHP_GT)
     execute_process(COMMAND git clone https://github.com/ahp-electronics/libahp-gt ${CMAKE_CURRENT_BINARY_DIR}/libahp-gt)
-  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/libahp-gt ${CMAKE_CURRENT_BINARY_DIR}/build-libahp-gt)
+  add_subdirectory(${CMAKE_CURRENT_BINARY_DIR}/libahp-gt ${CMAKE_CURRENT_BINARY_DIR}/buil_libahp-gt)
   endif(WITH_AHP_GT)
 
   #libpentax
