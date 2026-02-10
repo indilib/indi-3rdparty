@@ -36,6 +36,26 @@
 #include <indiccd.h>
 #include <inditimer.h>
 
+struct RpiCamProperties
+{
+    template<typename T>
+    struct ControlRange
+    {
+        T min;
+        T max;
+        T def;
+    };
+    
+    ControlRange<float> brightness    = {-1.0f, 1.0f, 0.0f};
+    ControlRange<float> contrast      = {0.0f, 15.99f, 1.0f};
+    ControlRange<float> saturation    = {0.0f, 15.99f, 1.0f};
+    ControlRange<float> sharpness     = {0.0f, 16.0f, 1.0f};
+    ControlRange<float> gain          = {0.0f, 100.0f, 0.0f};
+    ControlRange<float> colourGains   = {0.0f, 32.0f, 1.0f};
+    ControlRange<float> exposureTime  = {0.000014, 3600.0, 0.02}; // in seconds
+    ControlRange<float> exposureValue = {-8.0f, 8.0f, 0.0f};
+};
+
 class RPiCamINDIApp : public RPiCamApp
 {
     public:
@@ -51,7 +71,7 @@ class SingleWorker;
 class INDILibCamera : public INDI::CCD
 {
     public:
-        INDILibCamera(uint8_t index, const libcamera::ControlList &list);
+        INDILibCamera(uint8_t index, std::shared_ptr<libcamera::Camera> cam);
 
         virtual const char *getDefaultName() override;
 
@@ -141,8 +161,11 @@ class INDILibCamera : public INDI::CCD
         // std::unique_ptr<RPiCamApp> m_CameraApp;
         // std::unique_ptr<RPiCamEncoder> m_CameraEncoder;
 
+        bool m_csi_format_packed {false};
+        unsigned int m_bit_depth {8};
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
         uint8_t m_CameraIndex;
         libcamera::ControlList m_ControlList;
 
+        RpiCamProperties getAvailableCamProperties();
 };

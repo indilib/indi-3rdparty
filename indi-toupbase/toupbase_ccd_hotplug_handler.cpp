@@ -61,78 +61,74 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     std::set<std::string> currentEnumeratedDeviceIDs;
     for (int i = 0; i < numCameras; ++i)
     {
-        std::string displayName = pDevs[i].displayname;
-        if (displayName != "FILTERWHEEL" && displayName != "FOCUSER")
+        if (!(pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL))))
         {
             currentEnumeratedDeviceIDs.insert(std::string(pDevs[i].id));
+            LOGF_DEBUG("Tracking enumerated Toupbase camera with display name: %s (ID: %s)", pDevs[i].displayname, pDevs[i].id);
         }
         else
         {
-            LOGF_DEBUG("Ignoring enumerated Toupbase device with display name: %s (ID: %s)", displayName.c_str(), pDevs[i].id);
+            LOGF_DEBUG("Ignoring enumerated Toupbase FILTERWHEEL/FOCUSER device with display name: %s (ID: %s)", pDevs[i].displayname,
+                       pDevs[i].id);
         }
     }
 
-    // Build a new vector for connected devices, removing disconnected ones
+    // Remove disconnected devices from the map
     // Also ensure that FILTERWHEEL and FOCUSER devices are not in the managed list.
-    std::vector<XP(DeviceV2)> updatedConnectedDevices;
-    for (const auto& device : m_connectedDevices)
+    std::vector<std::string> devicesToRemove;
+    for (const auto& [deviceID, deviceInfo] : m_connectedDevices)
     {
-        std::string displayName = device.displayname;
-        if (displayName == "FILTERWHEEL" || displayName == "FOCUSER")
+        if (deviceInfo->model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
-            LOGF_DEBUG("Removing previously connected Toupbase device with display name: %s (ID: %s)", displayName.c_str(), device.id);
-            continue; // Skip this device
+            LOGF_DEBUG("Removing previously connected Toupbase device with display name: %s (ID: %s)",
+                       deviceInfo->displayname, deviceInfo->id);
+            devicesToRemove.push_back(deviceID);
+            continue;
         }
 
-        if (currentEnumeratedDeviceIDs.count(std::string(device.id)))
+        if (!currentEnumeratedDeviceIDs.count(deviceID))
         {
-            updatedConnectedDevices.push_back(device);
+            LOGF_DEBUG("Toupbase camera disconnected: %s", deviceID.c_str());
+            devicesToRemove.push_back(deviceID);
         }
-        else
-        {
-            LOGF_DEBUG("Toupbase camera disconnected: %s", device.id);
-        }
+    }
+
+    // Remove devices that are no longer connected
+    for (const auto& deviceID : devicesToRemove)
+    {
+        m_connectedDevices.erase(deviceID);
     }
 
     // Add newly connected devices, ignoring FILTERWHEEL and FOCUSER devices
+    // Use heap allocation with shared_ptr for stable addresses
     for (int i = 0; i < numCameras; ++i)
     {
-        std::string displayName = pDevs[i].displayname;
-        if (displayName == "FILTERWHEEL" || displayName == "FOCUSER")
+        if (pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
-            LOGF_DEBUG("Ignoring newly connected Toupbase device with display name: %s (ID: %s)", displayName.c_str(), pDevs[i].id);
+            LOGF_DEBUG("Ignoring newly connected Toupbase device with display name: %s (ID: %s)",
+                       pDevs[i].displayname, pDevs[i].id);
             continue; // Skip this device
         }
 
-        bool found = false;
-        for (const auto& existingDevice : m_connectedDevices)
+        std::string deviceID = std::string(pDevs[i].id);
+        if (m_connectedDevices.find(deviceID) == m_connectedDevices.end())
         {
-            if (std::string(pDevs[i].id) == std::string(existingDevice.id))
-            {
-                found = true;
-                break;
-            }
-        }
-        if (!found)
-        {
-            updatedConnectedDevices.push_back(pDevs[i]);
+            // Allocate device info on heap for stable address
+            auto deviceInfo = std::make_shared<XP(DeviceV2)>(pDevs[i]);
+            m_connectedDevices[deviceID] = deviceInfo;
             LOGF_DEBUG("Toupbase camera newly connected: %s, Model: %s", pDevs[i].id, pDevs[i].displayname);
         }
     }
 
-    m_connectedDevices = updatedConnectedDevices;
-
     // Update the m_Instance pointers for all managed ToupBase devices
+    // These pointers now point to heap-allocated memory with stable addresses
     for (const auto& managedDevice : m_internalCameras)
     {
         std::string managedDeviceID = managedDevice->getCameraID();
-        for (auto& connectedDevice : m_connectedDevices)
+        auto it = m_connectedDevices.find(managedDeviceID);
+        if (it != m_connectedDevices.end())
         {
-            if (std::string(connectedDevice.id) == managedDeviceID)
-            {
-                managedDevice->updateDeviceInfo(&connectedDevice);
-                break;
-            }
+            managedDevice->updateDeviceInfo(it->second.get());
         }
     }
 
@@ -142,35 +138,27 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
         return identifiers;
     }
 
-    for (const auto& device : m_connectedDevices)
+    for (const auto& [deviceID, deviceInfo] : m_connectedDevices)
     {
-        identifiers.push_back(std::string(device.id));
-        LOGF_DEBUG("Managed Toupbase camera with ID: %s, Model: %s", device.id, device.displayname);
+        identifiers.push_back(deviceID);
+        LOGF_DEBUG("Managed Toupbase camera with ID: %s, Model: %s", deviceID.c_str(), deviceInfo->displayname);
     }
     return identifiers;
 }
 
-std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(const std::string & identifier)
+std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(const std::string& identifier)
 {
     // Find the camera info in our persistent storage
-    XP(DeviceV2)* cameraInfoPtr = nullptr;
-    std::string baseName;
-
-    for (auto& device : m_connectedDevices)
-    {
-        if (std::string(device.id) == identifier)
-        {
-            cameraInfoPtr = &device;
-            baseName = device.displayname;
-            break;
-        }
-    }
-
-    if (cameraInfoPtr == nullptr)
+    auto it = m_connectedDevices.find(identifier);
+    if (it == m_connectedDevices.end())
     {
         LOGF_ERROR("No Toupbase camera found with identifier: %s in managed list.", identifier.c_str());
         return nullptr;
     }
+
+    // Get pointer to the heap-allocated device info (stable address)
+    XP(DeviceV2)* cameraInfoPtr = it->second.get();
+    std::string baseName = cameraInfoPtr->displayname;
 
     // Check if a device with this CameraID is already managed
     for (const auto& device : m_internalCameras)
@@ -204,7 +192,7 @@ std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(con
         }
     }
 
-    // Pass a pointer to the stored cameraInfo
+    // Pass a pointer to the heap-allocated cameraInfo (stable address that won't be invalidated)
     ToupBase *toupbaseCcd = new ToupBase(cameraInfoPtr, uniqueName);
     std::shared_ptr<ToupBase> newDevice = std::shared_ptr<ToupBase>(toupbaseCcd);
     m_internalCameras.push_back(newDevice);
@@ -252,14 +240,14 @@ void ToupbaseCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevic
     }
 }
 
-const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>>& ToupbaseCCDHotPlugHandler::getManagedDevices() const
+const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &ToupbaseCCDHotPlugHandler::getManagedDevices() const
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
     for (const auto& device : m_internalCameras)
     {
         m_managedDevicesView[device->getCameraID()] = std::static_pointer_cast<INDI::DefaultDevice>
-        (device); // Use string ID and static_pointer_cast
+            (device); // Use string ID and static_pointer_cast
     }
     return m_managedDevicesView;
 }
@@ -267,13 +255,11 @@ const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>>& ToupbaseCCDHo
 bool ToupbaseCCDHotPlugHandler::getCameraInfoByCameraID(const std::string & cameraIDStr, XP(DeviceV2)& cameraInfo)
 {
     // Search our persistent storage for the camera info
-    for (const auto& device : m_connectedDevices)
+    auto it = m_connectedDevices.find(cameraIDStr);
+    if (it != m_connectedDevices.end())
     {
-        if (std::string(device.id) == cameraIDStr)
-        {
-            cameraInfo = device;
-            return true;
-        }
+        cameraInfo = *(it->second);
+        return true;
     }
     return false;
 }

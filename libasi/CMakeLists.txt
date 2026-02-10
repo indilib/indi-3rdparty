@@ -9,7 +9,7 @@ project (libasi)
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
-set (ASICAM_VERSION "1.40")
+set (ASICAM_VERSION "1.41")
 set (ASICAM_SOVERSION "1")
 
 set (ASIEFW_VERSION "1.7.0")
