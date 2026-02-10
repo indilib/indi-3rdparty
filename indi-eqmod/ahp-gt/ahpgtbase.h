@@ -93,10 +93,15 @@ class AHPGTBase : public EQMod
 
         PropertyNumber GTDEConfigurationNP{GT_AXIS_N_PARAMS};
         PropertySwitch GTDESteppingModeSP{GT_N_STEPPING_MODE};
-
         PropertySwitch GTDEWindingSP{GT_N_WINDING_MODE};
         PropertySwitch GTDEInvertAxisSP{GT_N_INVERSION};
         PropertySwitch GTDEGPIOConfigSP{GT_N_GPIO_CONFIG};
+
+        PropertyNumber GTFOCConfigurationNP{GT_AXIS_N_PARAMS};
+        PropertySwitch GTFOCSteppingModeSP{GT_N_STEPPING_MODE};
+        PropertySwitch GTFOCWindingSP{GT_N_WINDING_MODE};
+        PropertySwitch GTFOCInvertAxisSP{GT_N_INVERSION};
+        PropertySwitch GTFOCGPIOConfigSP{GT_N_GPIO_CONFIG};
 
         PropertySwitch GTMountConfigSP{3};
         PropertyNumber GTConfigurationNP{GT_N_PARAMS};
