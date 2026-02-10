@@ -725,11 +725,11 @@ bool INDILibCamera::initProperties()
                                        props.sharpness.min, props.sharpness.max, 1.00, props.sharpness.def);
     AdjustmentNP[AdjustQuality].fill("Quality", "Quality", "%.2f", 0.00, 100.00, 1.00, 100.00);
     AdjustmentNP[AdjustExposureValue].fill("ExposureValue", "Exposure Value", "%.2f", 
-                                           props.exposureValue.min, props.exposureValue.max, .25, 0.00);
+                                           props.exposureValue.min, props.exposureValue.max, .25, props.exposureValue.def);
     AdjustmentNP[AdjustAwbRed].fill("AwbRed", "AWB Red", "%.2f", 
-                                    props.colourGains.min, props.colourGains.max, .1, 0.00);
+                                    props.colourGains.min, props.colourGains.max, .1, props.colourGains.def);
     AdjustmentNP[AdjustAwbBlue].fill("AwbBlue", "AWB Blue", "%.2f", 
-                                     props.colourGains.min, props.colourGains.max, .1, 0.00);
+                                     props.colourGains.min, props.colourGains.max, .1, props.colourGains.def);
     AdjustmentNP.fill(getDeviceName(), "Adjustments", "Adjustments", IMAGE_CONTROLS_TAB, IP_RW, 60, IPS_IDLE);
 
     GainNP[0].fill("GAIN", "Gain", "%.2f", props.gain.min, props.gain.max, 1.00, props.gain.def);
