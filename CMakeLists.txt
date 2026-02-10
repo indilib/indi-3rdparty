@@ -426,6 +426,18 @@ if(BUILD_LIBS)
     add_subdirectory(libsbig)
   endif(WITH_SBIG)
 
+  #libahp-xc
+  if(WITH_AHP_XC)
+    execute_process(COMMAND git clone https://github.com/ahp-electronics/libahp-xc build/libahp-xc
+  add_subdirectory(build/libahp-xc
+  endif(WITH_AHP_XC)
+
+  #libahp-gt
+  if(WITH_AHP_GT)
+    execute_process(COMMAND git clone https://github.com/ahp-electronics/libahp-gt build/libahp-gt
+  add_subdirectory(build/libahp-gt
+  endif(WITH_AHP_GT)
+
   #libpentax
   if(WITH_PENTAX)
     if(NOT ${CMAKE_SYSTEM_PROCESSOR} MATCHES "^aarch64")
