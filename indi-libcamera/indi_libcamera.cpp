@@ -313,7 +313,33 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 BayerTP.apply();
                 m_csi_format_packed = options->Get().mode.packed;
                 m_bit_depth = options->Get().mode.bit_depth;
+                m_pixel_format = bayerToPixelFormat(bayer_pattern);
                 LOGF_INFO("Acquired image, mode: %s%d%s", bayer_pattern, m_bit_depth, m_csi_format_packed ? "P" : "U");
+
+                auto bl = payload->metadata.get(controls::SensorBlackLevels);
+                if (bl)
+                {
+                    if (m_pixel_format == INDI_MONO)
+                    {
+                        int black_level = static_cast<int>((*bl)[0] * (1 << m_bit_depth) / 65536.0);
+                        for (int i = 0; i < 4; i++)
+                        {
+                            m_black_levels[i] = black_level;
+                        }
+                        LOGF_INFO("Black level: %d", black_level);
+                    }
+                    else
+                    {
+                        for (int i = 0; i < 4; i++)
+                        {
+                            m_black_levels[i] = static_cast<int>((*bl)[i] * (1 << m_bit_depth) / 65536.0);
+                        }
+                        LOGF_INFO("Black levels: %d,%d,%d,%d", m_black_levels[0], m_black_levels[1], m_black_levels[2], m_black_levels[3]);
+                    }
+                }
+                else {
+                    LOG_WARN("no black level found, using default");
+                }
             }
             else
             {
@@ -1137,6 +1163,18 @@ void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI
     fitsKeywords.push_back({"WB_R", awb_gain_r, 3, "White Balance - Red"});
     float awb_gain_b = AdjustmentNP[AdjustAwbBlue].getValue();
     fitsKeywords.push_back({"WB_B", awb_gain_b, 3, "White Balance - Blue"});
+
+    std::string black_level_str;
+    if (m_pixel_format == INDI_MONO)
+    {
+        black_level_str = std::to_string(m_black_levels[0]);
+    } else {
+        black_level_str = std::to_string(m_black_levels[0]) + "," 
+            + std::to_string(m_black_levels[1]) + "," 
+            + std::to_string(m_black_levels[2]) + "," 
+            + std::to_string(m_black_levels[3]);
+    }
+    fitsKeywords.push_back({"BLACKLEVEL", black_level_str.c_str(), "CCD Black Levels"});
 }
 
 /////////////////////////////////////////////////////////////////////////////
