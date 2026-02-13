@@ -92,6 +92,7 @@ public:
     virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
     virtual bool ISNewBLOB(const char *dev, const char *name, int sizes[], int blobsizes[], char *blobs[], char *formats[], char *names[], int n) override;
     virtual bool ISSnoopDevice(XMLEle *root) override;
+    bool Handshake() override;
 
 protected:
 
@@ -108,8 +109,6 @@ protected:
     virtual bool AbortIntegration() override;
     virtual void TimerHit() override;
     virtual void addFITSKeywords(fitsfile *fptr, uint8_t* buf, int len) override;
-
-    virtual bool Connect() override;
 
 private:
 
