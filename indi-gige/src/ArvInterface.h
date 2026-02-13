@@ -98,6 +98,8 @@ class ArvCamera
     virtual min_max_property<double> get_exposure()    = 0;
     virtual min_max_property<double> get_gain()        = 0;
     virtual min_max_property<double> get_frame_rate()  = 0;
+    virtual bool has_feature(const char * feature)     = 0;
+    virtual double get_float(const char * feature)     = 0;
 
     /* Set geometry */
     virtual void set_bin(int const bin_x, int const bin_y)                        = 0;

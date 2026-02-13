@@ -56,6 +56,8 @@ class ArvGeneric : public arv::ArvCamera
     virtual min_max_property<double> get_exposure() override;
     virtual min_max_property<double> get_gain() override;
     virtual min_max_property<double> get_frame_rate() override;
+    virtual bool has_feature(const char * feature) override;
+    virtual double get_float(const char * feature) override;
 
     virtual void set_bin(int const bin_x, int const bin_y) override;
     virtual void set_geometry(int const x, int const y, int const w, int const h) override;
@@ -78,6 +80,13 @@ class ArvGeneric : public arv::ArvCamera
     bool _get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max, GError**), min_max_property<T> *prop);
     template <typename T>
     void _set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GError**), min_max_property<T> *prop, T const new_val);
+    const char * getDeviceName() { return this->device_id(); }
+    // Variadic template error handler function with no return value
+    template<typename Func, typename... Args>
+    void call_log(const char *func_description, Func &&func, Args&&... args);
+    // Variadic template error handler function with no return value
+    template<typename Func, typename... Args>
+    auto call_log_return(const char *func_description, Func &&func, Args&&... args);
 
   protected:
     virtual bool _get_initial_config();
@@ -89,7 +98,6 @@ class ArvGeneric : public arv::ArvCamera
     ::ArvDevice *dev;
     ::ArvStream *stream;
     ::ArvBuffer *buffer;
-    ::GError *error;
 
     /* streaming, capturing functions */
     ::ArvStream *_stream_create(void);

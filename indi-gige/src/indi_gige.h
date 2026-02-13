@@ -21,7 +21,6 @@
 #define GENERIC_CCD_H
 
 #include <indiccd.h>
-#include <iostream>
 
 #include "ArvInterface.h"
 
@@ -33,22 +32,22 @@ class GigECCD : public INDI::CCD
     GigECCD(arv::ArvCamera *camera);
     virtual ~GigECCD();
 
-    const char *getDefaultName();
+    virtual const char *getDefaultName() override;
 
-    bool initProperties();
-    bool updateProperties();
+    virtual bool initProperties() override;
+    virtual bool updateProperties() override;
 
-    bool Connect();
-    bool Disconnect();
+    virtual bool Connect() override;
+    virtual bool Disconnect() override;
 
-    bool StartExposure(float duration);
-    bool AbortExposure();
+    virtual bool StartExposure(float duration) override;
+    virtual bool AbortExposure() override;
 
   protected:
-    void TimerHit();
-    virtual bool UpdateCCDFrame(int x, int y, int w, int h);
-    virtual bool UpdateCCDBin(int binx, int biny);
-    virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType);
+    virtual void TimerHit() override;
+    virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
+    virtual bool UpdateCCDBin(int binx, int biny) override;
+    virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType) override;
 
   private:
     void _delete_indi_properties(void);

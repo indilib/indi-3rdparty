@@ -18,6 +18,7 @@
  */
 #include "ArvGeneric.h"
 
+#include <indilogger.h>
 #include <string>
 
 using namespace arv;
@@ -28,6 +29,37 @@ namespace {
         return (s != "" ? s.c_str() : "None");
     }
 }
+
+// Variadic template error handler function
+template<typename Func, typename... Args>
+void ArvGeneric::call_log(const char *func_description, Func &&func, Args&&... args) {
+    GError * error = nullptr;
+    func(args..., &error);
+    if (error) {
+        if (error->message)
+            LOGF_ERROR("%s: %s", func_description, error->message);
+        else
+            LOGF_ERROR("%s: unknown error!", func_description);
+    }
+}
+#define CALL(func, ...) \
+  this->call_log(#func, func, __VA_ARGS__)
+
+// Variadic template error handler function
+template<typename Func, typename... Args>
+auto ArvGeneric::call_log_return(const char *func_description, Func &&func, Args&&... args) {
+    GError * error = nullptr;
+    auto ret = func(args..., &error);
+    if (error) {
+        if (error->message)
+            LOGF_ERROR("%s: %s", func_description, error->message);
+        else
+            LOGF_ERROR("%s: unknown error!", func_description);
+    }
+    return ret;
+}
+#define CALL_RETURN(func, ...) \
+  this->call_log_return(#func, func, __VA_ARGS__)
 
 const char *ArvGeneric::vendor_name()
 {
@@ -86,11 +118,21 @@ min_max_property<double> ArvGeneric::get_frame_rate()
     return min_max_property<double>(this->cam.frame_rate);
 }
 
+bool ArvGeneric::has_feature(const char * feature)
+{
+    return CALL_RETURN(arv_camera_is_feature_available, this->camera, feature) == TRUE;
+}
+
+double ArvGeneric::get_float(const char * feature)
+{
+    return CALL_RETURN(arv_camera_get_float, this->camera, feature);
+}
+
 template <typename T>
 bool ArvGeneric::_get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max, GError**), min_max_property<T> *prop)
 {
     T min, max;
-    fn_arv_bounds(this->camera, &min, &max, &(this->error));
+    CALL(fn_arv_bounds, this->camera, &min, &max);
     prop->update(min, max);
     return true;
 }
@@ -128,12 +170,17 @@ bool ArvGeneric::connect()
     /* (Re-)connect by means of the device-id */
     if (!this->camera)
     {
-        this->camera = ::arv_camera_new(this->cam.device_id.c_str(), &(this->error));
+        this->camera = CALL_RETURN(::arv_camera_new,this->cam.device_id.c_str());
         if (!this->camera)
             return false;
 
         this->dev             = arv_camera_get_device(this->camera);
-        this->cam.vendor_name = arv_camera_get_vendor_name(this->camera, &(this->error));
+        const char * di = CALL_RETURN(arv_camera_get_device_id,this->camera);
+        const char * mn = CALL_RETURN(arv_camera_get_model_name,this->camera);
+        const char * vn = CALL_RETURN(arv_camera_get_vendor_name,this->camera);
+        this->cam.device_id = di;
+        this->cam.model_name = mn;
+        this->cam.vendor_name = vn;
     }
     this->_configure();
     return true;
@@ -174,10 +221,10 @@ bool ArvGeneric::_set_initial_config()
      *      (2) disable auto framerate (to enable maximum possible exposure time)
      *      (3) set binning to 1x1
      *      (4) set software trigger */
-    arv_camera_set_binning(camera, 1, 1, &error);
-    arv_camera_set_gain_auto(camera, ARV_AUTO_OFF, &error);
-    arv_camera_set_exposure_time_auto(camera, ARV_AUTO_OFF, &error);
-    arv_camera_set_trigger(camera, "Software", &error);
+    CALL(arv_camera_set_binning, camera, 1, 1);
+    CALL(arv_camera_set_gain_auto, camera, ARV_AUTO_OFF);
+    CALL(arv_camera_set_exposure_time_auto, camera, ARV_AUTO_OFF);
+    CALL(arv_camera_set_trigger, camera, "Software");
     return true;
 }
 
@@ -201,7 +248,7 @@ bool ArvGeneric::_get_initial_config()
 
 int ArvGeneric::get_frame_byte_size()
 {
-    return arv_camera_get_payload(this->camera, &(this->error));
+    return CALL_RETURN(arv_camera_get_payload, this->camera);
 }
 
 void ArvGeneric::set_geometry(int const x, int const y, int const w, int const h)
@@ -211,16 +258,17 @@ void ArvGeneric::set_geometry(int const x, int const y, int const w, int const h
     this->cam.width.set(w);
     this->cam.height.set(h);
 
-    arv_camera_set_region(this->camera, this->cam.x_offset.val(), this->cam.y_offset.val(), this->cam.width.val(),
-                          this->cam.height.val(), &(this->error));
+    CALL(arv_camera_set_region, this->camera, this->cam.x_offset.val(),
+                                this->cam.y_offset.val(), this->cam.width.val(),
+                                this->cam.height.val());
 }
 
 void ArvGeneric::update_geometry(void)
 {
     gint x, y, w, h, binx, biny;
 
-    arv_camera_get_region(this->camera, &x, &y, &w, &h, &(this->error));
-    arv_camera_get_binning(this->camera, &binx, &biny, &(this->error));
+    CALL(arv_camera_get_region, this->camera, &x, &y, &w, &h);
+    CALL(arv_camera_get_binning, this->camera, &binx, &biny);
 
     this->cam.x_offset.set(x);
     this->cam.y_offset.set(y);
@@ -235,7 +283,7 @@ void ArvGeneric::set_bin(int const bin_x, int const bin_y)
     this->cam.bin_x.set(bin_x);
     this->cam.bin_y.set(bin_y);
 
-    arv_camera_set_binning(this->camera, this->cam.bin_x.val(), this->cam.bin_y.val(), &(this->error));
+    CALL(arv_camera_set_binning, this->camera, this->cam.bin_x.val(), this->cam.bin_y.val());
 }
 
 void ArvGeneric::_test_exposure_and_abort(void)
@@ -250,7 +298,7 @@ void ArvGeneric::_set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GE
 {
     this->_test_exposure_and_abort();
     prop->set(new_val);
-    arv_set(this->camera, prop->val(), &(this->error));
+    CALL(arv_set, this->camera, prop->val());
 }
 
 void ArvGeneric::set_gain(double const val)
@@ -276,7 +324,7 @@ void ArvGeneric::set_exposure_time(double const val)
             break;
     }
 
-    gint const payload = arv_camera_get_payload(this->camera, &(this->error));
+    gint const payload = CALL_RETURN(arv_camera_get_payload, this->camera);
     buffer             = arv_buffer_new(payload, nullptr);
     arv_stream_push_buffer(this->stream, buffer);
     return buffer;
@@ -284,7 +332,7 @@ void ArvGeneric::set_exposure_time(double const val)
 
 ::ArvStream *ArvGeneric::_stream_create(void)
 {
-    ::ArvStream *stream = arv_camera_create_stream(this->camera, nullptr, nullptr, &(this->error));
+    ::ArvStream *stream = CALL_RETURN(arv_camera_create_stream, this->camera, nullptr, nullptr);
     return stream;
 }
 
@@ -293,14 +341,14 @@ void ArvGeneric::_stream_start()
     this->stream_active = true;
 
     /* Start the acquisition stream */
-    arv_camera_set_acquisition_mode(this->camera, ARV_ACQUISITION_MODE_SINGLE_FRAME, &(this->error));
-    arv_camera_start_acquisition(this->camera, &(this->error));
+    CALL(arv_camera_set_acquisition_mode, this->camera, ARV_ACQUISITION_MODE_SINGLE_FRAME);
+    CALL(arv_camera_start_acquisition, this->camera);
 }
 
 void ArvGeneric::_stream_stop()
 {
     /* stop the acquisition stream */
-    arv_camera_stop_acquisition(this->camera, &(this->error));
+    CALL(arv_camera_stop_acquisition, this->camera);
     g_object_unref(this->stream);
 
     this->stream_active = false;
@@ -309,7 +357,7 @@ void ArvGeneric::_stream_stop()
 void ArvGeneric::_trigger_exposure()
 {
     /* Trigger for an exposure */
-    arv_camera_software_trigger(this->camera, &(this->error));
+    CALL(arv_camera_software_trigger, this->camera);
 }
 
 void ArvGeneric::exposure_start(void)
@@ -326,7 +374,7 @@ void ArvGeneric::exposure_abort(void)
 {
     if (this->_stream_active())
     {
-        arv_camera_abort_acquisition(this->camera, &(this->error));
+        CALL(arv_camera_abort_acquisition, this->camera);
         this->_stream_stop();
     }
 }

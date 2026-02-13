@@ -36,7 +36,7 @@ arv::ArvCamera *ArvFactory::find_first_available(void)
         return nullptr;
 
 
-    const char *device_id = arv_get_device_serial_nbr(0);
+    const char *device_id = arv_get_device_id(0);
     const char *model_name = arv_get_device_model(0);
 
     if (memmem(model_name, strlen(model_name), BLACKFLY_MODEL, strlen(BLACKFLY_MODEL)))
