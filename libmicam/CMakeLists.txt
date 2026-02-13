@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libmicam)
 
-set (MICAM_VERSION "0.12.0")
-set (MICAM_VERSION_MAC "0.11.0")
+set (MICAM_VERSION "0.12.1")
+set (MICAM_VERSION_MAC "0.11.1")
 set (MICAM_SOVERSION "0")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
