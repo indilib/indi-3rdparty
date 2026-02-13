@@ -161,8 +161,10 @@ class INDILibCamera : public INDI::CCD
         // std::unique_ptr<RPiCamApp> m_CameraApp;
         // std::unique_ptr<RPiCamEncoder> m_CameraEncoder;
 
+        INDI_PIXEL_FORMAT m_pixel_format {INDI_BAYER_RGGB};
         bool m_csi_format_packed {false};
         unsigned int m_bit_depth {8};
+        int m_black_levels[4] {0, 0, 0, 0};
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
         uint8_t m_CameraIndex;
         libcamera::ControlList m_ControlList;
