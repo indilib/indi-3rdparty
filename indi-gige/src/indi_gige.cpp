@@ -128,12 +128,20 @@ void GigECCD::_update_indi_properties(void)
 
     defineProperty(&indiprop_info_prop);
     defineProperty(&this->indiprop_gain_prop);
+    if (this->camera->has_feature("DeviceTemperature")) {
+      this->TemperatureNP.setPermission(IP_RO);
+      defineProperty(this->TemperatureNP);
+    }
 }
 
 void GigECCD::_delete_indi_properties(void)
 {
     this->deleteProperty(this->indiprop_gain_prop.name);
     this->deleteProperty(this->indiprop_info_prop.name);
+    if (TemperatureNP.getPermission() == IP_RO) {
+      this->TemperatureNP.setPermission(IP_RW);
+      this->deleteProperty(this->TemperatureNP);
+    }
 }
 
 //Initial call
@@ -205,6 +213,11 @@ void GigECCD::_update_image(uint8_t const *const data, size_t size)
     {
         uint8_t *const image = PrimaryCCD.getFrameBuffer();
         memcpy(image, (void const*)data, frame_buf_size);
+        if (TemperatureNP.getPermission() == IP_RO) {
+            this->TemperatureNP[0].setValue(this->camera->get_float("DeviceTemperature"));
+            this->TemperatureNP.setState(IPS_OK);
+            this->TemperatureNP.apply();
+        }
         this->ExposureComplete(&PrimaryCCD);
     }
     else
