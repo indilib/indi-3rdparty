@@ -995,7 +995,8 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         {
             updateProperty(USBResetSP, states, names, n, [this, names]()
             {
-                LOGF_INFO("USB reset on camera exposure timeout is %s.", USBResetSP[INDI_ENABLED].isNameMatch(names[0]) ? "enabled" : "disabled");
+                LOGF_INFO("USB reset on camera exposure timeout is %s.",
+                          USBResetSP[INDI_ENABLED].isNameMatch(names[0]) ? "enabled" : "disabled");
                 return true;
             }, true);
             return true;
@@ -1148,16 +1149,17 @@ bool ASIBase::StartStreaming()
 
 bool ASIBase::StopStreaming()
 {
-    // First stop video capture
+    // First stop the worker thread gracefully
+    mWorker.quit();
+
+    // Then stop video capture (cleanup/safety net - worker should have already called this)
     ASI_ERROR_CODE ret = ASIStopVideoCapture(mCameraInfo.CameraID);
     if (ret != ASI_SUCCESS)
     {
         LOGF_ERROR("Failed to stop video capture (%s).", Helpers::toString(ret));
-        return false;
+        // Don't return false - worker thread already stopped successfully
     }
 
-    // Then stop the worker thread
-    mWorker.quit();
     return true;
 }
 

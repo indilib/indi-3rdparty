@@ -100,3 +100,47 @@ fakeroot debian/rules clean
 this should produce two packages in the main build directory (above `package`),
 which you can install with `sudo dpkg -i indi-celestronaux_*.deb`.
 
+
+# System testing
+
+The driver includes a suite of end-to-end system tests that can be run against the `caux-simulator`.
+
+### Prerequisites
+- `indiserver`
+- `python3-pytest`
+- `caux-simulator`
+
+### Installing the Simulator
+The `caux-simulator` is an external high-fidelity NexStar AUX protocol emulator. It can be installed in several ways:
+
+**Option A: Virtual Environment (Recommended)**
+Standard Python installation without extra tools:
+```bash
+python3 -m venv .venv
+source .venv/bin/activate
+pip install caux-simulator
+```
+
+**Option B: Using `uv` tool**
+Fast and isolated tool management:
+```bash
+uv tool install caux-simulator
+```
+
+**Option C: Global installation (pipx)**
+Isolated global installation:
+```bash
+pipx install caux-simulator
+```
+
+### Running tests
+To run the full suite:
+```bash
+# Ensure caux-sim is in your PATH
+python3 -m pytest -v tests/system/
+```
+
+Individual test files can be run similarly. The tests automatically manage the lifecycle of the `indiserver` and the simulator.
+
+For more technical details on testing and simulator configuration, see `tests/system/TEST_DESCRIPTION.md`.
+

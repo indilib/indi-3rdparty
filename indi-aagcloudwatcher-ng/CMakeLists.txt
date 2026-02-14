@@ -23,6 +23,7 @@ include(CMakeCommon)
 set(indiaag_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/indi_aagcloudwatcher_ng.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/CloudWatcherController_ng.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/HeaterPID.cpp
    )
 
 IF (UNITY_BUILD)
@@ -35,6 +36,7 @@ target_link_libraries(indi_aagcloudwatcher_ng ${INDI_LIBRARIES})
 set(test_SRCS
    ${CMAKE_CURRENT_SOURCE_DIR}/main.cpp
    ${CMAKE_CURRENT_SOURCE_DIR}/CloudWatcherController_ng.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/HeaterPID.cpp
    )
 
 IF (UNITY_BUILD)

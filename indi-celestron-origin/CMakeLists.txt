@@ -13,6 +13,7 @@ find_package(ZLIB REQUIRED)
 find_package(TIFF REQUIRED)
 find_package(OpenSSL REQUIRED)
 find_package(Threads REQUIRED)
+find_package(Nova REQUIRED)
 
 # Qt autodetection (same as official pattern)
 find_package(Qt6 COMPONENTS Core Network Gui QUIET)
@@ -48,6 +49,7 @@ add_executable(indi_celestron_origin
 target_link_libraries(indi_celestron_origin
     ${QT_LIBRARIES}
     ${INDI_LIBRARIES}
+    ${NOVA_LIBRARIES}
     TIFF::TIFF
     OpenSSL::SSL
     OpenSSL::Crypto

@@ -51,6 +51,10 @@ QFocuser::QFocuser()
 {
     setVersion(INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
 
+    // Log version at startup
+    LOGF_INFO("QFocuser driver version %d.%d initializing",
+              INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
+
     // Here we tell the base Focuser class what types of connections we can support
     setSupportedConnections(CONNECTION_SERIAL);
 
@@ -81,7 +85,7 @@ bool QFocuser::initProperties()
     TemperatureChipNP[0].fill("TEMPERATURE", "Celsius", "%0.0f", 0, 65000., 0., 10000.);
     TemperatureChipNP.fill(getDeviceName(), "CHIP_TEMPERATURE", "Chip Temperature", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
-    VoltageNP[0].fill("VOLTAGE", "Volt", "%0.0f", 0, 12., 0., 0.);
+    VoltageNP[0].fill("VOLTAGE", "Volt", "%0.1f", 0, 15., 0., 0.);
     VoltageNP.fill(getDeviceName(), "FOCUS_VOLTAGE", "Voltage", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     FOCUSVersionNP[0].fill("VERSION", "Version", "%0.0f", 0, 99999999., 0., 0.);
@@ -89,6 +93,21 @@ bool QFocuser::initProperties()
 
     BOARDVersionNP[0].fill("VERSION", "Version", "%0.0f", 0, 65000., 0., 0.);
     BOARDVersionNP.fill(getDeviceName(), "BOARD_VERSION", "Board", CONNECTION_TAB, IP_RO, 60, IPS_OK);
+
+    // External temperature display switch
+    ExternalTempSP[0].fill("SHOW", "Show", ISS_OFF);
+    ExternalTempSP[1].fill("HIDE", "Hide", ISS_ON);
+    ExternalTempSP.fill(getDeviceName(), "EXTERNAL_TEMP", "External Temperature", OPTIONS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Hold force enable switch (initially read-only until voltage is checked)
+    HoldForceSP[0].fill("ENABLE", "Enable (12V)", ISS_OFF);
+    HoldForceSP[1].fill("DISABLE", "Disable", ISS_ON);
+    HoldForceSP.fill(getDeviceName(), "HOLD_FORCE", "Hold Force", OPTIONS_TAB, IP_RO, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // Hold current settings (initially read-only until voltage is checked)
+    HoldCurrentNP[0].fill("IHOLD", "IHOLD (12V)", "%0.0f", 0, 16., 1., 4.);
+    HoldCurrentNP[1].fill("IRUN", "IRUN (12V)", "%0.0f", 0, 30., 1., 8.);
+    HoldCurrentNP.fill(getDeviceName(), "HOLD_CURRENT", "Hold Current", OPTIONS_TAB, IP_RO, 60, IPS_IDLE);
 
     // Configure the inherited FocusSpeedN property
     FocusSpeedNP[0].setMin(0);
@@ -111,25 +130,44 @@ bool QFocuser::initProperties()
 /////////////////////////////////////////////////////////////////////////////
 bool QFocuser::updateProperties()
 {
+    LOG_DEBUG("=== QFocuser updateProperties() called ===");
     INDI::Focuser::updateProperties();
 
     if (isConnected())
     {
-        // TODO: Call define* for any custom properties only visible when connected.
-        defineProperty(TemperatureNP);
+        // Always define external temperature switch
+        // Note: TemperatureNP will be defined later in Handshake() after loadConfig() is called
+        LOG_DEBUG("Defining ExternalTempSP (外部温度) switch");
+        LOGF_DEBUG("Before defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
+                  ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
+        defineProperty(ExternalTempSP);
+        LOGF_DEBUG("After defineProperty: ExternalTempSP SHOW=%s, HIDE=%s",
+                  ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
+
         defineProperty(TemperatureChipNP);
         defineProperty(VoltageNP);
         defineProperty(FOCUSVersionNP);
         defineProperty(BOARDVersionNP);
+        // Always define HoldForceSP and HoldCurrentNP, but they will be disabled if voltage is low
+        LOG_DEBUG("Defining HoldForceSP and HoldCurrentNP properties (initially read-only)");
+        defineProperty(HoldForceSP);
+        defineProperty(HoldCurrentNP);
+        LOGF_DEBUG("HoldForceSP permission: %d, HoldCurrentNP permission: %d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
     }
     else
     {
-        // TODO: Call deleteProperty for any custom properties only visible when connected.
+        deleteProperty(ExternalTempSP);
         deleteProperty(TemperatureNP);
         deleteProperty(TemperatureChipNP);
         deleteProperty(VoltageNP);
         deleteProperty(FOCUSVersionNP);
         deleteProperty(BOARDVersionNP);
+        deleteProperty(HoldCurrentNP);
+        deleteProperty(HoldForceSP);
+
+        // Reset flag for next connection
+        configRestored = false;
     }
 
     return true;
@@ -196,10 +234,16 @@ std::string create_cmd(int cmd_idx, bool dir, int value)
             break;
         }
 
-        case 16:    // Set Hold
+        case 16:    // Set Hold (default values, use create_cmd_hold for custom values)
         {
             response["ihold"] = 0;
             response["irun"] = 5;
+            break;
+        }
+
+        case 19:    // Set PDN mode
+        {
+            response["pdn_d"] = value;
             break;
         }
 
@@ -207,6 +251,18 @@ std::string create_cmd(int cmd_idx, bool dir, int value)
             break;
     }
 
+    return response.dump();
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Create command for setting hold current (cmd_id 16) with custom ihold and irun
+/////////////////////////////////////////////////////////////////////////////
+std::string create_cmd_hold(int ihold, int irun)
+{
+    json response;
+    response["cmd_id"] = 16;
+    response["ihold"] = ihold;
+    response["irun"] = irun;
     return response.dump();
 }
 
@@ -329,6 +385,8 @@ int QFocuser::ReadResponse(char *buf, int &cmd_id)
 /////////////////////////////////////////////////////////////////////////////
 bool QFocuser::Handshake()
 {
+    LOGF_INFO("Driver version: %d.%d", INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
+
     // TODO: Any initial communciation needed with our focuser, we have an active connection.
     char ret_cmd[MAX_CMD] = {0};
     std::string command = create_cmd(1, true, 0);
@@ -394,6 +452,14 @@ bool QFocuser::Handshake()
     lastChipTemp = TemperatureChipNP[0].getValue();
     lastVoltage = VoltageNP[0].getValue();
 
+    // Log initialization info
+    LOGF_INFO("QFocuser Temperature: %.1f C, Chip Temperature: %.1f C, Voltage: %.1f V",
+              lastOutTemp, lastChipTemp, lastVoltage);
+    LOGF_INFO("Voltage threshold for hold force: %.1f V", VOLTAGE_THRESHOLD);
+
+    // Always update hold current visibility based on voltage
+    updateHoldCurrentVisibility();
+
     if(cmd_voltage == 0)
     {
         std::string command_ = create_cmd(16, true, 0);
@@ -417,6 +483,110 @@ void QFocuser::TimerHit()
 {
     if (!isConnected())
         return;
+
+    // On first timer hit after connection, restore configuration
+    // This ensures that loadConfig() has been called and properties are restored
+    if (!configRestored)
+    {
+        LOG_INFO("First timer hit - restoring configuration...");
+
+        // Restore External Temperature display state
+        LOGF_INFO("ExternalTempSP state: SHOW=%s, HIDE=%s",
+                  ExternalTempSP[0].getStateAsString(), ExternalTempSP[1].getStateAsString());
+
+        if (ExternalTempSP[0].getState() == ISS_ON)
+        {
+            // User wants to show external temperature
+            defineProperty(TemperatureNP);
+            LOG_INFO("External temperature display enabled (restored from config)");
+        }
+        else
+        {
+            LOG_INFO("External temperature display disabled (restored from config)");
+        }
+
+        // Restore Hold Current values (IHOLD and IRUN)
+        LOGF_INFO("HoldCurrentNP values: IHOLD=%.0f, IRUN=%.0f",
+                  HoldCurrentNP[0].getValue(), HoldCurrentNP[1].getValue());
+
+        // Check if voltage is sufficient before restoring hold current
+        if (VoltageNP[0].getValue() > VOLTAGE_THRESHOLD)
+        {
+            int ihold = static_cast<int>(HoldCurrentNP[0].getValue());
+            int irun = static_cast<int>(HoldCurrentNP[1].getValue());
+
+            if (setHoldCurrent(ihold, irun))
+            {
+                LOGF_INFO("Hold Current restored: IHOLD=%d, IRUN=%d (applied to hardware)", ihold, irun);
+            }
+            else
+            {
+                LOG_WARN("Failed to restore Hold Current to hardware");
+            }
+        }
+        else
+        {
+            LOGF_INFO("Voltage (%.1fV) too low to restore Hold Current values", VoltageNP[0].getValue());
+        }
+
+        // Restore Hold Force state
+        LOGF_INFO("HoldForceSP state: ENABLE=%s, DISABLE=%s",
+                  HoldForceSP[0].getStateAsString(), HoldForceSP[1].getStateAsString());
+
+        // Check if voltage is sufficient before restoring hold force
+        if (VoltageNP[0].getValue() > VOLTAGE_THRESHOLD)
+        {
+            if (HoldForceSP[0].getState() == ISS_ON)
+            {
+                // User wants hold force enabled, send command to hardware
+                char ret_cmd[MAX_CMD] = {0};
+                std::string command = "{\"cmd_id\":12,\"force\":1}";
+                LOGF_DEBUG("<CMD> %s", command.c_str());
+
+                auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+                if (ret_chk >= 0)
+                {
+                    int cmd_id = 0;
+                    ReadResponse(ret_cmd, cmd_id);
+                    LOG_INFO("Hold Force enabled (restored from config and applied to hardware)");
+                }
+                else
+                {
+                    LOG_WARN("Failed to restore Hold Force to hardware");
+                }
+            }
+            else
+            {
+                // User wants hold force disabled, send command to hardware
+                char ret_cmd[MAX_CMD] = {0};
+                std::string command = "{\"cmd_id\":12,\"force\":0}";
+                LOGF_DEBUG("<CMD> %s", command.c_str());
+
+                auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+                if (ret_chk >= 0)
+                {
+                    int cmd_id = 0;
+                    ReadResponse(ret_cmd, cmd_id);
+                    LOG_INFO("Hold Force disabled (restored from config and applied to hardware)");
+                }
+                else
+                {
+                    LOG_WARN("Failed to restore Hold Force to hardware");
+                }
+            }
+        }
+        else
+        {
+            LOGF_INFO("Voltage (%.1fV) too low to restore Hold Force state", VoltageNP[0].getValue());
+        }
+
+        configRestored = true;
+        LOG_INFO("Configuration restored successfully");
+    }
+
+    // Always ensure hold force permissions are correctly set based on voltage
+    // updateHoldCurrentVisibility() will only update if permission needs to change
+    updateHoldCurrentVisibility();
 
     double prevPos = FocusAbsPosNP[0].getValue();
     double newPos  = 0;
@@ -790,5 +960,293 @@ void QFocuser::GetFocusParams()
         lastVoltage = VoltageNP[0].getValue();
         VoltageNP.setState(IPS_OK);
         VoltageNP.apply();
+
+        // Update hold current visibility based on voltage
+        updateHoldCurrentVisibility();
     }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Update hold current property permission based on voltage
+/////////////////////////////////////////////////////////////////////////////
+void QFocuser::updateHoldCurrentVisibility()
+{
+    double voltage = VoltageNP[0].getValue();
+    IPerm currentPermission = HoldForceSP.getPermission();
+    IPerm desiredPermission = (voltage > VOLTAGE_THRESHOLD) ? IP_RW : IP_RO;
+
+    // Only update if permission needs to change
+    if (currentPermission == desiredPermission)
+    {
+        LOGF_DEBUG("Hold force permission already correct (%d), skipping update", currentPermission);
+        return;
+    }
+
+    LOGF_DEBUG("=== updateHoldCurrentVisibility: voltage=%.1f, threshold=%.1f ===",
+               voltage, VOLTAGE_THRESHOLD);
+
+    if (voltage > VOLTAGE_THRESHOLD)
+    {
+        // Voltage > threshold, enable PDN mode and enable hold force settings
+        LOGF_INFO("Voltage (%.1fV) > threshold (%.1fV), enabling hold force settings",
+                  voltage, VOLTAGE_THRESHOLD);
+        bool pdnOk = setPdnMode(1);
+        LOGF_DEBUG("setPdnMode(1) returned %s", pdnOk ? "true" : "false");
+
+        LOGF_DEBUG("Before setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
+
+        HoldForceSP.setPermission(IP_RW);
+        HoldCurrentNP.setPermission(IP_RW);
+
+        LOGF_DEBUG("After setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
+
+        HoldForceSP.apply();
+        HoldCurrentNP.apply();
+
+        LOGF_DEBUG("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
+        LOG_INFO("Hold force settings enabled (IP_RW).");
+    }
+    else
+    {
+        // Voltage <= threshold, disable hold force settings
+        LOGF_INFO("Voltage (%.1fV) <= threshold (%.1fV), disabling hold force settings",
+                  voltage, VOLTAGE_THRESHOLD);
+
+        LOGF_DEBUG("Before setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
+
+        HoldForceSP.setPermission(IP_RO);
+        HoldCurrentNP.setPermission(IP_RO);
+
+        LOGF_DEBUG("After setPermission: HoldForceSP=%d, HoldCurrentNP=%d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
+
+        HoldForceSP.apply();
+        HoldCurrentNP.apply();
+
+        LOGF_DEBUG("After apply: HoldForceSP=%d, HoldCurrentNP=%d",
+                  HoldForceSP.getPermission(), HoldCurrentNP.getPermission());
+        LOG_INFO("Hold force settings disabled (IP_RO).");
+        LOGF_WARN("Requires > %.0fV to operate.", VOLTAGE_THRESHOLD);
+    }
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Handle new number property
+/////////////////////////////////////////////////////////////////////////////
+bool QFocuser::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        if (HoldCurrentNP.isNameMatch(name))
+        {
+            // Check if voltage is sufficient
+            if (VoltageNP[0].getValue() <= VOLTAGE_THRESHOLD)
+            {
+                HoldCurrentNP.setState(IPS_ALERT);
+                LOGF_WARN("Cannot set hold current: voltage (%.1fV) <= threshold (%.0fV). Requires > %.0fV to operate.",
+                          VoltageNP[0].getValue(), VOLTAGE_THRESHOLD, VOLTAGE_THRESHOLD);
+                HoldCurrentNP.apply();
+                return true;
+            }
+
+            int ihold = static_cast<int>(values[0]);
+            int irun = static_cast<int>(values[1]);
+
+            if (setHoldCurrent(ihold, irun))
+            {
+                HoldCurrentNP.update(values, names, n);
+                HoldCurrentNP.setState(IPS_OK);
+                LOGF_INFO("Hold current set: IHOLD=%d, IRUN=%d", ihold, irun);
+            }
+            else
+            {
+                HoldCurrentNP.setState(IPS_ALERT);
+                LOG_ERROR("Failed to set hold current.");
+            }
+            HoldCurrentNP.apply();
+            return true;
+        }
+    }
+
+    return INDI::Focuser::ISNewNumber(dev, name, values, names, n);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Handle new switch property
+/////////////////////////////////////////////////////////////////////////////
+bool QFocuser::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
+{
+    if (dev != nullptr && strcmp(dev, getDeviceName()) == 0)
+    {
+        // Handle external temperature display switch
+        if (ExternalTempSP.isNameMatch(name))
+        {
+            ExternalTempSP.update(states, names, n);
+            bool showTemp = (ExternalTempSP[0].getState() == ISS_ON);
+
+            if (showTemp)
+            {
+                // Show temperature
+                defineProperty(TemperatureNP);
+                ExternalTempSP.setState(IPS_OK);
+                LOG_INFO("External temperature display enabled");
+            }
+            else
+            {
+                // Hide temperature
+                deleteProperty(TemperatureNP);
+                ExternalTempSP.setState(IPS_IDLE);
+                LOG_INFO("External temperature display disabled");
+            }
+
+            ExternalTempSP.apply();
+            return true;
+        }
+
+        if (HoldForceSP.isNameMatch(name))
+        {
+            // Check if voltage is sufficient
+            if (VoltageNP[0].getValue() <= VOLTAGE_THRESHOLD)
+            {
+                HoldForceSP.setState(IPS_ALERT);
+                LOGF_WARN("Cannot change hold force: voltage (%.1fV) <= threshold (%.0fV). Requires > %.0fV to operate.",
+                          VoltageNP[0].getValue(), VOLTAGE_THRESHOLD, VOLTAGE_THRESHOLD);
+                HoldForceSP.apply();
+                return true;
+            }
+
+            HoldForceSP.update(states, names, n);
+            bool enabled = (HoldForceSP[0].getState() == ISS_ON);
+
+            if (enabled)
+            {
+                // Enable hold force (cmd_id 12)
+                char ret_cmd[MAX_CMD] = {0};
+                std::string command = "{\"cmd_id\":12,\"force\":1}";
+                LOGF_DEBUG("<CMD> %s", command.c_str());
+
+                auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+                if (ret_chk >= 0)
+                {
+                    int cmd_id = 0;
+                    ReadResponse(ret_cmd, cmd_id);
+                    HoldForceSP.setState(IPS_OK);
+                    LOG_INFO("Hold force enabled.");
+                }
+                else
+                {
+                    HoldForceSP.setState(IPS_ALERT);
+                    LOG_ERROR("Failed to enable hold force.");
+                }
+            }
+            else
+            {
+                // Disable hold force (cmd_id 12)
+                char ret_cmd[MAX_CMD] = {0};
+                std::string command = "{\"cmd_id\":12,\"force\":0}";
+                LOGF_DEBUG("<CMD> %s", command.c_str());
+
+                auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+                if (ret_chk >= 0)
+                {
+                    int cmd_id = 0;
+                    ReadResponse(ret_cmd, cmd_id);
+                    HoldForceSP.setState(IPS_IDLE);
+                    LOG_INFO("Hold force disabled.");
+                }
+                else
+                {
+                    HoldForceSP.setState(IPS_ALERT);
+                    LOG_ERROR("Failed to disable hold force.");
+                }
+            }
+
+            HoldForceSP.apply();
+            return true;
+        }
+    }
+
+    return INDI::Focuser::ISNewSwitch(dev, name, states, names, n);
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Set hold current (ihold and irun)
+/////////////////////////////////////////////////////////////////////////////
+bool QFocuser::setHoldCurrent(int ihold, int irun)
+{
+    char ret_cmd[MAX_CMD] = {0};
+    std::string command = create_cmd_hold(ihold, irun);
+    LOGF_DEBUG("<CMD> %s", command.c_str());
+
+    auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("setHoldCurrent ihold=%d irun=%d error %d", ihold, irun, ret_chk);
+        return false;
+    }
+
+    int cmd_id = 0;
+    ret_chk = ReadResponse(ret_cmd, cmd_id);
+    if (ret_chk < 0)
+    {
+        LOGF_ERROR("setHoldCurrent ihold=%d irun=%d error %d", ihold, irun, ret_chk);
+        return false;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Set PDN mode
+/////////////////////////////////////////////////////////////////////////////
+bool QFocuser::setPdnMode(int pdn)
+{
+    char ret_cmd[MAX_CMD] = {0};
+    std::string command = create_cmd(19, true, pdn);
+    LOGF_DEBUG("<CMD> %s", command.c_str());
+
+    auto ret_chk = SendCommand(const_cast<char *>(command.c_str()));
+    if (ret_chk < 0)
+    {
+        LOGF_WARN("setPdnMode %d send error %d", pdn, ret_chk);
+        return false;
+    }
+
+    int cmd_id = 0;
+    ret_chk = ReadResponse(ret_cmd, cmd_id);
+    if (ret_chk < 0)
+    {
+        // Some firmware versions may not respond to PDN command, treat as warning
+        LOGF_WARN("setPdnMode %d response error %d (may be ignored)", pdn, ret_chk);
+        // Continue anyway - the command may have been executed
+    }
+
+    LOGF_DEBUG("setPdnMode %d completed", pdn);
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Save configuration items
+/////////////////////////////////////////////////////////////////////////////
+bool QFocuser::saveConfigItems(FILE *fp)
+{
+    // Call parent class to save standard focuser properties
+    INDI::Focuser::saveConfigItems(fp);
+
+    // Save External Temperature display switch state
+    // This allows the driver to remember if the user wants to show or hide external temperature
+    ExternalTempSP.save(fp);
+
+    // Save Hold Force switch state (Enable/Disable)
+    // This allows the driver to remember the user's preference for hold force
+    HoldForceSP.save(fp);
+
+    // Save Hold Current values (IHOLD and IRUN)
+    // This allows the driver to remember the user's custom hold current settings
+    HoldCurrentNP.save(fp);
+    return true;
 }
