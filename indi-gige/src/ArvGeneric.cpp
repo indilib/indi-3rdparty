@@ -404,6 +404,19 @@ ARV_EXPOSURE_STATUS ArvGeneric::exposure_poll(void (*fn_image_callback)(void *co
     if (!this->_stream_active())
         return ARV_EXPOSURE_UNKNOWN;
 
+    {
+        /* There is no point in examining the buffer status until it in the
+         * output queue of the stream. */
+        gint n_inputs = 0, n_outputs = 0;
+        arv_stream_get_n_buffers(this->stream, &n_inputs, &n_outputs);
+        if (n_outputs < 1) {
+            if (n_inputs == 0) {
+                LOG_ERROR("Waiting for image data without input buffer!");
+            }
+            return ARV_EXPOSURE_BUSY;
+        }
+    }
+
     ::ArvBufferStatus const status = arv_buffer_get_status(this->buffer);
     switch (status)
     {
