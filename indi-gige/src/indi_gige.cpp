@@ -115,10 +115,13 @@ bool GigECCD::_update_geometry(void)
 void GigECCD::_update_indi_properties(void)
 {
     LOG_INFO("update_indi_properties()");
-    IUFillNumber(&this->indiprop_gain[0], "Range", "", "%g", (double)this->camera->get_gain().min(),
-                 (double)this->camera->get_gain().max(), 1., (double)this->camera->get_gain().val());
-    IUFillNumberVector(&this->indiprop_gain_prop, this->indiprop_gain, 1, getDeviceName(), "Gain", "", MAIN_CONTROL_TAB,
-                       IP_RW, 60, IPS_IDLE);
+
+    // Gain
+    GainNP[0].fill("GAIN", "value", "%.f",
+                   (double)this->camera->get_gain().min(),
+                   (double)this->camera->get_gain().max(), 1.,
+                   (double)this->camera->get_gain().val());
+    GainNP.fill(getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
     IUFillText(&indiprop_info[0], "Vendor Name", "", this->camera->vendor_name());
     IUFillText(&indiprop_info[1], "Model Name", "", this->camera->model_name());
@@ -127,7 +130,7 @@ void GigECCD::_update_indi_properties(void)
                      0, IPS_IDLE);
 
     defineProperty(&indiprop_info_prop);
-    defineProperty(&this->indiprop_gain_prop);
+    defineProperty(this->GainNP);
     if (this->camera->has_feature("DeviceTemperature")) {
       this->TemperatureNP.setPermission(IP_RO);
       defineProperty(this->TemperatureNP);
@@ -136,7 +139,7 @@ void GigECCD::_update_indi_properties(void)
 
 void GigECCD::_delete_indi_properties(void)
 {
-    this->deleteProperty(this->indiprop_gain_prop.name);
+    this->deleteProperty(this->GainNP);
     this->deleteProperty(this->indiprop_info_prop.name);
     if (TemperatureNP.getPermission() == IP_RO) {
       this->TemperatureNP.setPermission(IP_RW);
@@ -300,16 +303,16 @@ bool GigECCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 {
     if (!strcmp(dev, this->getDeviceName()))
     {
-        if (!strcmp(name, this->indiprop_gain_prop.name))
+        if (GainNP.isNameMatch(name))
         {
-            IUUpdateNumber(&this->indiprop_gain_prop, values, names, n);
-            this->camera->set_gain(this->indiprop_gain[0].value);
-            this->indiprop_gain_prop.s = IPS_OK;
+            GainNP.update(values, names, n);
+            GainNP.setState(IPS_OK);
 
+            this->camera->set_gain(this->GainNP[0].getValue());
             /* Get-back from camera system */
-            double actual_value = this->camera->get_gain().val();
-            IUUpdateNumber(&this->indiprop_gain_prop, &actual_value, names, n);
-            IDSetNumber(&this->indiprop_gain_prop, nullptr);
+            this->GainNP[0].setValue(this->camera->get_gain().val());
+
+            GainNP.apply();
             return true;
         }
     }
@@ -337,4 +340,11 @@ bool GigECCD::UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType)
     LOGF_INFO("%s", __PRETTY_FUNCTION__);
     PrimaryCCD.setFrameType(fType);
     return true;
+}
+
+void GigECCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeyword)
+{
+    INDI::CCD::addFITSKeywords(targetChip, fitsKeyword);
+
+    fitsKeyword.push_back({"GAIN", GainNP[0].getValue(), 3, "Gain"});
 }

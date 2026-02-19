@@ -48,6 +48,7 @@ class GigECCD : public INDI::CCD
     virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
     virtual bool UpdateCCDBin(int binx, int biny) override;
     virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType) override;
+    virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeyword) override;
 
   private:
     void _delete_indi_properties(void);
@@ -67,8 +68,7 @@ class GigECCD : public INDI::CCD
 
     /* Indi properties */
 
-    INumber indiprop_gain[1];
-    INumberVectorProperty indiprop_gain_prop;
+    INDI::PropertyNumber GainNP {1};
     IText indiprop_info[3] {};
     ITextVectorProperty indiprop_info_prop;
 
