@@ -39,7 +39,13 @@
 // to its variant (indi_mi_ccd_usb and indi_mi_ccd_eth). The main function will
 // fetch from std args the binary name and ISInit will create the appropriate
 // driver afterwards.
+#ifdef __APPLE__
+#include <stdlib.h>
+#define PROGNAME getprogname()
+#else
 extern char *__progname;
+#define PROGNAME __progname
+#endif
 
 static char *rtrim(char *str)
 {
@@ -67,7 +73,7 @@ static class Loader
 
 Loader::Loader()
 {
-    if (strstr(__progname, "indi_mi_ccd_eth"))
+    if (strstr(PROGNAME, "indi_mi_ccd_eth"))
     {
         gxccd_enumerate_eth([](int id)
         {
@@ -76,7 +82,7 @@ Loader::Loader()
     }
     else
     {
-        // "__progname" shoud be indi_mi_ccd_usb, however accept all names as USB
+        // PROGNAME should be indi_mi_ccd_usb, however accept all names as USB
         gxccd_enumerate_usb([](int id)
         {
             loader.initCameras.emplace_back(id, false);
