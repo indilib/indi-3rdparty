@@ -43,7 +43,13 @@
 #define FOCUS_TIMER  50
 #define MAX_RETRIES  3
 
+#ifdef __APPLE__
+#include <stdlib.h>
+#define PROGNAME getprogname()
+#else
 extern char * __progname;
+#define PROGNAME __progname
+#endif
 
 
 typedef struct
@@ -73,7 +79,7 @@ static class Loader
             : context(gp_context_new())
         {
             // Let's just create one camera for now
-            if (!strcmp(__progname, "indi_gphoto_ccd"))
+            if (!strcmp(PROGNAME, "indi_gphoto_ccd"))
             {
                 cameras.push_back(std::unique_ptr<GPhotoCCD>(new GPhotoCCD()));
                 return;
@@ -123,7 +129,7 @@ static class Loader
 
                 // If we're NOT using the Generic INDI GPhoto drievr
                 // then let's search for multiple cameras
-                if (strcmp(__progname, "indi_gphoto_ccd"))
+                if (strcmp(PROGNAME, "indi_gphoto_ccd"))
                 {
                     char prefix[MAXINDINAME];
                     char name[MAXINDINAME];
