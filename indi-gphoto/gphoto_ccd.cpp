@@ -31,6 +31,7 @@
 
 #include <sharedblob.h>
 #include <deque>
+#include <stdlib.h>
 #include <memory>
 #include <math.h>
 #include <unistd.h>
@@ -44,12 +45,21 @@
 #define MAX_RETRIES  3
 
 #ifdef __APPLE__
-#include <stdlib.h>
-#define PROGNAME getprogname()
-#else
-extern char * __progname;
-#define PROGNAME __progname
+// getprogname() is a BSD/Darwin function present in the runtime but hidden from
+// <stdlib.h> when _POSIX_C_SOURCE or _XOPEN_SOURCE are defined. Forward-declare it
+// explicitly to bypass the header visibility guard.
+extern "C" const char *getprogname(void);
 #endif
+
+static const char *getProgName()
+{
+#ifdef __APPLE__
+    return getprogname();
+#else
+    extern char * __progname;
+    return __progname;
+#endif
+}
 
 
 typedef struct
@@ -79,7 +89,7 @@ static class Loader
             : context(gp_context_new())
         {
             // Let's just create one camera for now
-            if (!strcmp(PROGNAME, "indi_gphoto_ccd"))
+            if (!strcmp(getProgName(), "indi_gphoto_ccd"))
             {
                 cameras.push_back(std::unique_ptr<GPhotoCCD>(new GPhotoCCD()));
                 return;
@@ -129,7 +139,7 @@ static class Loader
 
                 // If we're NOT using the Generic INDI GPhoto drievr
                 // then let's search for multiple cameras
-                if (strcmp(PROGNAME, "indi_gphoto_ccd"))
+                if (strcmp(getProgName(), "indi_gphoto_ccd"))
                 {
                     char prefix[MAXINDINAME];
                     char name[MAXINDINAME];
