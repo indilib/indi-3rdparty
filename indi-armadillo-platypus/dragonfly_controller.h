@@ -41,6 +41,7 @@ class DragonFly : public INDI::DefaultDevice, public INDI::InputInterface, publi
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
         virtual bool ISNewText(const char * dev, const char * name, char * texts[], char * names[], int n) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
 
     protected:
         void TimerHit() override;
@@ -82,6 +83,13 @@ class DragonFly : public INDI::DefaultDevice, public INDI::InputInterface, publi
         /// Set & Query Functions
         ///////////////////////////////////////////////////////////////////////////////
         bool echo();
+
+        /**
+         * \brief Rebuild the Outputs tab properties in the correct display order:
+         * relay switches (with [P] where pulse duration > 0), then labels text, then pulse numbers.
+         * Must be called whenever switch labels or pulse durations change.
+         */
+        void rebuildOutputProperties();
 
         ///////////////////////////////////////////////////////////////////////////////
         /// Communication Functions
