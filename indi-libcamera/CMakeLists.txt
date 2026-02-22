@@ -30,8 +30,8 @@ include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
 include_directories( ${INDI_INCLUDE_DIR})
 include_directories( ${LibRaw_INCLUDE_DIR})
 include_directories( ${CFITSIO_INCLUDE_DIR})
-include_directories( ${LibCamera_INCLUDE_DIR})
-include_directories( ${LibCameraApps_INCLUDE_DIR})
+include_directories(SYSTEM ${LibCamera_INCLUDE_DIR})
+include_directories(SYSTEM ${LibCameraApps_INCLUDE_DIR})
 
 include(CMakeCommon)
 
