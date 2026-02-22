@@ -200,6 +200,7 @@ option(FIX_MACOS_LIBS "Fix MacOS Libraries links" Off)
 
 # Define standard set of drivers to build (default linux target)
 option(WITH_EQMOD "Install EQMod Driver" On)
+option(WITH_ASTARBOX "Install AStarBox Driver" On)
 option(WITH_STARBOOK "Install Starbook Driver" On)
 option(WITH_STARBOOK_TEN "Install Starbook Ten Driver" On)
 option(WITH_CAUX "Install Celestron AUX Driver" On)
@@ -330,6 +331,7 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
     set(WITH_QHY Off)
     set(WITH_SVBONY Off)
     set(WITH_ASTROASIS Off)
+    set(WITH_ASTARBOX Off)
   endif()
 endif()
 # Disable apogee, qhy and mi with gcc 4.8 and earlier versions
@@ -488,6 +490,11 @@ else(BUILD_LIBS)
   if(WITH_SKYWALKER)
     add_subdirectory(indi-aok)
   endif(WITH_SKYWALKER)
+
+  ## AStarBox
+  if(WITH_ASTARBOX)
+    add_subdirectory(indi-astarbox)
+  endif(WITH_ASTARBOX)
 
   ## Starbook
   if(WITH_STARBOOK)
