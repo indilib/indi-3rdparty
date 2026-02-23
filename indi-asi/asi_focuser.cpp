@@ -170,25 +170,27 @@ ASIEAF::ASIEAF(const EAF_INFO &info, const char *name, const std::string &serial
     : m_ID(info.ID)
     , m_MaxSteps(info.MaxStep)
     , mEAFInfo(info)
+    , mSerialNumber(serialNumber)
 {
-    mSerialNumber = serialNumber;
+    setVersion(1, 2);
+
     loadNicknames();
+
+    std::string focuserName = name;
     if (!mSerialNumber.empty())
     {
         auto nickname = mNicknames[mSerialNumber];
         if (!nickname.empty())
         {
-            auto finalName = nickname;
-            if (finalName.find("ZWO EAF") != 0)
-                finalName = "ZWO EAF " + finalName;
-            setDeviceName(finalName.c_str());
             mNickname = nickname;
-            LOGF_INFO("Using nickname %s for serial number %s.", finalName.c_str(), mSerialNumber.c_str());
-            return;
+            focuserName = nickname;
+            if (focuserName.find("ZWO EAF") != 0)
+                focuserName = "ZWO EAF " + focuserName;
+            LOGF_INFO("Using nickname %s for serial number %s.", focuserName.c_str(), mSerialNumber.c_str());
         }
     }
 
-    setVersion(1, 2);
+    setDeviceName(focuserName.c_str());
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
@@ -200,8 +202,6 @@ ASIEAF::ASIEAF(const EAF_INFO &info, const char *name, const std::string &serial
 
     // Just USB
     setSupportedConnections(CONNECTION_NONE);
-
-    setDeviceName(name);
 
     FocusAbsPosNP[0].setMax(m_MaxSteps);
 }

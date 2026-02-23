@@ -170,6 +170,6 @@ class ASIEAF : public INDI::Focuser
         void loadNicknames();
         void saveNicknames();
         const std::string NICKNAME_FILE = "/.indi/ZWONicknames.xml";
-        std::string mFocuserName, mFocuserID, mSerialNumber, mNickname;
+        std::string mSerialNumber, mNickname;
         std::map<std::string, std::string> mNicknames;
 };
