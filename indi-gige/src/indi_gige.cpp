@@ -191,6 +191,7 @@ bool GigECCD::StartExposure(float duration)
         duration = 0;
 
     camera->set_exposure_time((double)(duration)*1000000.0);
+    PrimaryCCD.setExposureDuration(duration); // to ensure FITS correct header
 
     TIME_VAL_INIT(&this->exposure_transfer_time);
     TIME_VAL_GET(&this->exposure_start_time);
