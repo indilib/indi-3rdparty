@@ -46,6 +46,8 @@
 
 #define CONTROL_TAB "Controls"
 
+constexpr float ILLEGAL_CCD_TEMP = -273.15f;
+
 static class Loader
 {
         std::map<int, std::shared_ptr<INDILibCamera >> cameras;
@@ -339,6 +341,16 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 }
                 else {
                     LOG_WARN("no black level found, using default");
+                }
+                auto st = payload->metadata.get(controls::SensorTemperature);
+                if (st)
+                {
+                    m_sensor_temp = *st;
+                    LOGF_INFO("Sensor temp: %0.2f", m_sensor_temp);
+                }
+                else
+                {
+                    m_sensor_temp = ILLEGAL_CCD_TEMP;
                 }
             }
             else
@@ -1175,6 +1187,10 @@ void INDILibCamera::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI
             + std::to_string(m_black_levels[3]);
     }
     fitsKeywords.push_back({"BLACKLEVEL", black_level_str.c_str(), "CCD Black Levels"});
+    if (m_sensor_temp != ILLEGAL_CCD_TEMP)
+    {
+        fitsKeywords.push_back({"CCD-TEMP", m_sensor_temp, 3, "CCD Temperature (Celsius)"});
+    }
 }
 
 /////////////////////////////////////////////////////////////////////////////
