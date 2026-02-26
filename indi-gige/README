@@ -15,7 +15,7 @@ Requirements
 
 	cfitsio-devel is required to compile support for FITS.
 	
-+ aravis >= v0.6
++ aravis >= v0.8
 
 	aravis is required, see https://github.com/AravisProject/aravis
 
@@ -57,9 +57,9 @@ GigE machine vision overview
             (2b) Vendor specific set
 
     Project Aravis only uses genicam standard. For some features you need to
-    access the CSR directly. These can easily be queried with arv-tool-0.6  that come
+    access the CSR directly. These can easily be queried with arv-tool-0.8  that come
     with aravis, i.e.
-        $ arv-tool-0.6 control R[0xF0F00A00] R[0xF0F00A04] R[0xF0F00A08] R[0xF0F00A10] R[0xF0F00A14]
+        $ arv-tool-0.8 control R[0xF0F00A00] R[0xF0F00A04] R[0xF0F00A08] R[0xF0F00A10] R[0xF0F00A14]
 
             Point Grey Research-16048874
             R[0xf0f00a00] = 0x08000600
