@@ -137,17 +137,27 @@ bool ArvGeneric::_get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max
     return true;
 }
 
-bool ArvGeneric::is_exposing()
+bool ArvGeneric::is_exposing_single()
 {
-    return this->stream_active;
+    bool single = this->single_acquisition_active.load();
+    bool stream = this->stream_active.load();
+    if (single && stream)
+        LOG_ERROR("Streaming during single-frame acquisition?!?");
+    return single;
 }
+
+bool ArvGeneric::is_streaming()
+{
+    bool single = this->single_acquisition_active.load();
+    bool stream = this->stream_active.load();
+    if (single && stream)
+        LOG_ERROR("Streaming during single-frame acquisition?!?");
+    return stream;
+}
+
 bool ArvGeneric::is_connected()
 {
     return (this->camera ? true : false);
-}
-bool ArvGeneric::_stream_active()
-{
-    return this->stream_active;
 }
 
 ArvGeneric::ArvGeneric(std::string device_id, std::string model_name)
@@ -197,8 +207,8 @@ bool ArvGeneric::_configure(void)
 void ArvGeneric::_init()
 {
     this->camera        = nullptr;
-    this->buffer        = nullptr;
     this->stream        = nullptr;
+    this->single_acquisition_active = false;
     this->stream_active = false;
 
     /* Don't clear device_id, its needed to re-attach with connect() */
@@ -208,7 +218,8 @@ bool ArvGeneric::disconnect()
 {
     if (this->is_connected())
     {
-        this->_test_exposure_and_abort();
+        this->exposure_abort();
+        g_clear_object(&this->stream);
         g_clear_object(&this->camera);
     }
     this->_init();
@@ -220,12 +231,10 @@ bool ArvGeneric::_set_initial_config()
     /* Configure "manual" mode
      *      (1) disable auto exposure
      *      (2) disable auto framerate (to enable maximum possible exposure time)
-     *      (3) set binning to 1x1
-     *      (4) set software trigger */
+     *      (3) set binning to 1x1 */
     CALL(arv_camera_set_binning, camera, 1, 1);
     CALL(arv_camera_set_gain_auto, camera, ARV_AUTO_OFF);
     CALL(arv_camera_set_exposure_time_auto, camera, ARV_AUTO_OFF);
-    CALL(arv_camera_set_trigger, camera, "Software");
     return true;
 }
 
@@ -289,122 +298,120 @@ void ArvGeneric::set_bin(int const bin_x, int const bin_y)
     CALL(arv_camera_set_binning, this->camera, this->cam.bin_x.val(), this->cam.bin_y.val());
 }
 
-void ArvGeneric::_test_exposure_and_abort(void)
-{
-    if (this->_stream_active())
-        this->exposure_abort();
-}
-
 template <typename T>
-void ArvGeneric::_set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GError**), min_max_property<T> *prop,
-                                            T const new_val)
+void ArvGeneric::set_cam_exposure_property(
+  void (*arv_set)(::ArvCamera *, T, GError**),
+  min_max_property<T> *prop, T const new_val,
+  T (*arv_get)(::ArvCamera *, GError**) )
 {
-    this->_test_exposure_and_abort();
+    if (this->is_exposing_single())
+        this->exposure_abort();
     prop->set(new_val);
     CALL(arv_set, this->camera, prop->val());
+
+    if (arv_get != nullptr)
+      prop->set(CALL_RETURN(arv_get, this->camera));
 }
 
 void ArvGeneric::set_gain(double const val)
 {
-    this->_set_cam_exposure_property(arv_camera_set_gain, &this->cam.gain, val);
+    this->set_cam_exposure_property(arv_camera_set_gain, &this->cam.gain, val,
+                                    arv_camera_get_gain);
 }
+
 void ArvGeneric::set_exposure_time(double const val)
 {
-    this->_set_cam_exposure_property(arv_camera_set_exposure_time, &this->cam.exposure, val);
+    this->set_cam_exposure_property(arv_camera_set_exposure_time,
+                                    &this->cam.exposure, val,
+                                    arv_camera_get_exposure_time);
 }
 
-::ArvBuffer *ArvGeneric::_buffer_create(void)
+void ArvGeneric::create_stream(unsigned int n_buffers)
 {
-    ::ArvBuffer *buffer;
-
-    /* Ensure no buffers in stream */
-    while (1)
-    {
-        buffer = arv_stream_try_pop_buffer(this->stream);
-        if (buffer)
-            g_clear_object(&buffer);
-        else
-            break;
+    this->stream = CALL_RETURN(arv_camera_create_stream, this->camera, nullptr, nullptr);
+    if (this->stream == nullptr) {
+        LOG_ERROR("Could not allocate a stream object!");
+        return;
     }
 
     gint const payload = CALL_RETURN(arv_camera_get_payload, this->camera);
-    buffer             = arv_buffer_new(payload, nullptr);
-    arv_stream_push_buffer(this->stream, buffer);
-    return buffer;
+    for (; n_buffers > 0; --n_buffers) {
+        auto buffer = arv_buffer_new(payload, nullptr);
+        if (this->stream == nullptr) {
+            LOG_ERROR("Could not allocate stream buffer!");
+            break;
+        }
+        arv_stream_push_buffer(this->stream, buffer);
+    }
 }
 
-::ArvStream *ArvGeneric::_stream_create(void)
+void ArvGeneric::start_acquisition(unsigned int n_buffers,
+                                   ArvAcquisitionMode mode)
 {
-    ::ArvStream *stream = CALL_RETURN(arv_camera_create_stream, this->camera, nullptr, nullptr);
-    return stream;
-}
+    this->exposure_abort();
 
-void ArvGeneric::_stream_start()
-{
-    this->stream_active = true;
+    // 1. make stream
+    this->create_stream(n_buffers);
 
-    /* Start the acquisition stream */
-    CALL(arv_camera_set_acquisition_mode, this->camera, ARV_ACQUISITION_MODE_SINGLE_FRAME);
+    // 2. Disable triggers; just acquire as soon as possible.
+    CALL(arv_camera_clear_triggers, this->camera);
+
+    // 3. start the acquisition stream
+    CALL(arv_camera_set_acquisition_mode, this->camera, mode);
     CALL(arv_camera_start_acquisition, this->camera);
 }
 
-void ArvGeneric::_stream_stop()
+void ArvGeneric::start_streaming_impl(unsigned int n_buffers)
+{
+    this->start_acquisition(n_buffers, ARV_ACQUISITION_MODE_CONTINUOUS);
+    this->stream_active = true;
+}
+
+void ArvGeneric::stop_streaming()
+{
+    this->stop_acquisition();
+}
+
+void ArvGeneric::stop_acquisition()
 {
     /* stop the acquisition stream */
     CALL(arv_camera_stop_acquisition, this->camera);
-    g_object_unref(this->stream);
+    /* Free stream resources. */
+    g_clear_object(&this->stream);
 
     this->stream_active = false;
-}
-
-void ArvGeneric::_trigger_exposure()
-{
-    /* Trigger for an exposure */
-    CALL(arv_camera_software_trigger, this->camera);
+    this->single_acquisition_active = false;
 }
 
 void ArvGeneric::exposure_start(void)
 {
-    this->_test_exposure_and_abort();
-    this->stream = this->_stream_create();
-    this->buffer = this->_buffer_create();
-
-    this->_stream_start();
-    this->_trigger_exposure();
+    this->start_acquisition(1, ARV_ACQUISITION_MODE_SINGLE_FRAME);
+    this->single_acquisition_active = true;
 }
 
 void ArvGeneric::exposure_abort(void)
 {
-    if (this->_stream_active())
+    if (this->is_acquiring())
     {
         CALL(arv_camera_abort_acquisition, this->camera);
-        this->_stream_stop();
+        this->stop_acquisition();
     }
 }
 
-void ArvGeneric::_get_image(void (*fn_image_callback)(void *const, uint8_t const *const, size_t), void *const usr_ptr)
+void ArvGeneric::_get_image(ArvGeneric::HandleImgCB fn_image_callback,
+                            ArvBuffer * buf)
 {
-    ArvBuffer *const popped_buf = arv_stream_timeout_pop_buffer(this->stream, 100000);
-    if ((popped_buf != nullptr) && (popped_buf == this->buffer) &&
-        arv_buffer_get_status(this->buffer) == ARV_BUFFER_STATUS_SUCCESS)
+    if (fn_image_callback != nullptr)
     {
-        if (fn_image_callback != nullptr)
-        {
-            size_t size;
-            uint8_t const * data = (uint8_t const *)arv_buffer_get_data(this->buffer, &size);
-            fn_image_callback(usr_ptr, data, size);
-        }
-    }
-    else
-    {
-        //TODO: failure...
+        size_t size;
+        uint8_t const * data = (uint8_t const *)arv_buffer_get_data(buf, &size);
+        fn_image_callback(data, size);
     }
 }
 
-ARV_EXPOSURE_STATUS ArvGeneric::exposure_poll(void (*fn_image_callback)(void *const, uint8_t const *const, size_t),
-                                              void *const usr_ptr)
+ARV_EXPOSURE_STATUS ArvGeneric::exposure_poll(ArvGeneric::HandleImgCB fn_image_callback)
 {
-    if (!this->_stream_active())
+    if (!this->is_exposing_single())
         return ARV_EXPOSURE_UNKNOWN;
 
     {
@@ -420,27 +427,111 @@ ARV_EXPOSURE_STATUS ArvGeneric::exposure_poll(void (*fn_image_callback)(void *co
         }
     }
 
-    ::ArvBufferStatus const status = arv_buffer_get_status(this->buffer);
+    ArvBuffer * buf = arv_stream_timeout_pop_buffer(
+      this->stream, static_cast<guint64>(this->get_exposure().val()));
+    if (buf == nullptr)
+        return ARV_EXPOSURE_BUSY;
+    ARV_EXPOSURE_STATUS retval;
+
+    ::ArvBufferStatus const status = arv_buffer_get_status(buf);
     switch (status)
     {
         case ARV_BUFFER_STATUS_CLEARED:
-            return ARV_EXPOSURE_BUSY;
+            retval = ARV_EXPOSURE_BUSY;
+            break;
         case ARV_BUFFER_STATUS_FILLING:
-            return ARV_EXPOSURE_FILLING;
+            retval = ARV_EXPOSURE_FILLING;
+            break;
         case ARV_BUFFER_STATUS_UNKNOWN:
-            return ARV_EXPOSURE_UNKNOWN;
+            retval = ARV_EXPOSURE_UNKNOWN;
+            break;
         case ARV_BUFFER_STATUS_SUCCESS:
-            this->_get_image(fn_image_callback, usr_ptr);
-            this->_stream_stop();
-            return ARV_EXPOSURE_FINISHED;
+            this->_get_image(fn_image_callback, buf);
+            this->stop_acquisition();
+            retval = ARV_EXPOSURE_FINISHED;
+            break;
         case ARV_BUFFER_STATUS_TIMEOUT:
         case ARV_BUFFER_STATUS_MISSING_PACKETS:
         case ARV_BUFFER_STATUS_WRONG_PACKET_ID:
         case ARV_BUFFER_STATUS_SIZE_MISMATCH:
         case ARV_BUFFER_STATUS_ABORTED:
-            this->_stream_stop();
-            return ARV_EXPOSURE_FAILED;
+            this->stop_acquisition();
+            retval = ARV_EXPOSURE_FAILED;
+            break;
         default:
-            return ARV_EXPOSURE_UNKNOWN;
+            retval = ARV_EXPOSURE_UNKNOWN;
+            break;
     }
+
+    if (this->is_acquiring())
+      /* give buffer back to stream and let the stream own buffer memory.
+       * This case seems unlikely.
+       */
+      arv_stream_push_buffer(this->stream, buf);
+    else
+      // free orphaned buffer
+      g_clear_object(&buf);
+    return retval;
+}
+
+ARV_EXPOSURE_STATUS ArvGeneric::next_streaming_image(ArvGeneric::HandleImgCB fn_image_callback)
+{
+    auto get_n_inputs = [this]() {
+        /* There is no point in examining the buffer status until it in the
+         * output queue of the stream. */
+        gint n_inputs = 0, n_outputs = 0;
+        arv_stream_get_n_buffers(this->stream, &n_inputs, &n_outputs);
+        return static_cast<int>(n_inputs);
+    };
+
+    if (!this->is_streaming())
+        return ARV_EXPOSURE_UNKNOWN;
+
+    auto pre_inputs = get_n_inputs();
+    ArvBuffer *const buf = arv_stream_timeout_pop_buffer(
+      this->stream, static_cast<guint64>(this->get_exposure().val()));
+    if (buf == nullptr) {
+        //LOG_DEBUG("Timed out getting next streaming image");
+        auto post_inputs = get_n_inputs();
+        if (pre_inputs != post_inputs)
+          LOGF_ERROR("Leaked %d buffers when buffer pop returned NULL!!!",
+                     (pre_inputs - post_inputs));
+        return ARV_EXPOSURE_BUSY;
+    }
+
+    ::ArvBufferStatus const status = arv_buffer_get_status(buf);
+    ARV_EXPOSURE_STATUS retval = ARV_EXPOSURE_UNKNOWN;
+    switch (status)
+    {
+        case ARV_BUFFER_STATUS_TIMEOUT:
+        case ARV_BUFFER_STATUS_CLEARED:
+            retval = ARV_EXPOSURE_BUSY;
+            break;
+        case ARV_BUFFER_STATUS_FILLING:
+            retval = ARV_EXPOSURE_FILLING;
+            break;
+        case ARV_BUFFER_STATUS_UNKNOWN:
+            retval = ARV_EXPOSURE_UNKNOWN;
+            break;
+        case ARV_BUFFER_STATUS_SUCCESS:
+            this->_get_image(fn_image_callback, buf);
+            retval = ARV_EXPOSURE_FINISHED;
+            break;
+        case ARV_BUFFER_STATUS_MISSING_PACKETS:
+        case ARV_BUFFER_STATUS_WRONG_PACKET_ID:
+        case ARV_BUFFER_STATUS_SIZE_MISMATCH:
+        case ARV_BUFFER_STATUS_ABORTED:
+            LOG_ERROR("Exposure failed, stopping acquisition");
+            this->stop_acquisition();
+            retval = ARV_EXPOSURE_FAILED;
+            break;
+        default:
+            retval = ARV_EXPOSURE_UNKNOWN;
+            break;
+    }
+
+    // give buffer back to stream and let the stream own buffer memory.
+    //LOG_DEBUG("Pushing buffer back to stream");
+    arv_stream_push_buffer(this->stream, buf);
+    return retval;
 }

@@ -22,6 +22,7 @@
 #include <sys/time.h>
 #include <deque>
 #include <memory>
+#include <mutex>
 
 #include "indidevapi.h"
 #include "eventloop.h"
@@ -42,8 +43,7 @@
 
 #define TIMER_US_TO_MS (1000)
 #define TIMER_US_TO_S  (1000000)
-#define TIMER_TICK_MS  (100)
-#define CAPS           (CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME)
+#define CAPS           (CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_STREAMING)
 
 static class Loader
 {
@@ -83,6 +83,7 @@ bool GigECCD::initProperties()
 
 bool GigECCD::_update_geometry(void)
 {
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     /* Get actual values */
     this->camera->update_geometry();
 
@@ -108,11 +109,15 @@ bool GigECCD::_update_geometry(void)
         LOGF_INFO("Reserving INDI image buffer size %i bytes", indi_bufsize);
         PrimaryCCD.setFrameBufferSize(frame_byte_size);
     }
+
+    this->Streamer->setPixelFormat(INDI_MONO, PrimaryCCD.getBPP());
+    this->Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
     return true;
 }
 
 void GigECCD::_update_indi_properties(void)
 {
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     LOG_INFO("update_indi_properties()");
 
     // Gain
@@ -160,6 +165,7 @@ bool GigECCD::updateProperties()
 {
     INDI::CCD::updateProperties();
 
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     if (this->camera->is_connected())
     {
         this->_update_indi_properties();
@@ -168,7 +174,7 @@ bool GigECCD::updateProperties()
                            this->camera->get_pixel_pitch().val());
 
         (void)this->_update_geometry();
-        this->timer_id = this->SetTimer(TIMER_TICK_MS);
+        this->timer_id = this->SetTimer(this->getCurrentPollingPeriod());
     }
     else
     {
@@ -181,14 +187,83 @@ bool GigECCD::updateProperties()
 
 bool GigECCD::Connect()
 {
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     IDLog("Connect to Camera: %s\n", camera->model_name());
+    this->start_streaming_thread();
     return camera->connect();
 }
 
 bool GigECCD::Disconnect()
 {
     LOGF_INFO("%s", __PRETTY_FUNCTION__);
+    this->stop_streaming_thread();
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     return camera->disconnect();
+}
+
+void GigECCD::start_streaming_thread()
+{
+    auto receive_image = [this](uint8_t const *const data, size_t size)
+    {
+        /* locked as per indiccd.h guidance. */
+        std::lock_guard<std::mutex> lock(this->ccdBufferLock);
+        this->Streamer->newFrame(data, size);
+        //LOG_DEBUG("injected image into stream manager");
+    };
+
+    auto streaming_worker = [this, receive_image]() {
+        while (!this->streaming_thread_stop_requested.load()) {
+            std::unique_lock<std::recursive_mutex> lock(this->camera_mutex);
+            if (!this->streaming_thread_active.load()) {
+                if (this->camera->is_streaming())
+                    // Have been streaming; have now been requested to stop
+                    this->camera->stop_streaming();
+
+                this->streaming_thread_condition.wait(lock);
+
+                if (!this->streaming_thread_active.load()) {
+                    LOG_INFO("Quit probably requested for streaming thread");
+                    // probably just requested to quit so go to while loop test
+                    continue;
+                }
+
+                /* While we *weren't* streaming, we are now requested to start
+                 * streaming.
+                 */
+                LOG_INFO("Starting streaming");
+                this->camera->start_streaming();
+            }
+
+            // camera_mutex should be locked at this point
+            auto status = camera->next_streaming_image(receive_image);
+            switch (status) {
+                case arv::ARV_EXPOSURE_UNKNOWN:
+                case arv::ARV_EXPOSURE_FAILED: {
+                    LOG_ERROR("Streaming acquisition had unknown failure");
+                    this->camera->exposure_abort();
+                    break;
+                }
+                default:
+                    break;
+            }
+        }
+
+        LOG_INFO("Shutting down streaming thread");
+    };
+
+    this->streaming_thread = std::thread(streaming_worker);
+}
+
+void GigECCD::stop_streaming_thread()
+{
+    LOG_INFO("Requesting streaming stop");
+    {
+        std::lock_guard<std::mutex> lock(this->ccdBufferLock);
+        this->streaming_thread_active = false;
+        this->streaming_thread_stop_requested = true;
+    }
+    this->streaming_thread_condition.notify_all();
+    this->streaming_thread.join();
 }
 
 bool GigECCD::StartExposure(float duration)
@@ -198,6 +273,7 @@ bool GigECCD::StartExposure(float duration)
     if (PrimaryCCD.getFrameType() == INDI::CCDChip::BIAS_FRAME)
         duration = 0;
 
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     camera->set_exposure_time((double)(duration)*1000000.0);
     PrimaryCCD.setExposureDuration(duration); // to ensure FITS correct header
 
@@ -205,27 +281,57 @@ bool GigECCD::StartExposure(float duration)
     TIME_VAL_GET(&this->exposure_start_time);
 
     camera->exposure_start();
-    return camera->is_exposing();
+    return camera->is_exposing_single();
 }
 
 bool GigECCD::AbortExposure()
 {
     LOGF_INFO("%s", __PRETTY_FUNCTION__);
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     camera->exposure_abort();
+    return true;
+}
+
+bool GigECCD::StartStreaming()
+{
+    {
+        std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
+        if (this->camera->is_exposing_single()) {
+            LOG_ERROR("Invalid streaming request during single-frame acquisition");
+            return false;
+        }
+
+        this->camera->set_exposure_time(Streamer->getTargetExposure()*1000000.0);
+        LOG_INFO("Requesting streaming start");
+        this->streaming_thread_active = true;
+    }
+    this->streaming_thread_condition.notify_all();
+    return true;
+}
+
+bool GigECCD::StopStreaming()
+{
+    LOG_INFO("Requesting streaming stop");
+    this->streaming_thread_active = false;
+    this->streaming_thread_condition.notify_all();
     return true;
 }
 
 void GigECCD::_update_image(uint8_t const *const data, size_t size)
 {
-    LOGF_INFO("Receiving %i bytes image", size);
+    LOGF_INFO("Received %i bytes image", size);
 
     size_t const frame_buf_size = PrimaryCCD.getFrameBufferSize();
 
     if ((size == frame_buf_size) && (data != nullptr))
     {
-        uint8_t *const image = PrimaryCCD.getFrameBuffer();
-        memcpy(image, (void const*)data, frame_buf_size);
+        { /* locked as per indiccd.h guidance. */
+            std::lock_guard<std::mutex> lock(this->ccdBufferLock);
+            uint8_t *const image = PrimaryCCD.getFrameBuffer();
+            memcpy(image, (void const*)data, frame_buf_size);
+        }
         if (TemperatureNP.getPermission() == IP_RO) {
+            std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
             this->TemperatureNP[0].setValue(this->camera->get_float("DeviceTemperature"));
             this->TemperatureNP.setState(IPS_OK);
             this->TemperatureNP.apply();
@@ -240,23 +346,21 @@ void GigECCD::_update_image(uint8_t const *const data, size_t size)
     }
 }
 
-void GigECCD::_receive_image_hook(void *const class_ptr, uint8_t const *const data, size_t size)
-{
-    GigECCD * cls = static_cast<GigECCD *>(class_ptr);
-    cls->_update_image(data, size);
-}
-
 void GigECCD::_handle_failed(void)
 {
     LOG_ERROR("Failure occurred, filling image with black");
 
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     camera->exposure_abort();
 
     PrimaryCCD.setExposureLeft(0);
 
-    /* Fill with black */
-    uint8_t *const image = PrimaryCCD.getFrameBuffer();
-    memset(image, 0, PrimaryCCD.getFrameBufferSize());
+    { /* locked as per indiccd.h guidance. */
+        std::lock_guard<std::mutex> lock(this->ccdBufferLock);
+        /* Fill with black */
+        uint8_t *const image = PrimaryCCD.getFrameBuffer();
+        memset(image, 0, PrimaryCCD.getFrameBufferSize());
+    }
 
     this->ExposureComplete(&PrimaryCCD);
 }
@@ -269,6 +373,7 @@ void GigECCD::_handle_timeout(struct timeval *const tv, uint32_t timeout_us)
     struct timeval now;
     TIME_VAL_GET(&now);
 
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     uint32_t const elapsed       = ((TIME_VAL_US(&now)) - (TIME_VAL_US(tv)));
     uint32_t const exposure_time = (uint32_t)this->camera->get_exposure().val();
     uint32_t const time_left     = exposure_time - elapsed;
@@ -278,26 +383,37 @@ void GigECCD::_handle_timeout(struct timeval *const tv, uint32_t timeout_us)
     else
         PrimaryCCD.setExposureLeft((float)time_left / (float)TIMER_US_TO_S);
 
-    if (elapsed > timeout_us)
+    if (elapsed > timeout_us) {
+        LOGF_ERROR("Image acquisition timed out (>%d μs)", timeout_us);
         this->_handle_failed();
+    }
 }
 
 void GigECCD::TimerHit()
 {
-    this->timer_id = this->SetTimer(TIMER_TICK_MS);
-    if (!this->camera->is_connected() || !this->camera->is_exposing())
+    this->timer_id = this->SetTimer(this->getCurrentPollingPeriod());
+    if (!this->camera->is_connected() || !this->camera->is_exposing_single())
         return;
 
-    arv::ARV_EXPOSURE_STATUS const status = camera->exposure_poll(this->_receive_image_hook, this);
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
+    auto receive_image = [this](uint8_t const *const data, size_t size)
+    {
+        this->_update_image(data, size);
+    };
+
+
+    auto status = camera->exposure_poll(receive_image);
     switch (status)
     {
         case arv::ARV_EXPOSURE_FINISHED:
-            /* Nothing to do, ArvCamera automatically unsets is_exposing */
+            // Nothing to do, ArvCamera automatically unsets is_exposing_single
             break;
         case arv::ARV_EXPOSURE_UNKNOWN:
-        case arv::ARV_EXPOSURE_FAILED:
+        case arv::ARV_EXPOSURE_FAILED: {
+            LOG_ERROR("Image acquisition had unknown failure");
             this->_handle_failed();
             break;
+        }
         case arv::ARV_EXPOSURE_FILLING:
             this->_handle_timeout(&this->exposure_transfer_time, TIMER_TRANSFER_TIMEOUT_US);
             break;
@@ -317,6 +433,7 @@ bool GigECCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             GainNP.update(values, names, n);
             GainNP.setState(IPS_OK);
 
+            std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
             this->camera->set_gain(this->GainNP[0].getValue());
             /* Get-back from camera system */
             this->GainNP[0].setValue(this->camera->get_gain().val());
@@ -346,6 +463,7 @@ bool GigECCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
     LOGF_INFO("%s x=%i y=%i w=%i h=%i", __PRETTY_FUNCTION__, x, y, w, h);
 
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     this->camera->set_geometry(x, y, w, h);
     return this->_update_geometry();
 }
@@ -353,6 +471,7 @@ bool GigECCD::UpdateCCDFrame(int x, int y, int w, int h)
 bool GigECCD::UpdateCCDBin(int binx, int biny)
 {
     LOGF_INFO("%s binx=%i biny=%i", __PRETTY_FUNCTION__, binx, biny);
+    std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     camera->set_bin(binx, biny);
     return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
 }

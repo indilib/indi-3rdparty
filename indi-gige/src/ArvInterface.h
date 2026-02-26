@@ -19,10 +19,11 @@
 #ifndef CPP_ARV_IFACE_H
 #define CPP_ARV_IFACE_H
 
-#include <stdint.h>
-#include <stddef.h>
+#include <cstdint>
+#include <cstddef>
 
 #include <string>
+#include <functional>
 
 namespace arv
 {
@@ -75,12 +76,21 @@ class min_max_property
 class ArvCamera
 {
   public:
-    ArvCamera([[maybe_unused]] std::string device_id, [[maybe_unused]] std::string model_name) {}
+    typedef std::function<void(uint8_t const *const, size_t)> HandleImgCB;
+
+    ArvCamera([[maybe_unused]] std::string device_id,
+              [[maybe_unused]] std::string model_name) {}
     virtual ~ArvCamera() = default;
-    virtual bool connect()      = 0;
-    virtual bool disconnect()   = 0;
-    virtual bool is_connected() = 0;
-    virtual bool is_exposing()  = 0;
+    virtual bool connect()            = 0;
+    virtual bool disconnect()         = 0;
+    virtual bool is_connected()       = 0;
+    /** Is a single-frame acquisition is underway? */
+    virtual bool is_exposing_single() = 0;
+    /** Is a multiple-frame acquisition (streaming) is underway? */
+    virtual bool is_streaming()       = 0;
+    bool is_acquiring() {
+      return this->is_exposing_single() || this->is_streaming();
+    }
 
     /* Get properties */
     virtual const char *vendor_name()                  = 0;
@@ -110,10 +120,19 @@ class ArvCamera
     virtual void set_exposure_time(double const val) = 0;
     virtual void set_gain(double const val)          = 0;
 
+    /** Start a single-frame acquisition. */
     virtual void exposure_start(void)                      = 0;
     virtual void exposure_abort(void)                      = 0;
-    virtual ARV_EXPOSURE_STATUS exposure_poll(void (*fn_image_callback)(void *const, uint8_t const *const, size_t),
-                                              void *const) = 0;
+    virtual ARV_EXPOSURE_STATUS exposure_poll(HandleImgCB fn_image_callback) = 0;
+    virtual ARV_EXPOSURE_STATUS next_streaming_image(HandleImgCB fn_image_callback) = 0;
+    virtual void stop_streaming(void)                      = 0;
+    /** Start a multi-frame acquisition (i.e. streaming). */
+    void start_streaming(unsigned int n_buffers=10) {
+      this->start_streaming_impl(n_buffers);
+    }
+
+  protected:
+    virtual void start_streaming_impl(unsigned int n_buffers)   = 0;
 };
 
 class ArvFactory

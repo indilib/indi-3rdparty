@@ -22,6 +22,11 @@
 
 #include <indiccd.h>
 
+#include <string>
+#include <thread>
+#include <atomic>
+#include <condition_variable>
+
 #include "ArvInterface.h"
 
 using namespace std;
@@ -42,6 +47,12 @@ class GigECCD : public INDI::CCD
 
     virtual bool StartExposure(float duration) override;
     virtual bool AbortExposure() override;
+    /** Request streaming to start.
+     * This should not be called with camera_mutex locked. */
+    virtual bool StartStreaming() override;
+    /** Request streaming to stop.
+     * This should not be called with camera_mutex locked. */
+    virtual bool StopStreaming() override;
 
   protected:
     virtual void TimerHit() override;
@@ -56,15 +67,24 @@ class GigECCD : public INDI::CCD
     void _update_indi_properties(void);
     bool _update_geometry(void);
     void _update_image(uint8_t const *const data, size_t size);
-    static void _receive_image_hook(void *const class_ptr, uint8_t const *const data, size_t size);
 
     void _handle_failed(void);
     void _handle_timeout(struct timeval *const tv, uint32_t timeout_us);
+    void start_streaming_thread();
+    /** Request streaming to stop and the streaming thread to quit.
+     * This should not be called with camera_mutex locked. */
+    void stop_streaming_thread();
 
     arv::ArvCamera *camera;
+    std::recursive_mutex camera_mutex;
     int timer_id;
     struct timeval exposure_start_time;
     struct timeval exposure_transfer_time;
+
+    std::thread streaming_thread;
+    std::atomic<bool> streaming_thread_stop_requested {false};
+    std::atomic<bool> streaming_thread_active {false};
+    std::condition_variable_any streaming_thread_condition;
 
     /* Indi properties */
 

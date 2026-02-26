@@ -20,6 +20,7 @@
 #define CPP_ARV_GENERIC_H
 
 #include <string>
+#include <atomic>
 
 //#extern "C" {
 #include <stddef.h>
@@ -34,11 +35,14 @@ using namespace arv;
 class ArvGeneric : public arv::ArvCamera
 {
   public:
+    using arv::ArvCamera::HandleImgCB;
+
     ArvGeneric(std::string device_id, std::string model_name);
     virtual ~ArvGeneric();
 
     virtual bool is_connected() override;
-    virtual bool is_exposing() override;
+    virtual bool is_exposing_single() override;
+    virtual bool is_streaming() override;
     virtual bool connect() override;
     virtual bool disconnect() override;
     virtual const char *vendor_name() override;
@@ -67,19 +71,34 @@ class ArvGeneric : public arv::ArvCamera
 
     virtual void exposure_start(void) override;
     virtual void exposure_abort(void) override;
-    virtual ARV_EXPOSURE_STATUS exposure_poll(void (*fn_image_callback)(void *const, uint8_t const *const, size_t),
-                                              void *const usr_ptr) override;
+    virtual ARV_EXPOSURE_STATUS exposure_poll(HandleImgCB fn_image_callback) override;
+    virtual ARV_EXPOSURE_STATUS next_streaming_image(HandleImgCB fn_image_callback) override;
+    virtual void stop_streaming(void)  override;
 
   protected:
+    virtual void start_streaming_impl(unsigned int n_buffers) override;
     void _init(void);
     virtual bool _configure(void);
-    void _test_exposure_and_abort(void);
 
   private:
     template <typename T>
     bool _get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max, GError**), min_max_property<T> *prop);
+
+    /** Set a given property where it should not be changed during a
+     * single-frame acquisition and attemping to do so should cause the
+     * acquisition to be aborted.
+     * This function does *not* stop acquisition if a change is made during a
+     * streaming operation.
+     * If the 'get' function is also passed, the value of the parameter will be
+     * queried from the camera after the 'set' function has been called.  This
+     * can be useful since the camera can often demote/promote settings to some
+     * gridded pattern internal to the camera.
+     */
     template <typename T>
-    void _set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GError**), min_max_property<T> *prop, T const new_val);
+    void set_cam_exposure_property(void (*arv_set)(::ArvCamera *, T, GError**),
+                                   min_max_property<T> *prop, T const new_val,
+                                   T (*arv_get)(::ArvCamera *, GError**) = nullptr);
+
     const char * getDeviceName() { return this->device_id(); }
     // Variadic template error handler function with no return value
     template<typename Func, typename... Args>
@@ -91,23 +110,22 @@ class ArvGeneric : public arv::ArvCamera
   protected:
     virtual bool _get_initial_config();
     virtual bool _set_initial_config();
-    void _get_image(void (*fn_image_callback)(void *const, uint8_t const *const, size_t), void *const usr_ptr);
+    void _get_image(HandleImgCB fn_image_callback, ArvBuffer * buf);
 
     /* aravis library state variables */
     ::ArvCamera *camera;
     ::ArvDevice *dev;
-    ::ArvStream *stream;
-    ::ArvBuffer *buffer;
+    ::ArvStream *stream; /// Hold all buffers in queues until freed
 
     /* streaming, capturing functions */
-    ::ArvStream *_stream_create(void);
-    ::ArvBuffer *_buffer_create(void);
-    bool _stream_active();
-    void _stream_start();
-    void _stream_stop();
-    void _trigger_exposure();
+    /** Creates the current stream and pushes buffers to its input queue. */
+    void create_stream(unsigned int n_buffers = 1);
+    void start_acquisition(unsigned int n_buffers, ArvAcquisitionMode mode);
+    /** Stops all acquisition. */
+    void stop_acquisition();
 
-    bool stream_active;
+    std::atomic<bool> single_acquisition_active;
+    std::atomic<bool> stream_active;
 
     /* Camera properties */
     struct
