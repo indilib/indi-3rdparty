@@ -241,8 +241,10 @@ bool ArvGeneric::_get_initial_config()
     this->_get_bounds<double>(arv_camera_get_exposure_time_bounds, &this->cam.exposure);
     this->_get_bounds<double>(arv_camera_get_gain_bounds, &this->cam.gain);
 
-    /* No GVCP call for this..., specialize if necessary */
-    this->cam.pixel_pitch.set_single(1.0);
+    /* No GVCP call for this..., specializations of this class could make this
+     * read-only by setting min=max=val (see BlackFly implementation). */
+    this->cam.pixel_pitch.update(1.0, 40.0);
+    this->cam.pixel_pitch.set(1.0);
 
     return true;
 }

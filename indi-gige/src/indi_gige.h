@@ -69,6 +69,7 @@ class GigECCD : public INDI::CCD
     /* Indi properties */
 
     INDI::PropertyNumber GainNP {1};
+    INDI::PropertyNumber PixelSizeNP {1};
     IText indiprop_info[3] {};
     ITextVectorProperty indiprop_info_prop;
 

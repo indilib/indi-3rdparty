@@ -123,6 +123,13 @@ void GigECCD::_update_indi_properties(void)
                    (double)this->camera->get_gain().val());
     GainNP.fill(getDeviceName(), "CCD_GAIN", "Gain", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
 
+    auto pitch = this->camera->get_pixel_pitch();
+    PixelSizeNP[0].fill("PIXEL_SIZE", "Size [μm]", "%.2f",
+                        pitch.min(), pitch.max(), .1, pitch.val());
+    PixelSizeNP.fill(getDeviceName(), "CCD_PIXEL_SIZE", "Pixel",
+                     IMAGE_SETTINGS_TAB,
+                     pitch.max() == pitch.min() ? IP_RO : IP_RW, 60, IPS_IDLE);
+
     IUFillText(&indiprop_info[0], "Vendor Name", "", this->camera->vendor_name());
     IUFillText(&indiprop_info[1], "Model Name", "", this->camera->model_name());
     IUFillText(&indiprop_info[2], "Device ID", "", this->camera->device_id());
@@ -131,6 +138,7 @@ void GigECCD::_update_indi_properties(void)
 
     defineProperty(&indiprop_info_prop);
     defineProperty(this->GainNP);
+    defineProperty(this->PixelSizeNP);
     if (this->camera->has_feature("DeviceTemperature")) {
       this->TemperatureNP.setPermission(IP_RO);
       defineProperty(this->TemperatureNP);
@@ -140,6 +148,7 @@ void GigECCD::_update_indi_properties(void)
 void GigECCD::_delete_indi_properties(void)
 {
     this->deleteProperty(this->GainNP);
+    this->deleteProperty(this->PixelSizeNP);
     this->deleteProperty(this->indiprop_info_prop.name);
     if (TemperatureNP.getPermission() == IP_RO) {
       this->TemperatureNP.setPermission(IP_RW);
@@ -314,6 +323,17 @@ bool GigECCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             this->GainNP[0].setValue(this->camera->get_gain().val());
 
             GainNP.apply();
+            return true;
+        }
+
+        if (PixelSizeNP.isNameMatch(name))
+        {
+            PixelSizeNP.update(values, names, n);
+            PixelSizeNP.setState(IPS_OK);
+            PixelSizeNP.apply();
+
+            auto dx = PixelSizeNP[0].getValue();
+            PrimaryCCD.setPixelSize(dx, dx);
             return true;
         }
     }
