@@ -23,6 +23,7 @@
 #include <cstddef>
 
 #include <string>
+#include <utility>
 #include <functional>
 
 namespace arv
@@ -40,12 +41,13 @@ template <class T>
 class min_max_property
 {
   public:
-    min_max_property() {}
-    min_max_property(T const min, T const max, T const val)
+    min_max_property() : _min(0), _max(0), _val(0), _incr(0) {}
+    min_max_property(T const min, T const max, T const val, T const incr = T(0))
     {
         this->_min = min;
         this->_max = max;
         this->_val = val;
+        this->_incr = incr;
     }
 
     void update(T const min, T const max)
@@ -54,8 +56,19 @@ class min_max_property
         this->_max = max;
     }
 
-    void set(T const new_val)
+    void set_increment(T const incr)
     {
+        this->_incr = incr;
+    }
+
+    /** Set a new value for the property, obeying max/min limits and following
+     * incremental restrictions if set (i.e. if not 0). */
+    void set(T new_val)
+    {
+        if (this->_incr != T(0))
+            // enforce alignment to increments
+            new_val = int((new_val - this->_min)/this->_incr) * this->_incr + this->_min;
+
         if (new_val > this->_max)
             this->_val = this->_max;
         else if (new_val < this->_min)
@@ -68,9 +81,10 @@ class min_max_property
     T val() { return this->_val; }
     T min() { return this->_min; }
     T max() { return this->_max; }
+    T incr() { return this->_incr; }
 
   private:
-    T _min, _max, _val;
+    T _min, _max, _val, _incr;
 };
 
 class ArvCamera
@@ -113,8 +127,15 @@ class ArvCamera
 
     /* Set geometry */
     virtual void set_bin(int const bin_x, int const bin_y)                        = 0;
+    /** update this class information of binning from the camera hardware.
+     * @return pair of binning values for x and y.
+     */
+    virtual std::pair<int,int> update_bin(void)                                   = 0;
     virtual void set_geometry(int const x, int const y, int const w, int const h) = 0;
-    virtual void update_geometry(void)                                            = 0;
+    /** update this class information of geometry from the camera hardware.
+     * @return tuple of (x, y, w, h).
+     */
+    virtual std::tuple<int,int,int,int> update_geometry(void)                     = 0;
 
     /* Set exposure */
     virtual void set_exposure_time(double const val) = 0;

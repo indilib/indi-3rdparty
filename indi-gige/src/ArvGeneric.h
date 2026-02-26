@@ -64,8 +64,9 @@ class ArvGeneric : public arv::ArvCamera
     virtual double get_float(const char * feature) override;
 
     virtual void set_bin(int const bin_x, int const bin_y) override;
+    virtual std::pair<int,int> update_bin(void) override;
     virtual void set_geometry(int const x, int const y, int const w, int const h) override;
-    virtual void update_geometry(void) override;
+    virtual std::tuple<int,int,int,int> update_geometry(void) override;
     virtual void set_exposure_time(double const val) override;
     virtual void set_gain(double const val) override;
 
@@ -83,6 +84,8 @@ class ArvGeneric : public arv::ArvCamera
   private:
     template <typename T>
     bool _get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max, GError**), min_max_property<T> *prop);
+    template <typename T>
+    bool _get_incr(T (*fn_arv_incr)(::ArvCamera *, GError**), min_max_property<T> *prop);
 
     /** Set a given property where it should not be changed during a
      * single-frame acquisition and attemping to do so should cause the

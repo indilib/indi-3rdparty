@@ -65,7 +65,8 @@ class GigECCD : public INDI::CCD
   private:
     void _delete_indi_properties(void);
     void _update_indi_properties(void);
-    bool _update_geometry(void);
+    void _update_bin(void); /// update binning to INDI from hardware
+    bool _update_geometry(void); /// update geometry to INDI from hardware
     void _update_image(uint8_t const *const data, size_t size);
 
     void _handle_failed(void);

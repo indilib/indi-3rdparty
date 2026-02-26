@@ -137,6 +137,13 @@ bool ArvGeneric::_get_bounds(void (*fn_arv_bounds)(::ArvCamera *, T *min, T *max
     return true;
 }
 
+template <typename T>
+bool ArvGeneric::_get_incr(T (*fn_arv_incr)(::ArvCamera *, GError**), min_max_property<T> *prop)
+{
+    prop->set_increment(CALL_RETURN(fn_arv_incr, this->camera));
+    return true;
+}
+
 bool ArvGeneric::is_exposing_single()
 {
     bool single = this->single_acquisition_active.load();
@@ -238,17 +245,24 @@ bool ArvGeneric::_set_initial_config()
     return true;
 }
 
+#define _GET_BOUNDS(T, feature, prop) \
+  this->_get_bounds<T>(arv_camera_get_ ## feature ## _bounds, &this->cam.prop)
+#define _GET_BOUNDS_INCR(T, feature, prop) \
+  _GET_BOUNDS(T, feature, prop); \
+  this->_get_incr<T>(arv_camera_get_ ## feature ## _increment, &this->cam.prop)
+
+
 bool ArvGeneric::_get_initial_config()
 {
-    this->_get_bounds<gint>(arv_camera_get_x_binning_bounds, &this->cam.bin_x);
-    this->_get_bounds<gint>(arv_camera_get_y_binning_bounds, &this->cam.bin_y);
-    this->_get_bounds<gint>(arv_camera_get_x_offset_bounds, &this->cam.x_offset);
-    this->_get_bounds<gint>(arv_camera_get_y_offset_bounds, &this->cam.y_offset);
-    this->_get_bounds<gint>(arv_camera_get_width_bounds, &this->cam.width);
-    this->_get_bounds<gint>(arv_camera_get_height_bounds, &this->cam.height);
-    this->_get_bounds<double>(arv_camera_get_frame_rate_bounds, &this->cam.frame_rate);
-    this->_get_bounds<double>(arv_camera_get_exposure_time_bounds, &this->cam.exposure);
-    this->_get_bounds<double>(arv_camera_get_gain_bounds, &this->cam.gain);
+    _GET_BOUNDS_INCR(gint, x_binning, bin_x);
+    _GET_BOUNDS_INCR(gint, y_binning, bin_y);
+    _GET_BOUNDS_INCR(gint, x_offset, x_offset);
+    _GET_BOUNDS_INCR(gint, y_offset, y_offset);
+    _GET_BOUNDS_INCR(gint, width, width);
+    _GET_BOUNDS_INCR(gint, height, height);
+    _GET_BOUNDS(double, frame_rate, frame_rate);
+    _GET_BOUNDS(double, exposure_time, exposure);
+    _GET_BOUNDS(double, gain, gain);
 
     /* No GVCP call for this..., specializations of this class could make this
      * read-only by setting min=max=val (see BlackFly implementation). */
@@ -275,19 +289,17 @@ void ArvGeneric::set_geometry(int const x, int const y, int const w, int const h
                                 this->cam.height.val());
 }
 
-void ArvGeneric::update_geometry(void)
+std::tuple<int,int,int,int> ArvGeneric::update_geometry(void)
 {
-    gint x, y, w, h, binx, biny;
+    gint x, y, w, h;
 
     CALL(arv_camera_get_region, this->camera, &x, &y, &w, &h);
-    CALL(arv_camera_get_binning, this->camera, &binx, &biny);
 
     this->cam.x_offset.set(x);
     this->cam.y_offset.set(y);
     this->cam.width.set(w);
     this->cam.height.set(h);
-    this->cam.bin_x.set(binx);
-    this->cam.bin_y.set(biny);
+    return std::tuple<int,int,int,int>(x, y, w, h);
 }
 
 void ArvGeneric::set_bin(int const bin_x, int const bin_y)
@@ -296,6 +308,17 @@ void ArvGeneric::set_bin(int const bin_x, int const bin_y)
     this->cam.bin_y.set(bin_y);
 
     CALL(arv_camera_set_binning, this->camera, this->cam.bin_x.val(), this->cam.bin_y.val());
+}
+
+std::pair<int,int> ArvGeneric::update_bin()
+{
+    /* read this back to ensure we know what binning was actually set.  For at
+     * least some cameras, a binning of 3 gets promoted to a binning of 4. */
+    gint binx, biny;
+    CALL(arv_camera_get_binning, this->camera, &binx, &biny);
+    this->cam.bin_x.set(binx);
+    this->cam.bin_y.set(biny);
+    return std::pair<int,int>(binx, biny);
 }
 
 template <typename T>

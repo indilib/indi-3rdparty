@@ -45,6 +45,31 @@
 #define TIMER_US_TO_S  (1000000)
 #define CAPS           (CCD_CAN_ABORT | CCD_CAN_BIN | CCD_CAN_SUBFRAME | CCD_HAS_STREAMING)
 
+/* NOTE ABOUT BINNING:
+ * At least for FLIR GiGE cameras, changing binning changes the apparent size of
+ * the chip, such that the region of interest is configured using a smaller
+ * number of pixels.  This appears to be contrary to how INDI expects binning to
+ * be configured.  Following the CCD Simulator (if that is a decent example of
+ * implementing a INDI::CCD device, it rather appears that the region of
+ * interest is still expected to be set using the entire available Width/Height.
+ * It therefore appears necessary to mitigate this mismatch since (at least for
+ * ekos) the client appears to mess up the apparent image if binning is
+ * configured but a smaller region is selected, but in reality the entire
+ * avaialble sensor was binned.
+ *
+ * So, for now (as of 26 Feb 2026), even when binning is used, this driver will
+ * use the full MaxWidth and MaxHeight manually divided by the binning to select
+ * the region of interest.
+ *
+ * This means that any use of get_x_offset().val(), get_y_offset().val(),
+ * get_width().val(), or get_height().val() from the GigECCD::camera object must
+ * be manually multiplied or divided by the values from get_bin_x().val() and
+ * get_bin_y().val() as appropriate.  Similarly, camera->set_geometry(...) must
+ * be given values that are divided by the appropriate binning.
+ *
+ * TODO: verify this behavior on GiGE cameras from other vendors.
+ */
+
 static class Loader
 {
     std::deque<std::unique_ptr<GigECCD>> cameras;
@@ -85,18 +110,23 @@ bool GigECCD::_update_geometry(void)
 {
     std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     /* Get actual values */
-    this->camera->update_geometry();
+    auto [x, y, w, h] = this->camera->update_geometry();
+
+    /* As per note at begin of this file, we manually manage the region of
+     * interest conversion between the camera and INDI because the camera
+     * changes the apparent region of interest available depending on binning,
+     * while INDI does not. */
+    auto bin_x = this->camera->get_bin_x().val(),
+         bin_y = this->camera->get_bin_y().val();
 
     /* Sync these with INDI */
-    PrimaryCCD.setBin(this->camera->get_bin_x().val(), this->camera->get_bin_y().val());
-    PrimaryCCD.setFrame(this->camera->get_x_offset().val(), this->camera->get_y_offset().val(),
-                        this->camera->get_width().val(), this->camera->get_height().val());
+    INDI::CCD::UpdateCCDFrame(x*bin_x, y*bin_y, w*bin_x, h*bin_y);
 
     /* Sanity checks, reserve buffers */
-    [[maybe_unused]] int const width           = this->camera->get_width().val();
-    [[maybe_unused]] int const height          = this->camera->get_height().val();
     int const frame_byte_size = this->camera->get_frame_byte_size();
-    int const indi_bufsize    = PrimaryCCD.getSubW() * PrimaryCCD.getSubH() * PrimaryCCD.getBPP() / 8;
+    int const indi_bufsize    = (PrimaryCCD.getSubW() / PrimaryCCD.getBinX())
+                              * (PrimaryCCD.getSubH() / PrimaryCCD.getBinY())
+                              * PrimaryCCD.getBPP() / 8;
 
     if (indi_bufsize != frame_byte_size)
     {
@@ -111,7 +141,6 @@ bool GigECCD::_update_geometry(void)
     }
 
     this->Streamer->setPixelFormat(INDI_MONO, PrimaryCCD.getBPP());
-    this->Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
     return true;
 }
 
@@ -173,6 +202,7 @@ bool GigECCD::updateProperties()
                            this->camera->get_bpp().val(), this->camera->get_pixel_pitch().val(),
                            this->camera->get_pixel_pitch().val());
 
+        this->_update_bin();
         (void)this->_update_geometry();
         this->timer_id = this->SetTimer(this->getCurrentPollingPeriod());
     }
@@ -461,10 +491,19 @@ bool GigECCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 
 bool GigECCD::UpdateCCDFrame(int x, int y, int w, int h)
 {
-    LOGF_INFO("%s x=%i y=%i w=%i h=%i", __PRETTY_FUNCTION__, x, y, w, h);
-
     std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
-    this->camera->set_geometry(x, y, w, h);
+
+    /* As per note at begin of this file, we manually manage the region of
+     * interest conversion between the camera and INDI because the camera
+     * changes the apparent region of interest available depending on binning,
+     * while INDI does not. */
+    auto bin_x = this->camera->get_bin_x().val(),
+         bin_y = this->camera->get_bin_y().val();
+
+    LOGF_INFO("%s x=%i y=%i w=%i h=%i binx=%i biny=%i",
+              __PRETTY_FUNCTION__, x, y, w, h, bin_x, bin_y);
+
+    this->camera->set_geometry(x/bin_x, y/bin_y, w/bin_x, h/bin_y);
     return this->_update_geometry();
 }
 
@@ -473,7 +512,15 @@ bool GigECCD::UpdateCCDBin(int binx, int biny)
     LOGF_INFO("%s binx=%i biny=%i", __PRETTY_FUNCTION__, binx, biny);
     std::lock_guard<std::recursive_mutex> lock(this->camera_mutex);
     camera->set_bin(binx, biny);
+    this->_update_bin();
     return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+}
+
+void GigECCD::_update_bin(void) {
+    auto [bx, by] = this->camera->update_bin(); /* Get actual values */
+
+    /* Sync actuals values to INDI */
+    INDI::CCD::UpdateCCDBin(bx, by);
 }
 
 bool GigECCD::UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType)
