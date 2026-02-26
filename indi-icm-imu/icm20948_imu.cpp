@@ -536,7 +536,20 @@ bool ICM20948IMU::SetDistanceUnits(bool metric)
 
 bool ICM20948IMU::SetAngularUnits(bool degrees)
 {
-    LOGF_INFO("ICM20948: Angular units are always degrees (requested degrees: %d).", degrees);
+    if (!degrees)
+    {
+        // ICM-20948 always outputs gyroscope data in degrees/s via getGyroX_dps().
+        // Allowing the property to flip to "Radians" would cause the base-class
+        // sensor fusion to skip the deg→rad conversion and feed wrong units into
+        // the Madgwick/Mahony filter.  Reject the request and reset the switch.
+        LOG_WARN("ICM20948: Gyroscope output is always in degrees/s — angular units cannot be changed to radians.");
+        AngularUnitsSP[ANGULAR_UNITS_DEGREES].setState(ISS_ON);
+        AngularUnitsSP[ANGULAR_UNITS_RADIANS].setState(ISS_OFF);
+        AngularUnitsSP.setState(IPS_ALERT);
+        AngularUnitsSP.apply();
+        return false;
+    }
+
     return true;
 }
 
