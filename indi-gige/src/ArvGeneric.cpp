@@ -175,12 +175,13 @@ bool ArvGeneric::connect()
             return false;
 
         this->dev             = arv_camera_get_device(this->camera);
-        const char * di = CALL_RETURN(arv_camera_get_device_id,this->camera);
-        const char * mn = CALL_RETURN(arv_camera_get_model_name,this->camera);
-        const char * vn = CALL_RETURN(arv_camera_get_vendor_name,this->camera);
-        this->cam.device_id = di;
-        this->cam.model_name = mn;
-        this->cam.vendor_name = vn;
+        this->cam.model_name  = CALL_RETURN(arv_camera_get_model_name, this->camera);
+        this->cam.vendor_name = CALL_RETURN(arv_camera_get_vendor_name,this->camera);
+        // do not change device_id since arv_camera_get_device_id seems to just
+        // return the serial number instead of the less useful
+        // "{vendor} {model}-{serial}" than arv_get_device_id that is used in
+        // camera enumeration.
+        //this->cam.device_id   = CALL_RETURN(arv_camera_get_device_id,this->camera);
     }
     this->_configure();
     return true;
