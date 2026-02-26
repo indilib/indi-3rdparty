@@ -9,7 +9,7 @@ include(GNUInstallDirs)
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 IF(NOT APPLE)
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 ENDIF(NOT APPLE)
 
 find_package(CFITSIO REQUIRED)
