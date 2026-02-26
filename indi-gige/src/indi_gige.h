@@ -49,6 +49,7 @@ class GigECCD : public INDI::CCD
     virtual bool UpdateCCDBin(int binx, int biny) override;
     virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType) override;
     virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeyword) override;
+    virtual bool saveConfigItems(FILE *fp) override;
 
   private:
     void _delete_indi_properties(void);

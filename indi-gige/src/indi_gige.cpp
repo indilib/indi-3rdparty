@@ -323,6 +323,7 @@ bool GigECCD::ISNewNumber(const char *dev, const char *name, double values[], ch
             this->GainNP[0].setValue(this->camera->get_gain().val());
 
             GainNP.apply();
+            saveConfig(PixelSizeNP);
             return true;
         }
 
@@ -334,6 +335,7 @@ bool GigECCD::ISNewNumber(const char *dev, const char *name, double values[], ch
 
             auto dx = PixelSizeNP[0].getValue();
             PrimaryCCD.setPixelSize(dx, dx);
+            saveConfig(PixelSizeNP);
             return true;
         }
     }
@@ -368,4 +370,12 @@ void GigECCD::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
     INDI::CCD::addFITSKeywords(targetChip, fitsKeyword);
 
     fitsKeyword.push_back({"GAIN", GainNP[0].getValue(), 3, "Gain"});
+}
+
+bool GigECCD::saveConfigItems(FILE *fp)
+{
+    INDI::CCD::saveConfigItems(fp);
+    GainNP.save(fp);
+    PixelSizeNP.save(fp);
+    return true;
 }
