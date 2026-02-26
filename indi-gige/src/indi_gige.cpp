@@ -65,8 +65,7 @@ const char *GigECCD::getDefaultName()
 GigECCD::GigECCD(arv::ArvCamera *camera)
 {
     this->camera = camera;
-    snprintf(this->name, sizeof(this->name), "%s", this->camera->device_id());
-    setDeviceName(this->name);
+    setDeviceName(this->camera->device_id());
 }
 
 GigECCD::~GigECCD()

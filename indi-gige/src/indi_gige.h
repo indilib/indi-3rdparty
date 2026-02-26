@@ -62,7 +62,6 @@ class GigECCD : public INDI::CCD
     void _handle_timeout(struct timeval *const tv, uint32_t timeout_us);
 
     arv::ArvCamera *camera;
-    char name[32];
     int timer_id;
     struct timeval exposure_start_time;
     struct timeval exposure_transfer_time;
