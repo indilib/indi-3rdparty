@@ -244,6 +244,15 @@ class ToupBase : public INDI::CCD
         // Tail Light
         INDI::PropertySwitch m_TailLightSP {2};
 
+        // RealTime Frame Buffer Mode
+        INDI::PropertySwitch m_RealTimeSP {3};
+        enum
+        {
+            TC_REALTIME_OFF,  // 0: Stop grabbing when buffer full (default)
+            TC_REALTIME_ON,   // 1: Drop all pending frames when new frame arrives (true realtime)
+            TC_REALTIME_SOFT, // 2: Drop oldest frame when queue full (soft realtime)
+        };
+
         // Camera Info
         INDI::PropertyText m_CameraTP {7};
         enum

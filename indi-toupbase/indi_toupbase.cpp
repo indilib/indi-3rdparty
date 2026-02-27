@@ -246,6 +246,16 @@ bool ToupBase::initProperties()
     m_TailLightSP.load();
 
     ///////////////////////////////////////////////////////////////////////////////////
+    /// RealTime Frame Buffer Mode (video/streaming mode only)
+    /// Controls how the internal frame buffer deque behaves when new frames arrive.
+    ///////////////////////////////////////////////////////////////////////////////////
+    m_RealTimeSP[TC_REALTIME_OFF].fill("TC_REALTIME_OFF", "Off", ISS_ON);
+    m_RealTimeSP[TC_REALTIME_ON].fill("TC_REALTIME_ON", "Realtime", ISS_OFF);
+    m_RealTimeSP[TC_REALTIME_SOFT].fill("TC_REALTIME_SOFT", "Soft Realtime", ISS_OFF);
+    m_RealTimeSP.fill(getDeviceName(), "TC_REALTIME", "Frame Buffer Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    m_RealTimeSP.load();
+
+    ///////////////////////////////////////////////////////////////////////////////////
     /// High Fullwell
     ///////////////////////////////////////////////////////////////////////////////////
     m_HighFullwellSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
@@ -362,6 +372,9 @@ bool ToupBase::updateProperties()
         if (m_SupportTailLight)
             defineProperty(m_TailLightSP);
 
+        // RealTime frame buffer mode (video/streaming only)
+        defineProperty(m_RealTimeSP);
+
         // Binning mode
         defineProperty(m_BinningModeSP);
         if (m_MonoCamera == false)
@@ -415,6 +428,7 @@ bool ToupBase::updateProperties()
         if (m_SupportTailLight)
             deleteProperty(m_TailLightSP);
 
+        deleteProperty(m_RealTimeSP);
         deleteProperty(m_BinningModeSP);
         if (m_MonoCamera == false)
         {
@@ -1496,6 +1510,51 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         }
 
         //////////////////////////////////////////////////////////////////////
+        /// RealTime Frame Buffer Mode
+        //////////////////////////////////////////////////////////////////////
+        if (m_RealTimeSP.isNameMatch(name))
+        {
+            int prevIndex = m_RealTimeSP.findOnSwitchIndex();
+            if (m_RealTimeSP.isUpdated(states, names, n))
+            {
+                m_RealTimeSP.update(states, names, n);
+                int realtimeMode = m_RealTimeSP.findOnSwitchIndex();
+
+                // Only apply to hardware if currently streaming (video mode)
+                if (Streamer->isBusy())
+                {
+                    HRESULT rc = FP(put_RealTime(m_Handle, realtimeMode));
+                    if (SUCCEEDED(rc))
+                    {
+                        m_RealTimeSP.setState(IPS_OK);
+                        LOGF_INFO("Frame buffer mode changed to: %s", m_RealTimeSP.findOnSwitch()->getLabel());
+                    }
+                    else
+                    {
+                        LOGF_ERROR("Failed to set frame buffer mode. %s", errorCodes(rc).c_str());
+                        m_RealTimeSP.setState(IPS_ALERT);
+                        m_RealTimeSP.reset();
+                        m_RealTimeSP[prevIndex].setState(ISS_ON);
+                    }
+                }
+                else
+                {
+                    m_RealTimeSP.setState(IPS_OK);
+                    LOG_INFO("Frame buffer mode will be applied when streaming starts.");
+                }
+
+                m_RealTimeSP.apply();
+                saveConfig(m_RealTimeSP);
+            }
+            else
+            {
+                m_RealTimeSP.setState(IPS_OK);
+                m_RealTimeSP.apply();
+            }
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////
         /// Heat
         //////////////////////////////////////////////////////////////////////
         if (m_HeatSP.isNameMatch(name))
@@ -1546,6 +1605,17 @@ bool ToupBase::StartStreaming()
         return false;
     }
     m_CurrentTriggerMode = TRIGGER_VIDEO;
+
+    // Apply realtime frame buffer mode if enabled
+    int realtimeMode = m_RealTimeSP.findOnSwitchIndex();
+    if (realtimeMode != TC_REALTIME_OFF)
+    {
+        rc = FP(put_RealTime(m_Handle, realtimeMode));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set realtime frame buffer mode. %s", errorCodes(rc).c_str());
+        else
+            LOGF_INFO("Frame buffer mode set to: %s", m_RealTimeSP.findOnSwitch()->getLabel());
+    }
 
     return true;
 }
@@ -2085,6 +2155,7 @@ bool ToupBase::saveConfigItems(FILE * fp)
     m_BBAutoSP.save(fp);
     if (m_Instance->model->flag & CP(FLAG_HEAT))
         m_HeatSP.save(fp);
+    m_RealTimeSP.save(fp);
 
     return true;
 }
