@@ -33,7 +33,7 @@ namespace INDI
 
 ASIEAFHotPlugHandler::ASIEAFHotPlugHandler()
 {
-    LOG_DEBUG("ASIEAFHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: ASIEAFHotPlugHandler initialized.");
 }
 
 ASIEAFHotPlugHandler::~ASIEAFHotPlugHandler()
@@ -47,7 +47,7 @@ ASIEAFHotPlugHandler::~ASIEAFHotPlugHandler()
     }
     m_internalFocusers.clear();
     m_managedDevicesView.clear();
-    LOG_DEBUG("ASIEAFHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: ASIEAFHotPlugHandler shut down.");
 }
 
 std::vector<std::string> ASIEAFHotPlugHandler::discoverConnectedDeviceIdentifiers()
@@ -56,7 +56,7 @@ std::vector<std::string> ASIEAFHotPlugHandler::discoverConnectedDeviceIdentifier
     int numFocusers = EAFGetNum();
     if (numFocusers < 0)
     {
-        LOG_ERROR("EAFGetNum returned an error.");
+        LOG_ERROR("HotPlugManager: EAFGetNum returned an error.");
         return identifiers;
     }
 
@@ -67,11 +67,11 @@ std::vector<std::string> ASIEAFHotPlugHandler::discoverConnectedDeviceIdentifier
         if (result == EAF_SUCCESS)
         {
             identifiers.push_back(std::to_string(id));
-            LOGF_DEBUG("Discovered ASI EAF with ID: %d", id);
+            LOGF_DEBUG("HotPlugManager: Discovered ASI EAF with ID: %d", id);
         }
         else
         {
-            LOGF_WARN("Failed to get focuser ID for index %d.", i);
+            LOGF_WARN("HotPlugManager: Failed to get focuser ID for index %d.", i);
         }
     }
     return identifiers;
@@ -86,7 +86,7 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("ASIEAFHotPlugHandler", "Invalid identifier format for focuser ID: %s. Error: %s", identifier.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid identifier format for focuser ID: %s. Error: %s", identifier.c_str(), e.what());
         return nullptr;
     }
 
@@ -117,7 +117,7 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
 
     if (!foundFocuser)
     {
-        LOGF_ERROR("Failed to get focuser info for ID: %d", focuserID);
+        LOGF_ERROR("HotPlugManager: Failed to get focuser info for ID: %d", focuserID);
         return nullptr;
     }
 
@@ -126,7 +126,7 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
     {
         if (device->getEAFInfo().ID == focuserID)
         {
-            LOGF_DEBUG("Device with focuser ID %d already managed, not creating new.", focuserID);
+            LOGF_DEBUG("HotPlugManager: Device with focuser ID %d already managed, not creating new.", focuserID);
             return device;
         }
     }
@@ -160,7 +160,7 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
     ASIEAF *asiEaf = new ASIEAF(eafInfo, uniqueName.c_str(), serialNumber);
     std::shared_ptr<ASIEAF> newDevice = std::shared_ptr<ASIEAF>(asiEaf);
     m_internalFocusers.push_back(newDevice);
-    LOGF_INFO("Created new ASIEAF device: %s (ID: %d)", uniqueName.c_str(), focuserID);
+    LOGF_INFO("HotPlugManager: Created new ASIEAF device: %s (ID: %d)", uniqueName.c_str(), focuserID);
     return newDevice;
 }
 
@@ -169,7 +169,7 @@ void ASIEAFHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device)
     std::shared_ptr<ASIEAF> asiEaf = std::dynamic_pointer_cast<ASIEAF>(device);
     if (!asiEaf)
     {
-        LOG_ERROR("Attempted to destroy a non-ASIEAF device with ASIEAFHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-ASIEAF device with ASIEAFHotPlugHandler.");
         return;
     }
 
@@ -186,11 +186,11 @@ void ASIEAFHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device)
     if (it != m_internalFocusers.end())
     {
         m_internalFocusers.erase(it, m_internalFocusers.end());
-        LOGF_INFO("Destroyed ASIEAF device: %s (ID: %d)", asiEaf->getDeviceName(), asiEaf->getEAFInfo().ID);
+        LOGF_INFO("HotPlugManager: Destroyed ASIEAF device: %s (ID: %d)", asiEaf->getDeviceName(), asiEaf->getEAFInfo().ID);
     }
     else
     {
-        LOGF_WARN("Attempted to destroy ASIEAF device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy ASIEAF device %s not found in managed list.",
                   asiEaf->getDeviceName());
     }
 }
@@ -215,7 +215,7 @@ bool ASIEAFHotPlugHandler::getEAFInfoByID(const std::string& idStr, EAF_INFO& ea
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("ASIEAFHotPlugHandler", "Invalid focuser ID format: %s. Error: %s", idStr.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid focuser ID format: %s. Error: %s", idStr.c_str(), e.what());
         return false;
     }
 

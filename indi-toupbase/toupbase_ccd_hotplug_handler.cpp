@@ -33,7 +33,7 @@
 
 ToupbaseCCDHotPlugHandler::ToupbaseCCDHotPlugHandler()
 {
-    LOG_DEBUG("ToupbaseCCDHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: ToupbaseCCDHotPlugHandler initialized.");
 }
 
 ToupbaseCCDHotPlugHandler::~ToupbaseCCDHotPlugHandler()
@@ -46,7 +46,7 @@ ToupbaseCCDHotPlugHandler::~ToupbaseCCDHotPlugHandler()
     }
     m_internalCameras.clear();
     m_managedDevicesView.clear();
-    LOG_DEBUG("ToupbaseCCDHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: ToupbaseCCDHotPlugHandler shut down.");
 }
 
 std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdentifiers()
@@ -64,11 +64,13 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
         if (!(pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL))))
         {
             currentEnumeratedDeviceIDs.insert(std::string(pDevs[i].id));
-            LOGF_DEBUG("Tracking enumerated Toupbase camera with display name: %s (ID: %s)", pDevs[i].displayname, pDevs[i].id);
+            LOGF_DEBUG("HotPlugManager: Tracking enumerated Toupbase camera with display name: %s (ID: %s)", pDevs[i].displayname,
+                       pDevs[i].id);
         }
         else
         {
-            LOGF_DEBUG("Ignoring enumerated Toupbase FILTERWHEEL/FOCUSER device with display name: %s (ID: %s)", pDevs[i].displayname,
+            LOGF_DEBUG("HotPlugManager: Ignoring enumerated Toupbase FILTERWHEEL/FOCUSER device with display name: %s (ID: %s)",
+                       pDevs[i].displayname,
                        pDevs[i].id);
         }
     }
@@ -80,7 +82,7 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     {
         if (deviceInfo->model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
-            LOGF_DEBUG("Removing previously connected Toupbase device with display name: %s (ID: %s)",
+            LOGF_DEBUG("HotPlugManager: Removing previously connected Toupbase device with display name: %s (ID: %s)",
                        deviceInfo->displayname, deviceInfo->id);
             devicesToRemove.push_back(deviceID);
             continue;
@@ -88,7 +90,7 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
 
         if (!currentEnumeratedDeviceIDs.count(deviceID))
         {
-            LOGF_DEBUG("Toupbase camera disconnected: %s", deviceID.c_str());
+            LOGF_DEBUG("HotPlugManager: Toupbase camera disconnected: %s", deviceID.c_str());
             devicesToRemove.push_back(deviceID);
         }
     }
@@ -105,7 +107,7 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
     {
         if (pDevs[i].model->flag & (CP(FLAG_AUTOFOCUSER) | CP(FLAG_FILTERWHEEL)))
         {
-            LOGF_DEBUG("Ignoring newly connected Toupbase device with display name: %s (ID: %s)",
+            LOGF_DEBUG("HotPlugManager: Ignoring newly connected Toupbase device with display name: %s (ID: %s)",
                        pDevs[i].displayname, pDevs[i].id);
             continue; // Skip this device
         }
@@ -116,7 +118,7 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
             // Allocate device info on heap for stable address
             auto deviceInfo = std::make_shared<XP(DeviceV2)>(pDevs[i]);
             m_connectedDevices[deviceID] = deviceInfo;
-            LOGF_DEBUG("Toupbase camera newly connected: %s, Model: %s", pDevs[i].id, pDevs[i].displayname);
+            LOGF_DEBUG("HotPlugManager: Toupbase camera newly connected: %s, Model: %s", pDevs[i].id, pDevs[i].displayname);
         }
     }
 
@@ -134,14 +136,14 @@ std::vector<std::string> ToupbaseCCDHotPlugHandler::discoverConnectedDeviceIdent
 
     if (m_connectedDevices.empty())
     {
-        LOG_DEBUG("No Toupbase cameras found after update.");
+        LOG_DEBUG("HotPlugManager: No Toupbase cameras found after update.");
         return identifiers;
     }
 
     for (const auto& [deviceID, deviceInfo] : m_connectedDevices)
     {
         identifiers.push_back(deviceID);
-        LOGF_DEBUG("Managed Toupbase camera with ID: %s, Model: %s", deviceID.c_str(), deviceInfo->displayname);
+        LOGF_DEBUG("HotPlugManager: Managed Toupbase camera with ID: %s, Model: %s", deviceID.c_str(), deviceInfo->displayname);
     }
     return identifiers;
 }
@@ -152,7 +154,7 @@ std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(con
     auto it = m_connectedDevices.find(identifier);
     if (it == m_connectedDevices.end())
     {
-        LOGF_ERROR("No Toupbase camera found with identifier: %s in managed list.", identifier.c_str());
+        LOGF_ERROR("HotPlugManager: No Toupbase camera found with identifier: %s in managed list.", identifier.c_str());
         return nullptr;
     }
 
@@ -165,7 +167,7 @@ std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(con
     {
         if (device->getCameraID() == identifier) // Use string ID
         {
-            LOGF_DEBUG("Device with identifier %s already managed, not creating new.", identifier.c_str());
+            LOGF_DEBUG("HotPlugManager: Device with identifier %s already managed, not creating new.", identifier.c_str());
             return device;
         }
     }
@@ -196,7 +198,7 @@ std::shared_ptr<INDI::DefaultDevice> ToupbaseCCDHotPlugHandler::createDevice(con
     ToupBase *toupbaseCcd = new ToupBase(cameraInfoPtr, uniqueName);
     std::shared_ptr<ToupBase> newDevice = std::shared_ptr<ToupBase>(toupbaseCcd);
     m_internalCameras.push_back(newDevice);
-    LOGF_INFO("Created new ToupBase device: %s (ID: %s)", uniqueName.c_str(), identifier.c_str());
+    LOGF_INFO("HotPlugManager: Created new ToupBase device: %s (ID: %s)", uniqueName.c_str(), identifier.c_str());
     return newDevice;
 }
 
@@ -205,7 +207,7 @@ void ToupbaseCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevic
     std::shared_ptr<ToupBase> toupbaseCcd = std::dynamic_pointer_cast<ToupBase>(device);
     if (!toupbaseCcd)
     {
-        LOG_ERROR("Attempted to destroy a non-INDI::ToupBase device with ToupbaseCCDHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-INDI::ToupBase device with ToupbaseCCDHotPlugHandler.");
         return;
     }
 
@@ -229,13 +231,13 @@ void ToupbaseCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevic
     {
         std::string deviceID = toupbaseCcd->getCameraID();
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("Destroyed INDI::ToupBase device: %s (ID: %s)", toupbaseCcd->getDeviceName(), deviceID.c_str());
+        LOGF_INFO("HotPlugManager: Destroyed INDI::ToupBase device: %s (ID: %s)", toupbaseCcd->getDeviceName(), deviceID.c_str());
 
         // No m_deviceInfoCache to remove from
     }
     else
     {
-        LOGF_WARN("Attempted to destroy INDI::ToupBase device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy INDI::ToupBase device %s not found in managed list.",
                   toupbaseCcd->getDeviceName());
     }
 }

@@ -33,7 +33,7 @@ namespace INDI
 
 ASIWHEELHotPlugHandler::ASIWHEELHotPlugHandler()
 {
-    LOG_DEBUG("ASIWHEELHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: ASIWHEELHotPlugHandler initialized.");
 }
 
 ASIWHEELHotPlugHandler::~ASIWHEELHotPlugHandler()
@@ -47,7 +47,7 @@ ASIWHEELHotPlugHandler::~ASIWHEELHotPlugHandler()
     }
     m_internalWheels.clear();
     m_managedDevicesView.clear();
-    LOG_DEBUG("ASIWHEELHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: ASIWHEELHotPlugHandler shut down.");
 }
 
 std::vector<std::string> ASIWHEELHotPlugHandler::discoverConnectedDeviceIdentifiers()
@@ -56,7 +56,7 @@ std::vector<std::string> ASIWHEELHotPlugHandler::discoverConnectedDeviceIdentifi
     int numWheels = EFWGetNum();
     if (numWheels < 0)
     {
-        LOG_ERROR("EFWGetNum returned an error.");
+        LOG_ERROR("HotPlugManager: EFWGetNum returned an error.");
         return identifiers;
     }
 
@@ -67,11 +67,11 @@ std::vector<std::string> ASIWHEELHotPlugHandler::discoverConnectedDeviceIdentifi
         if (result == EFW_SUCCESS)
         {
             identifiers.push_back(std::to_string(id));
-            LOGF_DEBUG("Discovered ASI EFW with ID: %d", id);
+            LOGF_DEBUG("HotPlugManager: Discovered ASI EFW with ID: %d", id);
         }
         else
         {
-            LOGF_WARN("Failed to get filter wheel ID for index %d.", i);
+            LOGF_WARN("HotPlugManager: Failed to get filter wheel ID for index %d.", i);
         }
     }
     return identifiers;
@@ -86,7 +86,7 @@ std::shared_ptr<DefaultDevice> ASIWHEELHotPlugHandler::createDevice(const std::s
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("ASIWHEELHotPlugHandler", "Invalid identifier format for filter wheel ID: %s. Error: %s", identifier.c_str(),
+        LOGF_ERROR("HotPlugManager: Invalid identifier format for filter wheel ID: %s. Error: %s", identifier.c_str(),
                    e.what());
         return nullptr;
     }
@@ -114,7 +114,7 @@ std::shared_ptr<DefaultDevice> ASIWHEELHotPlugHandler::createDevice(const std::s
 
     if (!foundWheel)
     {
-        LOGF_ERROR("Failed to get filter wheel info for ID: %d", wheelID);
+        LOGF_ERROR("HotPlugManager: Failed to get filter wheel info for ID: %d", wheelID);
         return nullptr;
     }
 
@@ -123,7 +123,7 @@ std::shared_ptr<DefaultDevice> ASIWHEELHotPlugHandler::createDevice(const std::s
     {
         if (device->getEFWInfo().ID == wheelID)
         {
-            LOGF_DEBUG("Device with filter wheel ID %d already managed, not creating new.", wheelID);
+            LOGF_DEBUG("HotPlugManager: Device with filter wheel ID %d already managed, not creating new.", wheelID);
             return device;
         }
     }
@@ -154,7 +154,7 @@ std::shared_ptr<DefaultDevice> ASIWHEELHotPlugHandler::createDevice(const std::s
     ASIWHEEL *asiWheel = new ASIWHEEL(efwInfo, uniqueName.c_str());
     std::shared_ptr<ASIWHEEL> newDevice = std::shared_ptr<ASIWHEEL>(asiWheel);
     m_internalWheels.push_back(newDevice);
-    LOGF_INFO("Created new ASIWHEEL device: %s (ID: %d)", uniqueName.c_str(), wheelID);
+    LOGF_INFO("HotPlugManager: Created new ASIWHEEL device: %s (ID: %d)", uniqueName.c_str(), wheelID);
     return newDevice;
 }
 
@@ -163,7 +163,7 @@ void ASIWHEELHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device
     std::shared_ptr<ASIWHEEL> asiWheel = std::dynamic_pointer_cast<ASIWHEEL>(device);
     if (!asiWheel)
     {
-        LOG_ERROR("Attempted to destroy a non-ASIWHEEL device with ASIWHEELHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-ASIWHEEL device with ASIWHEELHotPlugHandler.");
         return;
     }
 
@@ -180,11 +180,11 @@ void ASIWHEELHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device
     if (it != m_internalWheels.end())
     {
         m_internalWheels.erase(it, m_internalWheels.end());
-        LOGF_INFO("Destroyed ASIWHEEL device: %s (ID: %d)", asiWheel->getDeviceName(), asiWheel->getEFWInfo().ID);
+        LOGF_INFO("HotPlugManager: Destroyed ASIWHEEL device: %s (ID: %d)", asiWheel->getDeviceName(), asiWheel->getEFWInfo().ID);
     }
     else
     {
-        LOGF_WARN("Attempted to destroy ASIWHEEL device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy ASIWHEEL device %s not found in managed list.",
                   asiWheel->getDeviceName());
     }
 }
@@ -209,7 +209,7 @@ bool ASIWHEELHotPlugHandler::getEFWInfoByID(const std::string& idStr, EFW_INFO& 
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("ASIWHEELHotPlugHandler", "Invalid filter wheel ID format: %s. Error: %s", idStr.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid filter wheel ID format: %s. Error: %s", idStr.c_str(), e.what());
         return false;
     }
 

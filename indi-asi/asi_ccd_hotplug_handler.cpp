@@ -33,7 +33,7 @@ namespace INDI
 
 ASICCDHotPlugHandler::ASICCDHotPlugHandler()
 {
-    LOG_DEBUG("ASICCDHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: ASICCDHotPlugHandler initialized.");
 }
 
 ASICCDHotPlugHandler::~ASICCDHotPlugHandler()
@@ -47,7 +47,7 @@ ASICCDHotPlugHandler::~ASICCDHotPlugHandler()
     }
     m_internalCameras.clear();
     m_managedDevicesView.clear();
-    LOG_DEBUG("ASICCDHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: ASICCDHotPlugHandler shut down.");
 }
 
 std::vector<std::string> ASICCDHotPlugHandler::discoverConnectedDeviceIdentifiers()
@@ -56,7 +56,7 @@ std::vector<std::string> ASICCDHotPlugHandler::discoverConnectedDeviceIdentifier
     int numCameras = ASIGetNumOfConnectedCameras();
     if (numCameras < 0)
     {
-        LOG_ERROR("ASIGetNumOfConnectedCameras returned an error.");
+        LOG_ERROR("HotPlugManager: ASIGetNumOfConnectedCameras returned an error.");
         return identifiers;
     }
 
@@ -66,11 +66,11 @@ std::vector<std::string> ASICCDHotPlugHandler::discoverConnectedDeviceIdentifier
         if (ASIGetCameraProperty(&cameraInfo, i) == ASI_SUCCESS)
         {
             identifiers.push_back(std::to_string(cameraInfo.CameraID));
-            LOGF_DEBUG("Discovered ASI camera with CameraID: %d", cameraInfo.CameraID);
+            LOGF_DEBUG("HotPlugManager: Discovered ASI camera with CameraID: %d", cameraInfo.CameraID);
         }
         else
         {
-            LOGF_WARN("Failed to get camera property for index %d.", i);
+            LOGF_WARN("HotPlugManager: Failed to get camera property for index %d.", i);
         }
     }
     return identifiers;
@@ -85,7 +85,7 @@ std::shared_ptr<DefaultDevice> ASICCDHotPlugHandler::createDevice(const std::str
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("ASICCDHotPlugHandler", "Invalid identifier format for CameraID: %s. Error: %s", identifier.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid identifier format for CameraID: %s. Error: %s", identifier.c_str(), e.what());
         return nullptr;
     }
 
@@ -108,7 +108,7 @@ std::shared_ptr<DefaultDevice> ASICCDHotPlugHandler::createDevice(const std::str
 
     if (!foundCamera)
     {
-        LOGF_ERROR("Failed to get camera info for CameraID: %d", cameraID);
+        LOGF_ERROR("HotPlugManager: Failed to get camera info for CameraID: %d", cameraID);
         return nullptr;
     }
 
@@ -117,7 +117,7 @@ std::shared_ptr<DefaultDevice> ASICCDHotPlugHandler::createDevice(const std::str
     {
         if (device->getCameraInfo().CameraID == cameraID)
         {
-            LOGF_DEBUG("Device with CameraID %d already managed, not creating new.", cameraID);
+            LOGF_DEBUG("HotPlugManager: Device with CameraID %d already managed, not creating new.", cameraID);
             return device;
         }
     }
@@ -151,7 +151,7 @@ std::shared_ptr<DefaultDevice> ASICCDHotPlugHandler::createDevice(const std::str
     ASICCD *asiCcd = new ASICCD(cameraInfo, uniqueName, serialNumber);
     std::shared_ptr<ASICCD> newDevice = std::shared_ptr<ASICCD>(asiCcd);
     m_internalCameras.push_back(newDevice);
-    LOGF_INFO("Created new ASICCD device: %s (CameraID: %d)", uniqueName.c_str(), cameraID);
+    LOGF_INFO("HotPlugManager: Created new ASICCD device: %s (CameraID: %d)", uniqueName.c_str(), cameraID);
     return newDevice;
 }
 
@@ -160,7 +160,7 @@ void ASICCDHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device)
     std::shared_ptr<ASICCD> asiCcd = std::dynamic_pointer_cast<ASICCD>(device);
     if (!asiCcd)
     {
-        LOG_ERROR("Attempted to destroy a non-ASICCD device with ASICCDHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-ASICCD device with ASICCDHotPlugHandler.");
         return;
     }
 
@@ -183,16 +183,17 @@ void ASICCDHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device)
     if (it != m_internalCameras.end())
     {
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("Destroyed ASICCD device: %s (CameraID: %d)", asiCcd->getDeviceName(), asiCcd->getCameraInfo().CameraID);
+        LOGF_INFO("HotPlugManager: Destroyed ASICCD device: %s (CameraID: %d)", asiCcd->getDeviceName(),
+                  asiCcd->getCameraInfo().CameraID);
     }
     else
     {
-        LOGF_WARN("Attempted to destroy ASICCD device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy ASICCD device %s not found in managed list.",
                   asiCcd->getDeviceName());
     }
 }
 
-const std::map<std::string, std::shared_ptr<DefaultDevice>>& ASICCDHotPlugHandler::getManagedDevices() const
+const std::map<std::string, std::shared_ptr<DefaultDevice>> &ASICCDHotPlugHandler::getManagedDevices() const
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
@@ -212,7 +213,7 @@ bool ASICCDHotPlugHandler::getCameraInfoByCameraID(const std::string& cameraIDSt
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("ASICCDHotPlugHandler", "Invalid CameraID format: %s. Error: %s", cameraIDStr.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid CameraID format: %s. Error: %s", cameraIDStr.c_str(), e.what());
         return false;
     }
 
