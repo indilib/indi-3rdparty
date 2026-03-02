@@ -261,7 +261,7 @@ int main(int argc, char *argv[])
 
     ASIGetCameraProperty(&camInfo, camIndex);
     printf("\nUsing camera [%d] %s\n", camIndex, camInfo.Name);
-    printf("Max resolution: %u x %u\n", camInfo.MaxWidth, camInfo.MaxHeight);
+    printf("Max resolution: %ld x %ld\n", camInfo.MaxWidth, camInfo.MaxHeight);
 
     if (camInfo.IsColorCam)
     {
