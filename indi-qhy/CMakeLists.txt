@@ -88,6 +88,15 @@ endif()
 
 install(TARGETS qhy_video_test RUNTIME DESTINATION bin )
 
+########### qhy_camera_bench ###########
+add_executable(qhy_camera_bench ${CMAKE_CURRENT_SOURCE_DIR}/qhy_camera_bench.cpp)
+target_link_libraries(qhy_camera_bench ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(qhy_camera_bench rt)
+endif()
+
+install(TARGETS qhy_camera_bench RUNTIME DESTINATION bin )
+
 ########### qhy_focuser ###########
 add_executable(indi_qhy_focuser ${CMAKE_CURRENT_SOURCE_DIR}/qhy_focuser.cpp)
 target_link_libraries(indi_qhy_focuser ${INDI_LIBRARIES} )

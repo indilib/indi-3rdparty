@@ -125,6 +125,15 @@ ELSE()
 target_link_libraries(asi_multi_camera_test ${HIDAPILIB} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
 
+########### asi_camera_bench ###########
+add_executable(asi_camera_bench ${CMAKE_CURRENT_SOURCE_DIR}/asi_camera_bench.cpp)
+IF (APPLE)
+set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
+target_link_libraries(asi_camera_bench ${HIDAPILIB} ${ASI_LIBRARIES} ${USB1_LIBRARIES})
+ELSE()
+target_link_libraries(asi_camera_bench ${HIDAPILIB} ${ASI_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+ENDIF()
+
 #####################################
 
 if (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
@@ -136,6 +145,7 @@ target_link_libraries(indi_asi_focuser rt)
 target_link_libraries(indi_asi_rotator rt)
 target_link_libraries(asi_camera_test rt)
 target_link_libraries(asi_multi_camera_test rt)
+target_link_libraries(asi_camera_bench rt)
 endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm*")
 
 install(TARGETS indi_asi_ccd RUNTIME DESTINATION bin)
@@ -146,4 +156,5 @@ install(TARGETS indi_asi_focuser RUNTIME DESTINATION bin)
 install(TARGETS indi_asi_rotator RUNTIME DESTINATION bin)
 install(TARGETS asi_camera_test RUNTIME DESTINATION bin)
 install(TARGETS asi_multi_camera_test RUNTIME DESTINATION bin)
+install(TARGETS asi_camera_bench RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_asi.xml DESTINATION ${INDI_DATA_DIR})
