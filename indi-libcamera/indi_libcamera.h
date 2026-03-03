@@ -165,7 +165,6 @@ class INDILibCamera : public INDI::CCD
         bool m_csi_format_packed {false};
         unsigned int m_bit_depth {8};
         int m_black_levels[4] {0, 0, 0, 0};
-        float m_sensor_temp{ 0.0f };
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
         uint8_t m_CameraIndex;
         libcamera::ControlList m_ControlList;
