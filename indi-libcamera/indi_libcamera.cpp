@@ -340,6 +340,14 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
                 else {
                     LOG_WARN("no black level found, using default");
                 }
+                auto st = payload->metadata.get(controls::SensorTemperature);
+                if (st)
+                {
+                    LOGF_INFO("Sensor temp: %0.2f", *st);
+                    TemperatureNP[0].setValue(*st);
+                    TemperatureNP.setState(IPS_OK);
+                    TemperatureNP.apply();
+                }
             }
             else
             {
@@ -713,6 +721,10 @@ bool INDILibCamera::initProperties()
     LOGF_DEBUG("Initializing properties for %s", getDeviceName());
     INDI::CCD::initProperties();
 
+    // Temperature is read-only (sensor temp, no cooler control).
+    // IP_RO causes the base class to include CCD-TEMP in FITS automatically.
+    TemperatureNP.setPermission(IP_RO);
+
     PrimaryCCD.setMinMaxStep("CCD_EXPOSURE", "CCD_EXPOSURE_VALUE", props.exposureTime.min, props.exposureTime.max, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "HOR_BIN", 1, 4, 1, false);
     PrimaryCCD.setMinMaxStep("CCD_BINNING", "VER_BIN", 1, 4, 1, false);
@@ -795,6 +807,7 @@ bool INDILibCamera::updateProperties()
         // Setup camera
         setup();
 
+        defineProperty(TemperatureNP);
         defineProperty(AdjustmentNP);
         defineProperty(GainNP);
         defineProperty(AdjustExposureModeSP);
@@ -804,6 +817,7 @@ bool INDILibCamera::updateProperties()
     }
     else
     {
+        deleteProperty(TemperatureNP);
         deleteProperty(AdjustmentNP);
         deleteProperty(GainNP);
         deleteProperty(AdjustExposureModeSP);
