@@ -40,6 +40,7 @@ class ASIBase : public INDI::CCD
 {
     public:
         ASIBase();
+        ASIBase(const ASI_CAMERA_INFO &camInfo, const std::string &serialNumber);
         ~ASIBase() override;
 
         virtual const char *getDefaultName() override;
@@ -59,6 +60,8 @@ class ASIBase : public INDI::CCD
 
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+
+        virtual void nicknameSet(const char *nickname) override;
 
         // Streaming
         virtual bool StartStreaming() override;
@@ -147,7 +150,6 @@ class ASIBase : public INDI::CCD
         INDI::PropertyNumber  ADCDepthNP   {1};
         INDI::PropertyText    SDKVersionSP {1};
         INDI::PropertyText    SerialNumberTP {1};
-        INDI::PropertyText    NicknameTP {1};
 
         INDI::PropertyNumber  BlinkNP {2};
         enum
@@ -165,7 +167,7 @@ class ASIBase : public INDI::CCD
 
         INDI::PropertySwitch USBResetSP {2};
 
-        std::string mCameraName, mCameraID, mSerialNumber, mNickname;
+        std::string mCameraName, mCameraID, mSerialNumber;
         ASI_CAMERA_INFO mCameraInfo;
         uint8_t mExposureRetry {0};
         ASI_IMG_TYPE mCurrentVideoFormat;
