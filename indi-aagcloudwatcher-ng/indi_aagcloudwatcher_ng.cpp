@@ -55,7 +55,7 @@ AAGCloudWatcher::AAGCloudWatcher()
 
     usePIDforHeating = false;
 
-    heaterPID = new HeaterPID(0,0,0,10,100);
+    heaterPID = new HeaterPID(0, 0, 0, 10, 100);
 
 }
 
@@ -82,26 +82,29 @@ bool AAGCloudWatcher::Handshake()
         if (m_FirmwareVersion >= 5.6)
         {
             // add humidity parameter, if not already present
-            if (!ParametersNP.findWidgetByName("WEATHER_HUMIDITY")) {
+            if (!ParametersNP.findWidgetByName("WEATHER_HUMIDITY"))
+            {
                 addParameter("WEATHER_HUMIDITY", "Relative Humidity (%)", 0, 100, 10);
                 setCriticalParameter("WEATHER_HUMIDITY");
             }
-	    if (m_FirmwareVersion >= 5.89)
-	    {
-		// add SQM parameter, if not already present
-		if (!ParametersNP.findWidgetByName("WEATHER_SQM")) {
-		    addParameter("WEATHER_SQM", "SQM (mpsas)", 18.50, 28.50, 10);
-		    setCriticalParameter("WEATHER_SQM");
-		}
-	    }
-	    else
-	    {
-		// add pseudo-SQM parameter, if not already present
-		if (!ParametersNP.findWidgetByName("WEATHER_SQM")) {
-		    addParameter("WEATHER_SQM", "Ambient light brightness (K)", 2100, 1000000, 20);
-		    setCriticalParameter("WEATHER_SQM");
-		}
-	    }
+            if (m_FirmwareVersion >= 5.89)
+            {
+                // add SQM parameter, if not already present
+                if (!ParametersNP.findWidgetByName("WEATHER_SQM"))
+                {
+                    addParameter("WEATHER_SQM", "SQM (mpsas)", 18.50, 28.50, 10);
+                    setCriticalParameter("WEATHER_SQM");
+                }
+            }
+            else
+            {
+                // add pseudo-SQM parameter, if not already present
+                if (!ParametersNP.findWidgetByName("WEATHER_SQM"))
+                {
+                    addParameter("WEATHER_SQM", "Ambient light brightness (K)", 2100, 1000000, 20);
+                    setCriticalParameter("WEATHER_SQM");
+                }
+            }
         }
 
         return true;
@@ -139,7 +142,7 @@ bool AAGCloudWatcher::initProperties()
 
 IPState AAGCloudWatcher::updateWeather()
 {
-     // in case elevation updated as GPS gets a better fix
+    // in case elevation updated as GPS gets a better fix
     cwc->setElevation(LocationNP[INDI::Weather::LOCATION_ELEVATION].getValue());
 
     if (!sendData())
@@ -326,13 +329,13 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
         LOGF_INFO("Changing heating algorithm to %s\n", names[0]);
         if (strcmp(names[0], "pid") == 0)
         {
-            usePIDforHeating=true;
+            usePIDforHeating = true;
         }
         else
         {
-            usePIDforHeating=false;
+            usePIDforHeating = false;
         }
-	return false;
+        return false;
     }
 
     int error = 0;
@@ -518,7 +521,7 @@ bool AAGCloudWatcher::heatingAlgorithm()
 
         if (ambient < tempLow)
         {
-            desiredSensorTemperature = deltaLow;
+            desiredSensorTemperature = ambient + deltaLow;
         }
         else if (ambient > tempHigh)
         {
@@ -533,7 +536,7 @@ bool AAGCloudWatcher::heatingAlgorithm()
 
             if (desiredSensorTemperature < tempLow)
             {
-                desiredSensorTemperature = deltaLow;
+                desiredSensorTemperature = ambient + deltaLow;
             }
         }
     }
@@ -561,10 +564,10 @@ bool AAGCloudWatcher::heatingAlgorithm()
         if (usePIDforHeating)
         {
             // Update PID parameters
-            heaterPID->setParameters(pidKp,pidKi,pidKd,min,100);
+            heaterPID->setParameters(pidKp, pidKi, pidKd, min, 100);
 
             // Calculate new heating power percentage
-            double new_globalRainSensorHeater=heaterPID->calculate(desiredSensorTemperature,rainSensorTemperature);
+            double new_globalRainSensorHeater = heaterPID->calculate(desiredSensorTemperature, rainSensorTemperature);
 
             // Print key variables for debugging/PID tuning
             double temperatureError = desiredSensorTemperature - rainSensorTemperature;
@@ -573,14 +576,18 @@ bool AAGCloudWatcher::heatingAlgorithm()
             double pidCorrD = heaterPID->getLastCorrectionD();
             double pidSumError = heaterPID->getSumError();
 
-            LOGF_DEBUG("RainSensor: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C\n", rainSensorTemperature, desiredSensorTemperature, temperatureError);
+            LOGF_DEBUG("RainSensor: Temperature: %f °C, Desired temperature: %f °C, Error: %f °C\n", rainSensorTemperature,
+                       desiredSensorTemperature, temperatureError);
             LOGF_DEBUG("RainSensor: PID integrated error: %f\n", pidSumError);
             LOGF_DEBUG("RainSensor: PID terms: P: %f, I: %f, D: %f\n", pidCorrP, pidCorrI, pidCorrD);
-            LOGF_DEBUG("RainSensor: Current heater power: %f %%, New heater power: %f %%\n", globalRainSensorHeater, new_globalRainSensorHeater);
+            LOGF_DEBUG("RainSensor: Current heater power: %f %%, New heater power: %f %%\n", globalRainSensorHeater,
+                       new_globalRainSensorHeater);
 
             // Set new heating power percentage
-            globalRainSensorHeater=new_globalRainSensorHeater;
-        } else {
+            globalRainSensorHeater = new_globalRainSensorHeater;
+        }
+        else
+        {
             // Check desired temperature and act accordingly
             // Obtain the difference in temperature and modifier
             float dif             = fabs(desiredSensorTemperature - rainSensorTemperature);
@@ -619,13 +626,15 @@ bool AAGCloudWatcher::heatingAlgorithm()
             if (rainSensorTemperature > desiredSensorTemperature)
             {
                 // Lower heating
-                LOGF_DEBUG("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater / modifier);
+                LOGF_DEBUG("Temp: %f, Desired: %f, Lowering: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier,
+                           globalRainSensorHeater, globalRainSensorHeater / modifier);
                 globalRainSensorHeater /= modifier;
             }
             else
             {
                 // increase heating
-                LOGF_DEBUG("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier, globalRainSensorHeater, globalRainSensorHeater * modifier);
+                LOGF_DEBUG("Temp: %f, Desired: %f, Increasing: %f %f -> %f\n", rainSensorTemperature, desiredSensorTemperature, modifier,
+                           globalRainSensorHeater, globalRainSensorHeater * modifier);
                 globalRainSensorHeater *= modifier;
             }
         }
@@ -739,21 +748,21 @@ bool AAGCloudWatcher::sendData()
     rainSensorHeater       = 100.0 * rainSensorHeater / 1023.0;
     nvpS[SENSOR_RAIN_SENSOR_HEATER].setValue(rainSensorHeater);
 
-/*************
-    if (constants.sqmStatus < 0) {
-	LOG_DEBUG("send correct sqmStatus constant");
+    /*************
+        if (constants.sqmStatus < 0) {
+    	LOG_DEBUG("send correct sqmStatus constant");
 
-        if (m_FirmwareVersion >= 5.89 && data.lightFreq > 0)
-	{
-	    constants.sqmStatus = 1;
-	}
-	else
-	{
-	    constants.sqmStatus = 0;
-	}
-        sendConstants();
-    }
-*************/
+            if (m_FirmwareVersion >= 5.89 && data.lightFreq > 0)
+    	{
+    	    constants.sqmStatus = 1;
+    	}
+    	else
+    	{
+    	    constants.sqmStatus = 0;
+    	}
+            sendConstants();
+        }
+    *************/
 
 
     float ambientTemperature = data.tempEst;
@@ -765,8 +774,8 @@ bool AAGCloudWatcher::sendData()
     {
         double sqm = ( 250000.0 / double(data.lightFreq) );
 
-	auto nvpSqmLimit = getNumber("sqmLimit");
-	float sqmLimit   = getNumberValueFromVector(nvpSqmLimit, "sqmLimit");
+        auto nvpSqmLimit = getNumber("sqmLimit");
+        float sqmLimit   = getNumberValueFromVector(nvpSqmLimit, "sqmLimit");
 
         sqm = sqmLimit - 2.5 * log10( sqm );
 
@@ -849,7 +858,7 @@ bool AAGCloudWatcher::sendData()
     if (data.humidity > 0)
         setParameterValue("WEATHER_HUMIDITY", data.humidity);
     if (ambientLight > 0)
-	setParameterValue("WEATHER_SQM", ambientLight);
+        setParameterValue("WEATHER_SQM", ambientLight);
 
     return true;
 }
