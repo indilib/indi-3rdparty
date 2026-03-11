@@ -1,0 +1,57 @@
+# Build directories
+build/
+cmake_install.cmake
+CMakeCache.txt
+CMakeFiles/
+Makefile
+
+# Generated files
+config.h
+indi_hakos_roof.xml
+*.o
+*.a
+*.so
+*.so.*
+
+# IDE and Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+*.user
+*.pro.user
+.clang-format
+
+# CMake generated files
+install_manifest.txt
+*.cmake
+
+# Object files
+*.o
+*.ko
+*.obj
+*.elf
+*.lo
+*.la
+*.lai
+
+# Executables
+indi_hakos_roof
+*.exe
+*.out
+*.app
+
+# Dependencies
+*.d
+
+# Testing
+test_results/
+*.gcda
+*.gcno
+
+# OS specific
+.AppleDouble
+.LSOverride
+Thumbs.db
