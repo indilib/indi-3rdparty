@@ -91,9 +91,10 @@ class ASIEAF : public INDI::Focuser
 
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
 
+        virtual void nicknameSet(const char *nickname) override;
+
         /** Additional Properties to INDI::Focuser */
         INDI::PropertyText    SerialNumberTP {1};
-        INDI::PropertyText    NicknameTP {1};
 
     private:
         // Get initial focuser parameter when we first connect
@@ -166,10 +167,6 @@ class ASIEAF : public INDI::Focuser
         // EAF Info structure
         EAF_INFO mEAFInfo;
 
-        // Nicknames and EAF serial number
-        void loadNicknames();
-        void saveNicknames();
-        const std::string NICKNAME_FILE = "/.indi/ZWONicknames.xml";
-        std::string mFocuserName, mFocuserID, mSerialNumber, mNickname;
-        std::map<std::string, std::string> mNicknames;
+        // EAF serial number for nickname
+        std::string mSerialNumber;
 };

@@ -115,10 +115,10 @@ std::string GetHomeDirectory()
 #define ENTRYNODE "Nickname"
 #define ATTRIBUTE "SerialNumber"
 
-void ASICCD::loadNicknames()
+void ASICCD::loadZWONicknames()
 {
     const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
-    mNicknames.clear();
+    mZWONicknames.clear();
 
     LilXML *xmlHandle = newLilXML();
     XMLEle *rootXmlNode = nullptr;
@@ -144,7 +144,7 @@ void ASICCD::loadNicknames()
             if (!name.empty())
                 trim(name);
             if (!name.empty())
-                mNicknames[id] = name;
+                mZWONicknames[id] = name;
         }
         currentXmlNode = nextXMLEle(rootXmlNode, 0);
     }
@@ -152,7 +152,7 @@ void ASICCD::loadNicknames()
     delXMLEle(rootXmlNode);
 }
 
-void ASICCD::saveNicknames()
+void ASICCD::saveZWONicknames()
 {
     const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
     XMLEle *rootXmlNode = nullptr;
@@ -162,7 +162,7 @@ void ASICCD::saveNicknames()
 
     rootXmlNode = addXMLEle(nullptr, ROOTNODE);
 
-    for (const auto &kv : mNicknames)
+    for (const auto &kv : mZWONicknames)
     {
         oneElement = addXMLEle(rootXmlNode, ENTRYNODE);
         addXMLAtt(oneElement, ATTRIBUTE, kv.first.c_str());
@@ -174,42 +174,8 @@ void ASICCD::saveNicknames()
     delXMLEle(rootXmlNode);
 }
 
-
 bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
-    if (dev != nullptr && !strcmp(dev, getDeviceName()))
-    {
-        if (NicknameTP.isNameMatch(name))
-        {
-            NicknameTP.update(texts, names, n);
-            NicknameTP.setState(IPS_OK);
-            NicknameTP.apply();
-            if (!mSerialNumber.empty())
-            {
-                loadNicknames();  // another camera may have updated its nickname.
-                std::string newNickname = texts[0];
-                trim(newNickname);
-                if (newNickname.empty())
-                {
-                    mNicknames.erase(mSerialNumber);
-                    LOGF_INFO("Nickname for %s removed.", mSerialNumber.c_str());
-                }
-                else
-                {
-                    mNicknames[mSerialNumber] = newNickname;
-                    LOGF_INFO("Nickname for %s changed to %s.", mSerialNumber.c_str(), newNickname.c_str());
-                }
-                saveNicknames();
-                LOG_INFO("The driver must now be restarted for this change to take effect.");
-            }
-            else
-            {
-                LOG_INFO("Can't apply nickname change--serial number not known.");
-            }
-            NicknameTP.apply();
-            return true;
-        }
-    }
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
 }
 
@@ -217,27 +183,21 @@ bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *n
 /// Constructor for multi-camera driver.
 ///////////////////////////////////////////////////////////////////////
 ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
-               const std::string &serialNumber) : ASIBase()
+               const std::string &serialNumber)
+    : ASIBase(camInfo, serialNumber)
 {
-    mSerialNumber = serialNumber;
-    mCameraInfo = camInfo;
-    loadNicknames();
+    auto name = cameraName;
+
+    loadZWONicknames();
     if (!mSerialNumber.empty())
     {
-        auto nickname = mNicknames[mSerialNumber];
+        auto nickname = mZWONicknames[mSerialNumber];
         if (!nickname.empty())
         {
-            auto finalName = nickname;
-            if (finalName.find("ZWO CCD") != 0)
-                finalName = "ZWO CCD " + finalName;
-            setDeviceName(finalName.c_str());
-            mCameraName = finalName;
-            mNickname = nickname;
-            LOGF_INFO("Using nickname %s for serial number %s.", finalName.c_str(), mSerialNumber.c_str());
-            return;
+            name = nickname;
         }
     }
 
-    setDeviceName(cameraName.c_str());
-    mCameraName = cameraName;
+    setDeviceNickname(name.c_str());
+    LOGF_INFO("Using camera name [%s] for serial number %s.", getDeviceName(), mSerialNumber.c_str());
 }

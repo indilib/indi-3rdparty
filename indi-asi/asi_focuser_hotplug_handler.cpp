@@ -157,8 +157,7 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
     // Retrieve serial number for the ASIEAF constructor
     std::string serialNumber = getSerialNumberFromID(focuserID);
 
-    ASIEAF *asiEaf = new ASIEAF(eafInfo, uniqueName.c_str(), serialNumber);
-    std::shared_ptr<ASIEAF> newDevice = std::shared_ptr<ASIEAF>(asiEaf);
+    std::shared_ptr<ASIEAF> newDevice = std::make_shared<ASIEAF>(eafInfo, uniqueName.c_str(), serialNumber);
     m_internalFocusers.push_back(newDevice);
     LOGF_INFO("HotPlugManager: Created new ASIEAF device: %s (ID: %d)", uniqueName.c_str(), focuserID);
     return newDevice;
