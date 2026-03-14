@@ -8,7 +8,7 @@ include(CMakeCommon)
 
 set(
   UDEVRULES_INSTALL_DIR
-  "/lib/udev/rules.d"
+  "/usr/lib/udev/rules.d"
   CACHE STRING
   "Base directory for udev rules"
 )
