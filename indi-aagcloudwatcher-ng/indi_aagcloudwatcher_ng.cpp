@@ -161,274 +161,259 @@ IPState AAGCloudWatcher::updateWeather()
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool AAGCloudWatcher::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
-    INDI::Weather::ISNewNumber(dev, name, values, names, n);
-
-    // Ignore if not ours
-    if (strcmp(dev, getDefaultName()))
+    if (dev && !strcmp(dev, getDeviceName()))
     {
-        return false;
-    }
+        auto nvp = getNumber(name);
 
-    auto nvp = getNumber(name);
-
-    if (!nvp)
-    {
-        return false;
-    }
-
-    if (nvp.isNameMatch("WEATHER_UPDATE") || nvp.isNameMatch("WEATHER_RAIN"))
-    {
-        nvp.update(values, names, n);
-        nvp.setState(IPS_OK);
-        nvp.apply();
-
-        return true;
-    }
-
-    if (nvp.isNameMatch("heaterParameters"))
-    {
-        for (int i = 0; i < n; i++)
+        if (nvp)
         {
-            if ((strcmp(names[i], "tempLow") == 0) || (strcmp(names[i], "tempHigh") == 0))
+
+            if (nvp.isNameMatch("WEATHER_UPDATE") || nvp.isNameMatch("WEATHER_RAIN"))
             {
-                if (values[i] < -50)
-                {
-                    values[i] = -50;
-                }
-                else if (values[i] > 100)
-                {
-                    values[i] = 100;
-                }
+                nvp.update(values, names, n);
+                nvp.setState(IPS_OK);
+                nvp.apply();
+
+                return true;
             }
 
-            if ((strcmp(names[i], "deltaHigh") == 0) || (strcmp(names[i], "deltaLow") == 0))
+            if (nvp.isNameMatch("heaterParameters"))
             {
-                if (values[i] < 0)
+                for (int i = 0; i < n; i++)
                 {
-                    values[i] = 0;
+                    if ((strcmp(names[i], "tempLow") == 0) || (strcmp(names[i], "tempHigh") == 0))
+                    {
+                        if (values[i] < -50)
+                        {
+                            values[i] = -50;
+                        }
+                        else if (values[i] > 100)
+                        {
+                            values[i] = 100;
+                        }
+                    }
+
+                    if ((strcmp(names[i], "deltaHigh") == 0) || (strcmp(names[i], "deltaLow") == 0))
+                    {
+                        if (values[i] < 0)
+                        {
+                            values[i] = 0;
+                        }
+                        else if (values[i] > 50)
+                        {
+                            values[i] = 50;
+                        }
+                    }
+
+                    if ((strcmp(names[i], "min") == 0))
+                    {
+                        if (values[i] < 1)
+                        {
+                            values[i] = 1;
+                        }
+                        else if (values[i] > 20)
+                        {
+                            values[i] = 20;
+                        }
+                    }
+
+                    if ((strcmp(names[i], "heatImpulseTemp") == 0))
+                    {
+                        if (values[i] < 1)
+                        {
+                            values[i] = 1;
+                        }
+                        else if (values[i] > 30)
+                        {
+                            values[i] = 30;
+                        }
+                    }
+
+                    if ((strcmp(names[i], "heatImpulseDuration") == 0))
+                    {
+                        if (values[i] < 0)
+                        {
+                            values[i] = 0;
+                        }
+                        else if (values[i] > 600)
+                        {
+                            values[i] = 600;
+                        }
+                    }
+
+                    if ((strcmp(names[i], "heatImpulseCycle") == 0))
+                    {
+                        if (values[i] < 60)
+                        {
+                            values[i] = 60;
+                        }
+                        else if (values[i] > 1000)
+                        {
+                            values[i] = 1000;
+                        }
+                    }
                 }
-                else if (values[i] > 50)
-                {
-                    values[i] = 50;
-                }
+
+
+
+                nvp.update(values, names, n);
+                nvp.setState(IPS_OK);
+                nvp.apply();
+
+                return true;
             }
 
-            if ((strcmp(names[i], "min") == 0))
+            if (nvp.isNameMatch("heaterPIDParameters"))
             {
-                if (values[i] < 1)
-                {
-                    values[i] = 1;
-                }
-                else if (values[i] > 20)
-                {
-                    values[i] = 20;
-                }
+                nvp.update(values, names, n);
+                nvp.setState(IPS_OK);
+                nvp.apply();
+
+                return true;
             }
 
-            if ((strcmp(names[i], "heatImpulseTemp") == 0))
+            if (nvp.isNameMatch("skyCorrection"))
             {
-                if (values[i] < 1)
+                for (int i = 0; i < 5; i++)
                 {
-                    values[i] = 1;
+                    if (values[i] < -999)
+                    {
+                        values[i] = -999;
+                    }
+                    if (values[i] > 999)
+                    {
+                        values[i] = 999;
+                    }
                 }
-                else if (values[i] > 30)
-                {
-                    values[i] = 30;
-                }
+
+                nvp.update(values, names, n);
+                nvp.setState(IPS_OK);
+                nvp.apply();
+
+                return true;
             }
 
-            if ((strcmp(names[i], "heatImpulseDuration") == 0))
-            {
-                if (values[i] < 0)
-                {
-                    values[i] = 0;
-                }
-                else if (values[i] > 600)
-                {
-                    values[i] = 600;
-                }
-            }
+        } // nvp
+    } // dev
 
-            if ((strcmp(names[i], "heatImpulseCycle") == 0))
-            {
-                if (values[i] < 60)
-                {
-                    values[i] = 60;
-                }
-                else if (values[i] > 1000)
-                {
-                    values[i] = 1000;
-                }
-            }
-        }
-
-
-
-        nvp.update(values, names, n);
-        nvp.setState(IPS_OK);
-        nvp.apply();
-
-        return true;
-    }
-
-    if (nvp.isNameMatch("heaterPIDParameters"))
-    {
-        nvp.update(values, names, n);
-        nvp.setState(IPS_OK);
-        nvp.apply();
-
-        return true;
-    }
-
-    if (nvp.isNameMatch("skyCorrection"))
-    {
-        for (int i = 0; i < 5; i++)
-        {
-            if (values[i] < -999)
-            {
-                values[i] = -999;
-            }
-            if (values[i] > 999)
-            {
-                values[i] = 999;
-            }
-        }
-
-        nvp.update(values, names, n);
-        nvp.setState(IPS_OK);
-        nvp.apply();
-
-        return true;
-    }
-
-    return false;
+    return INDI::Weather::ISNewNumber(dev, name, values, names, n);
 }
 
 bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    // ignore if not ours
-    if (strcmp(dev, getDefaultName()))
+    if (dev && !strcmp(dev, getDeviceName()))
     {
-        return false;
-    }
+        auto svp = getSwitch(name);
 
-    if (INDI::Weather::ISNewSwitch(dev, name, states, names, n) == true)
-    {
-        return true;
-    }
-
-    auto svp = getSwitch(name);
-
-    if (!svp)
-    {
-        return false;
-    }
-
-    if (svp.isNameMatch("heatingAlgorithm"))
-    {
-        LOGF_INFO("Changing heating algorithm to %s\n", names[0]);
-        if (strcmp(names[0], "pid") == 0)
+        if (svp)
         {
-            usePIDforHeating = true;
-        }
-        else
-        {
-            usePIDforHeating = false;
-        }
-        return false;
-    }
 
-    int error = 0;
-    if (svp.isNameMatch("deviceSwitch"))
-    {
-        char *namesSw[2];
-        ISState statesSw[2];
-        statesSw[0] = ISS_ON;
-        statesSw[1] = ISS_OFF;
-        namesSw[0]  = const_cast<char *>("open");
-        namesSw[1]  = const_cast<char *>("close");
-
-        ISState openState;
-
-        if (strcmp(names[0], "open") == 0)
-        {
-            openState = states[0];
-        }
-        else
-        {
-            openState = states[1];
-        }
-
-        if (openState == ISS_ON)
-        {
-            if (isConnected())
+            if (svp.isNameMatch("heatingAlgorithm"))
             {
-                bool r = cwc->openSwitch();
-
-                if (!r)
-                {
-                    statesSw[0] = ISS_OFF;
-                    statesSw[1] = ISS_ON;
-                }
+                LOGF_INFO("Changing heating algorithm to %s\n", names[0]);
+                usePIDforHeating = (strcmp(names[0], "pid") == 0);
+                svp.update(states, names, n);
+                svp.setState(IPS_OK);
+                svp.apply();
+                return true;
             }
-            else
+
+            int error = 0;
+            if (svp.isNameMatch("deviceSwitch"))
             {
+                char *namesSw[2];
+                ISState statesSw[2];
                 statesSw[0] = ISS_ON;
                 statesSw[1] = ISS_OFF;
-                error       = 1;
-            }
-        }
-        else
-        {
-            if (isConnected())
-            {
-                bool r = cwc->closeSwitch();
+                namesSw[0]  = const_cast<char *>("open");
+                namesSw[1]  = const_cast<char *>("close");
 
-                if (r)
+                ISState openState;
+
+                if (strcmp(names[0], "open") == 0)
                 {
-                    statesSw[0] = ISS_OFF;
-                    statesSw[1] = ISS_ON;
+                    openState = states[0];
                 }
+                else
+                {
+                    openState = states[1];
+                }
+
+                if (openState == ISS_ON)
+                {
+                    if (isConnected())
+                    {
+                        bool r = cwc->openSwitch();
+
+                        if (!r)
+                        {
+                            statesSw[0] = ISS_OFF;
+                            statesSw[1] = ISS_ON;
+                        }
+                    }
+                    else
+                    {
+                        statesSw[0] = ISS_ON;
+                        statesSw[1] = ISS_OFF;
+                        error       = 1;
+                    }
+                }
+                else
+                {
+                    if (isConnected())
+                    {
+                        bool r = cwc->closeSwitch();
+
+                        if (r)
+                        {
+                            statesSw[0] = ISS_OFF;
+                            statesSw[1] = ISS_ON;
+                        }
+                    }
+                    else
+                    {
+                        statesSw[0] = ISS_ON;
+                        statesSw[1] = ISS_OFF;
+                        error       = 1;
+                    }
+                }
+
+                svp.update(statesSw, namesSw, 2);
+                if (error)
+                {
+                    svp.setState(IPS_IDLE);
+                }
+                else
+                {
+                    svp.setState(IPS_OK);
+                }
+                svp.apply();
+
+                return true;
             }
-            else
+
+            if (svp.isNameMatch("anemometerType"))
             {
-                statesSw[0] = ISS_ON;
-                statesSw[1] = ISS_OFF;
-                error       = 1;
+                svp.update(states, names, 2);
+                svp.setState(IPS_OK);
+                svp.apply();
+
+                auto sp = svp.findWidgetByName("BLACK");
+                if (sp->getState() == ISS_ON)
+                {
+                    cwc->setAnemometerType(BLACK);
+                }
+                else
+                {
+                    cwc->setAnemometerType(GRAY);
+                }
+                return true;
             }
-        }
 
-        svp.update(statesSw, namesSw, 2);
-        if (error)
-        {
-            svp.setState(IPS_IDLE);
-        }
-        else
-        {
-            svp.setState(IPS_OK);
-        }
-        svp.apply();
+        } // svp
+    } // dev
 
-        return true;
-    }
-
-    if (svp.isNameMatch("anemometerType"))
-    {
-        svp.update(states, names, 2);
-        svp.setState(IPS_OK);
-
-        auto sp = svp.findWidgetByName("BLACK");
-        if (sp->getState() == ISS_ON)
-        {
-            cwc->setAnemometerType(BLACK);
-        }
-        else
-        {
-            cwc->setAnemometerType(GRAY);
-        }
-    }
-
-    return false;
+    return INDI::Weather::ISNewSwitch(dev, name, states, names, n);
 }
 
 
