@@ -130,14 +130,19 @@ std::shared_ptr<INDI::DefaultDevice> QHYCCDHotPlugHandler::createDevice(const st
     }
     std::string baseName = model;
     std::string uniqueName = baseName;
-    int nameIndex = 0;
+    int nameIndex = 2;
     bool nameExists = true;
     while (nameExists)
     {
         nameExists = false;
         for (const auto& device : m_internalCameras)
         {
-            if (device->getDeviceName() == uniqueName)
+            // getDeviceName() returns "QHY CCD <model>", so strip the prefix before comparing
+            std::string existingLabel = device->getDeviceName();
+            const std::string prefix = "QHY CCD ";
+            if (existingLabel.rfind(prefix, 0) == 0)
+                existingLabel = existingLabel.substr(prefix.length());
+            if (existingLabel == uniqueName)
             {
                 nameExists = true;
                 break;
@@ -145,8 +150,8 @@ std::shared_ptr<INDI::DefaultDevice> QHYCCDHotPlugHandler::createDevice(const st
         }
         if (nameExists)
         {
-            nameIndex++;
             uniqueName = baseName + " " + std::to_string(nameIndex);
+            nameIndex++;
         }
     }
 
