@@ -1,3 +1,9 @@
+libmallincam (59.31026.20260322) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom <procom@procom.com>  Mon, 23 Mar 2026 10:43:24 +0800
+
 libmallincam (59.30594.20260120) jammy; urgency=medium
 
   * Upstream release

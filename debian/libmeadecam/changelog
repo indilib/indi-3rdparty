@@ -1,3 +1,9 @@
+libmeadecam (59.31026.20260322) jammy; urgency=medium
+
+  * Upstream release
+
+ -- meade <meade@meade.com>  Mon, 23 Mar 2026 10:42:37 +0800
+
 libmeadecam (59.30594.20260120) jammy; urgency=medium
 
   * Upstream release
