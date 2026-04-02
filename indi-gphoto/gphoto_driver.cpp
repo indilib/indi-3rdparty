@@ -1388,6 +1388,11 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         //Set exposure back to original value
         // JM 2018-08-06: Why do we really need to reset values here?
         //reset_settings(gphoto);
+      
+        // A ptp reset is needed by Sony A7II and A7III
+        if (strstr(gphoto->manufacturer, "Sony") && strstr(gphoto->model, "ILCE"))
+          gp_camera_exit(gphoto->camera, gphoto->context);
+
         return result;
     }
 
