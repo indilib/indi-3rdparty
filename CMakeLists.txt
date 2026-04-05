@@ -268,7 +268,7 @@ option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
 option(WITH_LIBCAMERA "Install Libcamera Driver (Raspberry PI)" Off)
 option(WITH_BNO_IMU "Install BNO IMU Driver" Off)
-option(WITH_CELESTRON_ORIGIN "Install Celestron Origin Driver" Off)
+option(WITH_CELESTRON_ORIGIN "Install Celestron Origin Driver" On)
 
 # FFMPEG required for INDI Webcam driver
 find_package(FFmpeg)
