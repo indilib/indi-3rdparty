@@ -305,6 +305,8 @@ endif(NUTCLIENT_FOUND)
 
 # Add/remove cases for OSX
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
+  # Celestron origin driver needs some work to make it work on MacOS due to Qt dependency
+  set (WITH_CELESTRON_ORIGIN Off)
   set(WITH_INOVAPLX Off)
   set(WITH_GIGE Off)
   set(WITH_PENTAX Off)
