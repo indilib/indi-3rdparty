@@ -4,7 +4,7 @@ PROJECT(indi_sx CXX C)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
-set(RULES_INSTALL_DIR "/usr/usr/lib/udev/rules.d/")
+set(RULES_INSTALL_DIR "/usr/lib/udev/rules.d/")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
