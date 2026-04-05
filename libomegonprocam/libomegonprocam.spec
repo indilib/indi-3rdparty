@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libomegonprocam
-/lib/udev/rules.d/99-omegonprocam.rules
+/usr/lib/udev/rules.d/99-omegonprocam.rules
 
 
 %changelog

@@ -77,7 +77,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/inovasdk
-/lib/udev/rules.d/99-inovaplx.rules
+/usr/lib/udev/rules.d/99-inovaplx.rules
 
 
 %changelog

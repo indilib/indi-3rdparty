@@ -72,7 +72,7 @@ make DESTDIR=%{buildroot} install
 %doc indi-armadillo-platypus/AUTHORS indi-armadillo-platypus/README
 %{_bindir}/*
 %{_datadir}/indi
-/lib/udev/rules.d/99-armadilloplatypus.rules
+/usr/lib/udev/rules.d/99-armadilloplatypus.rules
 
 
 %changelog

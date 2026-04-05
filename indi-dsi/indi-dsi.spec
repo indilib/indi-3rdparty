@@ -71,7 +71,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_bindir}/*
 %{_datadir}/indi
-/lib/udev/rules.d/99-meadedsi.rules
+/usr/lib/udev/rules.d/99-meadedsi.rules
 /lib/firmware/meade-deepskyimager.hex
 
 
