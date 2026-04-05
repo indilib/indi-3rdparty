@@ -72,7 +72,7 @@ make DESTDIR=%{buildroot} install
 %doc indi-gphoto/AUTHORS indi-gphoto/README
 %{_bindir}/*
 %{_datadir}/indi
-/lib/udev/rules.d/85-disable-dslr-automout.rules
+/usr/lib/udev/rules.d/85-disable-dslr-automout.rules
 
 
 %changelog

@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libmeadecam
-/lib/udev/rules.d/99-meadecam.rules
+/usr/lib/udev/rules.d/99-meadecam.rules
 
 
 %changelog

@@ -75,7 +75,7 @@ make DESTDIR=%{buildroot} install
 %{_libdir}/*
 %{_includedir}/libapogee
 %{_sysconfdir}/Apogee
-/lib/udev/rules.d/99-apogee.rules
+/usr/lib/udev/rules.d/99-apogee.rules
 
 
 %changelog

@@ -86,7 +86,7 @@ find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} 
 make DESTDIR=%{buildroot} install
 
 %files
-/lib/udev/rules.d/99-asi.rules
+/usr/lib/udev/rules.d/99-asi.rules
 %{_libdir}/*
 %{_includedir}/libasi
 

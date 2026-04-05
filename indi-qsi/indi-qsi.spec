@@ -72,7 +72,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_bindir}/*
 %{_datadir}/indi
-/lib/udev/rules.d/99-qsi.rules
+/usr/lib/udev/rules.d/99-qsi.rules
 
 %changelog
 * Sun Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.7.git-1

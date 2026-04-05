@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libnncam
-/lib/udev/rules.d/99-nncam.rules
+/usr/lib/udev/rules.d/99-nncam.rules
 
 
 %changelog

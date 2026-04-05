@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libbressercam
-/lib/udev/rules.d/99-bressercam.rules
+/usr/lib/udev/rules.d/99-bressercam.rules
 
 
 %changelog
