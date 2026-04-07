@@ -386,7 +386,7 @@ bool CelestronAUX::initProperties()
     setDriverInterface(getDriverInterface() | GUIDER_INTERFACE);
 
     // GPS Emulation
-	GuidePulseMode[PULSE_MODE_PULSE].fill("PULSE_MODE_PULSE", "PULSE", ISS_ON);
+    GuidePulseMode[PULSE_MODE_PULSE].fill("PULSE_MODE_PULSE", "PULSE", ISS_ON);
     GuidePulseMode[PULSE_MODE_GUIDE_RATE].fill("PULSE_MODE_GUIDE_RATE", "GUIDE RATE", ISS_OFF);
     GuidePulseMode.fill(getDeviceName(), "PULSE_MODE", "Pulse mode", GUIDE_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
@@ -1429,7 +1429,7 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
             else
                 m_GuideRATimer.start(ticks * 10);
             return sendAUXCommand(cmd);
-        } else {
+        } else if (m_GuideMode == GUIDE_BY_RATE_SHIFT) {
             // calc rate shift & new rate
             const double rate_shift = TRACKRATE_SIDEREAL * ((double)rate / 100.0);
             const double new_rate = this->m_TrackRates[axis] + rate_shift;
@@ -1450,6 +1450,8 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
 
             //finished
             return status;
+        } else {
+            return false;
         }
     }
     // For Alt-Az mounts in tracking state, add to guide delta
