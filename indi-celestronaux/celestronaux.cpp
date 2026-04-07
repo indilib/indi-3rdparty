@@ -86,7 +86,6 @@ CelestronAUX::CelestronAUX()
     m_GuideRATimer.callOnTimeout([this]()
     {
         // restore the configured normal guiding mode / rate.
-        fprintf(stderr, "=====> RESTORE AXIS %d\n", AXIS_AZ);
         this->restoreTrackingRateMode(AXIS_AZ);
 
         // reset the buttons
@@ -100,7 +99,6 @@ CelestronAUX::CelestronAUX()
     m_GuideDETimer.callOnTimeout([this]()
     {
         // restore the configured normal guiding mode / rate.
-        fprintf(stderr, "=====> RESTORE AXIS %d\n", AXIS_ALT);
         this->restoreTrackingRateMode(AXIS_ALT);
 
         // reset the buttons
@@ -1435,14 +1433,10 @@ bool CelestronAUX::guidePulse(INDI_EQ_AXIS axis, uint32_t ms, int8_t rate)
             const double new_rate = this->m_TrackRates[axis] + rate_shift;
             const int32_t new_step = (int32_t)(new_rate * STEPS_PER_ARCSEC * (double)GAIN_STEPS);
 
-            // save last value
-            fprintf(stderr, "=====> Change %d : %f => %f | %d => %d \n", axis, this->m_TrackRates[axis], new_rate, m_LastTrackRate[axis], new_step);
-
             // update tracking rate by sending command to the mount
             const bool status = this->trackByRate(axis == AXIS_DE ? AXIS_ALT : AXIS_AZ,  new_step);
 
             //start or restart timer to restore after delay (max 10secs arbitrary)
-            fprintf(stderr, "=====> WAIT %u\n", ms);
             if (axis == AXIS_DE)
                 m_GuideDETimer.start(std::min(10000u, ms) + m_GuideDETimer.remainingTime());
             else
