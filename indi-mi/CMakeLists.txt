@@ -40,8 +40,8 @@ endif(APPLE)
 install(TARGETS indi_mi_ccd RUNTIME DESTINATION bin)
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/make_mi_ccd_symlink.cmake
-"exec_program(\"${CMAKE_COMMAND}\" ARGS -E create_symlink indi_mi_ccd \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_ccd_usb)\n
- exec_program(\"${CMAKE_COMMAND}\" ARGS -E create_symlink indi_mi_ccd \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_ccd_eth)\n")
+"execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink indi_mi_ccd \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_ccd_usb)\n
+ execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink indi_mi_ccd \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_ccd_eth)\n")
 
 set_target_properties(indi_mi_ccd PROPERTIES POST_INSTALL_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/make_mi_ccd_symlink.cmake)
 
@@ -60,8 +60,8 @@ endif(APPLE)
 install(TARGETS indi_mi_sfw RUNTIME DESTINATION bin)
 
 file(WRITE ${CMAKE_CURRENT_BINARY_DIR}/make_mi_sfw_symlink.cmake
-"exec_program(\"${CMAKE_COMMAND}\" ARGS -E create_symlink indi_mi_sfw \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_sfw_usb)\n
- exec_program(\"${CMAKE_COMMAND}\" ARGS -E create_symlink indi_mi_sfw \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_sfw_eth)\n")
+"execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink indi_mi_sfw \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_sfw_usb)\n
+ execute_process(COMMAND \"${CMAKE_COMMAND}\" -E create_symlink indi_mi_sfw \$ENV{DESTDIR}${CMAKE_INSTALL_FULL_BINDIR}/indi_mi_sfw_eth)\n")
 
 set_target_properties(indi_mi_sfw PROPERTIES POST_INSTALL_SCRIPT ${CMAKE_CURRENT_BINARY_DIR}/make_mi_sfw_symlink.cmake)
 

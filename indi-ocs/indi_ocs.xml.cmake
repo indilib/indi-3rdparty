@@ -3,7 +3,7 @@
 <devGroup group="Domes">
     <device label="OCS" manufacturer="Other">
         <driver name="OCS">indi_ocs</driver>
-        <version>1.4</version>
+        <version>1.5</version>
     </device>
 </devGroup>
 </driversList>

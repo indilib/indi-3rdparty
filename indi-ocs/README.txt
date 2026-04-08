@@ -4,6 +4,9 @@ Observatory Control System (OCS) Indi Driver V1.4
 An Indi driver for the OCS (https://onstep.groups.io/g/onstep-ocs/wiki)
   Copyright (C) 2023-2025 Ed Lee
 
+Version 1.5
+    Fixed shutdown issue
+
 Version 1.4
     Corrected inactive weather measurement check added incorrectly in V1.1
 

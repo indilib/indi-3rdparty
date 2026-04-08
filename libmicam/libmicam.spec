@@ -78,7 +78,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libmicam
-/lib/udev/rules.d/99-miccd.rules
+/usr/lib/udev/rules.d/99-miccd.rules
 
 
 %changelog

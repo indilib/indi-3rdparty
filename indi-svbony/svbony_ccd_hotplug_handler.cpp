@@ -32,7 +32,7 @@ namespace INDI
 
 SVBONYCCDHotPlugHandler::SVBONYCCDHotPlugHandler()
 {
-    LOG_DEBUG("SVBONYCCDHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: SVBONYCCDHotPlugHandler initialized.");
 }
 
 SVBONYCCDHotPlugHandler::~SVBONYCCDHotPlugHandler()
@@ -46,7 +46,7 @@ SVBONYCCDHotPlugHandler::~SVBONYCCDHotPlugHandler()
     }
     m_internalCameras.clear();
     m_managedDevicesView.clear();
-    LOG_DEBUG("SVBONYCCDHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: SVBONYCCDHotPlugHandler shut down.");
 }
 
 std::vector<std::string> SVBONYCCDHotPlugHandler::discoverConnectedDeviceIdentifiers()
@@ -55,7 +55,7 @@ std::vector<std::string> SVBONYCCDHotPlugHandler::discoverConnectedDeviceIdentif
     int numCameras = SVBGetNumOfConnectedCameras();
     if (numCameras < 0)
     {
-        LOG_ERROR("SVBGetNumOfConnectedCameras returned an error.");
+        LOG_ERROR("HotPlugManager: SVBGetNumOfConnectedCameras returned an error.");
         return identifiers;
     }
 
@@ -65,11 +65,11 @@ std::vector<std::string> SVBONYCCDHotPlugHandler::discoverConnectedDeviceIdentif
         if (SVBGetCameraInfo(&cameraInfo, i) == SVB_SUCCESS)
         {
             identifiers.push_back(std::to_string(cameraInfo.CameraID));
-            LOGF_DEBUG("Discovered SVBony camera with CameraID: %d", cameraInfo.CameraID);
+            LOGF_DEBUG("HotPlugManager: Discovered SVBony camera with CameraID: %d", cameraInfo.CameraID);
         }
         else
         {
-            LOGF_WARN("Failed to get camera property for index %d.", i);
+            LOGF_WARN("HotPlugManager: Failed to get camera property for index %d.", i);
         }
     }
     return identifiers;
@@ -84,7 +84,7 @@ std::shared_ptr<DefaultDevice> SVBONYCCDHotPlugHandler::createDevice(const std::
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("SVBONYCCDHotPlugHandler", "Invalid identifier format for CameraID: %s. Error: %s", identifier.c_str(),
+        LOGF_ERROR("HotPlugManager: Invalid identifier format for CameraID: %s. Error: %s", identifier.c_str(),
                    e.what());
         return nullptr;
     }
@@ -108,7 +108,7 @@ std::shared_ptr<DefaultDevice> SVBONYCCDHotPlugHandler::createDevice(const std::
 
     if (!foundCamera)
     {
-        LOGF_ERROR("Failed to get camera info for CameraID: %d", cameraID);
+        LOGF_ERROR("HotPlugManager: Failed to get camera info for CameraID: %d", cameraID);
         return nullptr;
     }
 
@@ -117,7 +117,7 @@ std::shared_ptr<DefaultDevice> SVBONYCCDHotPlugHandler::createDevice(const std::
     {
         if (device->getCameraInfo().CameraID == cameraID)
         {
-            LOGF_DEBUG("Device with CameraID %d already managed, not creating new.", cameraID);
+            LOGF_DEBUG("HotPlugManager: Device with CameraID %d already managed, not creating new.", cameraID);
             return device;
         }
     }
@@ -152,7 +152,7 @@ std::shared_ptr<DefaultDevice> SVBONYCCDHotPlugHandler::createDevice(const std::
     SVBONYCCD *svbonyCcd = new SVBONYCCD(cameraInfo, uniqueName, serialNumber);
     std::shared_ptr<SVBONYCCD> newDevice = std::shared_ptr<SVBONYCCD>(svbonyCcd);
     m_internalCameras.push_back(newDevice);
-    LOGF_INFO("Created new SVBONYCCD device: %s (CameraID: %d)", uniqueName.c_str(), cameraID);
+    LOGF_INFO("HotPlugManager: Created new SVBONYCCD device: %s (CameraID: %d)", uniqueName.c_str(), cameraID);
     return newDevice;
 }
 
@@ -161,7 +161,7 @@ void SVBONYCCDHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> devic
     std::shared_ptr<SVBONYCCD> svbonyCcd = std::dynamic_pointer_cast<SVBONYCCD>(device);
     if (!svbonyCcd)
     {
-        LOG_ERROR("Attempted to destroy a non-SVBONYCCD device with SVBONYCCDHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-SVBONYCCD device with SVBONYCCDHotPlugHandler.");
         return;
     }
 
@@ -184,16 +184,17 @@ void SVBONYCCDHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> devic
     if (it != m_internalCameras.end())
     {
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("Destroyed SVBONYCCD device: %s (CameraID: %d)", svbonyCcd->getDeviceName(), svbonyCcd->getCameraInfo().CameraID);
+        LOGF_INFO("HotPlugManager: Destroyed SVBONYCCD device: %s (CameraID: %d)", svbonyCcd->getDeviceName(),
+                  svbonyCcd->getCameraInfo().CameraID);
     }
     else
     {
-        LOGF_WARN("Attempted to destroy SVBONYCCD device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy SVBONYCCD device %s not found in managed list.",
                   svbonyCcd->getDeviceName());
     }
 }
 
-const std::map<std::string, std::shared_ptr<DefaultDevice>>& SVBONYCCDHotPlugHandler::getManagedDevices() const
+const std::map<std::string, std::shared_ptr<DefaultDevice>> &SVBONYCCDHotPlugHandler::getManagedDevices() const
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
@@ -213,7 +214,7 @@ bool SVBONYCCDHotPlugHandler::getCameraInfoByCameraID(const std::string& cameraI
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("SVBONYCCDHotPlugHandler", "Invalid CameraID format: %s. Error: %s", cameraIDStr.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid CameraID format: %s. Error: %s", cameraIDStr.c_str(), e.what());
         return false;
     }
 

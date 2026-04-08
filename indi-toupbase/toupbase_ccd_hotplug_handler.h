@@ -37,7 +37,7 @@ class ToupbaseCCDHotPlugHandler : public INDI::HotPlugCapableDevice
         std::vector<std::string> discoverConnectedDeviceIdentifiers() override;
         std::shared_ptr<INDI::DefaultDevice> createDevice(const std::string& identifier) override;
         void destroyDevice(std::shared_ptr<INDI::DefaultDevice> device) override;
-        const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>>& getManagedDevices() const override;
+        const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &getManagedDevices() const override;
 
     private:
         // Internal storage for managed ToupbaseCCD devices
@@ -48,6 +48,8 @@ class ToupbaseCCDHotPlugHandler : public INDI::HotPlugCapableDevice
         // Helper to get camera info by ID
         bool getCameraInfoByCameraID(const std::string& cameraIDStr, XP(DeviceV2)& cameraInfo);
 
-        // Vector to store copies of connected ToupcamDeviceV2 instances
-        std::vector<XP(DeviceV2)> m_connectedDevices;
+        // Map to store device info with stable addresses (heap-allocated)
+        // Key: device ID string, Value: shared pointer to device info
+        // This prevents dangling pointers when enumeration updates the device list
+        std::map<std::string, std::shared_ptr<XP(DeviceV2)>> m_connectedDevices;
 };

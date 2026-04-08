@@ -39,64 +39,25 @@
 #include <deque>
 #include <memory>
 
+#include <hotplugmanager.h>
+#include "asi_wheel_hotplug_handler.h"
+
 //#define SIMULATION
 
 static class Loader
 {
-        std::deque<std::unique_ptr<ASIWHEEL>> wheels;
+        std::shared_ptr<INDI::ASIWHEELHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-#ifdef SIMULATION
-            EFW_INFO info;
-            info.ID = 1;
-            strncpy(info.Name, "Simulated EFW8", 64);
-            info.slotNum = 0;
-            wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, info.Name)));
-#else
-            int num_wheels = EFWGetNum();
-
-            if (num_wheels <= 0)
-            {
-                IDLog("No ASI EFW detected.");
-                return;
-            }
-            int num_wheels_ok = 0;
-            char *envDev = getenv("INDIDEV");
-            for (int i = 0; i < num_wheels; i++)
-            {
-                int id;
-                EFW_ERROR_CODE result = EFWGetID(i, &id);
-                if (result != EFW_SUCCESS)
-                {
-                    IDLog("ERROR: ASI EFW %d EFWGetID error %d.", i + 1, result);
-                    continue;
-                }
-                EFW_INFO info;
-                result = EFWGetProperty(id, &info);
-                if (result != EFW_SUCCESS && result != EFW_ERROR_CLOSED)   // TODO: remove the ERROR_CLOSED hack
-                {
-                    IDLog("ERROR: ASI EFW %d EFWGetProperty error %d.", i + 1, result);
-                    continue;
-                }
-                std::string name = "ZWO " + std::string(info.Name);
-                if (envDev && envDev[0])
-                    name = envDev;
-
-                // If we only have a single device connected
-                // then favor the INDIDEV driver label over the auto-generated name above
-                if (num_wheels > 1)
-                    name += " " + std::to_string(i + 1);
-
-                wheels.push_back(std::unique_ptr<ASIWHEEL>(new ASIWHEEL(info, name.c_str())));
-                num_wheels_ok++;
-            }
-            IDLog("%d ZWO EFW attached out of %d detected.", num_wheels_ok, num_wheels);
-#endif
+            hotPlugHandler = std::make_shared<INDI::ASIWHEELHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
 } loader;
 
 ASIWHEEL::ASIWHEEL(const EFW_INFO &info, const char *name)
+    : mEFWInfo(info)
 {
     fw_id              = info.ID;
     CurrentFilter      = 0;

@@ -25,6 +25,7 @@
 
 #include "indifocuser.h"
 #include <indipropertynumber.h>
+#include <indipropertyswitch.h>
 
 #include <memory>
 #include <cstring>
@@ -32,6 +33,7 @@
 #include <fstream>
 
 #define USB_CDC_RX_LEN      128
+#define VOLTAGE_THRESHOLD   11.5
 
 class QFocuser : public INDI::Focuser
 {
@@ -53,6 +55,9 @@ class QFocuser : public INDI::Focuser
         virtual bool SyncFocuser(uint32_t ticks) override;
         virtual bool AbortFocuser() override;
         virtual bool ReverseFocuser(bool enabled) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool saveConfigItems(FILE *fp) override;
 
     private:
         int SendCommand(char *cmd_line);
@@ -66,9 +71,13 @@ class QFocuser : public INDI::Focuser
         bool syncPosition(int position);
 
         bool setReverseDirection(int enabled);
+        bool setHoldCurrent(int ihold, int irun);
+        bool setPdnMode(int pdn);
+        void updateHoldCurrentVisibility();
 
         double targetPos{ 0 };
         bool isReboot = false;
+        bool configRestored = false;  // Flag to track if config has been restored
 
         char buff[USB_CDC_RX_LEN];
 
@@ -94,5 +103,14 @@ class QFocuser : public INDI::Focuser
         INDI::PropertyNumber FOCUSVersionNP{1};
 
         INDI::PropertyNumber BOARDVersionNP{1};
+
+        // External temperature display switch
+        INDI::PropertySwitch ExternalTempSP{2};
+
+        // Hold force enable switch
+        INDI::PropertySwitch HoldForceSP{2};
+
+        // Hold current settings (ihold, irun)
+        INDI::PropertyNumber HoldCurrentNP{2};
 
 };

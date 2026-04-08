@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %{_includedir}/libfishcamp
 /lib/firmware/Guider_mono_rev16_intel.srec
 /lib/firmware/gdr_usb.hex
-/lib/udev/rules.d/99-fishcamp.rules
+/usr/lib/udev/rules.d/99-fishcamp.rules
 
 %changelog
 * Sun Jul 19 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.7.git-1

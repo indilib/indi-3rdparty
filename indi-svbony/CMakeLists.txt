@@ -14,6 +14,8 @@ find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)
 find_package(ZLIB REQUIRED)
 find_package(SVBONY REQUIRED)
+find_package(USB1 REQUIRED)
+find_package(Threads REQUIRED)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_svbony_ccd.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_svbony_ccd.xml )
@@ -47,3 +49,13 @@ ENDIF()
 install(TARGETS indi_svbony_ccd RUNTIME DESTINATION bin)
 
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_svbony_ccd.xml DESTINATION ${INDI_DATA_DIR})
+
+########### svbony_camera_bench ###########
+add_executable(svbony_camera_bench ${CMAKE_CURRENT_SOURCE_DIR}/svbony_camera_bench.cpp)
+target_link_libraries(svbony_camera_bench ${SVBONY_LIBRARIES} ${USB1_LIBRARIES} m ${CMAKE_THREAD_LIBS_INIT})
+
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(svbony_camera_bench rt)
+ENDIF()
+
+install(TARGETS svbony_camera_bench RUNTIME DESTINATION bin)

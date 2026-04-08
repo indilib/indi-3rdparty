@@ -1,3 +1,9 @@
+libasi (1.410) jammy; urgency=medium
+
+  * Revert EFWFilter due to regression in ZWO SDK library
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Fri, 12 Dec 2025 10:00:00 +0300
+
 libasi (1.400) jammy; urgency=medium
 
   * ASI Camera SDK 1.40 release

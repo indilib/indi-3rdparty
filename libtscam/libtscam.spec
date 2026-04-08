@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libtscam
-/lib/udev/rules.d/99-tscam.rules
+/usr/lib/udev/rules.d/99-tscam.rules
 
 
 %changelog

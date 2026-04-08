@@ -8,7 +8,7 @@ include(GNUInstallDirs)
 find_package(INDI REQUIRED)
 find_package(USB1 REQUIRED)
 
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
 set(INDI_SSAG_VERSION_MAJOR 1)
 set(INDI_SSAG_VERSION_MINOR 0)

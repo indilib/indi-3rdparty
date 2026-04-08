@@ -29,6 +29,7 @@
 #include <deque>
 #include <memory>
 #include <utility>
+#include <stdlib.h>
 
 #define TEMP_THRESHOLD  0.2  /* Differential temperature threshold (°C) */
 #define TEMP_COOLER_OFF 100  /* High enough temperature for the camera cooler to turn off (°C) */
@@ -39,7 +40,22 @@
 // to its variant (indi_mi_ccd_usb and indi_mi_ccd_eth). The main function will
 // fetch from std args the binary name and ISInit will create the appropriate
 // driver afterwards.
-extern char *__progname;
+#ifdef __APPLE__
+// getprogname() is a BSD/Darwin function present in the runtime but hidden from
+// <stdlib.h> when _POSIX_C_SOURCE or _XOPEN_SOURCE are defined. Forward-declare it
+// explicitly to bypass the header visibility guard.
+extern "C" const char *getprogname(void);
+#endif
+
+static const char *getProgName()
+{
+#ifdef __APPLE__
+    return getprogname();
+#else
+    extern char *__progname;
+    return __progname;
+#endif
+}
 
 static char *rtrim(char *str)
 {
@@ -67,7 +83,7 @@ static class Loader
 
 Loader::Loader()
 {
-    if (strstr(__progname, "indi_mi_ccd_eth"))
+    if (strstr(getProgName(), "indi_mi_ccd_eth"))
     {
         gxccd_enumerate_eth([](int id)
         {
@@ -76,7 +92,7 @@ Loader::Loader()
     }
     else
     {
-        // "__progname" shoud be indi_mi_ccd_usb, however accept all names as USB
+        // PROGNAME should be indi_mi_ccd_usb, however accept all names as USB
         gxccd_enumerate_usb([](int id)
         {
             loader.initCameras.emplace_back(id, false);

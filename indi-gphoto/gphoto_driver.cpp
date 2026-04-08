@@ -1388,6 +1388,11 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         //Set exposure back to original value
         // JM 2018-08-06: Why do we really need to reset values here?
         //reset_settings(gphoto);
+      
+        // A ptp reset is needed by Sony A7II and A7III
+        if (strstr(gphoto->manufacturer, "Sony") && strstr(gphoto->model, "ILCE"))
+          gp_camera_exit(gphoto->camera, gphoto->context);
+
         return result;
     }
 
@@ -1740,9 +1745,34 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
         free(gphoto);
         return nullptr;
     }
+  
+    gphoto->manufacturer    = nullptr;
+    gphoto->model           = nullptr;
+
+    // Find Manufacturer
+    if ((widget = find_widget(gphoto, "manufacturer")) != nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Manufacturer: %s", widget->value.text);
+        gphoto->manufacturer = widget->value.text;
+    }
+
+    // Find Model
+    if ((widget = find_widget(gphoto, "cameramodel")) != nullptr || (widget = find_widget(gphoto, "model")) != nullptr)
+    {
+        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Model: %s", widget->value.text);
+        gphoto->model = widget->value.text;
+    }
+    // Make sure manufacturer is set to something useful
+    if (gphoto->manufacturer == nullptr)
+        gphoto->manufacturer = gphoto->model;
+
+    if (strstr(gphoto->manufacturer, "Canon"))
+        gphoto->supports_temperature = true;
 
     // Set 'capture=1' for Canon DSLRs.  Won't harm other cameras
-    if ((widget = find_widget(gphoto, "capture")))
+    // ...avoid this for Sony camera (on A7II and A7III it triggers exposure on init)
+    if ( !(strstr(gphoto->manufacturer, "Sony") && strstr(gphoto->model, "ILCE")) &&
+      (widget = find_widget(gphoto, "capture")) )
     {
         gphoto_set_widget_num(gphoto, widget, TRUE);
         widget_free(widget);
@@ -1784,8 +1814,6 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
     if (gphoto->format_widget == nullptr)
         gphoto->format_widget = find_widget(gphoto, "imagequality");
     gphoto->format          = -1;
-    gphoto->manufacturer    = nullptr;
-    gphoto->model           = nullptr;
     gphoto->upload_settings = GP_UPLOAD_CLIENT;
     gphoto->handle_sdcard_image = SAVE_IMAGE;
     gphoto->is_aborted = false;
@@ -1860,26 +1888,6 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
         DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "CustomFuncex Widget: %s",
                      gphoto->customfuncex_widget->name);
     }
-
-    // Find Manufacturer
-    if ((widget = find_widget(gphoto, "manufacturer")) != nullptr)
-    {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Manufacturer: %s", widget->value.text);
-        gphoto->manufacturer = widget->value.text;
-    }
-
-    // Find Model
-    if ((widget = find_widget(gphoto, "cameramodel")) != nullptr || (widget = find_widget(gphoto, "model")) != nullptr)
-    {
-        DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Model: %s", widget->value.text);
-        gphoto->model = widget->value.text;
-    }
-    // Make sure manufacturer is set to something useful
-    if (gphoto->manufacturer == nullptr)
-        gphoto->manufacturer = gphoto->model;
-
-    if (strstr(gphoto->manufacturer, "Canon"))
-        gphoto->supports_temperature = true;
 
     // Check for user
     if (shutter_release_port)

@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
-SET(RULES_INSTALL_DIR "/lib/udev/rules.d/")
+SET(RULES_INSTALL_DIR "/usr/lib/udev/rules.d/")
 
 find_package(CFITSIO REQUIRED)
 find_package(INDI REQUIRED)

@@ -1,0 +1,7 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: indi-celestron-origin
+Source: https://github.com/indilib/indi-3rdparty
+
+Files: *
+Copyright: 2025 Jonathan Kimmitt
+License: LGPL-2.1+

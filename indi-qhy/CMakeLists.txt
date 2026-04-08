@@ -24,7 +24,7 @@ else(INDI_JSONLIB)
 endif(INDI_JSONLIB)
 
 set(INDI_QHY_VERSION_MAJOR 2)
-set(INDI_QHY_VERSION_MINOR 8)
+set(INDI_QHY_VERSION_MINOR 9)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_qhy.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_qhy.xml )
@@ -87,6 +87,15 @@ IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
 endif()
 
 install(TARGETS qhy_video_test RUNTIME DESTINATION bin )
+
+########### qhy_camera_bench ###########
+add_executable(qhy_camera_bench ${CMAKE_CURRENT_SOURCE_DIR}/qhy_camera_bench.cpp)
+target_link_libraries(qhy_camera_bench ${QHY_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+IF (${CMAKE_SYSTEM_NAME} MATCHES "Linux|FreeBSD")
+    target_link_libraries(qhy_camera_bench rt)
+endif()
+
+install(TARGETS qhy_camera_bench RUNTIME DESTINATION bin )
 
 ########### qhy_focuser ###########
 add_executable(indi_qhy_focuser ${CMAKE_CURRENT_SOURCE_DIR}/qhy_focuser.cpp)

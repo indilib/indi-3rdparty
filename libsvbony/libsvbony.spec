@@ -78,7 +78,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libsvbony
-/lib/udev/rules.d/90-svbonyusb.rules
+/usr/lib/udev/rules.d/90-svbonyusb.rules
 
 
 %changelog

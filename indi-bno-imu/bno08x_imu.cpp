@@ -42,6 +42,13 @@ bool BNO08X::initProperties()
     IMU::initProperties();
     addDebugControl();
     addPollPeriodControl();
+
+    // BNO08X SH2 always reports gyroscope data in rad/s.
+    // Override the default (Degrees) that IMUInterface sets so the property
+    // correctly reflects the hardware from the moment the driver starts.
+    AngularUnitsSP[ANGULAR_UNITS_DEGREES].setState(ISS_OFF);
+    AngularUnitsSP[ANGULAR_UNITS_RADIANS].setState(ISS_ON);
+
     return true;
 }
 
@@ -316,8 +323,20 @@ bool BNO08X::SetDistanceUnits(bool metric)
 
 bool BNO08X::SetAngularUnits(bool degrees)
 {
-    // TODO: Implement BNO08X angular unit setting
-    LOGF_INFO("BNO08X: Setting angular units (degrees: %d).", degrees);
+    if (degrees)
+    {
+        // BNO08X SH2 reports gyroscope data in rad/s at all times.
+        // Switching the property to "Degrees" would display wrong units in the
+        // INDI client and could confuse any code that reads AngularUnitsSP.
+        // Reset the switch back to Radians and warn the user.
+        LOG_WARN("BNO08X: Gyroscope output is always in rad/s — angular units cannot be changed to degrees.");
+        AngularUnitsSP[ANGULAR_UNITS_DEGREES].setState(ISS_OFF);
+        AngularUnitsSP[ANGULAR_UNITS_RADIANS].setState(ISS_ON);
+        AngularUnitsSP.setState(IPS_ALERT);
+        AngularUnitsSP.apply();
+        return false;
+    }
+
     return true;
 }
 

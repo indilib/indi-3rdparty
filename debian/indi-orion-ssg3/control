@@ -1,7 +1,7 @@
 Source: indi-orion-ssg3
 Section: science
 Priority: extra
-Maintainer: Ben Gilsrud <bgilsrud@gmail.com
+Maintainer: Ben Gilsrud <bgilsrud@gmail.com>
 Build-Depends: debhelper (>= 5), cdbs, cmake, libusb-1.0-0-dev, libcfitsio3-dev|libcfitsio-dev, libindi-dev, zlib1g-dev, libnova-dev
 Standards-Version: 3.9.1
 

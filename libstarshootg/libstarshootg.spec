@@ -75,7 +75,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libstarshootg
-/lib/udev/rules.d/99-starshootg.rules
+/usr/lib/udev/rules.d/99-starshootg.rules
 
 
 %changelog

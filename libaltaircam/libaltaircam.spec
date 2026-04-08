@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libaltaircam
-/lib/udev/rules.d/99-altaircam.rules
+/usr/lib/udev/rules.d/99-altaircam.rules
 
 
 %changelog

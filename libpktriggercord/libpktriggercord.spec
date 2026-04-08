@@ -76,8 +76,8 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libpktriggercord
-/lib/udev/rules.d/95-pentax.rules
-/lib/udev/rules.d/95-samsung.rules
+/usr/lib/udev/rules.d/95-pentax.rules
+/usr/lib/udev/rules.d/95-samsung.rules
 /usr/share/pktriggercord/pentax_settings.json
 
 

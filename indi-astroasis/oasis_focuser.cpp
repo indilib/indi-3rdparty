@@ -61,7 +61,7 @@ bool OasisFocuser::initProperties()
 
     // Focuser ambient temperature
     TemperatureAmbientNP[0].fill("TEMPERATURE", "Ambient", "%.2f", -100, 100, 0., 0.);
-    TemperatureAmbientNP.fill(getDeviceName(), "FOCUS_TEMPERATURE_AMBIENT", "Temperature",
+    TemperatureAmbientNP.fill(getDeviceName(), "FOCUS_TEMPERATURE", "Temperature",
                               MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // Backlash compensation direction

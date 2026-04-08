@@ -39,6 +39,11 @@ private:
     double m_currentDec {0};
     bool m_connected {false};
     void onTelescopeDiscovered(const OriginDiscovery::TelescopeInfo& info);
+    // Coordinate conversion helpers
+    void j2000ToJNow(double ra_j2000, double dec_j2000,
+                     double *ra_jnow, double *dec_jnow);
+    void jnowToJ2000(double ra_jnow, double dec_jnow,
+                     double *ra_j2000, double *dec_j2000);  
 };
 
 class OriginCamera : public INDI::CCD

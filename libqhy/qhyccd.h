@@ -1010,6 +1010,8 @@ EXPORTFUNC uint32_t STDCALL GetQHYCCDSensorName(qhyccd_handle *handle, char *nam
 
 EXPORTFUNC uint8_t STDCALL GetCameraIsSuperSpeedFromID(char* id);
 
+EXPORTC uint8_t STDCALL GetCameraStatusFromID(char* id);
+
 EXPORTC void STDCALL EnableSupportOICamera(char* password);
 
 EXPORTC void STDCALL QHYCCDResetEMMC(qhyccd_handle* handle, bool reset);
