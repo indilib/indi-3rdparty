@@ -2,19 +2,19 @@
 
 # SBIG ST-7/8/9/10/2K cameras
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0d97", ATTR{idProduct}=="0001", \
-RUN+="/sbin/fxload -I /lib/firmware/sbigucam.hex -D $env{DEVNAME}"
+RUN+="/sbin/fxload -I /usr/lib/firmware/sbigucam.hex -D $env{DEVNAME}"
 
 # SBIG 4K camera
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0d97", ATTR{idProduct}=="0001", ATTRS{serial}=="3f980000.usb" \
-RUN+="/sbin/fxload -I /lib/firmware/sbigpcam.hex -D $env{DEVNAME}"
+RUN+="/sbin/fxload -I /usr/lib/firmware/sbigpcam.hex -D $env{DEVNAME}"
 
 # SBIG ST-L cameras
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0d97", ATTR{idProduct}=="0002", \
-RUN+="/sbin/fxload -I /lib/firmware/sbiglcam.hex -D $env{DEVNAME}"
+RUN+="/sbin/fxload -I /usr/lib/firmware/sbiglcam.hex -D $env{DEVNAME}"
 
 # SBIG ST-402/1603/3200/8300 cameras
 ACTION=="add", SUBSYSTEM=="usb", ATTR{idVendor}=="0d97", ATTR{idProduct}=="0003", \
-RUN+="/sbin/fxload -I /lib/firmware/sbigfcam.hex -D $env{DEVNAME} -t fx2"
+RUN+="/sbin/fxload -I /usr/lib/firmware/sbigfcam.hex -D $env{DEVNAME} -t fx2"
 
 # Make all SBIG Cameras accessible post enumeration
 SUBSYSTEM=="usb", ATTR{idVendor}=="0d97", MODE="0666"
