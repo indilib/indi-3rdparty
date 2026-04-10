@@ -120,7 +120,7 @@ EQMod::EQMod(): GI(this)
     DBG_COMM         = INDI::Logger::getInstance().addDebugLevel("Serial Port", "COMM");
     DBG_MOUNT        = INDI::Logger::getInstance().addDebugLevel("Verbose Mount", "MOUNT");
 
-    mount = new Skywatcher(this);
+    mount = std::make_unique<Skywatcher>(this);
 
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO | TELESCOPE_CAN_ABORT |
                            TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION
@@ -132,13 +132,13 @@ EQMod::EQMod(): GI(this)
     bzero(&syncdata2, sizeof(syncdata2));
 
 #ifdef WITH_ALIGN_GEEHALEL
-    align = new Align(this);
+    align = std::make_unique<Align>(this);
 #endif
 
-    simulator = new EQModSimulator(this);
+    simulator = std::make_unique<EQModSimulator>(this);
 
 #ifdef WITH_SCOPE_LIMITS
-    horizon = new HorizonLimits(this);
+    horizon = std::make_unique<HorizonLimits>(this);
 #endif
 
     /* initialize time */
@@ -157,13 +157,6 @@ EQMod::EQMod(): GI(this)
     // Others
     AutohomeState      = AUTO_HOME_IDLE;
     restartguidePPEC   = false;
-}
-
-EQMod::~EQMod()
-{
-    //dtor
-    delete mount;
-    mount = nullptr;
 }
 
 #if defined WITH_ALIGN || defined WITH_ALIGN_GEEHALEL
@@ -945,7 +938,7 @@ bool EQMod::ReadScopeStatus()
         {
             char CurrentRAString[64] = {0}, CurrentDEString[64] = {0},
                                        AlignedRAString[64] = {0}, AlignedDEString[64] = {0},
-                                               AZString[64] = {0}, ALString[64] = {0};
+                                           AZString[64] = {0}, ALString[64] = {0};
             fs_sexa(CurrentRAString, currentRA, 2, 3600);
             fs_sexa(CurrentDEString, currentDEC, 2, 3600);
             fs_sexa(AlignedRAString, alignedRA, 2, 3600);
@@ -2505,7 +2498,7 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
                 GuideNSNP.setState(IPS_IDLE);
                 GuideNSNP.apply();;
                 GuideWENP.setState(IPS_IDLE);
-                GuideWENP.apply();                
+                GuideWENP.apply();
                 LOG_WARN("Can not guide if not tracking.");
                 return true;
             }
