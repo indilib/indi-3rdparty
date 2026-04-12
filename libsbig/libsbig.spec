@@ -77,7 +77,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libsbig
-/lib/firmware/*
+/usr/lib/firmware/*
 /usr/lib/udev/rules.d/51-sbig-debian.rules
 
 

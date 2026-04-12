@@ -79,7 +79,7 @@ make DESTDIR=%{buildroot} install
 %{_libdir}/*
 %{_includedir}/libqhy
 /usr/lib/udev/rules.d/85-qhyccd.rules
-/lib/firmware/qhy
+/usr/lib/firmware/qhy
 
 
 %changelog

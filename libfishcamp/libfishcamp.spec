@@ -74,8 +74,8 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libfishcamp
-/lib/firmware/Guider_mono_rev16_intel.srec
-/lib/firmware/gdr_usb.hex
+/usr/lib/firmware/Guider_mono_rev16_intel.srec
+/usr/lib/firmware/gdr_usb.hex
 /usr/lib/udev/rules.d/99-fishcamp.rules
 
 %changelog

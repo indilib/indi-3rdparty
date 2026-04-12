@@ -1952,7 +1952,7 @@ void fcUsb_init(void)
         strncpy(driverSupportPath, "/usr/local/lib/indi", MAXRBUF);
     strncat(driverSupportPath, "/DriverSupport/fishcamp", MAXRBUF);
 #else
-    snprintf(driverSupportPath, MAXRBUF, "/lib/firmware");
+    snprintf(driverSupportPath, MAXRBUF, "/usr/lib/firmware");
 #endif
 
     gDoLogging    = true; // default to do logging
