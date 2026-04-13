@@ -78,7 +78,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libastroasis
-/lib/udev/rules.d/99-astroasis.rules
+/usr/lib/udev/rules.d/99-astroasis.rules
 
 %changelog
 * Mon Jul 27 2020 Jim Howard <jh.xsnrg+fedora@gmail.com> 1.8.7.git-1

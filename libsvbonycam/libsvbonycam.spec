@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libsvbonycam
-/lib/udev/rules.d/99-svbonycam.rules
+/usr/lib/udev/rules.d/99-svbonycam.rules
 
 
 %changelog

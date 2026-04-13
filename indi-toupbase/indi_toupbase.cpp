@@ -219,7 +219,7 @@ bool ToupBase::initProperties()
         /// Conversion Gain
         ///////////////////////////////////////////////////////////////////////////////////
         int nsp = 2;
-        m_ConversionGainSP[GAIN_LOW].fill("GAIN_LOW", "Low", ISS_OFF);
+        m_ConversionGainSP[GAIN_LOW].fill("GAIN_LOW", "Low", ISS_ON);
         m_ConversionGainSP[GAIN_HIGH].fill("GAIN_HIGH", "High", ISS_OFF);
         if (m_Instance->model->flag & CP(FLAG_CGHDR))
         {
@@ -673,69 +673,35 @@ void ToupBase::setupParams()
         LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
     }
 
-    // Set tail light status
-    int currentTailLightValue, configuredTailLightValue = 0;
-
+    // Read tail light status from camera and sync INDI switch
     if (m_SupportTailLight)
     {
+        int currentTailLightValue = 0;
         rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
-        if (FAILED(rc))
+        if (SUCCEEDED(rc))
+        {
+            m_TailLightSP.reset();
+            if (currentTailLightValue >= 0 && currentTailLightValue < static_cast<int>(m_TailLightSP.size()))
+                m_TailLightSP[currentTailLightValue].setState(ISS_ON);
+        }
+        else
         {
             LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
         }
-        configuredTailLightValue = m_TailLightSP.findOnSwitchIndex();
-        if (currentTailLightValue != configuredTailLightValue)
-        {
-            rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), configuredTailLightValue));
-            if (FAILED(rc))
-            {
-                m_TailLightSP.setState(IPS_ALERT);
-                LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
-                m_TailLightSP.apply();
-            }
-        }
     }
 
-    // Set tail light status
-    if (m_SupportTailLight)
-    {
-        int currentTailLightValue, configuredTailLightValue = 0;
-        rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
-        if (FAILED(rc))
-        {
-            LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
-        }
-        configuredTailLightValue = m_TailLightSP.findOnSwitchIndex();
-        if (currentTailLightValue != configuredTailLightValue)
-        {
-            rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), configuredTailLightValue));
-            if (FAILED(rc))
-            {
-                m_TailLightSP.setState(IPS_ALERT);
-                LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
-                m_TailLightSP.apply();
-            }
-        }
-    }
-
-    // Get CCD Controls values
-    int currentConversionGain, configuredConversionGain = 0;
-
+    // Read conversion gain from camera and sync INDI switch
+    int currentConversionGain = 0;
     rc = FP(get_Option(m_Handle, CP(OPTION_CG), &currentConversionGain));
-    if (FAILED(rc))
+    if (SUCCEEDED(rc))
+    {
+        m_ConversionGainSP.reset();
+        if (currentConversionGain >= 0 && currentConversionGain < static_cast<int>(m_ConversionGainSP.size()))
+            m_ConversionGainSP[currentConversionGain].setState(ISS_ON);
+    }
+    else
     {
         LOGF_ERROR("Failed to get camera gain conversion setting. %s", errorCodes(rc).c_str());
-    }
-    configuredConversionGain = m_ConversionGainSP.findOnSwitchIndex();
-    if (currentConversionGain != configuredConversionGain)
-    {
-        rc = FP(put_Option(m_Handle, CP(OPTION_CG), configuredConversionGain));
-        if (FAILED(rc))
-        {
-            m_ConversionGainSP.setState(IPS_ALERT);
-            LOGF_ERROR("Failed to set camera gain conversion setting. %s", errorCodes(rc).c_str());
-            m_ConversionGainSP.apply();
-        }
     }
 
     uint16_t nMax = 0, nDef = 0;

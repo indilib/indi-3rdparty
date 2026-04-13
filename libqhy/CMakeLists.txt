@@ -21,9 +21,14 @@ if (APPLE)
 
   set (QHY_FIRMWARE_INSTALL_DIR "/usr/local/lib/indi/DriverSupport/qhy/firmware" CACHE STRING "QHY firmware installation directory")
 
-  set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "mac_x64/libqhyccd.bin")
+  set(source_mac_dir "mac_x64")
+  if (CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    set(source_mac_dir "mac_arm64")
+  endif()
 
-  FIX_MACOS_LIBRARIES("libqhyccd" "mac_x64/libqhyccd.bin" "QHY")
+  set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libqhyccd.bin")
+
+  FIX_MACOS_LIBRARIES("libqhyccd" "${source_mac_dir}/libqhyccd.bin" "QHY")
 
 elseif (UNIX AND NOT WIN32)
 

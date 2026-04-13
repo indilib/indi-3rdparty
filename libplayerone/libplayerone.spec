@@ -80,7 +80,7 @@ find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} 
 make DESTDIR=%{buildroot} install
 
 %files
-/lib/udev/rules.d/99-player_one_astronomy.rules
+/usr/lib/udev/rules.d/99-player_one_astronomy.rules
 %{_libdir}/*
 %{_includedir}/libplayerone
 
