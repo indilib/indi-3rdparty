@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libogmacam
-/lib/udev/rules.d/99-ogmacam.rules
+/usr/lib/udev/rules.d/99-ogmacam.rules
 
 
 %changelog

@@ -80,13 +80,16 @@ find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} 
 make DESTDIR=%{buildroot} install
 
 %files
-/lib/udev/rules.d/99-player_one_astronomy.rules
+/usr/lib/udev/rules.d/99-player_one_astronomy.rules
 %{_libdir}/*
 %{_includedir}/libplayerone
 
 %license libplayerone/license.txt
 
 %changelog
+* Sat Jan 24 2026 Hiroshi Saito <hiro3110g@gmail.com>
+- update PlayerOneCamera SDK to v3.10.0
+- updatw PlayerOnePW SDK to 1.2.3
 * Sat Nov 15 2025 Hiroshi Saito <hiro3110g@gmail.com>
 - update PlayerOneCamera SDK to v3.9.1
 * Fri Sep 5 2025 Hiroshi Saito <hiro3110g@gmail.com>

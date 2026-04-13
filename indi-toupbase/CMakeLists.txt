@@ -8,13 +8,13 @@ include(CMakeCommon)
 
 set(
   UDEVRULES_INSTALL_DIR
-  "/lib/udev/rules.d"
+  "/usr/lib/udev/rules.d"
   CACHE STRING
   "Base directory for udev rules"
 )
 
 set(TOUPBASE_VERSION_MAJOR 2)
-set(TOUPBASE_VERSION_MINOR 4)
+set(TOUPBASE_VERSION_MINOR 6)
 
 if(PROJECT_IS_TOP_LEVEL)
   option(WITH_TOUPCAM "Install Toupcam Driver" On)

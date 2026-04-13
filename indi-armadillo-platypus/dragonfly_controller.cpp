@@ -89,6 +89,7 @@ bool DragonFly::initProperties()
     tty_set_generic_udp_format(1);
     tcpConnection->registerHandshake([&]()
     {
+        PortFD = tcpConnection->getPortFD();
         return echo();
     });
 
@@ -120,6 +121,21 @@ bool DragonFly::updateProperties()
     if (isConnected())
     {
         defineProperty(FirmwareVersionTP);
+
+        // If any relay has a non-zero saved pulse duration, rebuild the full Outputs
+        // property stack so that switches, Labels, and Pulse numbers appear in the
+        // correct order and [P] suffixes are applied.
+        bool anyPulse = false;
+        for (size_t i = 0; i < PulseDurationNP.size(); i++)
+        {
+            if (PulseDurationNP[i][0].getValue() > 0)
+            {
+                anyPulse = true;
+                break;
+            }
+        }
+        if (anyPulse)
+            rebuildOutputProperties();
 
         SetTimer(getPollingPeriod());
     }
@@ -185,12 +201,52 @@ bool DragonFly::ISNewText(const char * dev, const char * name, char * texts[], c
     if (dev && !strcmp(dev, getDeviceName()))
     {
         if (INDI::InputInterface::processText(dev, name, texts, names, n))
+        {
+            // If input labels changed, redefine the switch properties with the new labels
+            // so EKOS/clients immediately show the updated names.
+            if (DigitalInputLabelsTP.isNameMatch(name))
+            {
+                for (size_t i = 0; i < DigitalInputsSP.size() && i < DigitalInputLabelsTP.count(); i++)
+                {
+                    deleteProperty(DigitalInputsSP[i]);
+                    DigitalInputsSP[i].setLabel(DigitalInputLabelsTP[i].getText());
+                    defineProperty(DigitalInputsSP[i]);
+                }
+                // Re-append the labels property so it stays below the switch table in the UI
+                deleteProperty(DigitalInputLabelsTP);
+                defineProperty(DigitalInputLabelsTP);
+            }
             return true;
+        }
         if (INDI::OutputInterface::processText(dev, name, texts, names, n))
+        {
+            // If output labels changed, rebuild the full Outputs property stack so that
+            // the ordering is: relay switches → Labels text → Pulse numbers.
+            if (DigitalOutputLabelsTP.isNameMatch(name))
+                rebuildOutputProperties();
             return true;
+        }
     }
 
     return INDI::DefaultDevice::ISNewText(dev, name, texts, names, n);
+}
+
+////////////////////////////////////////////////////////////////////////////////////////
+///
+////////////////////////////////////////////////////////////////////////////////////////
+bool DragonFly::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if (dev && !strcmp(dev, getDeviceName()))
+    {
+        if (INDI::OutputInterface::processNumber(dev, name, values, names, n))
+        {
+            // Rebuild the full Outputs property stack so that the switch label [P] indicator
+            // and the ordering (switches → Labels → Pulse numbers) stay correct.
+            rebuildOutputProperties();
+            return true;
+        }
+    }
+    return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -228,8 +284,13 @@ void DragonFly::TimerHit()
     if (!isConnected())
         return;
 
-    UpdateDigitalInputs();
-    UpdateDigitalOutputs();
+    // Throttle polling: sensors every SENSOR_UPDATE_THRESHOLD ticks, relays every RELAY_UPDATE_THRESHOLD ticks.
+    // Both run on tick 0 (first call after connect), giving an immediate full update.
+    if (m_UpdateSensorCounter++ % SENSOR_UPDATE_THRESHOLD == 0)
+        UpdateDigitalInputs();
+
+    if (m_UpdateRelayCounter++ % RELAY_UPDATE_THRESHOLD == 0)
+        UpdateDigitalOutputs();
 
     SetTimer(getCurrentPollingPeriod());
 }
@@ -252,6 +313,7 @@ bool DragonFly::saveConfigItems(FILE *fp)
 ////////////////////////////////////////////////////////////////////////////////////////
 bool DragonFly::UpdateDigitalInputs()
 {
+    int failCount = 0;
     for (uint8_t i = 0; i < 8; i++)
     {
         auto oldState = DigitalInputsSP[i].findOnSwitchIndex();
@@ -259,17 +321,25 @@ bool DragonFly::UpdateDigitalInputs()
         int32_t res = 0;
         snprintf(cmd, DRIVER_LEN, "!relio snanrd 0 %d#", i);
         if (!sendCommand(cmd, res))
-            return false;
-        if (oldState != res)
+        {
+            // Log the individual failure but continue polling the remaining channels.
+            // A single dropped UDP packet should not suppress all further updates.
+            LOGF_DEBUG("Failed to read sensor %d, continuing.", i);
+            failCount++;
+            continue;
+        }
+        // Sensor returns analog value 0-1023; threshold to digital ON (1) or OFF (0)
+        int newState = (res > SENSOR_THRESHOLD) ? 1 : 0;
+        if (oldState != newState)
         {
             DigitalInputsSP[i].reset();
-            DigitalInputsSP[i][res].setState(ISS_ON);
+            DigitalInputsSP[i][newState].setState(ISS_ON);
             DigitalInputsSP[i].setState(IPS_OK);
             DigitalInputsSP[i].apply();
         }
     }
 
-    return true;
+    return failCount == 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -285,20 +355,28 @@ bool DragonFly::UpdateAnalogInputs()
 ////////////////////////////////////////////////////////////////////////////////////////
 bool DragonFly::UpdateDigitalOutputs()
 {
+    int failCount = 0;
     for (uint8_t i = 0; i < 8; i++)
     {
         char cmd[DRIVER_LEN] = {0};
         int32_t res = 0;
         snprintf(cmd, DRIVER_LEN, "!relio rldgrd 0 %d#", i);
+        // rldgrd returns 1 = relay ON, 0 = relay OFF
         if (!sendCommand(cmd, res))
-            return false;
+        {
+            // Log the individual failure but continue polling the remaining channels.
+            // A single dropped UDP packet should not suppress all further updates.
+            LOGF_DEBUG("Failed to read relay %d, continuing.", i);
+            failCount++;
+            continue;
+        }
         DigitalOutputsSP[i][INDI::OutputInterface::Off].setState(res == 1 ? ISS_OFF : ISS_ON);
         DigitalOutputsSP[i][INDI::OutputInterface::On].setState(res == 1 ? ISS_ON : ISS_OFF);
         DigitalOutputsSP[i].setState(IPS_OK);
         DigitalOutputsSP[i].apply();
     }
 
-    return true;
+    return failCount == 0;
 }
 
 ////////////////////////////////////////////////////////////////////////////////////////
@@ -320,6 +398,36 @@ bool DragonFly::CommandOutput(uint32_t index, OutputState command)
         return res == enabled;
 
     return false;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+/// Rebuild Outputs Tab
+/////////////////////////////////////////////////////////////////////////////
+void DragonFly::rebuildOutputProperties()
+{
+    // Tear down the full Outputs property stack in reverse order
+    for (size_t i = 0; i < PulseDurationNP.size(); i++)
+        deleteProperty(PulseDurationNP[i]);
+    deleteProperty(DigitalOutputLabelsTP);
+    for (size_t i = 0; i < DigitalOutputsSP.size(); i++)
+        deleteProperty(DigitalOutputsSP[i]);
+
+    // Rebuild switches with [P] suffix where pulse duration > 0
+    for (size_t i = 0; i < DigitalOutputsSP.size() && i < DigitalOutputLabelsTP.count(); i++)
+    {
+        std::string label = DigitalOutputLabelsTP[i].getText();
+        if (i < PulseDurationNP.size() && PulseDurationNP[i][0].getValue() > 0)
+            label += " [P]";
+        DigitalOutputsSP[i].setLabel(label.c_str());
+        defineProperty(DigitalOutputsSP[i]);
+    }
+
+    // Labels text below the switch table
+    defineProperty(DigitalOutputLabelsTP);
+
+    // Pulse number controls at the bottom
+    for (size_t i = 0; i < PulseDurationNP.size(); i++)
+        defineProperty(PulseDurationNP[i]);
 }
 
 /////////////////////////////////////////////////////////////////////////////

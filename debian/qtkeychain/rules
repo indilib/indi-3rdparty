@@ -1,15 +1,17 @@
 #!/usr/bin/make -f
-# -*- makefile -*-
-# Uncomment this to turn on verbose mode.
-#export DH_VERBOSE=1
 
-export DEB_BUILD_MAINT_OPTIONS=hardening=+all
-export DEB_CXXFLAGS_MAINT_APPEND = -fvisibility=hidden -fvisibility-inlines-hidden
-DPKG_EXPORT_BUILDFLAGS = 1
-include /usr/share/dpkg/buildflags.mk
+export DEB_BUILD_OPTIONS = parallel=$(shell nproc)
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND = -Wall -fno-strict-aliasing -std=gnu11 -fPIC
+export DEB_CXXFLAGS_MAINT_APPEND = -Wall -fno-strict-aliasing -fPIC
 
 %:
-	dh $@ --with kde --with pkgkde_symbolshelper
+	dh $@ --buildsystem=cmake --sourcedirectory=qtkeychain
 
-override_dh_install:
-	dh_install --list-missing
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo
+
+override_dh_shlibdeps:
+	dh_shlibdeps -- --ignore-missing-info

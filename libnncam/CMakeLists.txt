@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libnncam)
 
-set (LIBNNCAM_VERSION "59.30281")
+set (LIBNNCAM_VERSION "59.31026")
 set (LIBNNCAM_SOVERSION "59")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
@@ -36,7 +36,7 @@ elseif (UNIX AND NOT WIN32)
 
   # Install udev rules
   if (INDI_INSTALL_UDEV_RULES)
-    set (UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    set (UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
     install (FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-nncam.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
   endif()
 

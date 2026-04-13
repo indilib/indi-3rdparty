@@ -7,7 +7,7 @@ include(GNUInstallDirs)
 include(InstallImported)
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 
 ADD_DEFINITIONS(-Wall -O2 -D__LIBUSB__)
 

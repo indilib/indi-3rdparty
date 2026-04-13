@@ -359,6 +359,13 @@ ASIBase::ASIBase()
     mTimerNS.setSingleShot(true);
 }
 
+ASIBase::ASIBase(const ASI_CAMERA_INFO &camInfo, const std::string &serialNumber)
+    : ASIBase()
+{
+    mCameraInfo = camInfo;
+    mSerialNumber = serialNumber;
+}
+
 ASIBase::~ASIBase()
 {
     if (isConnected())
@@ -381,8 +388,12 @@ bool ASIBase::initProperties()
 {
     INDI::CCD::initProperties();
 
-    // Add Debug Control.
+    // Add Debug and Nickname Controls from DefaultDevice.
     addDebugControl();
+    if (!mSerialNumber.empty()) {
+        // asi_single_ccd does not set serial number
+        addNicknameControl();
+    }
 
     CoolerSP[0].fill("COOLER_ON",  "ON",  ISS_OFF);
     CoolerSP[1].fill("COOLER_OFF", "OFF", ISS_ON);
@@ -421,9 +432,6 @@ bool ASIBase::initProperties()
 
     SerialNumberTP[0].fill("SN", "SN", mSerialNumber);
     SerialNumberTP.fill(getDeviceName(), "Serial Number", "Serial Number", INFO_TAB, IP_RO, 60, IPS_IDLE);
-
-    NicknameTP[0].fill("nickname", "nickname", mNickname);
-    NicknameTP.fill(getDeviceName(), "NICKNAME", "Nickname", INFO_TAB, IP_RW, 60, IPS_IDLE);
 
     int maxBin = 1;
 
@@ -548,7 +556,6 @@ bool ASIBase::updateProperties()
         if (!mSerialNumber.empty())
         {
             defineProperty(SerialNumberTP);
-            defineProperty(NicknameTP);
         }
         defineProperty(USBResetSP);
     }
@@ -581,7 +588,6 @@ bool ASIBase::updateProperties()
         if (!mSerialNumber.empty())
         {
             deleteProperty(SerialNumberTP);
-            deleteProperty(NicknameTP);
         }
         deleteProperty(ADCDepthNP);
         deleteProperty(USBResetSP);
@@ -995,7 +1001,8 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         {
             updateProperty(USBResetSP, states, names, n, [this, names]()
             {
-                LOGF_INFO("USB reset on camera exposure timeout is %s.", USBResetSP[INDI_ENABLED].isNameMatch(names[0]) ? "enabled" : "disabled");
+                LOGF_INFO("USB reset on camera exposure timeout is %s.",
+                          USBResetSP[INDI_ENABLED].isNameMatch(names[0]) ? "enabled" : "disabled");
                 return true;
             }, true);
             return true;
@@ -1003,6 +1010,13 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
+}
+
+void ASIBase::nicknameSet(const char *nickname)
+{
+    if (!mSerialNumber.empty()) {
+        saveNicknameId(nickname, mSerialNumber.c_str());
+    }
 }
 
 bool ASIBase::setVideoFormat(uint8_t index)
@@ -1148,16 +1162,17 @@ bool ASIBase::StartStreaming()
 
 bool ASIBase::StopStreaming()
 {
-    // First stop video capture
+    // First stop the worker thread gracefully
+    mWorker.quit();
+
+    // Then stop video capture (cleanup/safety net - worker should have already called this)
     ASI_ERROR_CODE ret = ASIStopVideoCapture(mCameraInfo.CameraID);
     if (ret != ASI_SUCCESS)
     {
         LOGF_ERROR("Failed to stop video capture (%s).", Helpers::toString(ret));
-        return false;
+        // Don't return false - worker thread already stopped successfully
     }
 
-    // Then stop the worker thread
-    mWorker.quit();
     return true;
 }
 

@@ -76,7 +76,7 @@ make DESTDIR=%{buildroot} install
 %files
 %{_libdir}/*
 %{_includedir}/libmallincam
-/lib/udev/rules.d/99-mallincam.rules
+/usr/lib/udev/rules.d/99-mallincam.rules
 
 
 %changelog

@@ -15,7 +15,7 @@ IF(APPLE)
 set(CONF_DIR "/usr/local/lib/indi/DriverSupport/" CACHE STRING "Base configuration directory")
 ELSE(APPLE)
 set(CONF_DIR "/etc" CACHE STRING "Base configuration directory")
-set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 ENDIF()
 
 # IMPORTANT: When update libapogee code to upstream. Do not forget to save apgHelper.cpp as the configuration file

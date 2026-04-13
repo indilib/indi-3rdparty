@@ -8,7 +8,7 @@ include(GNUInstallDirs)
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 SET(CMAKE_CXX_STANDARD 17)
-SET(RULES_INSTALL_DIR "/lib/udev/rules.d/")
+SET(RULES_INSTALL_DIR "/usr/lib/udev/rules.d/")
 
 find_package(INDI REQUIRED)
 

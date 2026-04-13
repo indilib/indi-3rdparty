@@ -99,7 +99,7 @@ install(TARGETS indi_nightscape_ccd RUNTIME DESTINATION bin )
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_nightscape.xml DESTINATION ${INDI_DATA_DIR})
 
 if (${CMAKE_SYSTEM_NAME} MATCHES "Linux")
-        set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+        set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
         if (INDI_INSTALL_UDEV_RULES)
                 install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-nightscape.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
         endif ()

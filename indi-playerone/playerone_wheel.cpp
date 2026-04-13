@@ -79,6 +79,13 @@ static class Loader
                     continue;
                 }
 
+                // Skip devices with invalid/error names reported by the SDK
+                if (strcasestr(info.Name, "error") != nullptr)
+                {
+                    IDLog("ERROR: PlayerOne EFW %d has invalid name '%s', skipping.", i + 1, info.Name);
+                    continue;
+                }
+
 #ifndef WAIT_AFTER_OPEN_DEVICE
                 PWState state;
                 result = POAGetPWState(id, &state);

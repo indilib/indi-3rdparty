@@ -20,8 +20,8 @@ IF(APPLE)
   ## This one is needed for Craft
   include_directories("${CMAKE_INSTALL_PREFIX}/include")
 ELSE(APPLE)
-  set(FIRMWARE_INSTALL_DIR "/lib/firmware" CACHE STRING "libfishcamp firmware installation dir")
-  set(UDEVRULES_INSTALL_DIR "/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+  set(FIRMWARE_INSTALL_DIR "/usr/lib/firmware" CACHE STRING "libfishcamp firmware installation dir")
+  set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
 ENDIF(APPLE)
 #***********************************************************
 find_package(USB1 REQUIRED)

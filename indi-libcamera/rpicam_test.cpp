@@ -21,7 +21,7 @@ class RPiCamTestApp : public RPiCamApp
 
         StillOptions *GetOptions() const
         {
-            return static_cast<StillOptions *>(options_.get());
+            return static_cast<StillOptions *>(RPiCamApp::GetOptions());
         }
 };
 

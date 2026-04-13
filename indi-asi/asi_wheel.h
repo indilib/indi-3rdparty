@@ -36,6 +36,15 @@ class ASIWHEEL : public INDI::FilterWheel
         ASIWHEEL(const EFW_INFO &info, const char *name);
         ~ASIWHEEL();
 
+        /**
+         * @brief Returns the EFW_INFO structure for this filter wheel.
+         * @return The EFW_INFO structure.
+         */
+        const EFW_INFO &getEFWInfo() const
+        {
+            return mEFWInfo;
+        }
+
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
     protected:
@@ -67,4 +76,5 @@ class ASIWHEEL : public INDI::FilterWheel
 
     private:
         int fw_id = -1;
+        EFW_INFO mEFWInfo;
 };

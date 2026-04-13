@@ -29,7 +29,7 @@
 
 PlayerOneCCDHotPlugHandler::PlayerOneCCDHotPlugHandler()
 {
-    LOG_DEBUG("PlayerOneCCDHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: PlayerOneCCDHotPlugHandler initialized.");
 }
 
 PlayerOneCCDHotPlugHandler::~PlayerOneCCDHotPlugHandler()
@@ -43,7 +43,7 @@ PlayerOneCCDHotPlugHandler::~PlayerOneCCDHotPlugHandler()
     }
     m_internalCameras.clear();
     m_managedDevicesView.clear();
-    LOG_DEBUG("PlayerOneCCDHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: PlayerOneCCDHotPlugHandler shut down.");
 }
 
 std::vector<std::string> PlayerOneCCDHotPlugHandler::discoverConnectedDeviceIdentifiers()
@@ -52,7 +52,7 @@ std::vector<std::string> PlayerOneCCDHotPlugHandler::discoverConnectedDeviceIden
     int numCameras = POAGetCameraCount();
     if (numCameras < 0)
     {
-        LOG_ERROR("POAGetCameraCount returned an error.");
+        LOG_ERROR("HotPlugManager: POAGetCameraCount returned an error.");
         return identifiers;
     }
 
@@ -62,11 +62,11 @@ std::vector<std::string> PlayerOneCCDHotPlugHandler::discoverConnectedDeviceIden
         if (POAGetCameraProperties(i, &cameraInfo) == POA_OK)
         {
             identifiers.push_back(std::to_string(cameraInfo.cameraID));
-            LOGF_DEBUG("Discovered PlayerOne camera with CameraID: %d", cameraInfo.cameraID);
+            LOGF_DEBUG("HotPlugManager: Discovered PlayerOne camera with CameraID: %d", cameraInfo.cameraID);
         }
         else
         {
-            LOGF_WARN("Failed to get camera property for index %d.", i);
+            LOGF_WARN("HotPlugManager: Failed to get camera property for index %d.", i);
         }
     }
     return identifiers;
@@ -81,7 +81,7 @@ std::shared_ptr<INDI::DefaultDevice> PlayerOneCCDHotPlugHandler::createDevice(co
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("PlayerOneCCDHotPlugHandler", "Invalid identifier format for CameraID: %s. Error: %s", identifier.c_str(),
+        LOGF_ERROR("HotPlugManager: Invalid identifier format for CameraID: %s. Error: %s", identifier.c_str(),
                    e.what());
         return nullptr;
     }
@@ -105,7 +105,7 @@ std::shared_ptr<INDI::DefaultDevice> PlayerOneCCDHotPlugHandler::createDevice(co
 
     if (!foundCamera)
     {
-        LOGF_ERROR("Failed to get camera info for CameraID: %d", cameraID);
+        LOGF_ERROR("HotPlugManager: Failed to get camera info for CameraID: %d", cameraID);
         return nullptr;
     }
 
@@ -114,7 +114,7 @@ std::shared_ptr<INDI::DefaultDevice> PlayerOneCCDHotPlugHandler::createDevice(co
     {
         if (device->getCameraInfo().cameraID == cameraID)
         {
-            LOGF_DEBUG("Device with CameraID %d already managed, not creating new.", cameraID);
+            LOGF_DEBUG("HotPlugManager: Device with CameraID %d already managed, not creating new.", cameraID);
             return device;
         }
     }
@@ -149,7 +149,7 @@ std::shared_ptr<INDI::DefaultDevice> PlayerOneCCDHotPlugHandler::createDevice(co
     POACCD *playeroneCcd = new POACCD(cameraInfo, uniqueName, serialNumber);
     std::shared_ptr<POACCD> newDevice = std::shared_ptr<POACCD>(playeroneCcd);
     m_internalCameras.push_back(newDevice);
-    LOGF_INFO("Created new PlayerOneCCD device: %s (CameraID: %d)", uniqueName.c_str(), cameraID);
+    LOGF_INFO("HotPlugManager: Created new PlayerOneCCD device: %s (CameraID: %d)", uniqueName.c_str(), cameraID);
     return newDevice;
 }
 
@@ -158,7 +158,7 @@ void PlayerOneCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevi
     std::shared_ptr<POACCD> playeroneCcd = std::dynamic_pointer_cast<POACCD>(device);
     if (!playeroneCcd)
     {
-        LOG_ERROR("Attempted to destroy a non-PlayerOneCCD device with PlayerOneCCDHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-PlayerOneCCD device with PlayerOneCCDHotPlugHandler.");
         return;
     }
 
@@ -181,17 +181,17 @@ void PlayerOneCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevi
     if (it != m_internalCameras.end())
     {
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("Destroyed PlayerOneCCD device: %s (CameraID: %d)", playeroneCcd->getDeviceName(),
+        LOGF_INFO("HotPlugManager: Destroyed PlayerOneCCD device: %s (CameraID: %d)", playeroneCcd->getDeviceName(),
                   playeroneCcd->getCameraInfo().cameraID);
     }
     else
     {
-        LOGF_WARN("Attempted to destroy PlayerOneCCD device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy PlayerOneCCD device %s not found in managed list.",
                   playeroneCcd->getDeviceName());
     }
 }
 
-const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>>& PlayerOneCCDHotPlugHandler::getManagedDevices() const
+const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &PlayerOneCCDHotPlugHandler::getManagedDevices() const
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
@@ -211,7 +211,7 @@ bool PlayerOneCCDHotPlugHandler::getCameraInfoByCameraID(const std::string& came
     }
     catch (const std::exception& e)
     {
-        LOGF_ERROR("PlayerOneCCDHotPlugHandler", "Invalid CameraID format: %s. Error: %s", cameraIDStr.c_str(), e.what());
+        LOGF_ERROR("HotPlugManager: Invalid CameraID format: %s. Error: %s", cameraIDStr.c_str(), e.what());
         return false;
     }
 

@@ -32,7 +32,7 @@
 
 QHYCCDHotPlugHandler::QHYCCDHotPlugHandler()
 {
-    LOG_DEBUG("QHYCCDHotPlugHandler initialized.");
+    LOG_DEBUG("HotPlugManager: QHYCCDHotPlugHandler initialized.");
     // Initialize QHYCCD SDK resources if not already done
     // This should ideally be handled globally or checked for success
     InitQHYCCDResource();
@@ -48,7 +48,7 @@ QHYCCDHotPlugHandler::~QHYCCDHotPlugHandler()
     m_internalCameras.clear();
     m_managedDevicesView.clear();
     m_connectedDeviceIDs.clear();
-    LOG_DEBUG("QHYCCDHotPlugHandler shut down.");
+    LOG_DEBUG("HotPlugManager: QHYCCDHotPlugHandler shut down.");
     // Release QHYCCD SDK resources if this is the last handler
     // This should ideally be handled globally or reference counted
     ReleaseQHYCCDResource();
@@ -62,7 +62,7 @@ std::vector<std::string> QHYCCDHotPlugHandler::discoverConnectedDeviceIdentifier
     uint32_t numCameras = ScanQHYCCD();
     if (numCameras == 0)
     {
-        LOG_DEBUG("No QHYCCD cameras found.");
+        LOG_DEBUG("HotPlugManager: No QHYCCD cameras found.");
         m_connectedDeviceIDs.clear();
         return currentIdentifiers;
     }
@@ -91,7 +91,7 @@ std::vector<std::string> QHYCCDHotPlugHandler::discoverConnectedDeviceIdentifier
             {
                 char model[64];
                 GetQHYCCDModel(id, model);
-                LOGF_DEBUG("QHYCCD camera newly connected: ID: %s, Model: %s", cameraID.c_str(), model);
+                LOGF_DEBUG("HotPlugManager: QHYCCD camera newly connected: ID: %s, Model: %s", cameraID.c_str(), model);
             }
         }
     }
@@ -101,7 +101,7 @@ std::vector<std::string> QHYCCDHotPlugHandler::discoverConnectedDeviceIdentifier
     {
         if (newlyDetectedIDs.find(existingID) == newlyDetectedIDs.end())
         {
-            LOGF_DEBUG("QHYCCD camera disconnected: %s", existingID.c_str());
+            LOGF_DEBUG("HotPlugManager: QHYCCD camera disconnected: %s", existingID.c_str());
         }
     }
 
@@ -116,7 +116,7 @@ std::shared_ptr<INDI::DefaultDevice> QHYCCDHotPlugHandler::createDevice(const st
     {
         if (device->getCameraID() == identifier)
         {
-            LOGF_DEBUG("Device with identifier %s already managed, not creating new.", identifier.c_str());
+            LOGF_DEBUG("HotPlugManager: Device with identifier %s already managed, not creating new.", identifier.c_str());
             return device;
         }
     }
@@ -125,19 +125,24 @@ std::shared_ptr<INDI::DefaultDevice> QHYCCDHotPlugHandler::createDevice(const st
     char model[64];
     if (GetQHYCCDModel(const_cast<char * >(identifier.c_str()), model) != QHYCCD_SUCCESS)
     {
-        LOGF_ERROR("Could not get model name for QHYCCD camera with ID: %s", identifier.c_str());
+        LOGF_ERROR("HotPlugManager: Could not get model name for QHYCCD camera with ID: %s", identifier.c_str());
         return nullptr;
     }
     std::string baseName = model;
     std::string uniqueName = baseName;
-    int nameIndex = 0;
+    int nameIndex = 2;
     bool nameExists = true;
     while (nameExists)
     {
         nameExists = false;
         for (const auto& device : m_internalCameras)
         {
-            if (device->getDeviceName() == uniqueName)
+            // getDeviceName() returns "QHY CCD <model>", so strip the prefix before comparing
+            std::string existingLabel = device->getDeviceName();
+            const std::string prefix = "QHY CCD ";
+            if (existingLabel.rfind(prefix, 0) == 0)
+                existingLabel = existingLabel.substr(prefix.length());
+            if (existingLabel == uniqueName)
             {
                 nameExists = true;
                 break;
@@ -145,15 +150,15 @@ std::shared_ptr<INDI::DefaultDevice> QHYCCDHotPlugHandler::createDevice(const st
         }
         if (nameExists)
         {
-            nameIndex++;
             uniqueName = baseName + " " + std::to_string(nameIndex);
+            nameIndex++;
         }
     }
 
     QHYCCD *qhyCcd = new QHYCCD(uniqueName.c_str(), identifier.c_str());
     std::shared_ptr<QHYCCD> newDevice = std::shared_ptr<QHYCCD>(qhyCcd);
     m_internalCameras.push_back(newDevice);
-    LOGF_INFO("Created new QHYCCD device: %s (ID: %s)", uniqueName.c_str(), identifier.c_str());
+    LOGF_INFO("HotPlugManager: Created new QHYCCD device: %s (ID: %s)", uniqueName.c_str(), identifier.c_str());
     return newDevice;
 }
 
@@ -162,7 +167,7 @@ void QHYCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevice> de
     std::shared_ptr<QHYCCD> qhyCcd = std::dynamic_pointer_cast<QHYCCD>(device);
     if (!qhyCcd)
     {
-        LOG_ERROR("Attempted to destroy a non-QHYCCD device with QHYCCDHotPlugHandler.");
+        LOG_ERROR("HotPlugManager: Attempted to destroy a non-QHYCCD device with QHYCCDHotPlugHandler.");
         return;
     }
 
@@ -186,16 +191,16 @@ void QHYCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevice> de
     {
         std::string deviceID = qhyCcd->getCameraID();
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("Destroyed QHYCCD device: %s (ID: %s)", qhyCcd->getDeviceName(), deviceID.c_str());
+        LOGF_INFO("HotPlugManager: Destroyed QHYCCD device: %s (ID: %s)", qhyCcd->getDeviceName(), deviceID.c_str());
     }
     else
     {
-        LOGF_WARN("Attempted to destroy QHYCCD device %s not found in managed list.",
+        LOGF_WARN("HotPlugManager: Attempted to destroy QHYCCD device %s not found in managed list.",
                   qhyCcd->getDeviceName());
     }
 }
 
-const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>>& QHYCCDHotPlugHandler::getManagedDevices() const
+const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &QHYCCDHotPlugHandler::getManagedDevices() const
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();

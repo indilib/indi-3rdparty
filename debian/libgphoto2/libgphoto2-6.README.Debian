@@ -1,7 +1,7 @@
 Using libgphoto2 as a normal user
 ---------------------------------
 
-This version of libgphoto2-installs udev files in /lib/udev/rules.d/ to
+This version of libgphoto2-installs udev files in /usr/lib/udev/rules.d/ to
 allow camera access to all members of group 'plugdev'.
 
 This means the only configuration is to add authorized users to the 'plugdev'
