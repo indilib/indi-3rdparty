@@ -7,5 +7,5 @@
 
 # FTDI library, use user-space functions from 'libftdi1' to access the USB device FT232 on the Lacerta MGen
 ACTION=="add",    SUBSYSTEM=="usb", ATTRS{serial}=="MGS05443", SYMLINK+="usb.mgen"
-ACTION=="add",    SUBSYSTEM=="tty", ATTRS{serial}=="MGS05443", WAIT_FOR="/sys/bus/usb/drivers/ftdi_sio/unbind", RUN+="/bin/sh -c 'basename $(readlink -f /sys/$DEVPATH/../../..)> /tmp/udevvars'", RUN+="/bin/sh -c 'basename $(readlink -f /sys/$DEVPATH/../../..) > /sys/bus/usb/drivers/ftdi_sio/unbind'"
+ACTION=="add",    SUBSYSTEM=="tty", ATTRS{serial}=="MGS05443", RUN+="/bin/sh -c 'basename $(readlink -f /sys/$DEVPATH/../../..)> /tmp/udevvars'", RUN+="/bin/sh -c 'basename $(readlink -f /sys/$DEVPATH/../../..) > /sys/bus/usb/drivers/ftdi_sio/unbind'"
 
