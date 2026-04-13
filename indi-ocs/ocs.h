@@ -24,6 +24,7 @@
 #include "connectionplugins/connectionserial.h"
 #include "indipropertyswitch.h"
 #include "inditimer.h"
+#include <atomic>
 
 #define RB_MAX_LEN 64
 #define CMD_MAX_LEN 32
@@ -465,7 +466,7 @@ private:
     INDI::Timer SlowTimer;
 
     // Command sequence enforcement
-    bool waitingForResponse = false;
+    std::atomic<bool>waitingForResponse {false};
 
     // Roof/Shutter control
     //---------------------
