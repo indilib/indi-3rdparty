@@ -1,2 +1,3 @@
 # Astroasis devices
 SUBSYSTEMS=="usb", ATTR{idVendor}=="338f", MODE="0666"
+KERNEL=="hidraw*", ATTRS{idVendor}=="338f", MODE="0666"
