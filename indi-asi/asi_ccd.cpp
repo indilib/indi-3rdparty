@@ -26,7 +26,6 @@
 
 #include <hotplugmanager.h>
 #include "asi_ccd_hotplug_handler.h"
-#include <map>
 //#define USE_SIMULATION
 
 #ifdef USE_SIMULATION
@@ -58,122 +57,6 @@ static class Loader
         }
 } loader;
 
-namespace
-{
-
-// trim from start (in place)
-static inline void ltrim(std::string &s)
-{
-    s.erase(s.begin(), std::find_if(s.begin(), s.end(), [](unsigned char ch)
-    {
-        return !std::isspace(ch);
-    }));
-}
-
-// trim from end (in place)
-static inline void rtrim(std::string &s)
-{
-    s.erase(std::find_if(s.rbegin(), s.rend(), [](unsigned char ch)
-    {
-        return !std::isspace(ch);
-    }).base(), s.end());
-}
-
-// trim from both ends (in place)
-static inline void trim(std::string &s)
-{
-    ltrim(s);
-    rtrim(s);
-}
-
-std::string GetHomeDirectory()
-{
-    // Check first the HOME environmental variable
-    const char *HomeDir = getenv("HOME");
-
-    // ...otherwise get the home directory of the current user.
-    if (!HomeDir)
-    {
-        HomeDir = getpwuid(getuid())->pw_dir;
-    }
-    return (HomeDir ? std::string(HomeDir) : "");
-}
-
-}  // namespace
-
-// Nicknames are stored in an xml-format NICKNAME_FILE in a format like the below.
-// Nicknames are assoicated with the serial number of the camera, and are entered/changed
-// with NicknameTP. Since the device-name can't be changed once the driver is running,
-// changes to nicknames can only take effect at the next INDI startup.
-// <Nicknames>
-//  <Nickname SerialNumber="serialNumber1">nickname1</Nickname>
-//  <Nickname SerialNumber="serialNumber2">nickname2</Nickname>
-//  <Nickname SerialNumber="serialNumber3">nickname3</Nickname>
-// </Nicknames>
-
-#define ROOTNODE "Nicknames"
-#define ENTRYNODE "Nickname"
-#define ATTRIBUTE "SerialNumber"
-
-void ASICCD::loadZWONicknames()
-{
-    const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
-    mZWONicknames.clear();
-
-    LilXML *xmlHandle = newLilXML();
-    XMLEle *rootXmlNode = nullptr;
-    char errorMessage[512] = {0};
-    FILE *file = fopen(filename.c_str(), "r");
-    if (file)
-    {
-        rootXmlNode = readXMLFile(file, xmlHandle, errorMessage);
-        fclose(file);
-    }
-    delLilXML(xmlHandle);
-
-    if (rootXmlNode == nullptr)
-        return;
-
-    XMLEle *currentXmlNode = nextXMLEle(rootXmlNode, 1);
-    while (currentXmlNode)
-    {
-        const char *id = findXMLAttValu(currentXmlNode, ATTRIBUTE);
-        if (id != nullptr)
-        {
-            std::string name = pcdataXMLEle(currentXmlNode);
-            if (!name.empty())
-                trim(name);
-            if (!name.empty())
-                mZWONicknames[id] = name;
-        }
-        currentXmlNode = nextXMLEle(rootXmlNode, 0);
-    }
-
-    delXMLEle(rootXmlNode);
-}
-
-void ASICCD::saveZWONicknames()
-{
-    const std::string filename = GetHomeDirectory() + NICKNAME_FILE;
-    XMLEle *rootXmlNode = nullptr;
-    XMLEle *oneElement = nullptr;
-
-    FILE *file = fopen(filename.c_str(), "w");
-
-    rootXmlNode = addXMLEle(nullptr, ROOTNODE);
-
-    for (const auto &kv : mZWONicknames)
-    {
-        oneElement = addXMLEle(rootXmlNode, ENTRYNODE);
-        addXMLAtt(oneElement, ATTRIBUTE, kv.first.c_str());
-        editXMLEle(oneElement, kv.second.c_str());
-    }
-
-    prXMLEle(file, rootXmlNode, 0);
-    fclose(file);
-    delXMLEle(rootXmlNode);
-}
-
 bool ASICCD::ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n)
 {
     return INDI::CCD::ISNewText(dev, name, texts, names, n);
@@ -186,18 +69,10 @@ ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
                const std::string &serialNumber)
     : ASIBase(camInfo, serialNumber)
 {
-    auto name = cameraName;
+    setDeviceName(cameraName.c_str());
 
-    loadZWONicknames();
     if (!mSerialNumber.empty())
-    {
-        auto nickname = mZWONicknames[mSerialNumber];
-        if (!nickname.empty())
-        {
-            name = nickname;
-        }
-    }
+        setDeviceNicknameFromId(mSerialNumber.c_str());
 
-    setDeviceNickname(name.c_str());
-    LOGF_INFO("Using camera name [%s] for serial number %s.", getDeviceName(), mSerialNumber.c_str());
+    mCameraName = getDeviceName();
 }

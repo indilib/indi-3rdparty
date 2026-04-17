@@ -50,13 +50,4 @@ class ASICCD : public ASIBase
 
     protected:
         virtual bool ISNewText(const char *dev, const char *name, char *texts[], char *names[], int n) override;
-
-    private:
-        void loadZWONicknames();
-        void saveZWONicknames();
-        const std::string NICKNAME_FILE = "/.indi/ZWONicknames.xml";
-        // This is the map for ZWONicknames.xml for legacy compatibility. On
-        // load, all nicknames in that file will be migrated to the generic
-        // nickname support in DefaultDevice.
-        std::map<std::string, std::string> mZWONicknames;
 };
