@@ -2003,13 +2003,51 @@ void GPhotoCCD::streamLiveView()
         //            continue;
         //        }
 
+        // Panasonic Lumix DC-G9 fix 
+        uint8_t *lastSOI = nullptr;
+        unsigned long lastSOIPosition = 0;
+
+        // Lumix DC-G9 sends 17 bytes of erroneous data before the actual JPEG image. 
+        // It also sends a thumbnail image that has its own SOI. We need to find
+        // the (second) SOI of the actual liveview image.
+        // Look for last occurrance of 0xFF 0xD8 (start of image)
+        for (unsigned long i = 0; i < previewSize - 1; ++i)
+        {
+            if (inBuffer[i] == 0xFF && inBuffer[i+1] == 0xD8)
+            {
+                lastSOI = &inBuffer[i];
+                lastSOIPosition = i;
+            }
+        }
+
+        if (lastSOI == nullptr)
+        {
+            LOG_ERROR("No JPEG SOI marker found. Frame discarded.");
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            continue;
+        }
+
+        // Only use part of image data that follows last SOI
+        uint8_t *cleanBuffer = lastSOI;
+        unsigned long cleanSize = previewSize - lastSOIPosition;
+
+        // Sanity check: JPEG image must end with 0xFF 0xD9 (EOI)
+        if (cleanBuffer[cleanSize-2] != 0xFF || cleanBuffer[cleanSize-1] != 0xD9)
+        {
+             // If no EOI is found, continue with a warning
+             LOG_DEBUG("Warning: JPEG-endmarker missing in cleaned-up buffer.");
+        }
+        // Panasonic Lumix DC-G9 fix end
+
         uint8_t * ccdBuffer      = PrimaryCCD.getFrameBuffer();
         size_t size             = 0;
         int w = 0, h = 0, naxis = 0;
 
         // Read jpeg from memory
         std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-        rc = read_jpeg_mem(inBuffer, previewSize, &ccdBuffer, &size, &naxis, &w, &h);
+        
+        // Note: We now pass cleanBuffer and cleanSize
+        rc = read_jpeg_mem(cleanBuffer, cleanSize, &ccdBuffer, &size, &naxis, &w, &h);        
 
         if (rc != 0)
         {
