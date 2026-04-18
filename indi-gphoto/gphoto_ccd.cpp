@@ -2003,41 +2003,34 @@ void GPhotoCCD::streamLiveView()
         //            continue;
         //        }
 
-        // Panasonic Lumix DC-G9 fix 
-        uint8_t *lastSOI = nullptr;
-        unsigned long lastSOIPosition = 0;
+        // Fast path: well-behaved cameras (Canon, Nikon, etc.) always start with 0xFF 0xD8.
+        // Some cameras (e.g. Panasonic Lumix) prepend garbage bytes and/or an embedded
+        // thumbnail before the actual liveview JPEG, resulting in multiple SOI markers.
+        // Only scan when necessary: O(1) for normal cameras, O(n) only for malformed buffers.
+        uint8_t *cleanBuffer = inBuffer;
+        unsigned long cleanSize = previewSize;
 
-        // Lumix DC-G9 sends 17 bytes of erroneous data before the actual JPEG image. 
-        // It also sends a thumbnail image that has its own SOI. We need to find
-        // the (second) SOI of the actual liveview image.
-        // Look for last occurrance of 0xFF 0xD8 (start of image)
-        for (unsigned long i = 0; i < previewSize - 1; ++i)
+        if (previewSize < 2 || inBuffer[0] != 0xFF || inBuffer[1] != 0xD8)
         {
-            if (inBuffer[i] == 0xFF && inBuffer[i+1] == 0xD8)
+            // Scan for the last SOI marker: the actual liveview frame follows any
+            // prepended garbage bytes or an embedded thumbnail JPEG.
+            cleanBuffer = nullptr;
+            for (unsigned long i = 0; i + 1 < previewSize; ++i)
             {
-                lastSOI = &inBuffer[i];
-                lastSOIPosition = i;
+                if (inBuffer[i] == 0xFF && inBuffer[i + 1] == 0xD8)
+                {
+                    cleanBuffer = &inBuffer[i];
+                    cleanSize   = previewSize - i;
+                }
+            }
+
+            if (cleanBuffer == nullptr)
+            {
+                LOG_DEBUG("No JPEG SOI marker found in preview frame, discarding.");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
             }
         }
-
-        if (lastSOI == nullptr)
-        {
-            LOG_ERROR("No JPEG SOI marker found. Frame discarded.");
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            continue;
-        }
-
-        // Only use part of image data that follows last SOI
-        uint8_t *cleanBuffer = lastSOI;
-        unsigned long cleanSize = previewSize - lastSOIPosition;
-
-        // Sanity check: JPEG image must end with 0xFF 0xD9 (EOI)
-        if (cleanBuffer[cleanSize-2] != 0xFF || cleanBuffer[cleanSize-1] != 0xD9)
-        {
-             // If no EOI is found, continue with a warning
-             LOG_DEBUG("Warning: JPEG-endmarker missing in cleaned-up buffer.");
-        }
-        // Panasonic Lumix DC-G9 fix end
 
         uint8_t * ccdBuffer      = PrimaryCCD.getFrameBuffer();
         size_t size             = 0;
@@ -2045,9 +2038,7 @@ void GPhotoCCD::streamLiveView()
 
         // Read jpeg from memory
         std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-        
-        // Note: We now pass cleanBuffer and cleanSize
-        rc = read_jpeg_mem(cleanBuffer, cleanSize, &ccdBuffer, &size, &naxis, &w, &h);        
+        rc = read_jpeg_mem(cleanBuffer, cleanSize, &ccdBuffer, &size, &naxis, &w, &h);
 
         if (rc != 0)
         {
