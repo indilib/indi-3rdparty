@@ -31,88 +31,104 @@
 
 class MaxDomeII : public INDI::Dome
 {
-  public:
-    MaxDomeII();
-    ~MaxDomeII();
+    public:
+        MaxDomeII();
+        ~MaxDomeII();
 
-    virtual const char *getDefaultName() override;
-    virtual bool initProperties() override;
-    virtual bool updateProperties() override;
-    virtual bool saveConfigItems(FILE *fp) override;
+        virtual const char *getDefaultName() override;
+        virtual bool initProperties() override;
+        virtual bool updateProperties() override;
+        virtual bool saveConfigItems(FILE *fp) override;
 
-    virtual bool Disconnect() override;
-    virtual bool Handshake() override;
+        virtual bool Disconnect() override;
+        virtual bool Handshake() override;
 
-    virtual void TimerHit() override;
+        virtual void TimerHit() override;
 
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-    virtual IPState MoveAbs(double az) override;
-    virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
+        virtual IPState MoveAbs(double az) override;
+        virtual IPState Move(DomeDirection dir, DomeMotionCommand operation) override;
 
-    //virtual IPState Home();
-    virtual bool Abort() override;
+        //virtual IPState Home();
+        virtual bool Abort() override;
 
-  protected:
-    // Parking
-    IPState ConfigureShutterOperation(int nMDBOS, double ShutterOperationAzimuth);
-    virtual IPState Park() override;
-    virtual IPState UnPark() override;
-    virtual bool SetCurrentPark() override;
-    virtual bool SetDefaultPark() override;
-    virtual IPState ControlShutter(ShutterOperation operation) override;
+    protected:
+        // Parking
+        IPState ConfigureShutterOperation(int nMDBOS, double ShutterOperationAzimuth);
+        virtual IPState Park() override;
+        virtual IPState UnPark() override;
+        virtual bool SetCurrentPark() override;
+        virtual bool SetDefaultPark() override;
+        virtual IPState ControlShutter(ShutterOperation operation) override;
 
-    /*******************************************************/
-    /* Misc routines
- ********************************************************/
-    int AzimuthDistance(int nPos1, int nPos2);
-    double TicksToAzimuth(int nTicks);
-    int AzimuthToTicks(double nAzimuth);
-    int handle_driver_error(int *error, int *nRetry); // Handles errors returned by driver
+        /*******************************************************/
+        /* Misc routines
+        ********************************************************/
+        int AzimuthDistance(int nPos1, int nPos2);
+        double TicksToAzimuth(int nTicks);
+        int AzimuthToTicks(double nAzimuth);
+        int handle_driver_error(int *error, int *nRetry); // Handles errors returned by driver
 
-    INDI::PropertySwitch ShutterModeSP {2};
-    enum
-    {
-        FULL,
-        UPPER
-    };
+        INDI::PropertySwitch ShutterModeSP {2};
+        enum
+        {
+            FULL,
+            UPPER
+        };
 
-    INDI::PropertyNumber ShutterOperationAzimuthNP {1};
+        INDI::PropertyNumber ShutterOperationAzimuthNP {1};
 
-    INDI::PropertySwitch ShutterConflictSP {2};
-    enum
-    {
-      MOVE,
-      NO_MOVE
-    };
+        INDI::PropertySwitch ShutterConflictSP {2};
+        enum
+        {
+            MOVE,
+            NO_MOVE
+        };
 
-    INDI::PropertySwitch HomeSP {1};
+        INDI::PropertySwitch HomeSP {1};
 
-    INDI::PropertyNumber TicksPerTurnNP {1};
+        INDI::PropertyNumber TicksPerTurnNP {1};
 
-    INDI::PropertyNumber WatchDogNP {1};
+        INDI::PropertyNumber WatchDogNP {1};
 
-    INDI::PropertyNumber HomeAzimuthNP {1};
+        INDI::PropertyNumber HomeAzimuthNP {1};
 
-    INumber HomePosRN[1];
-    INumberVectorProperty HomePosRNP;
+        // Rotation sensor debounce time (Advanced Settings)
+        INDI::PropertySwitch RotationDebounceTimeSP {10};
+        enum
+        {
+            DEBOUNCE_10MS,
+            DEBOUNCE_20MS,
+            DEBOUNCE_30MS,
+            DEBOUNCE_40MS,
+            DEBOUNCE_60MS,
+            DEBOUNCE_80MS,
+            DEBOUNCE_120MS,  // default
+            DEBOUNCE_150MS,
+            DEBOUNCE_200MS,
+            DEBOUNCE_250MS,
+        };
 
-  private:
-    int nTicksPerTurn;           // Number of ticks per turn of azimuth dome
-    unsigned nCurrentTicks;      // Position as reported by the MaxDome II
-    int nMoveDomeBeforeOperateShutter; // 0 no move
-    double nShutterOperationPosition;        // Go to this position before operate the shutter. Controlled by the MaxDomeII firmware, in conjuntion to nMoveDomeBeforeOperateShutter
-    double nHomeAzimuth;         // Azimuth of home position
-    int nHomeTicks;              // Ticks from 0 azimuth to home
-    int nTimeSinceShutterStart;  // Timer since shutter movement has started, in order to check timeouts
-    int nTimeSinceAzimuthStart;  // Timer since azimuth movement has started, in order to check timeouts
-    int nTargetAzimuth;
-    int nTimeSinceLastCommunication; // Used by Watch Dog
+        INumber HomePosRN[1];
+        INumberVectorProperty HomePosRNP;
 
-    double prev_az, prev_alt;
+    private:
+        int nTicksPerTurn;           // Number of ticks per turn of azimuth dome
+        unsigned nCurrentTicks;      // Position as reported by the MaxDome II
+        int nMoveDomeBeforeOperateShutter; // 0 no move
+        double nShutterOperationPosition;        // Go to this position before operate the shutter. Controlled by the MaxDomeII firmware, in conjuntion to nMoveDomeBeforeOperateShutter
+        double nHomeAzimuth;         // Azimuth of home position
+        int nHomeTicks;              // Ticks from 0 azimuth to home
+        int nTimeSinceShutterStart;  // Timer since shutter movement has started, in order to check timeouts
+        int nTimeSinceAzimuthStart;  // Timer since azimuth movement has started, in order to check timeouts
+        int nTargetAzimuth;
+        int nTimeSinceLastCommunication; // Used by Watch Dog
 
-    bool SetupParms();
+        double prev_az, prev_alt;
 
-    MaxDomeIIDriver driver;
+        bool SetupParms();
+
+        MaxDomeIIDriver driver;
 };
