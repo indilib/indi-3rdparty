@@ -60,7 +60,13 @@ QHYCCD::QHYCCD(const char *name, const char *camID) : FilterInterface(this)
 
     snprintf(this->m_Name, MAXINDINAME, "QHY CCD %.15s", name);
     snprintf(this->m_CamID, MAXINDINAME, "%s", camID);
+
+    LOGF_INFO("*** This is the camera name: [%s]", m_Name);
+    LOGF_INFO("*** This is the camera ID: [%s]", m_CamID);
+
     setDeviceName(this->m_Name);
+
+    setDeviceNicknameFromId(m_CamID);
 
     setVersion(INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
 

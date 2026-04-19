@@ -1,8 +1,12 @@
+ZWO Optics ASI CCD Driver
+=========================
+
 This is the INDI driver for the ZWO Optics ASI cameras. It was tested
 with the ASI120MC and the ASI120MM but, hopefully, should work with
 other cameras from ZWO Optical too.
 
 COMPILING
+---------
 
 Go to the directory where  you unpacked indi_asi sources and do:
 
@@ -16,12 +20,14 @@ make
 should build the indi_asicam executable.
 
 RUNNING
+-------
 
 The Driver can run multiple devices if required, to run the driver:
 
 `indiserver -v indi_asi_ccd`
 
 AVAILABLE CONTROLS
+------------------
 
 You can set the exposure time and the gain (in the range between 1 and
 100) You can also change the USB Bandwidth control. It defaults to -1
@@ -32,6 +38,7 @@ set a value of 40 if you find problems with many broken frames.
 You can also start video stream.
 
 TESTING
+-------
 
 The driver was tested with KStars/EKOS as a remote INDI
 server (just select remote driver, the IP of machine where indi_asicam
@@ -39,6 +46,7 @@ is running and the default port 7624). Connect to the camera you want
 to use and have fun!
 
 NOTES
+-----
 
 The ASICameras are very USB bandwidth hungry when running at high
 FPS. If you see "broken frames" with more that one of them running,
@@ -51,31 +59,42 @@ find any problem with parameters changes not being immediately applied
 please report.
 
 NICKNAMES
+---------
 
-The ASI SDK exposes device serial numbers for at least CCDs and EAFs.
-You may associate nicknames with specific serial numbers to make, *e.g.*,
-setups with multiple identical devices reliably associate the same name
-with the same device across restarts.
-
-Nicknames are stored in an xml-format file in a format like the below.
-The hard-wired location for this file is ``~/.indi/ZWONicknames.xml``.
-Nicknames are assoicated with the serial number of the camera, and are
-entered/changed with the NicknameTP text property. Since the device-name
-can't be changed once the driver is running, changes to nicknames can
-only take effect at the next INDI startup.
-
-You may mix CCD and EAF nicknames in the same file, using the format:
+The `indi_asi_ccd` and `indi_asi_focuser` drivers use the generalized INDI
+nickname scheme introduced in [INDI PR #2343](https://github.com/indilib/indi/pull/2343).
+Nicknames are stored in `~/.indi/INDINicknames.xml` in a format like the below,
+and are assoicated with a driver and stable device identifier.
 
 ```
-<?xml version="1.0"?>
-<Nicknames>
-  <Nickname SerialNumber="serialNumber1">nickname1</Nickname>
-  <Nickname SerialNumber="serialNumber2">nickname2</Nickname>
-  <Nickname SerialNumber="serialNumber3">nickname3</Nickname>
-</Nicknames>
+<INDINicknames>
+ <nickname driver="AcmeFocuser" identifier="SN123">MainScope</nickname>
+ <nickname driver="AcmeFocuser" identifier="SN456">GuideScope</nickname>
+ <nickname driver="AcmeDustCap" identifier="CAP-1-2-3">MainScope</nickname>
+</INDINicknames>
 ```
+
+For the specific case of ASI cameras and focusers, the format looks something like this:
+```
+<INDINicknames>
+  <device name="ZWO EAF">
+    <nickname identifier="0F23C2003020F901">SM</nickname>
+    <nickname identifier="0F23218028DBC1A1">WR</nickname>
+    <nickname identifier="6000206EF19EE420">WB</nickname>
+  </device>
+  <device name="ZWO CCD">
+    <nickname identifier="081a0f011a020900">ASI6200MM-Pro WB</nickname>
+    <nickname identifier="212b810522020900">ASI6200MM-Pro WR</nickname>
+    <nickname identifier="091c920d2d010900">ASI183MM-Pro SM</nickname>
+  </device>
+</INDINicknames>
+```
+where the device name is simply "`ZWO CCD`" or "`ZWO EAF`", and the
+identifier is the device "`Serial Number`" property, as show with the
+tool `indi_getprop` or similar.
 
 CREDITS
+-------
 
 The origianl INDI driver was written by Chrstian Pellegrin <chripell@gmail.com> based on ASI SDK v1.0+
 
