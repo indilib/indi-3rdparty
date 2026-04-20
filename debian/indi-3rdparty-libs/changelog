@@ -1,0 +1,6 @@
+indi-3rdparty-libs (2.2.0) UNRELEASED; urgency=low
+
+  * Initial packaging of INDI 3rd party libraries as a unified source package.
+  * Builds all vendor SDKs and support libraries with BUILD_LIBS=ON.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 20 Apr 2026 07:00:00 +0000

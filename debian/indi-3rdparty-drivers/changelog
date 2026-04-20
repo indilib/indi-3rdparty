@@ -1,0 +1,7 @@
+indi-3rdparty-drivers (2.2.0) UNRELEASED; urgency=low
+
+  * Initial packaging of INDI 3rd party drivers as a unified source package.
+  * Builds all INDI 3rd party drivers with BUILD_LIBS=OFF.
+  * Depends on indi-3rdparty-libs for vendor SDKs.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 20 Apr 2026 07:00:00 +0000

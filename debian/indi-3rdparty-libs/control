@@ -1,0 +1,38 @@
+Source: indi-3rdparty-libs
+Section: libs
+Priority: optional
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper-compat (= 13),
+ cmake,
+ ninja-build,
+ libusb-1.0-0-dev,
+ libcfitsio-dev,
+ libnova-dev,
+ zlib1g-dev,
+ libjpeg-dev,
+ libtiff-dev,
+ libraw-dev,
+ libftdi1-dev,
+ libcurl4-openssl-dev,
+ libev-dev,
+ libgsl-dev,
+ pkg-config,
+ libindi-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/indilib/indi-3rdparty
+Vcs-Browser: https://github.com/indilib/indi-3rdparty
+Vcs-Git: https://github.com/indilib/indi-3rdparty.git
+
+Package: indi-3rdparty-libs
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+conflicts: libahp-gt, libahp-xc, libaltaircam, libapogee-dbg, libapogee3, libapogee3-dev, libasi, libastroasis, libatik, libbressercam, libfishcamp, libfishcamp-dev, libfli-dbg, libfli-dev, libfli2, libflipro-dev, libflipro2, libinovasdk, libmallincam, libmeadecam, libmicam, libnncam, libogmacam, libomegonprocam, libpigpiod, libpigpiod-dbg, libpktriggercord, libplayerone, libqhy, libqsi-dbg, libqsi-dev, libqsi7, libricohcamerasdk, libsbig, libstarshootg, libsvbony, libsvbonycam, libtoupcam, libtscam
+replaces: libahp-gt, libahp-xc, libaltaircam, libapogee-dbg, libapogee3, libapogee3-dev, libasi, libastroasis, libatik, libbressercam, libfishcamp, libfishcamp-dev, libfli-dbg, libfli-dev, libfli2, libflipro-dev, libflipro2, libinovasdk, libmallincam, libmeadecam, libmicam, libnncam, libogmacam, libomegonprocam, libpigpiod, libpigpiod-dbg, libpktriggercord, libplayerone, libqhy, libqsi-dbg, libqsi-dev, libqsi7, libricohcamerasdk, libsbig, libstarshootg, libsvbony, libsvbonycam, libtoupcam, libtscam
+Description: INDI 3rd party libraries
+ Shared libraries required by INDI 3rd party drivers. This includes
+ vendor SDKs and support libraries for cameras, focusers, filter wheels,
+ and other astronomical instrumentation.
+ .
+ This package provides the runtime shared libraries.
