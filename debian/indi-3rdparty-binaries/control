@@ -1,0 +1,42 @@
+Source: indi-3rdparty-binaries
+Section: science
+Priority: optional
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper-compat (= 13),
+ cmake,
+ ninja-build,
+ libusb-1.0-0-dev,
+ libcfitsio-dev,
+ libnova-dev,
+ zlib1g-dev,
+ libjpeg-dev,
+ libtiff-dev,
+ libraw-dev,
+ libftdi1-dev,
+ libgphoto2-dev,
+ libcurl4-openssl-dev,
+ libev-dev,
+ libgsl-dev,
+ pkg-config,
+ libindi-dev,
+ indi-3rdparty-libs (>= ${source:Version}),
+ indi-3rdparty-libs-dev (>= ${source:Version})
+Standards-Version: 4.6.2
+Homepage: https://github.com/indilib/indi-3rdparty
+Vcs-Browser: https://github.com/indilib/indi-3rdparty
+Vcs-Git: https://github.com/indilib/indi-3rdparty.git
+
+Package: indi-3rdparty-binaries
+Section: science
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, indi-3rdparty-libs (>= ${binary:Version})
+Description: INDI 3rd party drivers
+ INDI (Instrument-Neutral Device Interface) is a distributed XML-based
+ control protocol designed to operate astronomical instrumentation.
+ INDI is small, flexible, easy to parse, scalable, and stateless.
+ It supports common DCS functions such as remote control, data acquisition,
+ monitoring, and a lot more.
+ .
+ This package provides INDI 3rd party device drivers for astronomical
+ cameras, focusers, filter wheels, mount controllers, domes, and other
+ instrumentation.

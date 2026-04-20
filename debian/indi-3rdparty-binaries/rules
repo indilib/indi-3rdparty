@@ -1,0 +1,34 @@
+#!/usr/bin/make -f
+
+export DEB_BUILD_OPTIONS = parallel=$(shell nproc)
+export DEB_BUILD_MAINT_OPTIONS = hardening=+all
+export DEB_CFLAGS_MAINT_APPEND = -Wall -fno-strict-aliasing -std=gnu11 -fPIC
+export DEB_CXXFLAGS_MAINT_APPEND = -Wall -fno-strict-aliasing -fPIC
+
+%:
+	dh $@ --buildsystem=cmake --sourcedirectory=. --builddirectory=build-drivers
+
+override_dh_auto_configure:
+	dh_auto_configure -- \
+		-GNinja \
+		-DCMAKE_INSTALL_RPATH_USE_LINK_PATH=ON \
+		-DCMAKE_BUILD_TYPE=RelWithDebInfo \
+		-DBUILD_LIBS=OFF \
+		-DINDI_INSTALL_UDEV_RULES=OFF \
+		-DINDI_INSTALL_FIRMWARE=OFF
+
+override_dh_auto_build:
+	dh_auto_build -- build
+
+override_dh_auto_install:
+	dh_auto_install -- install
+
+override_dh_auto_clean:
+	dh_auto_clean
+	rm -rf build-drivers
+
+override_dh_shlibdeps:
+	dh_shlibdeps -- --ignore-missing-info
+
+override_dh_strip:
+	dh_strip --dbgsym-migration='indi-3rdparty-binaries-dbg (<< 2.1.0~)'

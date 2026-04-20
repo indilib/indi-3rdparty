@@ -1,0 +1,50 @@
+Source: indi-3rdparty-libs
+Section: libs
+Priority: optional
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper-compat (= 13),
+ cmake,
+ ninja-build,
+ libusb-1.0-0-dev,
+ libcfitsio-dev,
+ libnova-dev,
+ zlib1g-dev,
+ libjpeg-dev,
+ libtiff-dev,
+ libraw-dev,
+ libftdi1-dev,
+ libgphoto2-dev,
+ libcurl4-openssl-dev,
+ libev-dev,
+ libgsl-dev,
+ pkg-config,
+ libindi-dev
+Standards-Version: 4.6.2
+Homepage: https://github.com/indilib/indi-3rdparty
+Vcs-Browser: https://github.com/indilib/indi-3rdparty
+Vcs-Git: https://github.com/indilib/indi-3rdparty.git
+
+Package: indi-3rdparty-libs
+Section: libs
+Architecture: any
+Multi-Arch: same
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Recommends: indi-3rdparty-libs-dev
+Description: INDI 3rd party libraries
+ Shared libraries required by INDI 3rd party drivers. This includes
+ vendor SDKs and support libraries for cameras, focusers, filter wheels,
+ and other astronomical instrumentation.
+ .
+ This package provides the runtime shared libraries.
+
+Package: indi-3rdparty-libs-dev
+Section: libdevel
+Architecture: any
+Multi-Arch: same
+Depends: indi-3rdparty-libs (= ${binary:Version}), ${misc:Depends}
+Description: INDI 3rd party libraries - development files
+ Development headers and static libraries for INDI 3rd party libraries.
+ .
+ This package provides the development files needed to compile
+ INDI 3rd party drivers and other software that links against
+ these vendor SDKs.
