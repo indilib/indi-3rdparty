@@ -1,4 +1,4 @@
-indi-3rdparty-binaries (2.2.0) UNRELEASED; urgency=low
+indi-3rdparty-drivers (2.2.0) UNRELEASED; urgency=low
 
   * Initial packaging of INDI 3rd party drivers as a unified source package.
   * Builds all INDI 3rd party drivers with BUILD_LIBS=OFF.

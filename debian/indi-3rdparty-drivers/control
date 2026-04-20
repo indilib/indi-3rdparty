@@ -1,4 +1,4 @@
-Source: indi-3rdparty-binaries
+Source: indi-3rdparty-drivers
 Section: science
 Priority: optional
 Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
@@ -13,19 +13,21 @@ Build-Depends: debhelper-compat (= 13),
  libtiff-dev,
  libraw-dev,
  libftdi1-dev,
- libgphoto2-dev,
+ libdc1394-dev,
+ libgps-dev,
+ liblimesuite-dev,
  libcurl4-openssl-dev,
  libev-dev,
  libgsl-dev,
  pkg-config,
  libindi-dev,
- indi-3rdparty-libs (>= ${source:Version})
+ indi-3rdparty-libs
 Standards-Version: 4.6.2
 Homepage: https://github.com/indilib/indi-3rdparty
 Vcs-Browser: https://github.com/indilib/indi-3rdparty
 Vcs-Git: https://github.com/indilib/indi-3rdparty.git
 
-Package: indi-3rdparty-binaries
+Package: indi-3rdparty-drivers
 Section: science
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}, indi-3rdparty-libs (>= ${binary:Version})
