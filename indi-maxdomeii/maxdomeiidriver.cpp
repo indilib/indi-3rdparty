@@ -43,9 +43,10 @@
 #define GOTO_CMD    0x05 // Go to azimuth position
 #define SHUTTER_CMD 0x06 // Send a command to Shutter
 #define STATUS_CMD  0x07 // Retrieve status
-#define TICKS_CMD   0x09 // Set the number of tick per revolution of the dome
-#define ACK_CMD     0x0A // ACK (?)
-#define SETPARK_CMD 0x0B // Set park coordinates and if need to park before to operating shutter
+#define DEBOUNCE_CMD 0x08 // Set the debounce time for the rotation sensor
+#define TICKS_CMD    0x09 // Set the number of tick per revolution of the dome
+#define ACK_CMD      0x0A // ACK (?)
+#define SETPARK_CMD  0x0B // Set park coordinates and if need to park before to operating shutter
 
 // Shutter commands
 #define OPEN_SHUTTER            0x01
@@ -379,6 +380,25 @@ int MaxDomeIIDriver::SetTicksPerTurn(int nTicks)
     payload[1] = (char)(nTicks % 256);
 
     return SendCommand(TICKS_CMD, payload, sizeof(payload));
+}
+
+/*
+    Set the debounce time for the rotation sensor optical encoder.
+    The sensor is sampled every 10 ms; the debounce count is the number of
+    consecutive consistent samples required before a tick transition is accepted.
+
+    @param nDebounceMs Debounce time in milliseconds (must be a multiple of 10).
+                       Default is 120 ms (12 samples).
+    @return Same as SendCommand
+*/
+int MaxDomeIIDriver::SetDebounceTime(int nDebounceMs)
+{
+    LOGF_INFO("Setting rotation sensor debounce time: %d ms", nDebounceMs);
+
+    char payload[1];
+    payload[0] = (char)(nDebounceMs / 10);
+
+    return SendCommand(DEBOUNCE_CMD, payload, sizeof(payload));
 }
 
 ///////////////////////////////////////////////////////////////////////////

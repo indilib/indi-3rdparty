@@ -2491,12 +2491,17 @@ int OCS::charToInt (char *inString)
  * *****************************************************/
 void OCS::blockUntilClear()
 {
-    // Blocking wait for last command response to clear
+    int maxWaitUs = ((OCSTimeoutSeconds * 1000000) + OCSTimeoutMicroSeconds);
+    int waited = 0;
     while (waitingForResponse) {
-        usleep(((OCSTimeoutSeconds * 1000000) + OCSTimeoutMicroSeconds) / 10);
-//        usleep(OCSTimeoutMicroSeconds / 10);
+        if (!isConnected() || waited > maxWaitUs * 10) {
+            waitingForResponse = false;
+            return;
+        }
+        int slice = maxWaitUs / 10;
+        usleep(slice);
+        waited += slice;
     }
-    // Grab the response waiting command blocker
     waitingForResponse = true;
 }
 

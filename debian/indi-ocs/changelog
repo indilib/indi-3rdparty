@@ -1,3 +1,7 @@
+indi-ocs (1.6) nobel; urgency=medium
+
+  * New release - Fixed another shutdown issue
+
 indi-ocs (1.5) nobel; urgency=medium
 
   * New release - Fixed shutdown issue

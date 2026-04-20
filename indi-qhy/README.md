@@ -1,10 +1,10 @@
 QHY CCD Driver
-==================
+==============
 
 This package provides QHY CCD/CMOS and Filter Wheels INDI driver.
 
 Requirements
-============
+------------
 
 + INDI >= v2.1.0 (http://www.indilib.org)
 
@@ -33,12 +33,12 @@ Requirements
 	It can be installed via APT as 'nlohmann-json3-dev' on Debian-based distros.
 
 Installation
-============
+------------
 
 	See INSTALL
 	
 How to Use
-==========
+----------
 
 	You can use the QHY INDI Driver in any INDI-compatible client such as KStars or Xephem. 
 	
@@ -56,3 +56,29 @@ How to Use
 
         Share the test result output in INDI & QHY forums. Be as thorough as possible with your environment conditions (OS, architecture..etc)
 	 
+Nicknames
+---------
+
+The `indi_qhy_ccd` driver uses the generalized INDI nickname scheme
+introduced in [INDI PR #2343](https://github.com/indilib/indi/pull/2343).
+Nicknames are stored in `~/.indi/INDINicknames.xml` in a format like the below,
+and are assoicated with a driver and stable device identifier.
+
+```
+<INDINicknames>
+ <nickname driver="AcmeFocuser" identifier="SN123">MainScope</nickname>
+ <nickname driver="AcmeFocuser" identifier="SN456">GuideScope</nickname>
+ <nickname driver="AcmeDustCap" identifier="CAP-1-2-3">MainScope</nickname>
+</INDINicknames>
+```
+
+For the specific case of QHY cameras, the format looks something like this:
+```
+<INDINicknames>
+  <device name="QHY CCD">
+    <nickname identifier="QHY294PROC-4ce22a4b811ae7175">QHY294C UW</nickname>
+  </device>
+</INDINicknames>
+```
+where the device name is simply "`QHY CCD`", and the identifier is printed in
+the `indiserver` output and log in the line "`*** This is the camera ID: [______]`".

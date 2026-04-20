@@ -54,7 +54,10 @@ void hexDump(char *buf, const char *data, int size);
 class MaxDomeIIDriver
 {
     public:
-        MaxDomeIIDriver() { fd = 0; }
+        MaxDomeIIDriver()
+        {
+            fd = 0;
+        }
 
         const char *getDeviceName();
         void SetPortFD(int port_fd);
@@ -67,11 +70,13 @@ class MaxDomeIIDriver
         int HomeAzimuth();
         int GotoAzimuth(int nDir, int nTicks);
         int Status(ShStatus *shStatus, AzStatus *azStatus,
-                unsigned *azimuthPos, unsigned *homePos);
+                   unsigned *azimuthPos, unsigned *homePos);
         int Ack();
         int SetPark(int nParkOnShutter, int nTicks);
         int SetTicksPerTurn(int nTicks);
         int Park();
+
+        int SetDebounceTime(int nDebounceMs);
 
         //  Shutter commands
         int OpenShutter();

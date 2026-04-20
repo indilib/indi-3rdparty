@@ -2003,13 +2003,42 @@ void GPhotoCCD::streamLiveView()
         //            continue;
         //        }
 
+        // Fast path: well-behaved cameras (Canon, Nikon, etc.) always start with 0xFF 0xD8.
+        // Some cameras (e.g. Panasonic Lumix) prepend garbage bytes and/or an embedded
+        // thumbnail before the actual liveview JPEG, resulting in multiple SOI markers.
+        // Only scan when necessary: O(1) for normal cameras, O(n) only for malformed buffers.
+        uint8_t *cleanBuffer = inBuffer;
+        unsigned long cleanSize = previewSize;
+
+        if (previewSize < 2 || inBuffer[0] != 0xFF || inBuffer[1] != 0xD8)
+        {
+            // Scan for the last SOI marker: the actual liveview frame follows any
+            // prepended garbage bytes or an embedded thumbnail JPEG.
+            cleanBuffer = nullptr;
+            for (unsigned long i = 0; i + 1 < previewSize; ++i)
+            {
+                if (inBuffer[i] == 0xFF && inBuffer[i + 1] == 0xD8)
+                {
+                    cleanBuffer = &inBuffer[i];
+                    cleanSize   = previewSize - i;
+                }
+            }
+
+            if (cleanBuffer == nullptr)
+            {
+                LOG_DEBUG("No JPEG SOI marker found in preview frame, discarding.");
+                std::this_thread::sleep_for(std::chrono::milliseconds(100));
+                continue;
+            }
+        }
+
         uint8_t * ccdBuffer      = PrimaryCCD.getFrameBuffer();
         size_t size             = 0;
         int w = 0, h = 0, naxis = 0;
 
         // Read jpeg from memory
         std::unique_lock<std::mutex> ccdguard(ccdBufferLock);
-        rc = read_jpeg_mem(inBuffer, previewSize, &ccdBuffer, &size, &naxis, &w, &h);
+        rc = read_jpeg_mem(cleanBuffer, cleanSize, &ccdBuffer, &size, &naxis, &w, &h);
 
         if (rc != 0)
         {

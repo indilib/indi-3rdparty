@@ -4,6 +4,10 @@
 #include <indilogger.h>
 #include <sharedblob.h>
 
+// Must be included before jpeglib.h: libjpeg uses jmp_buf in its error manager
+// and requires setjmp.h to already be visible when jpeglib.h is parsed.
+#include <csetjmp>
+
 #include <jpeglib.h>
 #include <fitsio.h>
 #pragma GCC diagnostic push
@@ -11,7 +15,6 @@
 // the older libraw uses auto_ptr
 #include <libraw.h>
 #pragma GCC diagnostic pop
-
 
 #include <unistd.h>
 #include <arpa/inet.h>
@@ -303,20 +306,46 @@ int read_jpeg(const char *filename, uint8_t **memptr, size_t *memsize, int *naxi
     return 0;
 }
 
+// Custom libjpeg error manager that uses longjmp instead of exit(), preventing
+// the default fatal-error handler from terminating the entire INDI driver process.
+struct gphoto_jpeg_error_mgr
+{
+    struct jpeg_error_mgr pub;  // must be first member
+    jmp_buf setjmp_buffer;
+};
+
+static void gphoto_jpeg_error_exit(j_common_ptr cinfo)
+{
+    auto *myerr = reinterpret_cast<gphoto_jpeg_error_mgr *>(cinfo->err);
+    longjmp(myerr->setjmp_buffer, 1);
+}
+
 int read_jpeg_mem(unsigned char *inBuffer, unsigned long inSize, uint8_t **memptr, size_t *memsize, int *naxis, int *w,
                   int *h)
 {
     /* these are standard libjpeg structures for reading(decompression) */
     struct jpeg_decompress_struct cinfo;
-    struct jpeg_error_mgr jerr;
+    struct gphoto_jpeg_error_mgr jerr;
     /* libjpeg data structure for storing one row, that is, scanline of an image */
     JSAMPROW row_pointer[1] = { nullptr };
 
-    /* here we set up the standard libjpeg error handler */
-    cinfo.err = jpeg_std_error(&jerr);
+    /* Set up custom error handler that jumps back here on fatal errors instead
+     * of calling exit(), which would terminate the entire INDI driver process. */
+    cinfo.err            = jpeg_std_error(&jerr.pub);
+    jerr.pub.error_exit  = gphoto_jpeg_error_exit;
+
     /* setup decompression process and source, then read JPEG header */
     jpeg_create_decompress(&cinfo);
-    /* this makes the library read from infile */
+
+    if (setjmp(jerr.setjmp_buffer))
+    {
+        /* libjpeg hit a fatal error: clean up and return failure to the caller */
+        jpeg_destroy_decompress(&cinfo);
+        free(row_pointer[0]);  // free(nullptr) is safe per C standard
+        return -1;
+    }
+
+    /* this makes the library read from inBuffer */
     jpeg_mem_src(&cinfo, inBuffer, inSize);
 
     /* reading the image header which contains image information */
@@ -332,6 +361,7 @@ int read_jpeg_mem(unsigned char *inBuffer, unsigned long inSize, uint8_t **mempt
     if (*memptr == nullptr)
     {
         DEBUGFDEVICE(device, INDI::Logger::DBG_ERROR, "%s: Failed to allocate %d bytes of memory!", __PRETTY_FUNCTION__, *memsize);
+        jpeg_destroy_decompress(&cinfo);
         return -1;
     }
 
@@ -357,8 +387,7 @@ int read_jpeg_mem(unsigned char *inBuffer, unsigned long inSize, uint8_t **mempt
     jpeg_finish_decompress(&cinfo);
     jpeg_destroy_decompress(&cinfo);
 
-    if (row_pointer[0])
-        free(row_pointer[0]);
+    free(row_pointer[0]);
 
     return 0;
 }
