@@ -1,4 +1,4 @@
-indi-3rdparty-libs (2.1.1-1) UNRELEASED; urgency=low
+indi-3rdparty-libs (2.2.0) UNRELEASED; urgency=low
 
   * Initial packaging of INDI 3rd party libraries as a unified source package.
   * Builds all vendor SDKs and support libraries with BUILD_LIBS=ON.
