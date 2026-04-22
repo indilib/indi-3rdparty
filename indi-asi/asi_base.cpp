@@ -390,7 +390,8 @@ bool ASIBase::initProperties()
 
     // Add Debug and Nickname Controls from DefaultDevice.
     addDebugControl();
-    if (!mSerialNumber.empty()) {
+    if (!mSerialNumber.empty())
+    {
         // asi_single_ccd does not set serial number
         addNicknameControl();
     }
@@ -1014,13 +1015,22 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
 void ASIBase::nicknameSet(const char *nickname)
 {
-    if (!mSerialNumber.empty()) {
+    if (!mSerialNumber.empty())
+    {
         saveNicknameId(nickname, mSerialNumber.c_str());
     }
 }
 
 bool ASIBase::setVideoFormat(uint8_t index)
 {
+    // Guard against out-of-bounds index (e.g. stale/corrupt saved config)
+    if (VideoFormatSP.isEmpty() || index >= VideoFormatSP.count())
+    {
+        LOGF_WARN("Invalid video format index %d (max %d), ignoring.", index,
+                  VideoFormatSP.isEmpty() ? 0 : VideoFormatSP.count() - 1);
+        return false;
+    }
+
     auto currentFormat = getImageType();
     // If requested type is 16bit but we are already on 8bit and camera is 120, then ignore request
     if (currentFormat != ASI_IMG_RAW16 && index == ASI_IMG_RAW16 && (strstr(getDeviceName(), "ASI120")
