@@ -613,6 +613,8 @@ void ToupBase::setupParams()
         CaptureFormat rgb = {"INDI_RGB", "RGB", 8, false };
         CaptureFormat raw = {"INDI_RAW", (m_maxBitDepth > 8) ? "RAW 16" : "RAW 8", static_cast<uint8_t>((m_maxBitDepth > 8) ? 16 : 8), true };
 
+        // setupParams() enables RAW mode in the SDK, so keep the driver's format bookkeeping aligned.
+        m_CurrentVideoFormat = 1;
         m_Channels = 1;
         BayerTP[2].setText(getBayerString());// Get RAW Format
 
@@ -1839,6 +1841,11 @@ void ToupBase::TimerHit()
             LOG_ERROR("Exposure timed out waiting for image frame.");
             InExposure = false;
             PrimaryCCD.setExposureFailed();
+            LOG_ERROR("Exposure timed out - flushing to unlock camera.");
+            if(FAILED(FP(put_Option(m_Handle, CP(OPTION_FLUSH), 3))))
+            {
+                LOG_ERROR("Failed to flush camera after exposure timeout.");
+            }
         }
     }
 
@@ -2255,7 +2262,12 @@ void ToupBase::eventCallBack(unsigned event)
             break;
         case CP(EVENT_NOFRAMETIMEOUT):
             LOG_ERROR("Camera timed out");
-            PrimaryCCD.setExposureFailed();
+            if (InExposure)
+            {
+                InExposure = false;
+                PrimaryCCD.setExposureLeft(0);
+                PrimaryCCD.setExposureFailed();
+            }
             break;
         default:
             break;
@@ -2291,7 +2303,7 @@ bool ToupBase::SetCaptureFormat(uint8_t index)
             return false;
         }
 
-        m_BitsPerPixel = index ? 8 : 16;
+        m_BitsPerPixel = index ? 16 : 8;
     }
     // Color
     else
