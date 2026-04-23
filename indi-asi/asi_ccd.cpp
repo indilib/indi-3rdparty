@@ -69,10 +69,10 @@ ASICCD::ASICCD(const ASI_CAMERA_INFO &camInfo, const std::string &cameraName,
                const std::string &serialNumber)
     : ASIBase(camInfo, serialNumber)
 {
-    setDeviceName(cameraName.c_str());
-
-    if (!mSerialNumber.empty())
-        setDeviceNicknameFromId(mSerialNumber.c_str());
+    // Apply saved nickname from serial number. Returns true if a nickname was found.
+    // If no nickname exists, fall back to the model-specific camera name.
+    if (mSerialNumber.empty() || !setDeviceNicknameFromId(mSerialNumber.c_str()))
+        setDeviceName(cameraName.c_str());
 
     mCameraName = getDeviceName();
 }

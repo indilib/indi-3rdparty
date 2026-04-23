@@ -55,10 +55,13 @@ ASIEAF::ASIEAF(const EAF_INFO &info, const char *name, const std::string &serial
     , mEAFInfo(info)
     , mSerialNumber(serialNumber)
 {
-    INDI_UNUSED(name);
     setVersion(1, 2);
 
-    setDeviceNicknameFromId(mSerialNumber.c_str());
+    // Apply saved nickname from serial number. Returns true if a nickname was found.
+    // If no nickname exists, fall back to the unique name supplied by the hotplug handler
+    // (which may include a counter suffix, e.g. "ZWO EAF 1", for multiple devices).
+    if (mSerialNumber.empty() || !setDeviceNicknameFromId(mSerialNumber.c_str()))
+        setDeviceName(name);
 
     // Can move in Absolute & Relative motions, can AbortFocuser motion, and can reverse.
     FI::SetCapability(FOCUSER_CAN_ABS_MOVE |
@@ -491,7 +494,8 @@ bool ASIEAF::ISNewText(const char *dev, const char *name, char *texts[], char *n
 
 void ASIEAF::nicknameSet(const char *nickname)
 {
-    if (!mSerialNumber.empty()) {
+    if (!mSerialNumber.empty())
+    {
         saveNicknameId(nickname, mSerialNumber.c_str());
     }
 }

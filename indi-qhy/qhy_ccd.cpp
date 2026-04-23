@@ -64,9 +64,10 @@ QHYCCD::QHYCCD(const char *name, const char *camID) : FilterInterface(this)
     LOGF_INFO("*** This is the camera name: [%s]", m_Name);
     LOGF_INFO("*** This is the camera ID: [%s]", m_CamID);
 
-    setDeviceName(this->m_Name);
-
-    setDeviceNicknameFromId(m_CamID);
+    // Apply saved nickname from camera ID. Returns true if a nickname was found.
+    // If no nickname exists, fall back to the model-specific camera name.
+    if (!setDeviceNicknameFromId(m_CamID))
+        setDeviceName(this->m_Name);
 
     setVersion(INDI_QHY_VERSION_MAJOR, INDI_QHY_VERSION_MINOR);
 
