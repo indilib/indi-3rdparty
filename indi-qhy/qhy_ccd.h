@@ -71,6 +71,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         virtual bool AbortExposure() override;
 
         // Debug
+        virtual void nicknameSet(const char *nickname) override;
         virtual void debugTriggered(bool enable) override;
 
         // CCD

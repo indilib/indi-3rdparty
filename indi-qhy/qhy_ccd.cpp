@@ -259,6 +259,7 @@ bool QHYCCD::initProperties()
     IUFillTextVector(&GPSDataNowTP, GPSDataNowT, 4, getDeviceName(), "GPS_DATA_NOW", "Now", GPS_DATA_TAB, IP_RO, 60, IPS_IDLE);
 
     addAuxControls();
+    addNicknameControl();
     setDriverInterface(getDriverInterface());
 
     return true;
@@ -2617,6 +2618,11 @@ void QHYCCD::exposureSetRequest(ImageState request)
 void QHYCCD::logQHYMessages(const std::string &message)
 {
     LOGF_DEBUG("%s", message.c_str());
+}
+
+void QHYCCD::nicknameSet(const char *nickname)
+{
+    saveNicknameId(nickname, m_CamID);
 }
 
 void QHYCCD::debugTriggered(bool enable)
