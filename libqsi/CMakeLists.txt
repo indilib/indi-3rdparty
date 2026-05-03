@@ -1,13 +1,11 @@
-PROJECT(libqsi C CXX)
 cmake_minimum_required(VERSION 3.16)
+PROJECT(libqsi C CXX)
 
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 include(CMakeCommon)
 
-SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wno-error")
-SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-error")
 
 find_package(FTDI1 REQUIRED)
 find_package(INDI REQUIRED)
@@ -16,9 +14,7 @@ SET(PACKAGE_VERSION "7.6.1")
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 
-ADD_DEFINITIONS(-DUSELIBFTDIONE -DNO_CYUSB -Wall -O2 -fPIC -g)
-
-set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fpermissive")
+ADD_DEFINITIONS(-DUSELIBFTDIONE -DNO_CYUSB)
 
 include_directories( ${CMAKE_CURRENT_BINARY_DIR})
 include_directories( ${CMAKE_CURRENT_SOURCE_DIR})
