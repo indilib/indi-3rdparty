@@ -832,19 +832,24 @@ void ToupBase::setupParams()
 
 void ToupBase::allocateFrameBuffer()
 {
+    uint32_t binX = PrimaryCCD.getBinX();
+    uint32_t binY = PrimaryCCD.getBinY();
+    uint32_t width = PrimaryCCD.getXRes() / binX;
+    uint32_t height = PrimaryCCD.getYRes() / binY;
+
     // Allocate memory
     if (m_MonoCamera)
     {
         if (0 == m_CurrentVideoFormat)
         {
-            PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes());
+            PrimaryCCD.setFrameBufferSize(width * height);
             PrimaryCCD.setBPP(8);
             PrimaryCCD.setNAxis(2);
             Streamer->setPixelFormat(INDI_MONO, 8);
         }
         else
         {
-            PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 2);
+            PrimaryCCD.setFrameBufferSize(width * height * 2);
             PrimaryCCD.setBPP(16);
             PrimaryCCD.setNAxis(2);
             Streamer->setPixelFormat(INDI_MONO, 16);
@@ -855,21 +860,21 @@ void ToupBase::allocateFrameBuffer()
         if (0 == m_CurrentVideoFormat)
         {
             // RGB24 or RGB888
-            PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * 3);
+            PrimaryCCD.setFrameBufferSize(width * height * 3);
             PrimaryCCD.setBPP(8);
             PrimaryCCD.setNAxis(3);
             Streamer->setPixelFormat(INDI_RGB, 8);
         }
         else
         {
-            PrimaryCCD.setFrameBufferSize(PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * m_BitsPerPixel / 8);
+            PrimaryCCD.setFrameBufferSize(width * height * m_BitsPerPixel / 8);
             PrimaryCCD.setBPP(m_BitsPerPixel);
             PrimaryCCD.setNAxis(2);
             Streamer->setPixelFormat(m_CameraPixelFormat, m_BitsPerPixel);
         }
     }
 
-    Streamer->setSize(PrimaryCCD.getXRes(), PrimaryCCD.getYRes());
+    Streamer->setSize(width, height);
 }
 
 bool ToupBase::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
@@ -1558,6 +1563,14 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 bool ToupBase::StartStreaming()
 {
+    // Re-apply current binning to hardware before streaming.
+    // This ensures the SDK uses the correct binning even if it was changed
+    // by another module (e.g., capture module set 2x2, guide module expects 1x1).
+    updateBinningMode(PrimaryCCD.getBinX(), m_BinningMode);
+
+    // Ensure frame buffer and streamer size are correct for current binning
+    allocateFrameBuffer();
+
     const uint32_t uSecs = static_cast<uint32_t>(1000000.0f / Streamer->getTargetFPS());
     HRESULT rc = FP(put_ExpoTime(m_Handle, uSecs));
     if (FAILED(rc))
