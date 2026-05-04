@@ -834,8 +834,8 @@ void ToupBase::allocateFrameBuffer()
 {
     uint32_t binX = PrimaryCCD.getBinX();
     uint32_t binY = PrimaryCCD.getBinY();
-    uint32_t width = PrimaryCCD.getXRes() / binX;
-    uint32_t height = PrimaryCCD.getYRes() / binY;
+    uint32_t width = PrimaryCCD.getSubW() / binX;
+    uint32_t height = PrimaryCCD.getSubH() / binY;
 
     // Allocate memory
     if (m_MonoCamera)
@@ -1779,13 +1779,19 @@ bool ToupBase::UpdateCCDFrame(int x, int y, int w, int h)
     // Set UNBINNED coords
     PrimaryCCD.setFrame(x, y, w, h);
 
-    // Total bytes required for image buffer
-    uint32_t nbuf = (w * h * PrimaryCCD.getBPP() / 8) * m_Channels;
-    LOGF_DEBUG("Updating frame buffer size to %d bytes", nbuf);
+    // Total bytes required for image buffer.
+    // With digital binning active, the SDK delivers (w/binX * h/binY) pixels,
+    // so the buffer must be sized for the binned dimensions.
+    uint32_t binX = PrimaryCCD.getBinX();
+    uint32_t binY = PrimaryCCD.getBinY();
+    uint32_t binW = w / binX;
+    uint32_t binH = h / binY;
+    uint32_t nbuf = (binW * binH * PrimaryCCD.getBPP() / 8) * m_Channels;
+    LOGF_DEBUG("Updating frame buffer size to %d bytes (binned %dx%d)", nbuf, binW, binH);
     PrimaryCCD.setFrameBufferSize(nbuf);
 
-    // Always set BINNED size
-    Streamer->setSize(w / PrimaryCCD.getBinX(), h / PrimaryCCD.getBinY());
+    // Always set BINNED size for the streamer
+    Streamer->setSize(binW, binH);
     return true;
 }
 
