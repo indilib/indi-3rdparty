@@ -46,7 +46,7 @@ case "$OS" in
                 $(command -v sudo) dnf install -y \
                     git \
                     cmake gcc-c++ zlib-devel \
-                    cfitsio-devel libnova-devel libahp-gt libahp-xc libusb1-devel libcurl-devel \
+                    cfitsio-devel libnova-devel libusb1-devel libcurl-devel \
                     gsl-devel libjpeg-devel fftw-devel opencv-devel zeromq-devel \
                     openssl-devel libtiff-devel \
                     qt6-qtbase-devel qt6-qtnetworkauth-devel \
