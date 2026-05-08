@@ -1515,9 +1515,11 @@ void CelestronAUX::resetTracking()
 
     m_Controllers[AXIS_AZ].reset(new PID(getPollingPeriod() / 1000.0, 10000, -10000, Axis1PIDNP[Propotional].getValue(),
                                          Axis1PIDNP[Derivative].getValue(), Axis1PIDNP[Integral].getValue()));
+    m_Controllers[AXIS_AZ]->reset();
     m_Controllers[AXIS_AZ]->setIntegratorLimits(-10000, 10000);
     m_Controllers[AXIS_ALT].reset(new PID(getPollingPeriod() / 1000.0, 10000, -10000, Axis2PIDNP[Propotional].getValue(),
                                           Axis2PIDNP[Derivative].getValue(), Axis2PIDNP[Integral].getValue()));
+    m_Controllers[AXIS_ALT]->reset();
     m_Controllers[AXIS_ALT]->setIntegratorLimits(-10000, 10000);
 
     if (m_az_pid_tuner)
@@ -2211,7 +2213,10 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_AZ] = offsetSteps[AXIS_AZ];
                     targetSteps[AXIS_AZ] = DegreesToEncoders(AzimuthToDegrees(targetMountAxisCoordinates.azimuth));
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    trackRates[AXIS_AZ] = predRate[AXIS_AZ] + m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    double pidCorrectionAz = 0;
+                    if (m_az_pid_tuner && m_az_pid_tuner->isActivelyTuning())
+                        pidCorrectionAz = m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    trackRates[AXIS_AZ] = predRate[AXIS_AZ] + pidCorrectionAz;
 
                     // Apply minTrackRate logic from Skywatcher
                     double minAzTrackRate = predRate[AXIS_AZ] * MIN_TRACK_RATE_FACTOR;
@@ -2260,7 +2265,10 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
                     targetSteps[AXIS_ALT]  = DegreesToEncoders(targetMountAxisCoordinates.altitude);
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    double pidCorrectionAl = 0;
+                    if (m_al_pid_tuner && m_al_pid_tuner->isActivelyTuning())
+                        pidCorrectionAl = m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + pidCorrectionAl;
 
                     // Apply minTrackRate logic from Skywatcher
                     double minAlTrackRate = predRate[AXIS_ALT] * MIN_TRACK_RATE_FACTOR;
