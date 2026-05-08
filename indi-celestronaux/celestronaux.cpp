@@ -2265,10 +2265,10 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
                     targetSteps[AXIS_ALT]  = DegreesToEncoders(targetMountAxisCoordinates.altitude);
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    double pidCorrectionAl = 0;
+                    double pidCorrectionAlt = 0;
                     if (m_al_pid_tuner && m_al_pid_tuner->isActivelyTuning())
-                        pidCorrectionAl = m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
-                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + pidCorrectionAl;
+                        pidCorrectionAlt = m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + pidCorrectionAlt;
 
                     // Apply minTrackRate logic from Skywatcher
                     double minAlTrackRate = predRate[AXIS_ALT] * MIN_TRACK_RATE_FACTOR;
