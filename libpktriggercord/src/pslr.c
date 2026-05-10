@@ -1002,7 +1002,6 @@ int pslr_buffer_open(pslr_handle_t h, int bufno, pslr_buffer_type buftype, int b
     DPRINT("[C]\tpslr_buffer_open(#%X, type=%X, res=%X)\n", bufno, buftype, bufres);
     pslr_buffer_segment_info info;
     uint16_t bufs;
-    uint32_t buf_total = 0;
     int i, j;
     int ret;
     int retry = 0;
@@ -1063,7 +1062,6 @@ int pslr_buffer_open(pslr_handle_t h, int bufno, pslr_buffer_type buftype, int b
             j++;
         }
         CHECK(ipslr_next_segment(p));
-        buf_total += info.length;
         i++;
     } while (i < 9 && info.b != 2);
     p->segment_count = j;

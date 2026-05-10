@@ -344,7 +344,6 @@ int servermode_socket(int servermode_timeout) {
                         imageSize = pslr_buffer_get_size(camhandle);
                         sprintf(buf, "%d %d\n", 0, imageSize);
                         write_socket_answer(buf);
-                        uint32_t current = 0;
                         while (1) {
                             uint32_t bytes;
                             uint8_t buf[65536];
@@ -353,7 +352,6 @@ int servermode_socket(int servermode_timeout) {
                                 break;
                             }
                             write_socket_answer_bin( buf, bytes);
-                            current += bytes;
                         }
                         pslr_buffer_close(camhandle);
                     }
