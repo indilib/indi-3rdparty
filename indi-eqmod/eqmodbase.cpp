@@ -862,7 +862,7 @@ bool EQMod::ReadScopeStatus()
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT, " Direction RA(deg.)  %lf DEC %lf TDV(x %lf y %lf z %lf)",
                    RaDec.rightascension, RaDec.declination, TDV.x, TDV.y, TDV.z);
             aligned = true;
-            if (!TransformTelescopeToCelestial(TDV, alignedRA, alignedDEC))
+            if (!TransformTelescopeToCelestialJD(TDV, alignedRA, alignedDEC, juliandate))
             {
                 aligned = false;
                 DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
@@ -1855,7 +1855,7 @@ bool EQMod::Goto(double r, double d)
     {
         TelescopeDirectionVector TDV;
         aligned = true;
-        if (!TransformCelestialToTelescope(r, d, 0.0, TDV))
+        if (!TransformCelestialToTelescopeJD(r, d, ln_get_julian_from_sys(), TDV))
         {
             DEBUGF(INDI::AlignmentSubsystem::DBG_ALIGNMENT,
                    "Failed TransformCelestialToTelescope:  RA=%lf DE=%lf, Goto RA=%lf DE=%lf", r, d, gotoparams.ratarget,

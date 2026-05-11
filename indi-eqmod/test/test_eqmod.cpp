@@ -280,7 +280,7 @@ TEST(EqmodTest, scope_limits_empty)
     auto limitgoto = onlimit.findWidgetByName("HORIZONLIMITSONLIMITGOTO");
     ASSERT_NE(limitgoto, nullptr);
 
-    HorizonLimits * const hl = eqmod.horizon;
+    HorizonLimits * const hl = eqmod.horizon.get();
     ASSERT_NE(hl, nullptr);
 
     // Because there are no horizon limits set, any altitude under the horizon will trigger the limit check
@@ -362,7 +362,7 @@ TEST(EqmodTest, scope_limits_altaz)
     auto limitgoto = onlimit.findWidgetByName("HORIZONLIMITSONLIMITGOTO");
     ASSERT_NE(limitgoto, nullptr);
 
-    HorizonLimits * const hl = eqmod.horizon;
+    HorizonLimits * const hl = eqmod.horizon.get();
     ASSERT_NE(hl, nullptr);
 
     // Use a configuration that aborts tracking out of limits
