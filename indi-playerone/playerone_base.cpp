@@ -176,16 +176,6 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 
     while (!isAbortToQuit)
     {
-        POABool pIsReady = POA_FALSE;
-        while (pIsReady == POA_FALSE)
-        {
-            //if (isAbortToQuit) //Triggered by external conditions
-            //    break;
-
-            //usleep(ExposureRequest / 10);
-            POAImageReady(mCameraInfo.cameraID, &pIsReady);
-        }
-
         ret = POAGetImageData(mCameraInfo.cameraID, targetFrame, totalBytes, waitMS);
         if (ret != POA_OK)
         {
