@@ -1269,7 +1269,7 @@ INDI::IHorizontalCoordinates CelestronAUX::AltAzFromRaDec(double ra, double dec,
     TelescopeDirectionVector TDV;
     INDI::IHorizontalCoordinates AltAz;
 
-    if (TransformCelestialToTelescope(ra, dec, ts, TDV))
+    if (TransformCelestialToTelescopeJD(ra, dec, ln_get_julian_from_sys() + ts, TDV))
         // The alignment subsystem has successfully transformed my coordinate
         AltitudeAzimuthFromTelescopeDirectionVector(TDV, AltAz);
     else
@@ -1745,6 +1745,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     }
 
     uint32_t axis1Steps {0}, axis2Steps {0};
+    double JDnow {ln_get_julian_from_sys()};
 
     TelescopeDirectionVector TDV;
     INDI::IEquatorialCoordinates MountRADE { ra, dec };
@@ -1764,8 +1765,8 @@ bool CelestronAUX::Goto(double ra, double dec)
 
             // Calculate tracking direction
             TelescopeDirectionVector TDV_now, TDV_offset;
-            if (TransformCelestialToTelescope(ra, dec, 0.0, TDV_now) &&
-                    TransformCelestialToTelescope(ra, dec, julianOffsetForGoto, TDV_offset))
+            if (TransformCelestialToTelescopeJD(ra, dec, JDnow, TDV_now) &&
+                    TransformCelestialToTelescopeJD(ra, dec, JDnow + julianOffsetForGoto, TDV_offset))
             {
                 INDI::IHorizontalCoordinates now {0, 0}, offset {0, 0};
                 AltitudeAzimuthFromTelescopeDirectionVector(TDV_now, now);
@@ -1785,7 +1786,7 @@ bool CelestronAUX::Goto(double ra, double dec)
     // We have no good way to estimate how long will the mount takes to reach target (with deceleration,
     // and not just speed). So we will use iterative GOTO once the first GOTO is complete.
     // Stages are GOTO --> SLEWING FAST --> APPROACH --> SLEWING SLOW --> TRACKING
-    if (TransformCelestialToTelescope(ra, dec, 0.0, TDV))
+    if (TransformCelestialToTelescopeJD(ra, dec, JDnow, TDV))
     {
         // For Alt-Az Mounts, we get the Mount AltAz coords
         if (m_MountType == ALT_AZ)
@@ -1939,13 +1940,14 @@ bool CelestronAUX::Sync(double ra, double dec)
 bool CelestronAUX::mountToSkyCoords()
 {
     double RightAscension, Declination;
+    double JDnow {ln_get_julian_from_sys()};
 
     // TODO for Alt-Az Mounts on a Wedge, we need a watch to set this.
     if (m_MountType == ALT_AZ)
     {
         INDI::IHorizontalCoordinates AltAz = m_MountCurrentAltAz;
         TelescopeDirectionVector TDV = TelescopeDirectionVectorFromAltitudeAzimuth(AltAz);
-        if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
+        if (!TransformTelescopeToCelestialJD(TDV, RightAscension, Declination, JDnow))
         {
             TelescopeDirectionVector RotatedTDV(TDV);
             switch (GetApproximateMountAlignment())
@@ -1978,7 +1980,7 @@ bool CelestronAUX::mountToSkyCoords()
     {
         INDI::IEquatorialCoordinates EquatorialCoordinates = m_MountCurrentRADE;
         TelescopeDirectionVector TDV = TelescopeDirectionVectorFromEquatorialCoordinates(EquatorialCoordinates);
-        if (!TransformTelescopeToCelestial(TDV, RightAscension, Declination))
+        if (!TransformTelescopeToCelestialJD(TDV, RightAscension, Declination, JDnow))
         {
             RightAscension = EquatorialCoordinates.rightascension;
             Declination = EquatorialCoordinates.declination;
@@ -2106,25 +2108,25 @@ void CelestronAUX::TimerHit()
                 INDI::IHorizontalCoordinates futureMountAxisCoordinates { 0, 0 };
                 double timeStep { 5.0 }; // time step for tracking rate estimation in seconds
                 double JDoffset { timeStep / (60 * 60 * 24) } ; // The same in days
+                double JDnow {ln_get_julian_from_sys()};
 
                 // Start by transforming tracking target celestial coordinates to telescope coordinates.
-                if (TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
-                                                  0, TDV))
+                if (TransformCelestialToTelescopeJD(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
+                                                    JDnow, TDV))
                 {
                     // If mount is Alt-Az then that's all we need to do
                     AltitudeAzimuthFromTelescopeDirectionVector(TDV, targetMountAxisCoordinates);
-                    TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
-                                                  JDoffset, futureTDV);
+                    TransformCelestialToTelescopeJD(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
+                                                    JDnow + JDoffset, futureTDV);
                     AltitudeAzimuthFromTelescopeDirectionVector(futureTDV, futureMountAxisCoordinates);
-                    TransformCelestialToTelescope(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
-                                                  -JDoffset, pastTDV);
+                    TransformCelestialToTelescopeJD(m_SkyTrackingTarget.rightascension, m_SkyTrackingTarget.declination,
+                                                    JDnow - JDoffset, pastTDV);
                     AltitudeAzimuthFromTelescopeDirectionVector(pastTDV, pastMountAxisCoordinates);
 
                 }
                 // If transformation failed.
                 else
                 {
-                    double JDnow {ln_get_julian_from_sys()};
                     INDI::IEquatorialCoordinates EquatorialCoordinates { 0, 0 };
                     EquatorialCoordinates.rightascension  = m_SkyTrackingTarget.rightascension;
                     EquatorialCoordinates.declination = m_SkyTrackingTarget.declination;
