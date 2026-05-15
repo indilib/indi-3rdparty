@@ -176,7 +176,7 @@ bool CelestronAUX::Handshake()
         LOG_DEBUG("Connection ready. Starting Processing.");
 
         // set mount type to alignment subsystem
-        //SetApproximateMountAlignmentFromMountType(static_cast<MountType>(MountTypeSP.findOnSwitchIndex()));
+        //SetApproximateMountAlignmentFromMountType(m_MountType);
         // tell the alignment math plugin to reinitialise
         Initialise(this);
 
@@ -290,10 +290,13 @@ bool CelestronAUX::initProperties()
     else
         SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
 
-    MountTypeSP[ALT_AZ].fill("ALTAZ", "AltAz", m_MountType == ALT_AZ ? ISS_ON : ISS_OFF);
-    MountTypeSP[EQ_FORK].fill("FORK", "EQ Fork", m_MountType == EQ_FORK ? ISS_ON : ISS_OFF);
-    MountTypeSP[EQ_GEM].fill("GEM", "EQ GEM", m_MountType == EQ_GEM ? ISS_ON : ISS_OFF);
-    MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    const char *mountTypeLabel = "AltAz";
+    if (m_MountType == EQ_GEM)
+        mountTypeLabel = "EQ GEM";
+    else if (m_MountType == EQ_FORK)
+        mountTypeLabel = "EQ Fork";
+    MountTypeTP[0].fill("TYPE", "Type", mountTypeLabel);
+    MountTypeTP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
 
     // Track Modes for Equatorial Mount
     if (m_MountType != ALT_AZ)
@@ -569,7 +572,7 @@ bool CelestronAUX::updateProperties()
     if (isConnected())
     {
         // Main Control Panel
-        //defineProperty(MountTypeSP);
+        defineProperty(MountTypeTP);
         //defineProperty(GainNP);
         if (m_MountType == ALT_AZ)
             defineProperty(HorizontalCoordsNP);
@@ -747,7 +750,7 @@ bool CelestronAUX::updateProperties()
     }
     else
     {
-        //deleteProperty(MountTypeSP.getName());
+        deleteProperty(MountTypeTP);
         if (m_MountType == ALT_AZ)
             deleteProperty(HorizontalCoordsNP);
         deleteProperty(HomeSP);
@@ -798,7 +801,7 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     INDI::Telescope::saveConfigItems(fp);
     SaveAlignmentConfigProperties(fp);
 
-    //MountTypeSP.save(fp);
+    //MountTypeTP is read-only (display only) and not persisted in config
     PortTypeSP.save(fp);
     CordWrapToggleSP.save(fp);
     CordWrapPositionSP.save(fp);
@@ -979,29 +982,6 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
-        // mount type
-        //        if (MountTypeSP.isNameMatch(name))
-        //        {
-        //            // Get current type
-        //            MountType currentMountType = static_cast<MountType>(MountTypeSP.findOnSwitchIndex());
-
-        //            MountTypeSP.update(states, names, n);
-        //            MountTypeSP.setState(IPS_OK);
-        //            MountTypeSP.apply();
-
-        //            // Get target type
-        //            MountType targetMountType = static_cast<MountType>(MountTypeSP.findOnSwitchIndex());
-
-        //            // If different then update
-        //            if (currentMountType != targetMountType)
-        //            {
-        //                LOG_INFO("Mount type updated. You must restart the driver for changes to take effect.");
-        //                saveConfig(true, MountTypeSP.getName());
-        //            }
-
-        //            return true;
-        //        }
-
         // Approach Direction
         if (ApproachDirectionSP.isNameMatch(name))
         {
@@ -2365,7 +2345,7 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
 
     // Do we really need this in update Location??
     // take care of latitude for north or south emisphere
-    //SetApproximateMountAlignmentFromMountType(static_cast<MountType>(IUFindOnSwitchIndex(&MountTypeSP)));
+    //SetApproximateMountAlignmentFromMountType(m_MountType);
     // tell the alignment math plugin to reinitialise
     //Initialise(this);
 
