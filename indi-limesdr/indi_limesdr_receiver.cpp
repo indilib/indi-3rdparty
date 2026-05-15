@@ -40,27 +40,34 @@
 
 static class Loader
 {
-public:
-    std::deque<std::unique_ptr<LIMESDR>> receivers;
-    lms_info_str_t *lime_dev_list;
-public:
-    Loader()
-    {
-        int iNumofConnectedReceivers = LMS_GetDeviceList(lime_dev_list);
-
-        if (iNumofConnectedReceivers <= 0)
+    public:
+        std::deque<std::unique_ptr<LIMESDR>> receivers;
+        lms_info_str_t *lime_dev_list;
+    public:
+        Loader() : lime_dev_list(nullptr)
         {
-            //Try sending IDMessage as well?
-            IDLog("No LIMESDR receivers detected. Power on?");
-            IDMessage(nullptr, "No LIMESDR receivers detected. Power on?");
-            return;
-        }
+            int iNumofConnectedReceivers = LMS_GetDeviceList(nullptr);
 
-        for (int i = 0; i < iNumofConnectedReceivers; i++)
-        {
-            receivers.push_back(std::unique_ptr<LIMESDR>(new LIMESDR(i)));
+            if (iNumofConnectedReceivers <= 0)
+            {
+                //Try sending IDMessage as well?
+                IDLog("No LIMESDR receivers detected. Power on?");
+                IDMessage(nullptr, "No LIMESDR receivers detected. Power on?");
+                return;
+            }
+
+            lime_dev_list = new lms_info_str_t[iNumofConnectedReceivers];
+            LMS_GetDeviceList(lime_dev_list);
+
+            for (int i = 0; i < iNumofConnectedReceivers; i++)
+            {
+                receivers.push_back(std::unique_ptr<LIMESDR>(new LIMESDR(i)));
+            }
         }
-    }
+        ~Loader()
+        {
+            delete[] lime_dev_list;
+        }
 } loader;
 
 LIMESDR::LIMESDR(uint32_t index)
@@ -141,7 +148,7 @@ bool LIMESDR::initProperties()
     IUFillBLOB(&TFitsB[3], "TRMT", "Transmit4", "");
     IUFillBLOB(&TFitsB[4], "TRMT", "Transmit5", "");
     IUFillBLOBVector(&TFitsBP, TFitsB, 5, getDeviceName(), "LIME_TRMT", "Transmit Data", INTEGRATION_INFO_TAB, IP_WO, 60, IPS_IDLE);
-*/
+    */
     // Add Debug, Simulator, and Configuration controls
     addAuxControls();
 
@@ -231,15 +238,24 @@ void LIMESDR::setupParams(float sr, float freq, float bw, float gain)
 bool LIMESDR::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
 {
     bool r = false;
-    if (dev && !strcmp(dev, getDeviceName()) && !strcmp(name, ReceiverSettingsNP.name)) {
-        for(int i = 0; i < n; i++) {
-            if (!strcmp(names[i], "RECEIVER_GAIN")) {
+    if (dev && !strcmp(dev, getDeviceName()) && !strcmp(name, ReceiverSettingsNP.name))
+    {
+        for(int i = 0; i < n; i++)
+        {
+            if (!strcmp(names[i], "RECEIVER_GAIN"))
+            {
                 setupParams(getSampleRate(), getFrequency(), getBandwidth(), values[i]);
-            } else if (!strcmp(names[i], "RECEIVER_BANDWIDTH")) {
+            }
+            else if (!strcmp(names[i], "RECEIVER_BANDWIDTH"))
+            {
                 setupParams(getSampleRate(), getFrequency(), values[i], getGain());
-            } else if (!strcmp(names[i], "RECEIVER_FREQUENCY")) {
+            }
+            else if (!strcmp(names[i], "RECEIVER_FREQUENCY"))
+            {
                 setupParams(getSampleRate(), values[i], getBandwidth(), getGain());
-            } else if (!strcmp(names[i], "RECEIVER_SAMPLERATE")) {
+            }
+            else if (!strcmp(names[i], "RECEIVER_SAMPLERATE"))
+            {
                 setupParams(values[i], getFrequency(), getBandwidth(), getGain());
             }
         }
