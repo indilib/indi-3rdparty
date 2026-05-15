@@ -46,6 +46,7 @@ static constexpr double MIN_TRACK_RATE_FACTOR =
     0.1; // Factor to ensure track rate doesn't go below a certain threshold of predicted rate
 
 static std::unique_ptr<CelestronAUX> telescope_caux(new CelestronAUX());
+static constexpr const char *MOUNT_TYPE_PROPERTY_NAME = "MOUNT_TYPE";
 
 double anglediff(double a, double b)
 {
@@ -270,7 +271,7 @@ bool CelestronAUX::initProperties()
     /////////////////////////////////////////////////////////////////////////////////////
     // Mount type
     int configMountType = ALT_AZ;
-    IUGetConfigOnSwitchIndex(getDeviceName(), "MOUNT_TYPE", &configMountType);
+    IUGetConfigOnSwitchIndex(getDeviceName(), MOUNT_TYPE_PROPERTY_NAME, &configMountType);
     m_MountType = static_cast<MountType>(configMountType);
 
     // Detect Equatorial Mounts
@@ -297,7 +298,7 @@ bool CelestronAUX::initProperties()
     else if (m_MountType == EQ_FORK)
         mountTypeLabel = "EQ Fork";
     MountTypeTP[0].fill("TYPE", "Type", mountTypeLabel);
-    MountTypeTP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    MountTypeTP.fill(getDeviceName(), MOUNT_TYPE_PROPERTY_NAME, "Mount Type", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
 
     // Track Modes for Equatorial Mount
     if (m_MountType != ALT_AZ)
@@ -569,6 +570,9 @@ bool CelestronAUX::updateProperties()
 
     if (isConnected())
     {
+        // Remove base telescope mount-type switch, then expose read-only mount type text.
+        deleteProperty(MOUNT_TYPE_PROPERTY_NAME);
+
         // Main Control Panel
         defineProperty(MountTypeTP);
         //defineProperty(GainNP);
