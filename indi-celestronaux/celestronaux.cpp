@@ -76,7 +76,6 @@ CelestronAUX::CelestronAUX()
                            TELESCOPE_HAS_TIME |
                            TELESCOPE_HAS_LOCATION |
                            TELESCOPE_CAN_CONTROL_TRACK |
-                           TELESCOPE_HAS_TRACK_MODE |
                            TELESCOPE_HAS_TRACK_RATE
                            , 8);
 
@@ -291,14 +290,17 @@ bool CelestronAUX::initProperties()
     else
         SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
 
-    //    MountTypeSP[ALT_AZ].fill("ALTAZ", "AltAz", m_MountType == ALT_AZ ? ISS_ON : ISS_OFF);
-    //    MountTypeSP[EQ_FORK].fill("FORK", "EQ Fork", m_MountType == EQ_FORK ? ISS_ON : ISS_OFF);
-    //    MountTypeSP[EQ_GEM].fill("GEM", "EQ GEM", m_MountType == EQ_GEM ? ISS_ON : ISS_OFF);
-    //    MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    MountTypeSP[ALT_AZ].fill("ALTAZ", "AltAz", m_MountType == ALT_AZ ? ISS_ON : ISS_OFF);
+    MountTypeSP[EQ_FORK].fill("FORK", "EQ Fork", m_MountType == EQ_FORK ? ISS_ON : ISS_OFF);
+    MountTypeSP[EQ_GEM].fill("GEM", "EQ GEM", m_MountType == EQ_GEM ? ISS_ON : ISS_OFF);
+    MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     // Track Modes for Equatorial Mount
     if (m_MountType != ALT_AZ)
     {
+
+        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_TRACK_MODE, 8);
+
         AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
         AddTrackMode("TRACK_SOLAR", "Solar");
         AddTrackMode("TRACK_LUNAR", "Lunar");
@@ -441,7 +443,7 @@ bool CelestronAUX::initProperties()
 
     Axis2PIDNP[Propotional].fill("Propotional", "Propotional", "%.2f", 0, 500, 10, 0);
     Axis2PIDNP[Derivative].fill("Derivative", "Derivative", "%.2f", 0, 100, 10, 0);
-    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 100, 10, 1);
+    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 100, 10, 0);
     Axis2PIDNP.fill(getDeviceName(), "AXIS2_PID", "Axis2 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     // Adaptive PID Tuning Toggles
@@ -2213,8 +2215,12 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_AZ] = offsetSteps[AXIS_AZ];
                     targetSteps[AXIS_AZ] = DegreesToEncoders(AzimuthToDegrees(targetMountAxisCoordinates.azimuth));
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    trackRates[AXIS_AZ] = predRate[AXIS_AZ] + m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    // trackRates[AXIS_AZ] = predRate[AXIS_AZ] + m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    double pidCorrectionAz = 0;
+                    if (m_az_pid_tuner && m_az_pid_tuner->isActivelyTuning())
+                        pidCorrectionAz = m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
 
+                    trackRates[AXIS_AZ] = predRate[AXIS_AZ] + pidCorrectionAz;
                     // Apply minTrackRate logic from Skywatcher
                     double minAzTrackRate = predRate[AXIS_AZ] * MIN_TRACK_RATE_FACTOR;
                     if (trackRates[AXIS_AZ] * predRate[AXIS_AZ] < 0 || std::abs(trackRates[AXIS_AZ]) < std::abs(minAzTrackRate))
@@ -2262,7 +2268,12 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
                     targetSteps[AXIS_ALT]  = DegreesToEncoders(targetMountAxisCoordinates.altitude);
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    // trackRates[AXIS_ALT] = predRate[AXIS_ALT] + m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    double pidCorrectionAlt = 0;
+                    if (m_al_pid_tuner && m_al_pid_tuner->isActivelyTuning())
+                        pidCorrectionAlt = m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+
+                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + pidCorrectionAlt;
 
                     // Apply minTrackRate logic from Skywatcher
                     double minAlTrackRate = predRate[AXIS_ALT] * MIN_TRACK_RATE_FACTOR;
