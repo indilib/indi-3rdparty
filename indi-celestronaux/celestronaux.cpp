@@ -75,8 +75,7 @@ CelestronAUX::CelestronAUX()
                            TELESCOPE_CAN_ABORT |
                            TELESCOPE_HAS_TIME |
                            TELESCOPE_HAS_LOCATION |
-                           TELESCOPE_CAN_CONTROL_TRACK |
-                           TELESCOPE_HAS_TRACK_RATE
+                           TELESCOPE_CAN_CONTROL_TRACK
                            , 8);
 
     //Both communication available, Serial and network (tcp/ip).
@@ -300,7 +299,7 @@ bool CelestronAUX::initProperties()
     if (m_MountType != ALT_AZ)
     {
 
-        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_TRACK_MODE, 8);
+        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_TRACK_MODE | TELESCOPE_HAS_TRACK_RATE, 8);
 
         AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
         AddTrackMode("TRACK_SOLAR", "Solar");
