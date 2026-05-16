@@ -290,13 +290,11 @@ bool CelestronAUX::initProperties()
     else
         SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
 
-    const char *mountTypeLabel = "AltAz";
-    if (m_MountType == EQ_GEM)
-        mountTypeLabel = "EQ GEM";
-    else if (m_MountType == EQ_FORK)
-        mountTypeLabel = "EQ Fork";
-    MountTypeTP[0].fill("TYPE", "Type", mountTypeLabel);
-    MountTypeTP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RO, 0, IPS_IDLE);
+    // Configure standard MountTypeSP from INDI::Telescope
+    MountTypeSP.setPermission(IP_RO);
+    MountTypeSP[MOUNT_ALTAZ].s   = (m_MountType == ALT_AZ) ? ISS_ON : ISS_OFF;
+    MountTypeSP[MOUNT_EQ_FORK].s = (m_MountType == EQ_FORK) ? ISS_ON : ISS_OFF;
+    MountTypeSP[MOUNT_EQ_GEM].s  = (m_MountType == EQ_GEM) ? ISS_ON : ISS_OFF;
 
     // Track Modes for Equatorial Mount
     if (m_MountType != ALT_AZ)
@@ -571,8 +569,6 @@ bool CelestronAUX::updateProperties()
 
     if (isConnected())
     {
-        // Main Control Panel
-        defineProperty(MountTypeTP);
         //defineProperty(GainNP);
         if (m_MountType == ALT_AZ)
             defineProperty(HorizontalCoordsNP);
@@ -750,7 +746,6 @@ bool CelestronAUX::updateProperties()
     }
     else
     {
-        deleteProperty(MountTypeTP);
         if (m_MountType == ALT_AZ)
             deleteProperty(HorizontalCoordsNP);
         deleteProperty(HomeSP);
@@ -801,7 +796,6 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     INDI::Telescope::saveConfigItems(fp);
     SaveAlignmentConfigProperties(fp);
 
-    //MountTypeTP is read-only (display only) and not persisted in config
     PortTypeSP.save(fp);
     CordWrapToggleSP.save(fp);
     CordWrapPositionSP.save(fp);
