@@ -1,3 +1,11 @@
+indi-celestronaux (1.6) jammy; urgency=medium
+
+  * Add comprehensive battery telemetry support for Evolution mounts
+  * Improve PID tracking stability and property handling
+  * Bump version to 1.6
+
+ -- Paweł T. Jochym <jochym@gmail.com>  Sat, 16 May 2026 18:41:05 +0200
+
 indi-celestronaux (1.5) jammy; urgency=medium
 
   * Add configurable approach direction with tracking vector support
