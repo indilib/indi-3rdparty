@@ -293,6 +293,10 @@ int AUXCommand::responseDataSize()
                 return -1;
         }
     }
+    else if (m_Destination == BAT && m_Command == GET_VOLTAGE)
+    {
+        return 6;
+    }
     else
     {
         switch (m_Command)

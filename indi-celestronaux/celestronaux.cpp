@@ -459,6 +459,12 @@ bool CelestronAUX::initProperties()
                             IPS_IDLE);
     AdaptiveTuningAlSP.load();
 
+    // Battery Info
+    BatteryStatusTP[BATT_LEVEL].fill("LEVEL", "Level", "Unknown");
+    BatteryStatusTP[BATT_VOLTAGE].fill("VOLTAGE", "Voltage (V)", "Unknown");
+    BatteryStatusTP[BATT_STATUS].fill("STATUS", "Power Status", "Unknown");
+    BatteryStatusTP.fill(getDeviceName(), "BATTERY_STATUS", "Battery", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
+
 
     /////////////////////////////////////////////////////////////////////////////////////
     /// Initial Configuration
@@ -607,6 +613,10 @@ bool CelestronAUX::updateProperties()
         getModel(AZM);
         getVersions();
 
+        // Battery and Power (only if detected/supported, but for Evolution it is standard)
+        // We'll define it here so it shows up in Mount Info
+        defineProperty(BatteryStatusTP);
+
         // Display firmware versions - only for detected devices
         struct FWInfo { const char *name; const char *label; uint8_t *ver; };
         std::vector<FWInfo> detected;
@@ -648,6 +658,12 @@ bool CelestronAUX::updateProperties()
             }
             FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
             defineProperty(FirmwareTP);
+        }
+
+        if (m_ModelVersion == MountVersion::Evolution_Nexstar || (m_BATVersion[0] || m_BATVersion[1]))
+        {
+            defineProperty(BatteryStatusTP);
+            getBatteryStatus();
         }
 
         bool hasFocuser = false;
@@ -789,6 +805,8 @@ bool CelestronAUX::updateProperties()
             deleteProperty(AdaptiveTuningAzSP);
             deleteProperty(AdaptiveTuningAlSP);
         }
+
+        deleteProperty(BatteryStatusTP);
 
         deleteProperty(FirmwareTP);
 
@@ -2056,6 +2074,17 @@ bool CelestronAUX::enforceSlewLimits()
 void CelestronAUX::TimerHit()
 {
     INDI::Telescope::TimerHit();
+
+    if (isConnected() && (m_ModelVersion == MountVersion::Evolution_Nexstar || m_BATVersion[0] || m_BATVersion[1]))
+    {
+        struct timeval now;
+        gettimeofday(&now, nullptr);
+        if (now.tv_sec - lastBatteryUpdate.tv_sec > 30)
+        {
+            getBatteryStatus();
+            lastBatteryUpdate = now;
+        }
+    }
 
     if(!enforceSlewLimits())
         return;
@@ -3366,10 +3395,6 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 m_HomingProgress[AXIS_ALT] = m.getData() == 0x00;
                 break;
 
-            case MC_SEEK_DONE:
-                m_HomingProgress[AXIS_AZ] = m.getData() == 0x00;
-                break;
-
             case MC_AUX_GUIDE_ACTIVE:
                 switch (m.source())
                 {
@@ -3455,6 +3480,61 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 }
             }
             break;
+
+            case GET_VOLTAGE:
+            {
+                if (m.source() == BAT && m.dataSize() >= 6)
+                {
+                    uint8_t charging = m.data()[0];
+                    uint8_t level_stat = m.data()[1];
+                    uint32_t voltage_uv = (static_cast<uint32_t>(m.data()[2]) << 24) |
+                                          (static_cast<uint32_t>(m.data()[3]) << 16) |
+                                          (static_cast<uint32_t>(m.data()[4]) << 8) |
+                                          static_cast<uint32_t>(m.data()[5]);
+                    double voltage = voltage_uv / 1000000.0;
+
+                    char valStr[32];
+                    sprintf(valStr, "%.2f V", voltage);
+                    BatteryStatusTP[BATT_VOLTAGE].setText(valStr);
+
+                    const char *levelStr = "Unknown";
+                    switch (level_stat)
+                    {
+                        case 0: levelStr = "Low"; break;
+                        case 1: levelStr = "Medium"; break;
+                        case 2: levelStr = "High"; break;
+                    }
+                    BatteryStatusTP[BATT_LEVEL].setText(levelStr);
+
+                    const char *statusStr = "Unknown";
+                    switch (charging)
+                    {
+                        case 0: statusStr = "Discharging"; break;
+                        case 1: statusStr = "Charging"; break;
+                        case 2: statusStr = "Full"; break;
+                    }
+                    BatteryStatusTP[BATT_STATUS].setText(statusStr);
+
+                    if (charging == 1)
+                        BatteryStatusTP.setState(IPS_BUSY);
+                    else if (level_stat == 0)
+                        BatteryStatusTP.setState(IPS_ALERT);
+                    else
+                        BatteryStatusTP.setState(IPS_OK);
+
+                    BatteryStatusTP.apply();
+                }
+            }
+            break;
+
+            case MC_SEEK_DONE:
+                if (m.source() == AZM)
+                    m_HomingProgress[AXIS_AZ] = m.getData() == 0x00;
+                // GET_CURRENT handling removed as per request
+                break;
+
+            break;
+
             default:
                 break;
 
@@ -3911,4 +3991,17 @@ void CelestronAUX::hex_dump(char *buf, AUXBuffer data, size_t size)
 
     if (size > 0)
         buf[3 * size - 1] = '\0';
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::getBatteryStatus()
+{
+    // Battery info from BAT module (0xb6) using command 0x10 (GET_VOLTAGE)
+    // Data is processed in processResponse(m)
+    AUXCommand bat_cmd(GET_VOLTAGE, APP, BAT);
+    sendAUXCommand(bat_cmd) && readAUXResponse(bat_cmd);
+
+    return true;
 }

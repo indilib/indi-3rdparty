@@ -402,6 +402,12 @@ class CelestronAUX :
         INDI::PropertyText FirmwareTP {0};
         enum {FW_MODEL, FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS, FW_FOCUS};
 
+        // Evolution Battery Status
+        INDI::PropertyText BatteryStatusTP {3};
+        enum { BATT_LEVEL, BATT_VOLTAGE, BATT_STATUS };
+        bool getBatteryStatus();
+        struct timeval lastBatteryUpdate {0, 0};
+
         // Mount Cord wrap Toogle
         INDI::PropertySwitch CordWrapToggleSP {2};
 
