@@ -459,17 +459,6 @@ bool CelestronAUX::initProperties()
                             IPS_IDLE);
     AdaptiveTuningAlSP.load();
 
-    // Firmware Info
-    FirmwareTP[FW_MODEL].fill("Model", "", nullptr);
-    FirmwareTP[FW_HC].fill("HC version", "", nullptr);
-    FirmwareTP[FW_MB].fill("Mother Board version", "", nullptr);
-    FirmwareTP[FW_AZM].fill("Ra/AZM version", "", nullptr);
-    FirmwareTP[FW_ALT].fill("Dec/ALT version", "", nullptr);
-    FirmwareTP[FW_WiFi].fill("WiFi version", "", nullptr);
-    FirmwareTP[FW_FOCUS].fill("Focuser version", "", nullptr);
-    FirmwareTP[FW_BAT].fill("Battery version", "", nullptr);
-    FirmwareTP[FW_GPS].fill("GPS version", "", nullptr);
-    FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
 
     /////////////////////////////////////////////////////////////////////////////////////
     /// Initial Configuration
@@ -617,27 +606,49 @@ bool CelestronAUX::updateProperties()
 
         getModel(AZM);
         getVersions();
-        // display firmware versions
-        char fwText[24] = {0};
-        formatModelString(fwText, sizeof(fwText), m_ModelVersion);
-        FirmwareTP[FW_MODEL].setText(fwText);
-        formatVersionString(fwText, 10, m_HCVersion);
-        FirmwareTP[FW_HC].setText(fwText);
-        formatVersionString(fwText, 10, m_MainBoardVersion);
-        FirmwareTP[FW_MB].setText(fwText);
-        formatVersionString(fwText, 10, m_AzimuthVersion);
-        FirmwareTP[FW_AZM].setText(fwText);
-        formatVersionString(fwText, 10, m_AltitudeVersion);
-        FirmwareTP[FW_ALT].setText(fwText);
-        formatVersionString(fwText, 10, m_WiFiVersion);
-        FirmwareTP[FW_WiFi].setText(fwText);
-        formatVersionString(fwText, 10, m_BATVersion);
-        FirmwareTP[FW_BAT].setText(fwText);
-        formatVersionString(fwText, 10, m_GPSVersion);
-        FirmwareTP[FW_GPS].setText(fwText);
-        formatVersionString(fwText, 10, m_FocusVersion);
-        FirmwareTP[FW_FOCUS].setText(fwText);
-        defineProperty(FirmwareTP);
+
+        // Display firmware versions - only for detected devices
+        struct FWInfo { const char *name; const char *label; uint8_t *ver; };
+        std::vector<FWInfo> detected;
+
+        char modelText[24] = {0};
+        formatModelString(modelText, sizeof(modelText), m_ModelVersion);
+        if (strcmp(modelText, "Unknown") != 0)
+            detected.push_back({"MODEL", "Model", nullptr}); // Special case for model
+
+        if (m_HCVersion[0] || m_HCVersion[1] || m_HCVersion[2] || m_HCVersion[3])
+            detected.push_back({"HC", "HC version", m_HCVersion});
+        if (m_MainBoardVersion[0] || m_MainBoardVersion[1] || m_MainBoardVersion[2] || m_MainBoardVersion[3])
+            detected.push_back({"MB", "Mother Board version", m_MainBoardVersion});
+        if (m_AzimuthVersion[0] || m_AzimuthVersion[1] || m_AzimuthVersion[2] || m_AzimuthVersion[3])
+            detected.push_back({"AZM", "Ra/AZM version", m_AzimuthVersion});
+        if (m_AltitudeVersion[0] || m_AltitudeVersion[1] || m_AltitudeVersion[2] || m_AltitudeVersion[3])
+            detected.push_back({"ALT", "Dec/ALT version", m_AltitudeVersion});
+        if (m_WiFiVersion[0] || m_WiFiVersion[1] || m_WiFiVersion[2] || m_WiFiVersion[3])
+            detected.push_back({"WiFi", "WiFi version", m_WiFiVersion});
+        if (m_BATVersion[0] || m_BATVersion[1] || m_BATVersion[2] || m_BATVersion[3])
+            detected.push_back({"BAT", "Battery version", m_BATVersion});
+        if (m_GPSVersion[0] || m_GPSVersion[1] || m_GPSVersion[2] || m_GPSVersion[3])
+            detected.push_back({"GPS", "GPS version", m_GPSVersion});
+        if (m_FocusVersion[0] || m_FocusVersion[1] || m_FocusVersion[2] || m_FocusVersion[3])
+            detected.push_back({"FOCUS", "Focuser version", m_FocusVersion});
+
+        if (!detected.empty())
+        {
+            FirmwareTP.resize(detected.size());
+            for (size_t i = 0; i < detected.size(); ++i)
+            {
+                char fwText[24] = {0};
+                if (detected[i].ver == nullptr) // Model
+                    strncpy(fwText, modelText, sizeof(fwText));
+                else
+                    formatVersionString(fwText, sizeof(fwText), detected[i].ver);
+                
+                FirmwareTP[i].fill(detected[i].name, detected[i].label, fwText);
+            }
+            FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
+            defineProperty(FirmwareTP);
+        }
 
         bool hasFocuser = false;
         for(size_t i = 0; i < sizeof(m_FocusVersion); i++)
