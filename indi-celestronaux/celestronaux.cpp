@@ -3549,10 +3549,10 @@ bool CelestronAUX::processResponse(AUXCommand &m)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::serialReadResponse(AUXCommand c)
 {
-    int n;
     unsigned char buf[MAX_AUX_PACKET_SIZE];
     char hexbuf[sizeof(buf) * 3];
     AUXCommand cmd;
+    size_t packet_size = 0;
 
     // We are not connected. Nothing to do.
     if ( PortFD <= 0 )
@@ -3562,15 +3562,16 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
     {
         // if connected to AUX or PC ports, receive AUX command response.
         // search for packet preamble (0x3b)
+        int bytes_read;
         do
         {
-            if (aux_tty_read((char * )buf, 1, READ_TIMEOUT, &n) != TTY_OK)
+            if (aux_tty_read((char * )buf, 1, READ_TIMEOUT, &bytes_read) != TTY_OK)
                 return false;
         }
         while (buf[0] != 0x3b);
 
         // packet preamble is found, now read packet length.
-        if (aux_tty_read((char * )(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
+        if (aux_tty_read((char * )(buf + 1), 1, READ_TIMEOUT, &bytes_read) != TTY_OK)
             return false;
 
         if (buf[1] + 3 > (int)sizeof(buf))
@@ -3580,14 +3581,16 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         }
 
         // now packet length is known, read the rest of the packet.
-        if (aux_tty_read((char * )(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
-                != TTY_OK || n != buf[1] + 1)
+        int payload_bytes_read;
+        if (aux_tty_read((char * )(buf + 2), buf[1] + 1, READ_TIMEOUT, &payload_bytes_read)
+                != TTY_OK || payload_bytes_read != buf[1] + 1)
         {
             LOG_DEBUG("Did not got whole packet. Dropping out.");
             return false;
         }
 
-        AUXBuffer b(buf, buf + (n + 2));
+        packet_size = payload_bytes_read + 2;
+        AUXBuffer b(buf, buf + packet_size);
         hex_dump(hexbuf, b, b.size());
         DEBUGF(DBG_SERIAL, "RES <%s>", hexbuf);
         cmd.parseBuf(b);
@@ -3603,15 +3606,16 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
             return false;
         }
 
-        if ((tty_read(PortFD, (char *)buf + 5, response_data_size + 1, READ_TIMEOUT, &n) !=
-                TTY_OK) || (n != response_data_size + 1))
+        int response_bytes_read;
+        if ((tty_read(PortFD, (char *)buf + 5, response_data_size + 1, READ_TIMEOUT, &response_bytes_read) !=
+                TTY_OK) || (response_bytes_read != response_data_size + 1))
             return false;
 
         // if last char is not '#', there was an error.
         if (buf[response_data_size + 5] != '#')
         {
-            LOGF_ERROR("Resp. char %d is %2.2x ascii %c", n, buf[n + 5], (char)buf[n + 5]);
-            AUXBuffer b(buf, buf + (response_data_size + 5));
+            LOGF_ERROR("Resp. char %d is %2.2x ascii %c", response_bytes_read, buf[response_data_size + 5], (char)buf[response_data_size + 5]);
+            AUXBuffer b(buf + 5, buf + 5 + response_bytes_read);
             hex_dump(hexbuf, b, b.size());
             LOGF_ERROR("RES <%s>", hexbuf);
             return false;
@@ -3623,19 +3627,18 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         buf[3] = c.source();
         buf[4] = c.command();
 
-        AUXBuffer b(buf, buf + (response_data_size + 5));
+        packet_size = response_data_size + 5;
+        AUXBuffer b(buf, buf + packet_size);
         hex_dump(hexbuf, b, b.size());
         DEBUGF(DBG_SERIAL, "RES (%d B): <%s>", (int)b.size(), hexbuf);
         cmd.parseBuf(b, false);
     }
 
     // Got the packet, process it
-    // n:length field >=3
-    // The buffer of n+2>=5 bytes contains:
-    // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
+    // packet_size: total length of reconstructed or received AUX packet
 
-    DEBUGF(DBG_SERIAL, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
-    logBytes(buf, n + 2, getDeviceName(), DBG_SERIAL);
+    DEBUGF(DBG_SERIAL, "Got %d bytes:  ; payload length field: %d ; MSG:", (int)packet_size, buf[1]);
+    logBytes(buf, packet_size, getDeviceName(), DBG_SERIAL);
     processResponse(cmd);
     return true;
 }
@@ -3851,6 +3854,9 @@ bool CelestronAUX::detectHC(char *version, size_t size)
     // We are not connected. Nothing to do.
     if ( PortFD <= 0 )
         return false;
+
+    // Flush any transient garbage bytes from the UART buffer
+    tcflush(PortFD, TCIOFLUSH);
 
     // send get firmware version command
     if (sendBuffer(b) != (int)b.size())
