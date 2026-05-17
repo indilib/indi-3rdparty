@@ -613,8 +613,6 @@ bool CelestronAUX::updateProperties()
         getModel(AZM);
         getVersions();
 
-        // Battery and Power is defined only for mounts that detect/support it.
-
         // Display firmware versions - only for detected devices
         struct FWInfo { const char *name; const char *label; uint8_t *ver; };
         std::vector<FWInfo> detected;
@@ -657,7 +655,8 @@ bool CelestronAUX::updateProperties()
             FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
             defineProperty(FirmwareTP);
         }
-
+        
+        // Battery and Power is defined only for mounts that detect/support it.
         if (m_ModelVersion == MountVersion::Evolution_Nexstar || (m_BATVersion[0] || m_BATVersion[1]))
         {
             defineProperty(BatteryStatusTP);
