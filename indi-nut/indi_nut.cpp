@@ -49,8 +49,8 @@ const char *NetworkUPSToolsMonitor::getDefaultName()
 
 bool NetworkUPSToolsMonitor::Connect()
 {
-    nutClient.connect(nutMonitorUrl[NUT_HOST].getText(), atoi(nutMonitorUrl[NUT_PORT].getText()));
-    nutClient.authenticate(nutMonitorUrl[NUT_USER].getText(), nutMonitorUrl[NUT_PASSWORD].getText());
+    nutClient.connect(nutMonitorUrl[INDEX_HOST].getText(), atoi(nutMonitorUrl[INDEX_PORT].getText()));
+    nutClient.authenticate(nutMonitorUrl[INDEX_USER].getText(), nutMonitorUrl[INDEX_PASSWORD].getText());
 
     return true;
 }
@@ -66,10 +66,10 @@ bool NetworkUPSToolsMonitor::initProperties()
 {
     INDI::Weather::initProperties();
 
-    nutMonitorUrl[NUT_HOST].fill("NUT_HOST", "NUT Monitor Host", nullptr);
-    nutMonitorUrl[NUT_PORT].fill("NUT_PORT", "NUT Monitor Port", "3493");
-    nutMonitorUrl[NUT_USER].fill("NUT_USER", "NUT Monitor User", nullptr);
-    nutMonitorUrl[NUT_PASSWORD].fill("NUT_PASSWORD", "NUT Monitor Password", nullptr);
+    nutMonitorUrl[INDEX_HOST].fill("NUT_HOST", "NUT Monitor Host", nullptr);
+    nutMonitorUrl[INDEX_PORT].fill("NUT_PORT", "NUT Monitor Port", "3493");
+    nutMonitorUrl[INDEX_USER].fill("NUT_USER", "NUT Monitor User", nullptr);
+    nutMonitorUrl[INDEX_PASSWORD].fill("NUT_PASSWORD", "NUT Monitor Password", nullptr);
 
     nutMonitorUrl.fill(getDeviceName(), "NUT_MON_URL", "NetworkUPSToolsMonitor", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
 
