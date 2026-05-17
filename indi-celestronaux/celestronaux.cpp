@@ -3550,8 +3550,8 @@ bool CelestronAUX::processResponse(AUXCommand &m)
 bool CelestronAUX::serialReadResponse(AUXCommand c)
 {
     int n;
-    unsigned char buf[32];
-    char hexbuf[24];
+    unsigned char buf[MAX_AUX_PACKET_SIZE];
+    char hexbuf[sizeof(buf) * 3];
     AUXCommand cmd;
 
     // We are not connected. Nothing to do.
@@ -3573,6 +3573,12 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         if (aux_tty_read((char * )(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
             return false;
 
+        if (buf[1] + 3 > (int)sizeof(buf))
+        {
+            LOGF_ERROR("Packet length %d exceeds buffer size", buf[1]);
+            return false;
+        }
+
         // now packet length is known, read the rest of the packet.
         if (aux_tty_read((char * )(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
                 != TTY_OK || n != buf[1] + 1)
@@ -3591,6 +3597,12 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         // if connected to HC serial, build up the AUX command response from
         // given AUX command and passthrough response without checksum.
         // read passthrough response
+        if (response_data_size + 6 > (int)sizeof(buf))
+        {
+            LOGF_ERROR("Response data size %d too large for buffer", response_data_size);
+            return false;
+        }
+
         if ((tty_read(PortFD, (char *)buf + 5, response_data_size + 1, READ_TIMEOUT, &n) !=
                 TTY_OK) || (n != response_data_size + 1))
             return false;
@@ -3664,7 +3676,7 @@ bool CelestronAUX::tcpReadResponse()
                     AUXBuffer b(buf + i, buf + shft);
                     cmd.parseBuf(b);
 
-                    char hexbuf[32 * 3] = {0};
+                    char hexbuf[MAX_AUX_PACKET_SIZE * 3] = {0};
                     hex_dump(hexbuf, b, b.size());
                     DEBUGF(DBG_SERIAL, "RES <%s>", hexbuf);
 
@@ -3724,7 +3736,7 @@ int CelestronAUX::sendBuffer(AUXBuffer buf)
         if ((unsigned)n != buf.size())
             LOGF_WARN("sendBuffer: incomplete send n=%d size=%d", n, (int)buf.size());
 
-        char hexbuf[32 * 3] = {0};
+        char hexbuf[MAX_AUX_PACKET_SIZE * 3] = {0};
         hex_dump(hexbuf, buf, buf.size());
         DEBUGF(DBG_SERIAL, "CMD <%s>", hexbuf);
 

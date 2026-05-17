@@ -526,6 +526,7 @@ class CelestronAUX :
         // MC_SET_POS_GUIDERATE & MC_SET_NEG_GUIDERATE use 24bit number rate in
         static constexpr uint8_t RATE_PER_ARCSEC {4};
 
+        static constexpr size_t MAX_AUX_PACKET_SIZE {258};
         static constexpr uint32_t BUFFER_SIZE {10240};
         // seconds
         static constexpr uint8_t READ_TIMEOUT {1};
