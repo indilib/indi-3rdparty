@@ -3491,7 +3491,7 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                     double voltage = voltage_uv / 1000000.0;
 
                     char valStr[32];
-                    sprintf(valStr, "%.2f V", voltage);
+                    snprintf(valStr, sizeof(valStr), "%.2f V", voltage);
                     BatteryStatusTP[BATT_VOLTAGE].setText(valStr);
 
                     const char *levelStr = "Unknown";
