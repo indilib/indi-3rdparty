@@ -613,9 +613,7 @@ bool CelestronAUX::updateProperties()
         getModel(AZM);
         getVersions();
 
-        // Battery and Power (only if detected/supported, but for Evolution it is standard)
-        // We'll define it here so it shows up in Mount Info
-        defineProperty(BatteryStatusTP);
+        // Battery and Power is defined only for mounts that detect/support it.
 
         // Display firmware versions - only for detected devices
         struct FWInfo { const char *name; const char *label; uint8_t *ver; };
