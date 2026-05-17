@@ -281,6 +281,7 @@ EXPORTC uint32_t STDCALL ExpQHYCCDSingleFrame(qhyccd_handle *handle);
    another QHYCCD_ERROR code on other failures
  */
 EXPORTC uint32_t STDCALL GetQHYCCDSingleFrame(qhyccd_handle *handle,uint32_t *w,uint32_t *h,uint32_t *bpp,uint32_t *channels,uint8_t *imgdata);
+EXPORTC uint32_t STDCALL GetQHYCCDSingleFrame_proc(qhyccd_handle *handle,uint32_t *w,uint32_t *h,uint32_t *bpp,uint32_t *channels,uint8_t *imgdata,uint8_t proc_overscan,uint32_t proc_binx,uint32_t proc_biny,uint8_t proc_bin_avg);
 
 /**
   @fn uint32_t CancelQHYCCDExposing(qhyccd_handle *handle)

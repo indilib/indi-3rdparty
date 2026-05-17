@@ -286,6 +286,7 @@ enum CONTROL_ID
 /*92*/  CONTROL_AUTOEXPgainMax,         //!<auto exposure max gain
 /*93*/	CONTROL_Error_Led,  // 992s 411s Error Led
 /*94*/  CONTROL_HEATINGBOARD,         //!< control camera heating board
+/*95*/  CONTROL_CAA_ROTATOR,          //!< CAA rotator angle
 
 /* Do not Put Item after  CONTROL_MAX_ID !! This should be the max index of the list */
 /*Last One */  CONTROL_MAX_ID,

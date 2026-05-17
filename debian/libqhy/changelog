@@ -1,3 +1,9 @@
+libqhy (26.5.17) bullseye; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sun, 17 May 2026 10:30:40 +0000
+
 libqhy (26.2.1) bullseye; urgency=medium
 
   * Upstream release.
