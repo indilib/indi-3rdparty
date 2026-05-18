@@ -4016,7 +4016,5 @@ bool CelestronAUX::getBatteryStatus()
     // Battery info from BAT module (0xb6) using command 0x10 (GET_VOLTAGE)
     // Data is processed in processResponse(m)
     AUXCommand bat_cmd(GET_VOLTAGE, APP, BAT);
-    sendAUXCommand(bat_cmd) && readAUXResponse(bat_cmd);
-
-    return true;
+    return sendAUXCommand(bat_cmd) && readAUXResponse(bat_cmd);
 }
