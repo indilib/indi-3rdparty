@@ -1,3 +1,13 @@
+indi-celestronaux (1.6) jammy; urgency=medium
+
+  * Add comprehensive battery telemetry support for Evolution mounts
+  * Fix PID tracking handling
+  * Fix some issues with property handling
+  * Bump version to 1.6
+  * Fix communication stack buffer overflows and enhance packet validation
+
+ -- Paweł T. Jochym <jochym@gmail.com>  Sun, 17 May 2026 15:03:00 +0200
+
 indi-celestronaux (1.5) jammy; urgency=medium
 
   * Add configurable approach direction with tracking vector support

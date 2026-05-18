@@ -75,9 +75,7 @@ CelestronAUX::CelestronAUX()
                            TELESCOPE_CAN_ABORT |
                            TELESCOPE_HAS_TIME |
                            TELESCOPE_HAS_LOCATION |
-                           TELESCOPE_CAN_CONTROL_TRACK |
-                           TELESCOPE_HAS_TRACK_MODE |
-                           TELESCOPE_HAS_TRACK_RATE
+                           TELESCOPE_CAN_CONTROL_TRACK
                            , 8);
 
     //Both communication available, Serial and network (tcp/ip).
@@ -177,7 +175,7 @@ bool CelestronAUX::Handshake()
         LOG_DEBUG("Connection ready. Starting Processing.");
 
         // set mount type to alignment subsystem
-        //SetApproximateMountAlignmentFromMountType(static_cast<MountType>(MountTypeSP.findOnSwitchIndex()));
+        //SetApproximateMountAlignmentFromMountType(m_MountType);
         // tell the alignment math plugin to reinitialise
         Initialise(this);
 
@@ -291,14 +289,18 @@ bool CelestronAUX::initProperties()
     else
         SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
 
-    //    MountTypeSP[ALT_AZ].fill("ALTAZ", "AltAz", m_MountType == ALT_AZ ? ISS_ON : ISS_OFF);
-    //    MountTypeSP[EQ_FORK].fill("FORK", "EQ Fork", m_MountType == EQ_FORK ? ISS_ON : ISS_OFF);
-    //    MountTypeSP[EQ_GEM].fill("GEM", "EQ GEM", m_MountType == EQ_GEM ? ISS_ON : ISS_OFF);
-    //    MountTypeSP.fill(getDeviceName(), "MOUNT_TYPE", "Mount Type", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    // Configure standard MountTypeSP from INDI::Telescope
+    MountTypeSP.setPermission(IP_RO);
+    MountTypeSP[MOUNT_ALTAZ].s   = (m_MountType == ALT_AZ) ? ISS_ON : ISS_OFF;
+    MountTypeSP[MOUNT_EQ_FORK].s = (m_MountType == EQ_FORK) ? ISS_ON : ISS_OFF;
+    MountTypeSP[MOUNT_EQ_GEM].s  = (m_MountType == EQ_GEM) ? ISS_ON : ISS_OFF;
 
     // Track Modes for Equatorial Mount
     if (m_MountType != ALT_AZ)
     {
+
+        SetTelescopeCapability(GetTelescopeCapability() | TELESCOPE_HAS_TRACK_MODE | TELESCOPE_HAS_TRACK_RATE, 8);
+
         AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
         AddTrackMode("TRACK_SOLAR", "Solar");
         AddTrackMode("TRACK_LUNAR", "Lunar");
@@ -441,7 +443,7 @@ bool CelestronAUX::initProperties()
 
     Axis2PIDNP[Propotional].fill("Propotional", "Propotional", "%.2f", 0, 500, 10, 0);
     Axis2PIDNP[Derivative].fill("Derivative", "Derivative", "%.2f", 0, 100, 10, 0);
-    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 100, 10, 1);
+    Axis2PIDNP[Integral].fill("Integral", "Integral", "%.2f", 0, 100, 10, 0);
     Axis2PIDNP.fill(getDeviceName(), "AXIS2_PID", "Axis2 PID", MOUNTINFO_TAB, IP_RW, 60, IPS_IDLE);
 
     // Adaptive PID Tuning Toggles
@@ -457,17 +459,12 @@ bool CelestronAUX::initProperties()
                             IPS_IDLE);
     AdaptiveTuningAlSP.load();
 
-    // Firmware Info
-    FirmwareTP[FW_MODEL].fill("Model", "", nullptr);
-    FirmwareTP[FW_HC].fill("HC version", "", nullptr);
-    FirmwareTP[FW_MB].fill("Mother Board version", "", nullptr);
-    FirmwareTP[FW_AZM].fill("Ra/AZM version", "", nullptr);
-    FirmwareTP[FW_ALT].fill("Dec/ALT version", "", nullptr);
-    FirmwareTP[FW_WiFi].fill("WiFi version", "", nullptr);
-    FirmwareTP[FW_FOCUS].fill("Focuser version", "", nullptr);
-    FirmwareTP[FW_BAT].fill("Battery version", "", nullptr);
-    FirmwareTP[FW_GPS].fill("GPS version", "", nullptr);
-    FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
+    // Battery Info
+    BatteryStatusTP[BATT_LEVEL].fill("LEVEL", "Level", "Unknown");
+    BatteryStatusTP[BATT_VOLTAGE].fill("VOLTAGE", "Voltage (V)", "Unknown");
+    BatteryStatusTP[BATT_STATUS].fill("STATUS", "Power Status", "Unknown");
+    BatteryStatusTP.fill(getDeviceName(), "BATTERY_STATUS", "Battery", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
+
 
     /////////////////////////////////////////////////////////////////////////////////////
     /// Initial Configuration
@@ -566,8 +563,6 @@ bool CelestronAUX::updateProperties()
 
     if (isConnected())
     {
-        // Main Control Panel
-        //defineProperty(MountTypeSP);
         //defineProperty(GainNP);
         if (m_MountType == ALT_AZ)
             defineProperty(HorizontalCoordsNP);
@@ -617,27 +612,56 @@ bool CelestronAUX::updateProperties()
 
         getModel(AZM);
         getVersions();
-        // display firmware versions
-        char fwText[24] = {0};
-        formatModelString(fwText, sizeof(fwText), m_ModelVersion);
-        FirmwareTP[FW_MODEL].setText(fwText);
-        formatVersionString(fwText, 10, m_HCVersion);
-        FirmwareTP[FW_HC].setText(fwText);
-        formatVersionString(fwText, 10, m_MainBoardVersion);
-        FirmwareTP[FW_MB].setText(fwText);
-        formatVersionString(fwText, 10, m_AzimuthVersion);
-        FirmwareTP[FW_AZM].setText(fwText);
-        formatVersionString(fwText, 10, m_AltitudeVersion);
-        FirmwareTP[FW_ALT].setText(fwText);
-        formatVersionString(fwText, 10, m_WiFiVersion);
-        FirmwareTP[FW_WiFi].setText(fwText);
-        formatVersionString(fwText, 10, m_BATVersion);
-        FirmwareTP[FW_BAT].setText(fwText);
-        formatVersionString(fwText, 10, m_GPSVersion);
-        FirmwareTP[FW_GPS].setText(fwText);
-        formatVersionString(fwText, 10, m_FocusVersion);
-        FirmwareTP[FW_FOCUS].setText(fwText);
-        defineProperty(FirmwareTP);
+
+        // Display firmware versions - only for detected devices
+        struct FWInfo { const char *name; const char *label; uint8_t *ver; };
+        std::vector<FWInfo> detected;
+
+        char modelText[24] = {0};
+        formatModelString(modelText, sizeof(modelText), m_ModelVersion);
+        if (strcmp(modelText, "Unknown") != 0)
+            detected.push_back({"MODEL", "Model", nullptr}); // Special case for model
+
+        if (m_HCVersion[0] || m_HCVersion[1] || m_HCVersion[2] || m_HCVersion[3])
+            detected.push_back({"HC", "HC version", m_HCVersion});
+        if (m_MainBoardVersion[0] || m_MainBoardVersion[1] || m_MainBoardVersion[2] || m_MainBoardVersion[3])
+            detected.push_back({"MB", "Mother Board version", m_MainBoardVersion});
+        if (m_AzimuthVersion[0] || m_AzimuthVersion[1] || m_AzimuthVersion[2] || m_AzimuthVersion[3])
+            detected.push_back({"AZM", "Ra/AZM version", m_AzimuthVersion});
+        if (m_AltitudeVersion[0] || m_AltitudeVersion[1] || m_AltitudeVersion[2] || m_AltitudeVersion[3])
+            detected.push_back({"ALT", "Dec/ALT version", m_AltitudeVersion});
+        if (m_WiFiVersion[0] || m_WiFiVersion[1] || m_WiFiVersion[2] || m_WiFiVersion[3])
+            detected.push_back({"WiFi", "WiFi version", m_WiFiVersion});
+        if (m_BATVersion[0] || m_BATVersion[1] || m_BATVersion[2] || m_BATVersion[3])
+            detected.push_back({"BAT", "Battery version", m_BATVersion});
+        if (m_GPSVersion[0] || m_GPSVersion[1] || m_GPSVersion[2] || m_GPSVersion[3])
+            detected.push_back({"GPS", "GPS version", m_GPSVersion});
+        if (m_FocusVersion[0] || m_FocusVersion[1] || m_FocusVersion[2] || m_FocusVersion[3])
+            detected.push_back({"FOCUS", "Focuser version", m_FocusVersion});
+
+        if (!detected.empty())
+        {
+            FirmwareTP.resize(detected.size());
+            for (size_t i = 0; i < detected.size(); ++i)
+            {
+                char fwText[24] = {0};
+                if (detected[i].ver == nullptr) // Model
+                    strncpy(fwText, modelText, sizeof(fwText));
+                else
+                    formatVersionString(fwText, sizeof(fwText), detected[i].ver);
+                
+                FirmwareTP[i].fill(detected[i].name, detected[i].label, fwText);
+            }
+            FirmwareTP.fill(getDeviceName(), "Firmware Info", "Firmware Info", MOUNTINFO_TAB, IP_RO, 0, IPS_IDLE);
+            defineProperty(FirmwareTP);
+        }
+        
+        // Battery and Power is defined only for mounts that detect/support it.
+        if (m_ModelVersion == MountVersion::Evolution_Nexstar || (m_BATVersion[0] || m_BATVersion[1]))
+        {
+            defineProperty(BatteryStatusTP);
+            getBatteryStatus();
+        }
 
         bool hasFocuser = false;
         for(size_t i = 0; i < sizeof(m_FocusVersion); i++)
@@ -745,7 +769,6 @@ bool CelestronAUX::updateProperties()
     }
     else
     {
-        //deleteProperty(MountTypeSP.getName());
         if (m_MountType == ALT_AZ)
             deleteProperty(HorizontalCoordsNP);
         deleteProperty(HomeSP);
@@ -780,6 +803,8 @@ bool CelestronAUX::updateProperties()
             deleteProperty(AdaptiveTuningAlSP);
         }
 
+        deleteProperty(BatteryStatusTP);
+
         deleteProperty(FirmwareTP);
 
         FI::updateProperties();
@@ -796,7 +821,6 @@ bool CelestronAUX::saveConfigItems(FILE *fp)
     INDI::Telescope::saveConfigItems(fp);
     SaveAlignmentConfigProperties(fp);
 
-    //MountTypeSP.save(fp);
     PortTypeSP.save(fp);
     CordWrapToggleSP.save(fp);
     CordWrapPositionSP.save(fp);
@@ -977,29 +1001,6 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
 {
     if (strcmp(dev, getDeviceName()) == 0)
     {
-        // mount type
-        //        if (MountTypeSP.isNameMatch(name))
-        //        {
-        //            // Get current type
-        //            MountType currentMountType = static_cast<MountType>(MountTypeSP.findOnSwitchIndex());
-
-        //            MountTypeSP.update(states, names, n);
-        //            MountTypeSP.setState(IPS_OK);
-        //            MountTypeSP.apply();
-
-        //            // Get target type
-        //            MountType targetMountType = static_cast<MountType>(MountTypeSP.findOnSwitchIndex());
-
-        //            // If different then update
-        //            if (currentMountType != targetMountType)
-        //            {
-        //                LOG_INFO("Mount type updated. You must restart the driver for changes to take effect.");
-        //                saveConfig(true, MountTypeSP.getName());
-        //            }
-
-        //            return true;
-        //        }
-
         // Approach Direction
         if (ApproachDirectionSP.isNameMatch(name))
         {
@@ -2071,6 +2072,17 @@ void CelestronAUX::TimerHit()
 {
     INDI::Telescope::TimerHit();
 
+    if (isConnected() && (m_ModelVersion == MountVersion::Evolution_Nexstar || m_BATVersion[0] || m_BATVersion[1]))
+    {
+        struct timeval now;
+        gettimeofday(&now, nullptr);
+        if (now.tv_sec - lastBatteryUpdate.tv_sec > 30)
+        {
+            getBatteryStatus();
+            lastBatteryUpdate = now;
+        }
+    }
+
     if(!enforceSlewLimits())
         return;
 
@@ -2213,8 +2225,12 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_AZ] = offsetSteps[AXIS_AZ];
                     targetSteps[AXIS_AZ] = DegreesToEncoders(AzimuthToDegrees(targetMountAxisCoordinates.azimuth));
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    trackRates[AXIS_AZ] = predRate[AXIS_AZ] + m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    // trackRates[AXIS_AZ] = predRate[AXIS_AZ] + m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
+                    double pidCorrectionAz = 0;
+                    if (m_az_pid_tuner && m_az_pid_tuner->isActivelyTuning())
+                        pidCorrectionAz = m_Controllers[AXIS_AZ]->calculate(0, -offsetSteps[AXIS_AZ]);
 
+                    trackRates[AXIS_AZ] = predRate[AXIS_AZ] + pidCorrectionAz;
                     // Apply minTrackRate logic from Skywatcher
                     double minAzTrackRate = predRate[AXIS_AZ] * MIN_TRACK_RATE_FACTOR;
                     if (trackRates[AXIS_AZ] * predRate[AXIS_AZ] < 0 || std::abs(trackRates[AXIS_AZ]) < std::abs(minAzTrackRate))
@@ -2262,7 +2278,12 @@ void CelestronAUX::TimerHit()
                     m_LastOffset[AXIS_ALT] = offsetSteps[AXIS_ALT];
                     targetSteps[AXIS_ALT]  = DegreesToEncoders(targetMountAxisCoordinates.altitude);
                     // Track rate: predicted + PID controlled correction based on tracking error: offsetSteps
-                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    // trackRates[AXIS_ALT] = predRate[AXIS_ALT] + m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+                    double pidCorrectionAlt = 0;
+                    if (m_al_pid_tuner && m_al_pid_tuner->isActivelyTuning())
+                        pidCorrectionAlt = m_Controllers[AXIS_ALT]->calculate(0, -offsetSteps[AXIS_ALT]);
+
+                    trackRates[AXIS_ALT] = predRate[AXIS_ALT] + pidCorrectionAlt;
 
                     // Apply minTrackRate logic from Skywatcher
                     double minAlTrackRate = predRate[AXIS_ALT] * MIN_TRACK_RATE_FACTOR;
@@ -2354,7 +2375,7 @@ bool CelestronAUX::updateLocation(double latitude, double longitude, double elev
 
     // Do we really need this in update Location??
     // take care of latitude for north or south emisphere
-    //SetApproximateMountAlignmentFromMountType(static_cast<MountType>(IUFindOnSwitchIndex(&MountTypeSP)));
+    //SetApproximateMountAlignmentFromMountType(m_MountType);
     // tell the alignment math plugin to reinitialise
     //Initialise(this);
 
@@ -3371,10 +3392,6 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 m_HomingProgress[AXIS_ALT] = m.getData() == 0x00;
                 break;
 
-            case MC_SEEK_DONE:
-                m_HomingProgress[AXIS_AZ] = m.getData() == 0x00;
-                break;
-
             case MC_AUX_GUIDE_ACTIVE:
                 switch (m.source())
                 {
@@ -3460,6 +3477,61 @@ bool CelestronAUX::processResponse(AUXCommand &m)
                 }
             }
             break;
+
+            case GET_VOLTAGE:
+            {
+                if (m.source() == BAT && m.dataSize() >= 6)
+                {
+                    uint8_t charging = m.data()[0];
+                    uint8_t level_stat = m.data()[1];
+                    uint32_t voltage_uv = (static_cast<uint32_t>(m.data()[2]) << 24) |
+                                          (static_cast<uint32_t>(m.data()[3]) << 16) |
+                                          (static_cast<uint32_t>(m.data()[4]) << 8) |
+                                          static_cast<uint32_t>(m.data()[5]);
+                    double voltage = voltage_uv / 1000000.0;
+
+                    char valStr[32];
+                    snprintf(valStr, sizeof(valStr), "%.2f V", voltage);
+                    BatteryStatusTP[BATT_VOLTAGE].setText(valStr);
+
+                    const char *levelStr = "Unknown";
+                    switch (level_stat)
+                    {
+                        case 0: levelStr = "Low"; break;
+                        case 1: levelStr = "Medium"; break;
+                        case 2: levelStr = "High"; break;
+                    }
+                    BatteryStatusTP[BATT_LEVEL].setText(levelStr);
+
+                    const char *statusStr = "Unknown";
+                    switch (charging)
+                    {
+                        case 0: statusStr = "Discharging"; break;
+                        case 1: statusStr = "Charging"; break;
+                        case 2: statusStr = "Full"; break;
+                    }
+                    BatteryStatusTP[BATT_STATUS].setText(statusStr);
+
+                    if (charging == 1)
+                        BatteryStatusTP.setState(IPS_BUSY);
+                    else if (level_stat == 0)
+                        BatteryStatusTP.setState(IPS_ALERT);
+                    else
+                        BatteryStatusTP.setState(IPS_OK);
+
+                    BatteryStatusTP.apply();
+                }
+            }
+            break;
+
+            case MC_SEEK_DONE:
+                if (m.source() == AZM)
+                    m_HomingProgress[AXIS_AZ] = m.getData() == 0x00;
+                // GET_CURRENT handling removed as per request
+                break;
+
+            break;
+
             default:
                 break;
 
@@ -3477,10 +3549,10 @@ bool CelestronAUX::processResponse(AUXCommand &m)
 /////////////////////////////////////////////////////////////////////////////////////
 bool CelestronAUX::serialReadResponse(AUXCommand c)
 {
-    int n;
-    unsigned char buf[32];
-    char hexbuf[24];
+    unsigned char buf[MAX_AUX_PACKET_SIZE];
+    char hexbuf[sizeof(buf) * 3];
     AUXCommand cmd;
+    size_t packet_size = 0;
 
     // We are not connected. Nothing to do.
     if ( PortFD <= 0 )
@@ -3490,26 +3562,35 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
     {
         // if connected to AUX or PC ports, receive AUX command response.
         // search for packet preamble (0x3b)
+        int bytes_read;
         do
         {
-            if (aux_tty_read((char * )buf, 1, READ_TIMEOUT, &n) != TTY_OK)
+            if (aux_tty_read((char * )buf, 1, READ_TIMEOUT, &bytes_read) != TTY_OK)
                 return false;
         }
         while (buf[0] != 0x3b);
 
         // packet preamble is found, now read packet length.
-        if (aux_tty_read((char * )(buf + 1), 1, READ_TIMEOUT, &n) != TTY_OK)
+        if (aux_tty_read((char * )(buf + 1), 1, READ_TIMEOUT, &bytes_read) != TTY_OK)
             return false;
 
+        if (buf[1] + 3 > (int)sizeof(buf))
+        {
+            LOGF_ERROR("Packet length %d exceeds buffer size", buf[1]);
+            return false;
+        }
+
         // now packet length is known, read the rest of the packet.
-        if (aux_tty_read((char * )(buf + 2), buf[1] + 1, READ_TIMEOUT, &n)
-                != TTY_OK || n != buf[1] + 1)
+        int payload_bytes_read;
+        if (aux_tty_read((char * )(buf + 2), buf[1] + 1, READ_TIMEOUT, &payload_bytes_read)
+                != TTY_OK || payload_bytes_read != buf[1] + 1)
         {
             LOG_DEBUG("Did not got whole packet. Dropping out.");
             return false;
         }
 
-        AUXBuffer b(buf, buf + (n + 2));
+        packet_size = payload_bytes_read + 2;
+        AUXBuffer b(buf, buf + packet_size);
         hex_dump(hexbuf, b, b.size());
         DEBUGF(DBG_SERIAL, "RES <%s>", hexbuf);
         cmd.parseBuf(b);
@@ -3519,15 +3600,22 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         // if connected to HC serial, build up the AUX command response from
         // given AUX command and passthrough response without checksum.
         // read passthrough response
-        if ((tty_read(PortFD, (char *)buf + 5, response_data_size + 1, READ_TIMEOUT, &n) !=
-                TTY_OK) || (n != response_data_size + 1))
+        if (response_data_size + 6 > (int)sizeof(buf))
+        {
+            LOGF_ERROR("Response data size %d too large for buffer", response_data_size);
+            return false;
+        }
+
+        int response_bytes_read;
+        if ((tty_read(PortFD, (char *)buf + 5, response_data_size + 1, READ_TIMEOUT, &response_bytes_read) !=
+                TTY_OK) || (response_bytes_read != response_data_size + 1))
             return false;
 
         // if last char is not '#', there was an error.
         if (buf[response_data_size + 5] != '#')
         {
-            LOGF_ERROR("Resp. char %d is %2.2x ascii %c", n, buf[n + 5], (char)buf[n + 5]);
-            AUXBuffer b(buf, buf + (response_data_size + 5));
+            LOGF_ERROR("Resp. char %d is %2.2x ascii %c", response_bytes_read, buf[response_data_size + 5], (char)buf[response_data_size + 5]);
+            AUXBuffer b(buf + 5, buf + 5 + response_bytes_read);
             hex_dump(hexbuf, b, b.size());
             LOGF_ERROR("RES <%s>", hexbuf);
             return false;
@@ -3539,19 +3627,18 @@ bool CelestronAUX::serialReadResponse(AUXCommand c)
         buf[3] = c.source();
         buf[4] = c.command();
 
-        AUXBuffer b(buf, buf + (response_data_size + 5));
+        packet_size = response_data_size + 5;
+        AUXBuffer b(buf, buf + packet_size);
         hex_dump(hexbuf, b, b.size());
         DEBUGF(DBG_SERIAL, "RES (%d B): <%s>", (int)b.size(), hexbuf);
         cmd.parseBuf(b, false);
     }
 
     // Got the packet, process it
-    // n:length field >=3
-    // The buffer of n+2>=5 bytes contains:
-    // 0x3b <n>=3> <from> <to> <type> <n-3 bytes> <xsum>
+    // packet_size: total length of reconstructed or received AUX packet
 
-    DEBUGF(DBG_SERIAL, "Got %d bytes:  ; payload length field: %d ; MSG:", n, buf[1]);
-    logBytes(buf, n + 2, getDeviceName(), DBG_SERIAL);
+    DEBUGF(DBG_SERIAL, "Got %d bytes:  ; payload length field: %d ; MSG:", (int)packet_size, buf[1]);
+    logBytes(buf, packet_size, getDeviceName(), DBG_SERIAL);
     processResponse(cmd);
     return true;
 }
@@ -3592,7 +3679,7 @@ bool CelestronAUX::tcpReadResponse()
                     AUXBuffer b(buf + i, buf + shft);
                     cmd.parseBuf(b);
 
-                    char hexbuf[32 * 3] = {0};
+                    char hexbuf[MAX_AUX_PACKET_SIZE * 3] = {0};
                     hex_dump(hexbuf, b, b.size());
                     DEBUGF(DBG_SERIAL, "RES <%s>", hexbuf);
 
@@ -3652,7 +3739,7 @@ int CelestronAUX::sendBuffer(AUXBuffer buf)
         if ((unsigned)n != buf.size())
             LOGF_WARN("sendBuffer: incomplete send n=%d size=%d", n, (int)buf.size());
 
-        char hexbuf[32 * 3] = {0};
+        char hexbuf[MAX_AUX_PACKET_SIZE * 3] = {0};
         hex_dump(hexbuf, buf, buf.size());
         DEBUGF(DBG_SERIAL, "CMD <%s>", hexbuf);
 
@@ -3767,6 +3854,9 @@ bool CelestronAUX::detectHC(char *version, size_t size)
     // We are not connected. Nothing to do.
     if ( PortFD <= 0 )
         return false;
+
+    // Flush any transient garbage bytes from the UART buffer
+    tcflush(PortFD, TCIOFLUSH);
 
     // send get firmware version command
     if (sendBuffer(b) != (int)b.size())
@@ -3916,4 +4006,15 @@ void CelestronAUX::hex_dump(char *buf, AUXBuffer data, size_t size)
 
     if (size > 0)
         buf[3 * size - 1] = '\0';
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::getBatteryStatus()
+{
+    // Battery info from BAT module (0xb6) using command 0x10 (GET_VOLTAGE)
+    // Data is processed in processResponse(m)
+    AUXCommand bat_cmd(GET_VOLTAGE, APP, BAT);
+    return sendAUXCommand(bat_cmd) && readAUXResponse(bat_cmd);
 }

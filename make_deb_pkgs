@@ -18,7 +18,7 @@
 set -e
 
 DRV_LIST=$@
-SRC_DIR=`pwd`
+SRC_DIR="$(dirname "$(realpath "$0")")"
 
 #at least one driver is needed as argument
 #otherwise abort the script!
@@ -32,7 +32,7 @@ fi
 #otherwise abort the script!
 for drv in $DRV_LIST ; do
 (
-  if [ ! -d "$drv" ]; then
+  if [ ! -d "${SRC_DIR}/$drv" ]; then
     echo "$drv" "directory doesn't exist"
     exit 1
   fi
