@@ -62,7 +62,9 @@ enum AUXCommands
     GPS_GET_TIME         = 0x33,
     GPS_TIME_VALID       = 0x36,
     GPS_LINKED           = 0x37,
-    FOC_GET_HS_POSITIONS = 0x2c
+    FOC_GET_HS_POSITIONS = 0x2c,
+    // Evolution commands
+    GET_VOLTAGE          = 0x10
 };
 
 enum AUXTargets

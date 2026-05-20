@@ -399,10 +399,14 @@ class CelestronAUX :
         ///////////////////////////////////////////////////////////////////////////////
 
         // Firmware
-        INDI::PropertyText FirmwareTP {9};
+        INDI::PropertyText FirmwareTP {0};
         enum {FW_MODEL, FW_HC, FW_MB, FW_AZM, FW_ALT, FW_WiFi, FW_BAT, FW_GPS, FW_FOCUS};
-        // Mount type
-        //INDI::PropertySwitch MountTypeSP {3};
+
+        // Evolution Battery Status
+        INDI::PropertyText BatteryStatusTP {3};
+        enum { BATT_LEVEL, BATT_VOLTAGE, BATT_STATUS };
+        bool getBatteryStatus();
+        struct timeval lastBatteryUpdate {0, 0};
 
         // Mount Cord wrap Toogle
         INDI::PropertySwitch CordWrapToggleSP {2};
@@ -522,6 +526,7 @@ class CelestronAUX :
         // MC_SET_POS_GUIDERATE & MC_SET_NEG_GUIDERATE use 24bit number rate in
         static constexpr uint8_t RATE_PER_ARCSEC {4};
 
+        static constexpr size_t MAX_AUX_PACKET_SIZE {258};
         static constexpr uint32_t BUFFER_SIZE {10240};
         // seconds
         static constexpr uint8_t READ_TIMEOUT {1};
