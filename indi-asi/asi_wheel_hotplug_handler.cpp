@@ -180,7 +180,7 @@ void ASIWHEELHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device
     if (it != m_internalWheels.end())
     {
         m_internalWheels.erase(it, m_internalWheels.end());
-        LOGF_INFO("HotPlugManager: Destroyed ASIWHEEL device: %s (ID: %d)", asiWheel->getDeviceName(), asiWheel->getEFWInfo().ID);
+        LOGF_DEBUG("HotPlugManager: Destroyed ASIWHEEL device: %s (ID: %d)", asiWheel->getDeviceName(), asiWheel->getEFWInfo().ID);
     }
     else
     {
@@ -193,9 +193,9 @@ const std::map<std::string, std::shared_ptr<DefaultDevice>> &ASIWHEELHotPlugHand
 {
     // Dynamically construct the map view from m_internalWheels
     m_managedDevicesView.clear();
-    for (const auto& device : m_internalWheels)
-    {
-        m_managedDevicesView[std::to_string(device->getEFWInfo().ID)] = device;
+for (const auto& device : m_internalWheels)
+{
+    m_managedDevicesView[std::to_string(device->getEFWInfo().ID)] = device;
     }
     return m_managedDevicesView;
 }

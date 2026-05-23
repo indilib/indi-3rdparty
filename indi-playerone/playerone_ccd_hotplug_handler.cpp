@@ -181,8 +181,8 @@ void PlayerOneCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevi
     if (it != m_internalCameras.end())
     {
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("HotPlugManager: Destroyed PlayerOneCCD device: %s (CameraID: %d)", playeroneCcd->getDeviceName(),
-                  playeroneCcd->getCameraInfo().cameraID);
+        LOGF_DEBUG("HotPlugManager: Destroyed PlayerOneCCD device: %s (CameraID: %d)", playeroneCcd->getDeviceName(),
+                   playeroneCcd->getCameraInfo().cameraID);
     }
     else
     {
@@ -195,9 +195,9 @@ const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &PlayerOneCCDH
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
-    for (const auto& device : m_internalCameras)
-    {
-        m_managedDevicesView[std::to_string(device->getCameraInfo().cameraID)] = device;
+for (const auto& device : m_internalCameras)
+{
+    m_managedDevicesView[std::to_string(device->getCameraInfo().cameraID)] = device;
     }
     return m_managedDevicesView;
 }

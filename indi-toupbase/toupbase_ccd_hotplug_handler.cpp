@@ -231,7 +231,7 @@ void ToupbaseCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevic
     {
         std::string deviceID = toupbaseCcd->getCameraID();
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("HotPlugManager: Destroyed INDI::ToupBase device: %s (ID: %s)", toupbaseCcd->getDeviceName(), deviceID.c_str());
+        LOGF_DEBUG("HotPlugManager: Destroyed INDI::ToupBase device: %s (ID: %s)", toupbaseCcd->getDeviceName(), deviceID.c_str());
 
         // No m_deviceInfoCache to remove from
     }
@@ -246,9 +246,9 @@ const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &ToupbaseCCDHo
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
-    for (const auto& device : m_internalCameras)
-    {
-        m_managedDevicesView[device->getCameraID()] = std::static_pointer_cast<INDI::DefaultDevice>
+for (const auto& device : m_internalCameras)
+{
+    m_managedDevicesView[device->getCameraID()] = std::static_pointer_cast<INDI::DefaultDevice>
             (device); // Use string ID and static_pointer_cast
     }
     return m_managedDevicesView;

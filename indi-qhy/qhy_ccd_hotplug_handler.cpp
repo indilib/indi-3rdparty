@@ -191,7 +191,7 @@ void QHYCCDHotPlugHandler::destroyDevice(std::shared_ptr<INDI::DefaultDevice> de
     {
         std::string deviceID = qhyCcd->getCameraID();
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("HotPlugManager: Destroyed QHYCCD device: %s (ID: %s)", qhyCcd->getDeviceName(), deviceID.c_str());
+        LOGF_DEBUG("HotPlugManager: Destroyed QHYCCD device: %s (ID: %s)", qhyCcd->getDeviceName(), deviceID.c_str());
     }
     else
     {
@@ -204,9 +204,9 @@ const std::map<std::string, std::shared_ptr<INDI::DefaultDevice>> &QHYCCDHotPlug
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
-    for (const auto& device : m_internalCameras)
-    {
-        m_managedDevicesView[device->getCameraID()] = std::static_pointer_cast<INDI::DefaultDevice>(device);
+for (const auto& device : m_internalCameras)
+{
+    m_managedDevicesView[device->getCameraID()] = std::static_pointer_cast<INDI::DefaultDevice>(device);
     }
     return m_managedDevicesView;
 }

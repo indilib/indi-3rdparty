@@ -185,7 +185,7 @@ void ASIEAFHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> device)
     if (it != m_internalFocusers.end())
     {
         m_internalFocusers.erase(it, m_internalFocusers.end());
-        LOGF_INFO("HotPlugManager: Destroyed ASIEAF device: %s (ID: %d)", asiEaf->getDeviceName(), asiEaf->getEAFInfo().ID);
+        LOGF_DEBUG("HotPlugManager: Destroyed ASIEAF device: %s (ID: %d)", asiEaf->getDeviceName(), asiEaf->getEAFInfo().ID);
     }
     else
     {
@@ -198,9 +198,9 @@ const std::map<std::string, std::shared_ptr<DefaultDevice>> &ASIEAFHotPlugHandle
 {
     // Dynamically construct the map view from m_internalFocusers
     m_managedDevicesView.clear();
-    for (const auto& device : m_internalFocusers)
-    {
-        m_managedDevicesView[std::to_string(device->getEAFInfo().ID)] = device;
+for (const auto& device : m_internalFocusers)
+{
+    m_managedDevicesView[std::to_string(device->getEAFInfo().ID)] = device;
     }
     return m_managedDevicesView;
 }

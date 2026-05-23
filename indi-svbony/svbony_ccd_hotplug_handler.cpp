@@ -184,8 +184,8 @@ void SVBONYCCDHotPlugHandler::destroyDevice(std::shared_ptr<DefaultDevice> devic
     if (it != m_internalCameras.end())
     {
         m_internalCameras.erase(it, m_internalCameras.end());
-        LOGF_INFO("HotPlugManager: Destroyed SVBONYCCD device: %s (CameraID: %d)", svbonyCcd->getDeviceName(),
-                  svbonyCcd->getCameraInfo().CameraID);
+        LOGF_DEBUG("HotPlugManager: Destroyed SVBONYCCD device: %s (CameraID: %d)", svbonyCcd->getDeviceName(),
+                   svbonyCcd->getCameraInfo().CameraID);
     }
     else
     {
@@ -198,9 +198,9 @@ const std::map<std::string, std::shared_ptr<DefaultDevice>> &SVBONYCCDHotPlugHan
 {
     // Dynamically construct the map view from m_internalCameras
     m_managedDevicesView.clear();
-    for (const auto& device : m_internalCameras)
-    {
-        m_managedDevicesView[std::to_string(device->getCameraInfo().CameraID)] = device;
+for (const auto& device : m_internalCameras)
+{
+    m_managedDevicesView[std::to_string(device->getCameraInfo().CameraID)] = device;
     }
     return m_managedDevicesView;
 }
