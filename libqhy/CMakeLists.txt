@@ -32,7 +32,9 @@ if (APPLE)
 
 elseif (UNIX AND NOT WIN32)
 
-  set (QHY_FIRMWARE_INSTALL_DIR "/usr/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
+  if (NOT DEFINED QHY_FIRMWARE_INSTALL_DIR)
+    set (QHY_FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
+  endif()
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
     set_property (TARGET qhyccd PROPERTY IMPORTED_LOCATION "armv6/libqhyccd.bin")
@@ -46,10 +48,26 @@ elseif (UNIX AND NOT WIN32)
 
   # Install udev rules
   if (INDI_INSTALL_UDEV_RULES)
-    set (UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
-    install (FILES 85-qhyccd.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
-  endif ()
+    if (NOT DEFINED UDEVRULES_INSTALL_DIR)
+      set (UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
+    endif()
+ 
+    SET (UDEVRULES_SOURCE_FILE "${CMAKE_CURRENT_SOURCE_DIR}/85-qhyccd.rules")
+    SET (UDEVRULES_GENERATED_FILE "${CMAKE_CURRENT_BINARY_DIR}/85-qhyccd.rules")
 
+    add_custom_command(
+      OUTPUT "${UDEVRULES_GENERATED_FILE}"
+      COMMAND sed -e "s@/lib/firmware@${QHY_FIRMWARE_INSTALL_DIR}@g" "${UDEVRULES_SOURCE_FILE}" > "${UDEVRULES_GENERATED_FILE}"
+      DEPENDS "${UDEVRULES_SOURCE_FILE}"
+    )
+    add_custom_target(
+      QHY_CCD_UDEVRULE_GENERATED_TARGET
+      ALL
+      DEPENDS "${UDEVRULES_GENERATED_FILE}"
+    )
+
+    install (FILES ${UDEVRULES_GENERATED_FILE} DESTINATION ${UDEVRULES_INSTALL_DIR})
+  endif ()
 endif ()
 
 # Install header files
