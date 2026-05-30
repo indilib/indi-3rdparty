@@ -179,7 +179,8 @@ int QSI_Interface::GetDeviceInfo( int iIndex, CameraID &cID )
     else
     {
         cID = vID[iIndex];
-        m_log->Write(2, "GetDeviceInfo Description complete. Serial number: %s, Desc: %s, Error Code: %x", cID.SerialNumber.c_str(), cID.Description.c_str(), m_iError);
+        m_log->Write(2, "GetDeviceInfo Description complete. Serial number: %s, Desc: %s, Error Code: %x", cID.SerialNumber.c_str(),
+                     cID.Description.c_str(), m_iError);
     }
 
     return m_iError;
@@ -267,7 +268,8 @@ int QSI_Interface::OpenCamera( CameraID cID )
     if (iError != 0)
         return iError;
 
-    m_MaxBytesPerReadBlock = reg.GetMaxPixelsPerBlock( (m_HostCon.m_HostIO) ? m_HostCon.m_HostIO->MaxBytesPerReadBlock() : 65536 );
+    m_MaxBytesPerReadBlock = reg.GetMaxPixelsPerBlock( (m_HostCon.m_HostIO) ? m_HostCon.m_HostIO->MaxBytesPerReadBlock() :
+                             65536 );
     if (m_MaxBytesPerReadBlock < 1) m_MaxBytesPerReadBlock = 1;
     m_log->Write(2, _T("Open: MaxBytesPerReadBlock: %d for this connection."), m_MaxBytesPerReadBlock);
 
@@ -341,7 +343,8 @@ int QSI_Interface::CloseCamera ( void )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-int  QSI_Interface::ReadImageByRow(PVOID pvRxBuffer, int iRowsRequested, int iColumnsRequested, int iStride, int iPixelSize, int &iRowsRead)
+int  QSI_Interface::ReadImageByRow(PVOID pvRxBuffer, int iRowsRequested, int iColumnsRequested, int iStride, int iPixelSize,
+                                   int &iRowsRead)
 {
     int iError;
     int iRowsToRead;
@@ -373,7 +376,8 @@ int  QSI_Interface::ReadImageByRow(PVOID pvRxBuffer, int iRowsRequested, int iCo
     else
         iRowsToRead = iMaxRows;
 
-    iError = m_HostCon.m_HostIO->Read((unsigned char *)pvRxBuffer, iRowsToRead * iColumnsRequested * iPixelSize, &iBytesReturned);
+    iError = m_HostCon.m_HostIO->Read((unsigned char *)pvRxBuffer, iRowsToRead * iColumnsRequested * iPixelSize,
+                                      &iBytesReturned);
 
     iRowsRead = (iBytesReturned / iPixelSize) / iColumnsRequested;
 
@@ -519,7 +523,8 @@ int QSI_Interface::CMD_GetDeviceDetails ( QSI_DeviceDetails &DeviceDetails )
     const int iModelNameLen	= RSP_SerialNumber - RSP_ModelName;
     const int iSerialNumberLen = RSP_DeviceError - RSP_SerialNumber;
     // from low eeprom config memory:
-    DeviceDetails.ModelType		= GetStdString( &Rsp_Pkt[RSP_ModelNumber],  iModelNumberLen);		// "504ws" Full model type number field
+    DeviceDetails.ModelType		= GetStdString( &Rsp_Pkt[RSP_ModelNumber],
+                                iModelNumberLen);		// "504ws" Full model type number field
     DeviceDetails.ModelName		= GetStdString( &Rsp_Pkt[RSP_ModelName],    iModelNameLen);			// "QSI 500 Series Camera"
     DeviceDetails.SerialNumber	= GetStdString( &Rsp_Pkt[RSP_SerialNumber], iSerialNumberLen);		// "05001234"
     // Model Base Type
@@ -635,7 +640,8 @@ int QSI_Interface::AutoGainAdjust(QSI_ExposureSettings ExpSettings, QSI_AdvSetti
 //
 int QSI_Interface::CMD_StartExposure ( QSI_ExposureSettings ExposureSettings )
 {
-    m_log->Write(2,  "StartExposure Started %d milliseconds, %d x, %d y", ExposureSettings.Duration * 10, ExposureSettings.ColumnsToRead, ExposureSettings.RowsToRead);
+    m_log->Write(2,  "StartExposure Started %d milliseconds, %d x, %d y", ExposureSettings.Duration * 10,
+                 ExposureSettings.ColumnsToRead, ExposureSettings.RowsToRead);
 
     if (m_HostCon.m_HostIO == NULL)
     {
@@ -714,7 +720,8 @@ int QSI_Interface::CMD_StartExposure ( QSI_ExposureSettings ExposureSettings )
 //
 int QSI_Interface::CMD_StartExposureEx( QSI_ExposureSettings ExposureSettings )
 {
-    m_log->Write(2, "StartExposureEx started. Duration: %d, DurationUSec: %d.", ExposureSettings.Duration, ExposureSettings.DurationUSec);
+    m_log->Write(2, "StartExposureEx started. Duration: %d, DurationUSec: %d.", ExposureSettings.Duration,
+                 ExposureSettings.DurationUSec);
 
     if (m_HostCon.m_HostIO == NULL)
     {
@@ -792,7 +799,8 @@ int QSI_Interface::CMD_StartExposureEx( QSI_ExposureSettings ExposureSettings )
     m_log->Write(2, _T("Implemented: %d"), ExposureSettings.ProbeForImplemented ? 1 : 0);
 
     // Send/receive packets
-    m_iError = m_PacketWrapper.PKT_SendPacket(m_HostCon.m_HostIO, Cmd_Pkt, Rsp_Pkt, true, ExposureSettings.ProbeForImplemented ? IOTimeout_Short : IOTimeout_Long);
+    m_iError = m_PacketWrapper.PKT_SendPacket(m_HostCon.m_HostIO, Cmd_Pkt, Rsp_Pkt, true,
+               ExposureSettings.ProbeForImplemented ? IOTimeout_Short : IOTimeout_Long);
     if( m_iError )
     {
         m_log->Write(2, "StartExposureEx failed. Error Code: %I32x", m_iError);
@@ -970,7 +978,8 @@ int QSI_Interface::CMD_GetAutoZero( QSI_AutoZeroData &AutoZeroData )
     AutoZeroData.zeroLevel = Get2Bytes(&Rsp_Pkt[RSP_ZeroLevel]);
     AutoZeroData.pixelCount = Get2Bytes(&Rsp_Pkt[RSP_PixelCount]);
 
-    m_log->Write(2, "GetAutoZero completed OK. Enable: %s Level: %x Count: %x", AutoZeroData.pixelCount ? "T" : "F", AutoZeroData.zeroLevel, AutoZeroData.pixelCount);
+    m_log->Write(2, "GetAutoZero completed OK. Enable: %s Level: %x Count: %x", AutoZeroData.pixelCount ? "T" : "F",
+                 AutoZeroData.zeroLevel, AutoZeroData.pixelCount);
     return ALL_OK;
 }
 
@@ -1047,7 +1056,8 @@ int QSI_Interface::CMD_GetDeviceState ( int &iCameraState, bool &bShutterOpen, b
         CMD_ExtTrigMode( TRIG_CLEARERROR, 0);
     }
 
-    m_log->Write(2, _T("GetDeviceState completed OK. Camera: %d Shutter: %d Filter: %d"), iCameraState, bShutterOpen, bFilterState);
+    m_log->Write(2, _T("GetDeviceState completed OK. Camera: %d Shutter: %d Filter: %d"), iCameraState, bShutterOpen,
+                 bFilterState);
     return ALL_OK;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -1107,7 +1117,8 @@ int QSI_Interface::CMD_SetTemperature ( bool bCoolerOn, bool bGoToAmbient, doubl
 
 //////////////////////////////////////////////////////////////////////////////////////////
 //
-int QSI_Interface::CMD_GetTemperature ( int &iCoolerState, double &dCoolerTemp, double &dTempAmbient, USHORT &usCoolerPower )
+int QSI_Interface::CMD_GetTemperature ( int &iCoolerState, double &dCoolerTemp, double &dTempAmbient,
+                                        USHORT &usCoolerPower )
 {
     // Define command packet structure
     const int CMD_Command  = 0;
@@ -1169,13 +1180,15 @@ int QSI_Interface::CMD_GetTemperature ( int &iCoolerState, double &dCoolerTemp, 
     dCoolerTemp   = (short) Get2Bytes(&Rsp_Pkt[RSP_CoolerTemp]) / 100.0;
     dTempAmbient  = (short) Get2Bytes(&Rsp_Pkt[RSP_TempAmbient]) / 100.0;
     usCoolerPower = (short) ( Get2Bytes(&Rsp_Pkt[RSP_CoolerPower]) / 100.0 );
-    m_log->Write(2, "GetTemperature completed OK. Cooler power: %d, Temp: %f Camera Body Temp: %f", usCoolerPower, dCoolerTemp, dTempAmbient);
+    m_log->Write(2, "GetTemperature completed OK. Cooler power: %d, Temp: %f Camera Body Temp: %f", usCoolerPower, dCoolerTemp,
+                 dTempAmbient);
     return ALL_OK;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////
 //
-int QSI_Interface::CMD_GetTemperatureEx( int &iCoolerState, double &dCoolerTemp, double &dHotsideTemp, USHORT &usCoolerPower, double &dPCBTemp, bool bProbe )
+int QSI_Interface::CMD_GetTemperatureEx( int &iCoolerState, double &dCoolerTemp, double &dHotsideTemp,
+        USHORT &usCoolerPower, double &dPCBTemp, bool bProbe )
 {
     if (!(m_DeviceDetails.HasCMD_GetTemperatureEx || bProbe))
     {
@@ -1211,7 +1224,8 @@ int QSI_Interface::CMD_GetTemperatureEx( int &iCoolerState, double &dCoolerTemp,
     do
     {
         // Send/receive packets
-        m_iError = m_PacketWrapper.PKT_SendPacket(m_HostCon.m_HostIO, Cmd_Pkt, Rsp_Pkt, true, bProbe ? IOTimeout_Short : IOTimeout_Normal);
+        m_iError = m_PacketWrapper.PKT_SendPacket(m_HostCon.m_HostIO, Cmd_Pkt, Rsp_Pkt, true,
+                   bProbe ? IOTimeout_Short : IOTimeout_Normal);
         if (bProbe)
         {
             m_log->Write(2, _T("GetTemperatureEx Probe returning with status %d"), m_iError);
@@ -1249,7 +1263,8 @@ int QSI_Interface::CMD_GetTemperatureEx( int &iCoolerState, double &dCoolerTemp,
     dHotsideTemp  = (short) Get2Bytes(&Rsp_Pkt[RSP_HotsideTemp]) / 100.0;
     usCoolerPower = (short) ( Get2Bytes(&Rsp_Pkt[RSP_CoolerPower]) / 100.0 );
     dPCBTemp = (short) Get2Bytes(&Rsp_Pkt[RSP_AmbientTemp]) / 100.0 ;
-    m_log->Write(2, _T("GetTemperatureEx completed OK. Cooler power: %d, cold side temp: %f, Hotside temp: %f, PCB Temp: %f"), usCoolerPower, dCoolerTemp, dHotsideTemp, dPCBTemp);
+    m_log->Write(2, _T("GetTemperatureEx completed OK. Cooler power: %d, cold side temp: %f, Hotside temp: %f, PCB Temp: %f"),
+                 usCoolerPower, dCoolerTemp, dHotsideTemp, dPCBTemp);
 
     return ALL_OK;
 
@@ -1394,7 +1409,8 @@ int QSI_Interface::CMD_SetFilterWheel ( int iFilterPosition )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Get the advanced default settings and enabled options
-int QSI_Interface::CMD_GetCamDefaultAdvDetails( QSI_AdvSettings &AdvDefaultSettings, QSI_AdvEnabledOptions &AdvEnabledOptions, QSI_DeviceDetails DeviceDetails )
+int QSI_Interface::CMD_GetCamDefaultAdvDetails( QSI_AdvSettings &AdvDefaultSettings,
+        QSI_AdvEnabledOptions &AdvEnabledOptions, QSI_DeviceDetails DeviceDetails )
 {
     // Define command packet structure
     const int CMD_Command        = 0;
@@ -2012,7 +2028,8 @@ int QSI_Interface::CMD_GetCCDSpecs( QSI_CCDSpecs &CCDSpecs)
     CCDSpecs.maxExp = dMaxExp;
     CCDSpecs.minExp = dMinExp;
 
-    m_log->Write(2, "GetCCDSpecs completed ok. MaxADU: %x E/ADU High: %f E/ADU Low: %f Full: %f Min: %f Max %f", iMaxADU, dEPerADUHigh, dEPerADULow, dEFullWell, dMinExp, dMaxExp);
+    m_log->Write(2, "GetCCDSpecs completed ok. MaxADU: %x E/ADU High: %f E/ADU Low: %f Full: %f Min: %f Max %f", iMaxADU,
+                 dEPerADUHigh, dEPerADULow, dEFullWell, dMinExp, dMaxExp);
     return ALL_OK;
 }
 //////////////////////////////////////////////////////////////////////////////////////////
@@ -2159,7 +2176,8 @@ int QSI_Interface::CMD_GetFeatures(BYTE* pMem, int iFeatureArraySize, int &iCoun
     int iPacketLen = (int)Rsp_Pkt[ RSP_Length ];
 
     // Check valid packet length
-    if ( (iPacketLen < 2) || (iPacketLen == 2 && (Rsp_Pkt[RSP_FeatureStart] == 0xFF ))	)// Must be at least one feature, not FF, if the command is supported
+    if ( (iPacketLen < 2) || (iPacketLen == 2
+                              && (Rsp_Pkt[RSP_FeatureStart] == 0xFF ))	)// Must be at least one feature, not FF, if the command is supported
     {
         m_log->Write(2, _T("GetFeature failed. Invalid Feature Count %d. Error Code %x"), iPacketLen, m_iError);
         return ERR_IFC_GetCCDSpecs;
@@ -2328,7 +2346,7 @@ void QSI_Interface::GetString ( PVOID pvSource, PVOID pvDestination, int iSource
         return;
     // Copy each character
     for (int iCount = 0; iCount < iSourceLength; iCount++)
-        *((UCHAR*)pvDestination + iCount) = *((UCHAR*)pvSource + iCount);
+        *((UCHAR * )pvDestination + iCount) = *((UCHAR * )pvSource + iCount);
 
     // Add null terminating character
     *((UCHAR*)pvDestination + iSourceLength) = '\0';
@@ -2367,7 +2385,7 @@ void QSI_Interface::Put3Bytes ( PVOID pvDestination, uint32_t ulValue )
 // PutBool converts a C++ bool (0 or 1) to the type of bool used in the camera (0 or 255)
 void QSI_Interface::PutBool(PVOID pvDestination, bool bValue)
 {
-    if (bValue == true) *((UCHAR*)pvDestination) = 255;
+    if (bValue == true) *((UCHAR * )pvDestination) = 255;
     else *((UCHAR*)pvDestination) = 0;
     return;
 }
@@ -2382,7 +2400,8 @@ void QSI_Interface::LogWrite(int iLevel, const char * msg, ... )
 
 //////////////////////////////////////////////////////////////////////////////////////////
 // Calculate AutoZero Parameters at exposure download time.
-void QSI_Interface::GetAutoZeroAdjustment(QSI_AutoZeroData autoZeroData, USHORT * zeroPixels, USHORT * usLastMean, int * usAdjust, double * dAdjust)
+void QSI_Interface::GetAutoZeroAdjustment(QSI_AutoZeroData autoZeroData, USHORT * zeroPixels, USHORT * usLastMean,
+        int * usAdjust, double * dAdjust)
 {
     int iMedian = 0;
     int iMean = 0;
@@ -2509,7 +2528,7 @@ void QSI_Interface::GetAutoZeroAdjustment(QSI_AutoZeroData autoZeroData, USHORT 
         {
             for (int j = 0; j < 16; j++)
             {
-                snprintf(m_log->m_Message + (j * 6), MSGSIZE, _T("%5u "), (unsigned int)zeroPixels[(i * 16) + j]);
+                snprintf(m_log->m_Message + (j * 6), MSGSIZE - (j * 6), _T("%5u "), (unsigned int)zeroPixels[(i * 16) + j]);
             }
             m_log->Write(6);
         }
@@ -2539,21 +2558,24 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, USHORT* pDst, int iPixelsPerRow, int
         bAdjust = false;
     }
 
-    m_log->Write(6, _T("First row of un-adjusted image data (up to the first 512 bytes):"));
-
-    int iSampleSize = iPixelsPerRow  > 512 ? 512 : iPixelsPerRow;
-    int iLines = (iSampleSize / 16);
-    if (iSampleSize % 16 > 0)
-        iLines++;
-
-    for (int i = 0; i < iLines; i++)
+    if (m_log->LoggingEnabled(6))
     {
-        for (int j = 0; j < 16 && iSampleSize > 0; j++)
+        m_log->Write(6, _T("First row of un-adjusted image data (up to the first 512 bytes):"));
+
+        int iSampleSize = iPixelsPerRow  > 512 ? 512 : iPixelsPerRow;
+        int iLines = (iSampleSize / 16);
+        if (iSampleSize % 16 > 0)
+            iLines++;
+
+        for (int i = 0; i < iLines; i++)
         {
-            snprintf(m_log->m_Message + (j * 6), MSGSIZE, _T("%5u "), ((unsigned short*)pSrc)[(i * 16) + j]);
-            iSampleSize--;
+            for (int j = 0; j < 16 && iSampleSize > 0; j++)
+            {
+                snprintf(m_log->m_Message + (j * 6), MSGSIZE - (j * 6), _T("%5u "), ((unsigned short*)pSrc)[(i * 16) + j]);
+                iSampleSize--;
+            }
+            m_log->Write(6);
         }
-        m_log->Write(6);
     }
 
     //
@@ -2612,7 +2634,7 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, USHORT* pDst, int iPixelsPerRow, int
         {
             for (int j = 0; j < 16 && iSampleSize > 0; j++)
             {
-                snprintf(m_log->m_Message + (j * 6), MSGSIZE, _T("%5u "), ((unsigned short*)pDst)[(i * 16) + j]);
+                snprintf(m_log->m_Message + (j * 6), MSGSIZE - (j * 6), _T("%5u "), ((unsigned short*)pDst)[(i * 16) + j]);
                 iSampleSize--;
             }
             m_log->Write(6);
@@ -2654,7 +2676,7 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, double * pDst, int iPixelsPerRow, in
         {
             for (int j = 0; j < 16 && iSampleSize > 0; j++)
             {
-                snprintf(m_log->m_Message + (j * 6), MSGSIZE, _T("%5u "), ((unsigned short*)pSrc)[(i * 16) + j]);
+                snprintf(m_log->m_Message + (j * 6), MSGSIZE - (j * 6), _T("%5u "), ((unsigned short*)pSrc)[(i * 16) + j]);
                 iSampleSize--;
             }
             m_log->Write(6);
@@ -2717,7 +2739,7 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, double * pDst, int iPixelsPerRow, in
         {
             for (int j = 0; j < 16 && iSampleSize > 0; j++)
             {
-                snprintf(m_log->m_Message + (j * 8), MSGSIZE, _T("%7.2f "), pDst[(i * 16) + j]);
+                snprintf(m_log->m_Message + (j * 8), MSGSIZE - (j * 8), _T("%7.2f "), pDst[(i * 16) + j]);
                 iSampleSize--;
             }
             m_log->Write(6);
@@ -2745,21 +2767,24 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, long* pDst, int iPixelsPerRow, int i
         bAdjust = false;
     }
 
-    m_log->Write(6, _T("First row of un-adjusted image data (up to the first 512 bytes):"));
-
-    int iSampleSize = iPixelsPerRow  > 512 ? 512 : iPixelsPerRow;
-    int iLines = (iSampleSize / 16);
-    if (iSampleSize % 16 > 0)
-        iLines++;
-
-    for (int i = 0; i < iLines; i++)
+    if (m_log->LoggingEnabled(6))
     {
-        for (int j = 0; j < 16 && iSampleSize > 0; j++)
+        m_log->Write(6, _T("First row of un-adjusted image data (up to the first 512 bytes):"));
+
+        int iSampleSize = iPixelsPerRow  > 512 ? 512 : iPixelsPerRow;
+        int iLines = (iSampleSize / 16);
+        if (iSampleSize % 16 > 0)
+            iLines++;
+
+        for (int i = 0; i < iLines; i++)
         {
-            snprintf(m_log->m_Message + (j * 6), MSGSIZE, _T("%5u "), ((unsigned short*)pSrc)[(i * 16) + j]);
-            iSampleSize--;
+            for (int j = 0; j < 16 && iSampleSize > 0; j++)
+            {
+                snprintf(m_log->m_Message + (j * 6), MSGSIZE - (j * 6), _T("%5u "), ((unsigned short*)pSrc)[(i * 16) + j]);
+                iSampleSize--;
+            }
+            m_log->Write(6);
         }
-        m_log->Write(6);
     }
 
     //
@@ -2818,7 +2843,7 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, long* pDst, int iPixelsPerRow, int i
         {
             for (int j = 0; j < 16 && iSampleSize > 0; j++)
             {
-                snprintf(m_log->m_Message + (j * 6), MSGSIZE, _T("%5ld "), ((long*)pDst)[(i * 16) + j]);
+                snprintf(m_log->m_Message + (j * 6), MSGSIZE - (j * 6), _T("%5ld "), ((long*)pDst)[(i * 16) + j]);
                 iSampleSize--;
             }
             m_log->Write(6);
@@ -2830,9 +2855,9 @@ int QSI_Interface::AdjustZero(USHORT* pSrc, long* pDst, int iPixelsPerRow, int i
 
 int compareUSHORT( const void *val1, const void *val2)
 {
-    if (*(USHORT*)val1 == *(USHORT*)val2)
+    if (*(USHORT * )val1 == *(USHORT * )val2)
         return 0;
-    if (*(USHORT*)val1 < * (USHORT*)val2)
+    if (*(USHORT * )val1 < * (USHORT * )val2)
         return -1;
     return 1;
 }

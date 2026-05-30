@@ -18,7 +18,7 @@ QSILog::QSILog(const char * filename, const char * szValueName, const char * szP
     //
     me = getuid();
     my_passwd = getpwuid(me);
-    pTmp = my_passwd->pw_dir;
+    pTmp = (my_passwd != NULL) ? my_passwd->pw_dir : NULL;
 
     if (pTmp != NULL)
     {
@@ -58,7 +58,7 @@ void QSILog::TestForLogging()
 
     me = getuid();
     my_passwd = getpwuid(me);
-    pTmp = my_passwd->pw_dir;
+    pTmp = (my_passwd != NULL) ? my_passwd->pw_dir : NULL;
 
     if (pTmp == NULL)
     {
