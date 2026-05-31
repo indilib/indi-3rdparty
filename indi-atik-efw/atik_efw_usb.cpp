@@ -30,6 +30,11 @@
 namespace AtikEfwUsb
 {
 
+// Out-of-line definition prevents GCC from inlining through the copy constructor
+// and producing a false-positive -Warray-bounds diagnostic (GCC 14+).
+DeviceInfo::DeviceInfo(const DeviceInfo &) = default;
+
+
 namespace
 {
 

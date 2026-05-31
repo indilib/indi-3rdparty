@@ -38,6 +38,13 @@ struct DeviceInfo
     uint8_t address {0};
     std::vector<uint8_t> ports;
     std::string product;
+
+    DeviceInfo() = default;
+    DeviceInfo(const DeviceInfo &);
+    DeviceInfo(DeviceInfo &&) = default;
+    DeviceInfo &operator=(const DeviceInfo &) = default;
+    DeviceInfo &operator=(DeviceInfo &&) = default;
+    ~DeviceInfo() = default;
 };
 
 class DeviceHandle
