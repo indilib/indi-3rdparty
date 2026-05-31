@@ -1,3 +1,9 @@
+libqsi (7.6.2) noble; urgency=medium
+
+  * New release
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Sat, 30 May 2026 20:18:11 +0300
+
 libqsi (7.6.1) bionic; urgency=medium
 
   * New release
