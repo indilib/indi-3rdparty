@@ -38,6 +38,15 @@ struct MockState
     int slotCount {5};
     int currentSlot {1};
     bool statusOk {true};
+    bool asciiStatus {false};
+    bool malformedStatus {false};
+    bool resetOk {true};
+    int openCount {0};
+    int resetCount {0};
+    int detachCount {0};
+    int setConfigurationCount {0};
+    int claimInterfaceCount {0};
+    int controlTransferCount {0};
     enum class LastCommand
     {
         None,
@@ -55,26 +64,31 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
 
         bool reset() override
         {
-            return true;
+            state_.resetCount++;
+            return state_.resetOk;
         }
 
         bool detachKernelDriver(int) override
         {
+            state_.detachCount++;
             return true;
         }
 
         bool setConfiguration(int) override
         {
+            state_.setConfigurationCount++;
             return true;
         }
 
         bool claimInterface(int) override
         {
+            state_.claimInterfaceCount++;
             return true;
         }
 
         int controlTransfer(uint8_t, uint8_t, uint16_t, uint16_t, unsigned char *, uint16_t, unsigned int) override
         {
+            state_.controlTransferCount++;
             return 0;
         }
 
@@ -107,10 +121,25 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
             if (!state_.statusOk || state_.lastCommand != MockState::LastCommand::Status)
                 return 0;
 
+            if (state_.malformedStatus)
+            {
+                std::vector<uint8_t> response = {0x60, 0x01, 0x23, 0x04, 0x00, 0x23};
+                int toCopy = std::min(length, static_cast<int>(response.size()));
+                for (int i = 0; i < toCopy; i++)
+                    data[i] = response[i];
+                return toCopy;
+            }
+
+            uint8_t current = static_cast<uint8_t>(state_.currentSlot);
+            uint8_t slots = static_cast<uint8_t>(state_.slotCount);
+            if (state_.asciiStatus)
+            {
+                current = static_cast<uint8_t>('0' + state_.currentSlot);
+                slots = static_cast<uint8_t>('0' + state_.slotCount);
+            }
+
             std::vector<uint8_t> response = {0x60, 0x01, 0x23, 0x04,
-                                             static_cast<uint8_t>(state_.currentSlot),
-                                             static_cast<uint8_t>(state_.slotCount),
-                                             0x23};
+                                             current, slots, 0x23};
 
             int toCopy = std::min(length, static_cast<int>(response.size()));
             for (int i = 0; i < toCopy; i++)
@@ -150,10 +179,17 @@ class MockBackend : public AtikEfwUsb::Backend
 
         std::unique_ptr<AtikEfwUsb::DeviceHandle> open(const AtikEfwUsb::DeviceInfo &info) override
         {
+            openAttempts_++;
             auto it = states_.find(keyFor(info));
             if (it == states_.end())
                 return nullptr;
+            it->second.openCount++;
             return std::make_unique<MockHandle>(it->second);
+        }
+
+        int openAttempts() const
+        {
+            return openAttempts_;
         }
 
     private:
@@ -164,6 +200,7 @@ class MockBackend : public AtikEfwUsb::Backend
 
         std::vector<AtikEfwUsb::DeviceInfo> devices_;
         std::map<std::string, MockState> states_;
+        int openAttempts_ {0};
 };
 
 class TestAtikEFW : public AtikEFW
@@ -173,6 +210,7 @@ class TestAtikEFW : public AtikEFW
         using AtikEFW::initProperties;
         using AtikEFW::QueryFilter;
         using AtikEFW::SelectFilter;
+        using INDI::DefaultDevice::setSimulation;
 
         int maxSlots() const
         {
@@ -217,10 +255,16 @@ TEST(AtikEFWDriver, EnumerateUsesHandshake)
     backend.addDevice(deviceBad, badState);
 
     auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
+    ASSERT_EQ(devices.size(), 2u);
     EXPECT_EQ(devices[0].slotCount, 7);
     EXPECT_EQ(devices[0].currentSlot, 2);
+    EXPECT_TRUE(devices[0].slotCountKnown);
     EXPECT_NE(devices[0].name.find("1-3"), std::string::npos);
+
+    EXPECT_EQ(devices[1].slotCount, 5);
+    EXPECT_EQ(devices[1].currentSlot, 1);
+    EXPECT_FALSE(devices[1].slotCountKnown);
+    EXPECT_NE(devices[1].name.find("1-4"), std::string::npos);
 }
 
 TEST(AtikEFWDriver, ConnectSelectsAndQueries)
@@ -242,6 +286,11 @@ TEST(AtikEFWDriver, ConnectSelectsAndQueries)
     ASSERT_TRUE(wheel.Connect());
     EXPECT_EQ(wheel.maxSlots(), 8);
     EXPECT_EQ(wheel.currentFilter(), 3);
+    EXPECT_EQ(backend.stateFor(device).resetCount, 1);
+    EXPECT_EQ(backend.stateFor(device).openCount, 3);
+    EXPECT_EQ(backend.stateFor(device).setConfigurationCount, 2);
+    EXPECT_EQ(backend.stateFor(device).claimInterfaceCount, 2);
+    EXPECT_EQ(backend.stateFor(device).controlTransferCount, 6);
 
     ASSERT_TRUE(wheel.SelectFilter(5));
     auto &writes = backend.stateFor(device).writes;
@@ -249,4 +298,114 @@ TEST(AtikEFWDriver, ConnectSelectsAndQueries)
     EXPECT_EQ(writes.back(), (std::vector<uint8_t>{0x23, 0x01, 5, 0x23}));
 
     EXPECT_EQ(wheel.QueryFilter(), 5);
+}
+
+TEST(AtikEFWDriver, SimulationConnectsWithoutUsb)
+{
+    MockBackend backend;
+    AtikEFW::DeviceDescriptor desc;
+    desc.name = "Atik EFW";
+    desc.slotCount = 6;
+    desc.currentSlot = 2;
+
+    TestAtikEFW wheel(desc, backend);
+    ASSERT_TRUE(wheel.initProperties());
+    wheel.setSimulation(true);
+
+    ASSERT_TRUE(wheel.Connect());
+    EXPECT_EQ(backend.openAttempts(), 0);
+    EXPECT_EQ(wheel.maxSlots(), 6);
+    EXPECT_EQ(wheel.currentFilter(), 2);
+
+    ASSERT_TRUE(wheel.SelectFilter(4));
+    EXPECT_EQ(wheel.QueryFilter(), 4);
+    EXPECT_EQ(wheel.currentFilter(), 4);
+    EXPECT_TRUE(wheel.Disconnect());
+}
+
+TEST(AtikEFWDriver, ParsesAsciiStatusBytes)
+{
+    MockBackend backend;
+    MockState state;
+    state.slotCount = 8;
+    state.currentSlot = 4;
+    state.asciiStatus = true;
+
+    auto device = makeDevice(3, 8, {5});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_EQ(devices[0].slotCount, 8);
+    EXPECT_EQ(devices[0].currentSlot, 4);
+    EXPECT_TRUE(devices[0].slotCountKnown);
+
+    TestAtikEFW wheel(devices[0], backend);
+    ASSERT_TRUE(wheel.initProperties());
+    ASSERT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.maxSlots(), 8);
+    EXPECT_EQ(wheel.currentFilter(), 4);
+}
+
+TEST(AtikEFWDriver, PreservesBinarySlotOneWhenStrippingFtdiStatus)
+{
+    MockBackend backend;
+    MockState state;
+    state.slotCount = 5;
+    state.currentSlot = 1;
+
+    auto device = makeDevice(3, 11, {8});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_EQ(devices[0].slotCount, 5);
+    EXPECT_EQ(devices[0].currentSlot, 1);
+    EXPECT_TRUE(devices[0].slotCountKnown);
+}
+
+TEST(AtikEFWDriver, QueryRejectsMalformedStatus)
+{
+    MockBackend backend;
+    MockState state;
+    state.malformedStatus = true;
+
+    auto device = makeDevice(4, 9, {6});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_FALSE(devices[0].slotCountKnown);
+    EXPECT_EQ(devices[0].slotCount, 5);
+    EXPECT_EQ(devices[0].currentSlot, 1);
+
+    TestAtikEFW wheel(devices[0], backend);
+    ASSERT_TRUE(wheel.initProperties());
+    ASSERT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.QueryFilter(), -1);
+}
+
+TEST(AtikEFWDriver, ConnectFailsWithoutStatusResponse)
+{
+    MockBackend backend;
+    MockState state;
+    state.statusOk = false;
+
+    auto device = makeDevice(5, 10, {7});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_FALSE(devices[0].slotCountKnown);
+
+    TestAtikEFW wheel(devices[0], backend);
+    ASSERT_TRUE(wheel.initProperties());
+    EXPECT_FALSE(wheel.Connect());
+    EXPECT_EQ(backend.stateFor(device).resetCount, 1);
+}
+
+int main(int argc, char **argv)
+{
+    ::testing::InitGoogleTest(&argc, argv);
+    return RUN_ALL_TESTS();
 }

@@ -53,6 +53,7 @@ constexpr uint16_t kFtdiFlowValue = 0x0303;
 constexpr unsigned int kControlTimeoutMs = 1000;
 constexpr unsigned int kReadTimeoutMs = 1000;
 constexpr unsigned int kWriteTimeoutMs = 1000;
+constexpr useconds_t kUsbResetDelayUs = 1000000;
 constexpr useconds_t kFtdiDelayUs = 200000;
 constexpr useconds_t kStatusDelayUs = 100000;
 constexpr int kDefaultSlots = 5;
@@ -74,15 +75,10 @@ std::string bytesToHex(const std::vector<uint8_t> &data)
 
 std::vector<uint8_t> sanitizeResponse(const std::vector<uint8_t> &raw)
 {
-    std::vector<uint8_t> filtered;
-    filtered.reserve(raw.size());
-    for (uint8_t value : raw)
-    {
-        if (value == 0x01 || value == 0x60)
-            continue;
-        filtered.push_back(value);
-    }
-    return filtered;
+    if (raw.size() >= 3 && raw[0] != kFrameByte && raw[2] == kFrameByte)
+        return {raw.begin() + 2, raw.end()};
+
+    return raw;
 }
 
 int decodeByte(uint8_t value)
@@ -253,6 +249,16 @@ static class Loader
         {
             auto &backend = AtikEfwUsb::defaultBackend();
             auto devices = AtikEFW::Enumerate(backend);
+            if (devices.empty())
+            {
+                AtikEFW::DeviceDescriptor desc;
+                desc.name = buildDeviceName(desc.info, 0, 1);
+                desc.slotCount = kDefaultSlots;
+                desc.currentSlot = 1;
+                devices.push_back(std::move(desc));
+                IDLog("Atik EFW: no USB wheel detected; exposing simulation-capable device.\n");
+            }
+
             for (const auto &device : devices)
                 wheels.push_back(std::make_unique<AtikEFW>(device, backend));
         }
@@ -289,6 +295,7 @@ bool AtikEFW::initProperties()
     slotCountHint_ = static_cast<int>(SlotCountNP[0].getValue());
 
     addDebugControl();
+    addSimulationControl();
     setDefaultPollingPeriod(250);
 
     return true;
@@ -348,6 +355,20 @@ bool AtikEFW::openHandle()
     }
 
     return true;
+}
+
+bool AtikEFW::resetAndReopenHandle()
+{
+    if (!handle_)
+        return false;
+
+    if (!handle_->reset())
+        LOGF_WARN("%s: USB device reset failed, continuing with reopen", getDeviceName());
+
+    handle_.reset();
+    usleep(kUsbResetDelayUs);
+
+    return openHandle();
 }
 
 bool AtikEFW::configureDevice()
@@ -465,8 +486,25 @@ void AtikEFW::applySlotCount(int slots, bool updateProperty)
 
 bool AtikEFW::Connect()
 {
+    if (isSimulation())
+    {
+        int slots = slotCountHint_ > 0 ? slotCountHint_ : kDefaultSlots;
+        CurrentFilter = currentSlotHint_ > 0 ? currentSlotHint_ : 1;
+        applySlotCount(slots, true);
+        TargetFilter = CurrentFilter;
+        LOGF_INFO("%s simulation connected (slots=%d, current=%d)", getDeviceName(), slots, CurrentFilter);
+        SetTimer(getCurrentPollingPeriod());
+        return true;
+    }
+
     if (!openHandle())
         return false;
+
+    if (!resetAndReopenHandle())
+    {
+        handle_.reset();
+        return false;
+    }
 
     if (!configureDevice())
     {
@@ -531,6 +569,14 @@ bool AtikEFW::SelectFilter(int targetFilter)
 {
     TargetFilter = targetFilter;
 
+    if (isSimulation())
+    {
+        CurrentFilter = TargetFilter;
+        FilterSlotNP[0].setValue(CurrentFilter);
+        SelectFilterDone(CurrentFilter);
+        return true;
+    }
+
     const std::vector<uint8_t> command {kFrameByte, kCmdSetPosition, static_cast<uint8_t>(targetFilter), kFrameByte};
 
     if (!sendCommand(command))
@@ -544,6 +590,13 @@ bool AtikEFW::SelectFilter(int targetFilter)
 
 int AtikEFW::QueryFilter()
 {
+    if (isSimulation())
+    {
+        FilterSlotNP[0].setValue(CurrentFilter);
+        FilterSlotNP.apply();
+        return CurrentFilter;
+    }
+
     int slots = 0;
     int position = 0;
     if (!sendStatus(true, &slots, &position))
@@ -582,11 +635,19 @@ std::vector<AtikEFW::DeviceDescriptor> AtikEFW::Enumerate(AtikEfwUsb::Backend &b
 
     for (size_t i = 0; i < devices.size(); i++)
     {
+        DeviceDescriptor desc;
+        desc.info = devices[i];
+        desc.name = buildDeviceName(devices[i], i, devices.size());
+        desc.slotCount = kDefaultSlots;
+        desc.currentSlot = 1;
+        desc.slotCountKnown = false;
+
         auto handle = backend.open(devices[i]);
         if (!handle)
         {
             IDLog("Atik EFW: failed to open USB device on bus %u address %u.\n",
                   devices[i].bus, devices[i].address);
+            detected.push_back(std::move(desc));
             continue;
         }
 
@@ -595,6 +656,7 @@ std::vector<AtikEFW::DeviceDescriptor> AtikEFW::Enumerate(AtikEfwUsb::Backend &b
         {
             IDLog("Atik EFW: init failed on bus %u address %u (%s).\n",
                   devices[i].bus, devices[i].address, error.c_str());
+            detected.push_back(std::move(desc));
             continue;
         }
 
@@ -605,20 +667,16 @@ std::vector<AtikEFW::DeviceDescriptor> AtikEFW::Enumerate(AtikEfwUsb::Backend &b
         {
             IDLog("Atik EFW: status probe failed on bus %u address %u.\n",
                   devices[i].bus, devices[i].address);
-            continue;
+        }
+        else
+        {
+            desc.slotCount = slots > 0 ? slots : kDefaultSlots;
+            desc.currentSlot = position > 0 ? position : 1;
+            desc.slotCountKnown = (slots > 0);
         }
 
-        DeviceDescriptor desc;
-        desc.info = devices[i];
-        desc.name = buildDeviceName(devices[i], i, devices.size());
-        desc.slotCount = slots > 0 ? slots : kDefaultSlots;
-        desc.currentSlot = position > 0 ? position : 1;
-        desc.slotCountKnown = (slots > 0);
         detected.push_back(std::move(desc));
     }
-
-    if (detected.empty())
-        IDLog("No Atik EFW responded to status handshake.\n");
 
     return detected;
 }

@@ -22,8 +22,9 @@
 
 #include "atik_efw_usb.h"
 
-#include <libusb-1.0/libusb.h>
+#include <libusb.h>
 
+#include <algorithm>
 #include <cstring>
 
 namespace AtikEfwUsb
@@ -31,6 +32,27 @@ namespace AtikEfwUsb
 
 namespace
 {
+
+std::vector<uint8_t> getPortNumbers(libusb_device *device)
+{
+    uint8_t ports[8];
+    int portCount = libusb_get_port_numbers(device, ports, sizeof(ports));
+    if (portCount <= 0)
+        return {};
+    return {ports, ports + portCount};
+}
+
+bool matchesDevice(libusb_device *device, const libusb_device_descriptor &desc, const DeviceInfo &info)
+{
+    if (desc.idVendor != info.vendorId || desc.idProduct != info.productId)
+        return false;
+
+    uint8_t bus = libusb_get_bus_number(device);
+    if (!info.ports.empty())
+        return bus == info.bus && getPortNumbers(device) == info.ports;
+
+    return bus == info.bus && libusb_get_device_address(device) == info.address;
+}
 
 class LibusbDeviceHandle : public DeviceHandle
 {
@@ -169,10 +191,7 @@ class LibusbBackend : public Backend
                 info.bus = libusb_get_bus_number(device);
                 info.address = libusb_get_device_address(device);
 
-                uint8_t ports[8];
-                int portCount = libusb_get_port_numbers(device, ports, sizeof(ports));
-                if (portCount > 0)
-                    info.ports.assign(ports, ports + portCount);
+                info.ports = getPortNumbers(device);
 
                 if (desc.iProduct > 0)
                 {
@@ -212,12 +231,7 @@ class LibusbBackend : public Backend
                 if (libusb_get_device_descriptor(device, &desc) != 0)
                     continue;
 
-                if (desc.idVendor != info.vendorId || desc.idProduct != info.productId)
-                    continue;
-
-                uint8_t bus = libusb_get_bus_number(device);
-                uint8_t address = libusb_get_device_address(device);
-                if (bus != info.bus || address != info.address)
+                if (!matchesDevice(device, desc, info))
                     continue;
 
                 libusb_device_handle *handle = nullptr;

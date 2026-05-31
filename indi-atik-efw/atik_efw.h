@@ -65,6 +65,7 @@ class AtikEFW : public INDI::FilterWheel
 
     private:
         bool openHandle();
+        bool resetAndReopenHandle();
         bool configureDevice();
         bool sendStatus(bool requireParse, int *slotCount, int *currentSlot);
         bool sendCommand(const std::vector<uint8_t> &command);

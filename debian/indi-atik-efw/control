@@ -1,0 +1,25 @@
+Source: indi-atik-efw
+Section: science
+Priority: extra
+Maintainer: Jasem Mutlaq <mutlaqja@ikarustech.com>
+Build-Depends: debhelper (>= 5), cdbs, cmake, libusb-1.0-0-dev, libindi-dev, libnova-dev
+Standards-Version: 3.9.2
+
+Package: indi-atik-efw
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}
+Description: INDI driver for Atik USB electronic filter wheels.
+ Driver for Atik USB electronic filter wheels.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+
+Package: indi-atik-efw-dbg
+Priority: extra
+Section: debug
+Architecture: any
+Depends: indi-atik-efw (= ${binary:Version}), ${misc:Depends}
+Description: INDI driver for Atik USB electronic filter wheels.
+ Driver for Atik USB electronic filter wheels.
+ .
+ This driver is compatible with any INDI client such as KStars or Xephem.
+ This package contains the debug symbols for this driver, useful to investigate problems in INDI.
