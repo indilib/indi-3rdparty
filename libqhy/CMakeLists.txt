@@ -33,7 +33,7 @@ if (APPLE)
 elseif (UNIX AND NOT WIN32)
 
   if (NOT DEFINED QHY_FIRMWARE_INSTALL_DIR)
-    set (QHY_FIRMWARE_INSTALL_DIR "/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
+    set (QHY_FIRMWARE_INSTALL_DIR "/usr/lib/firmware/qhy" CACHE STRING "QHY firmware installation directory")
   endif()
 
   if (CMAKE_SYSTEM_PROCESSOR MATCHES "armv+")
@@ -57,7 +57,7 @@ elseif (UNIX AND NOT WIN32)
 
     add_custom_command(
       OUTPUT "${UDEVRULES_GENERATED_FILE}"
-      COMMAND sed -e "s@/lib/firmware@${QHY_FIRMWARE_INSTALL_DIR}@g" "${UDEVRULES_SOURCE_FILE}" > "${UDEVRULES_GENERATED_FILE}"
+      COMMAND sed -e "s@/lib/firmware/qhy@${QHY_FIRMWARE_INSTALL_DIR}@g" "${UDEVRULES_SOURCE_FILE}" > "${UDEVRULES_GENERATED_FILE}"
       DEPENDS "${UDEVRULES_SOURCE_FILE}"
     )
     add_custom_target(
