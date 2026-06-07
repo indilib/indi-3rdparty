@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libmallincam)
 
-set (LIBMALLINCAM_VERSION "59.31026")
-set (LIBMALLINCAM_SOVERSION "59")
+set (LIBMALLINCAM_VERSION "60.31631")
+set (LIBMALLINCAM_SOVERSION "60")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
