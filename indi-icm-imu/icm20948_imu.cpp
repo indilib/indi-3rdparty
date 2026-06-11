@@ -362,15 +362,6 @@ bool ICM20948IMU::collectCalibrationSample()
 
 void ICM20948IMU::updateCalibrationStatus()
 {
-    // Update calibration status based on offsets
-    auto getCalibrationState = [](double offset) -> IPState
-    {
-        if (std::abs(offset) < 0.01)
-            return IPS_ALERT;   // Not calibrated
-        else
-            return IPS_OK;      // Calibrated
-    };
-
     // For now, use simple logic: if offsets are non-zero, consider calibrated
     bool accelCal = (std::abs(m_Offsets.accel[0]) > 0.01 ||
                      std::abs(m_Offsets.accel[1]) > 0.01 ||
@@ -396,21 +387,21 @@ bool ICM20948IMU::SetCalibrationStatus(int sys, int gyro, int accel, int mag)
     auto getCalibrationState = [](int value) -> IPState
     {
         switch (value)
-        {
-            case 0:
-                return IPS_ALERT;   // Not calibrated
-            case 1:
-                return IPS_BUSY;    // Partially calibrated
-            case 2:
-                return IPS_BUSY;    // Mostly calibrated
-            case 3:
-                return IPS_OK;      // Fully calibrated
-            default:
-                return IPS_IDLE;
-        }
-    };
+    {
+        case 0:
+            return IPS_ALERT;   // Not calibrated
+        case 1:
+            return IPS_BUSY;    // Partially calibrated
+        case 2:
+            return IPS_BUSY;    // Mostly calibrated
+        case 3:
+            return IPS_OK;      // Fully calibrated
+        default:
+            return IPS_IDLE;
+    }
+};
 
-    CalibrationStatusLP[0].setState(getCalibrationState(sys));
+CalibrationStatusLP[0].setState(getCalibrationState(sys));
     CalibrationStatusLP[1].setState(getCalibrationState(gyro));
     CalibrationStatusLP[2].setState(getCalibrationState(accel));
     CalibrationStatusLP[3].setState(getCalibrationState(mag));
