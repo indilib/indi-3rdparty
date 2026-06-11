@@ -269,6 +269,7 @@ option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
 option(WITH_OPENOGMA "Install OpenOGMA Driver" On)
 option(WITH_LIBCAMERA "Install Libcamera Driver (Raspberry PI)" Off)
 option(WITH_BNO_IMU "Install BNO IMU Driver" Off)
+option(WITH_ICM_IMU "Install ICM IMU Driver" Off)
 # Due to Qt requirement
 option(WITH_CELESTRON_ORIGIN "Install Celestron Origin Driver" Off)
 
@@ -860,6 +861,11 @@ else(BUILD_LIBS)
   if (WITH_BNO_IMU)
     add_subdirectory(indi-bno-imu)
   endif(WITH_BNO_IMU)
+
+  # ICM_IMU
+  if (WITH_ICM_IMU)
+    add_subdirectory(indi-icm-imu)
+  endif(WITH_ICM_IMU)
 
   # CELESTRON ORIGIN
   if (WITH_CELESTRON_ORIGIN)
