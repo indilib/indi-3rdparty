@@ -194,24 +194,10 @@ int main(int argc, char *argv[])
         }
     }
 
-    // Initialize gphoto2 camera
-    Camera *camera;
-    GPContext *context;
+    // Initialize gphoto driver (handles camera detection internally)
+    GPContext *context = gp_context_new();
 
-    context = gp_context_new();
-    gp_camera_new(&camera);
-
-    // Auto-detect camera
-    printf("Detecting camera...\n");
-    int ret = gp_camera_init(camera, context);
-    if (ret < GP_OK)
-    {
-        fprintf(stderr, "No camera detected! Error: %d\n", ret);
-        return EXIT_NO_CAMERA;
-    }
-
-    // Initialize gphoto driver
-    gphoto_driver *gphoto = gphoto_open(camera, context, nullptr, nullptr, nullptr);
+    gphoto_driver *gphoto = gphoto_open(nullptr, context, nullptr, nullptr, nullptr);
     if (!gphoto)
     {
         fprintf(stderr, "Failed to initialize camera driver\n");
@@ -261,6 +247,7 @@ int main(int argc, char *argv[])
     }
 
     // Capture loop
+    int ret;
     for (int i = 0; i < num_exposures; i++)
     {
         printf("Taking exposure %d of %d...\n", i + 1, num_exposures);
@@ -328,8 +315,6 @@ int main(int argc, char *argv[])
 
     // Cleanup
     gphoto_close(gphoto);
-    gp_camera_exit(camera, context);
-    gp_camera_unref(camera);
     gp_context_unref(context);
 
     // Add capture session summary to report

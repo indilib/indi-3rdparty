@@ -147,6 +147,10 @@ static class Loader
 
                     for (int j = 0; camInfos[j].exec != nullptr; j++)
                     {
+                        // Only match cameras that correspond to the running driver's brand
+                        if (strcmp(getProgName(), camInfos[j].exec))
+                            continue;
+
                         if (strstr(model, camInfos[j].model))
                         {
                             snprintf(prefix, sizeof(prefix), "%s", camInfos[j].driver);
