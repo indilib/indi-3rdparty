@@ -25,6 +25,7 @@
 #include <string>
 #include <thread>
 #include <atomic>
+#include <memory>
 #include <condition_variable>
 
 #include "ArvInterface.h"
@@ -34,7 +35,7 @@ using namespace std;
 class GigECCD : public INDI::CCD
 {
   public:
-    GigECCD(arv::ArvCamera *camera);
+    GigECCD(std::unique_ptr<arv::ArvCamera> camera);
     virtual ~GigECCD();
 
     virtual const char *getDefaultName() override;
@@ -76,7 +77,7 @@ class GigECCD : public INDI::CCD
      * This should not be called with camera_mutex locked. */
     void stop_streaming_thread();
 
-    arv::ArvCamera *camera;
+    std::unique_ptr<arv::ArvCamera> camera;
     std::recursive_mutex camera_mutex;
     int timer_id;
     struct timeval exposure_start_time;

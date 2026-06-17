@@ -76,9 +76,10 @@ static class Loader
 public:
     Loader()
     {
-        arv::ArvCamera *camera = arv::ArvFactory::find_first_available();
-        cameras.push_back(std::unique_ptr<GigECCD>(new GigECCD(camera)));
+        auto camera = arv::ArvFactory::find_first_available();
         IDLog("Found Camera: %s\n", camera->device_id());
+        auto gigeccd = new GigECCD(std::move(camera));
+        cameras.push_back(std::unique_ptr<GigECCD>(gigeccd));
     }
 } loader;
 
@@ -87,9 +88,9 @@ const char *GigECCD::getDefaultName()
     return "GigE CCD";
 }
 
-GigECCD::GigECCD(arv::ArvCamera *camera)
+GigECCD::GigECCD(std::unique_ptr<arv::ArvCamera> camera)
+  : camera(std::move(camera))
 {
-    this->camera = camera;
     setDeviceName(this->camera->device_id());
 }
 

@@ -24,6 +24,7 @@
 
 #include <string>
 #include <utility>
+#include <memory>
 #include <functional>
 
 namespace arv
@@ -159,7 +160,7 @@ class ArvCamera
 class ArvFactory
 {
   public:
-    static ArvCamera *find_first_available(void);
+    static std::unique_ptr<ArvCamera> find_first_available(void);
 
     //TODO: add iterative support to add all discovered cameras
 };

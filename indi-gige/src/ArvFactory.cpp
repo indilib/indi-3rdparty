@@ -26,7 +26,7 @@
 
 #define BLACKFLY_MODEL "BFLY-PGE-31S4M"
 
-arv::ArvCamera *ArvFactory::find_first_available(void)
+std::unique_ptr<arv::ArvCamera> ArvFactory::find_first_available(void)
 {
     /* We first ensure the library knows of all available devices and info */
     arv_update_device_list();
@@ -42,11 +42,11 @@ arv::ArvCamera *ArvFactory::find_first_available(void)
     if (memmem(model_name, strlen(model_name), BLACKFLY_MODEL, strlen(BLACKFLY_MODEL)))
     {
         printf("Creating BlackFly... for %s-%s\n", model_name, device_id);
-        return new BlackFly(device_id, model_name);
+        return std::unique_ptr<ArvCamera>(new BlackFly(device_id, model_name));
     }
     else
     {
         printf("Creating Generic... for %s-%s\n", model_name, device_id);
-        return new ArvGeneric(device_id, model_name);
+        return std::unique_ptr<ArvCamera>(new ArvGeneric(device_id, model_name));
     }
 }
