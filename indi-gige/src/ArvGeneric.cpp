@@ -43,7 +43,7 @@ void ArvGeneric::call_log(const char *func_description, Func &&func, Args&&... a
     }
 }
 #define CALL(func, ...) \
-  this->call_log(#func, func, __VA_ARGS__)
+  this->call_log(#func "(" #__VA_ARGS__ ")", func, __VA_ARGS__)
 
 // Variadic template error handler function
 template<typename Func, typename... Args>
@@ -59,7 +59,7 @@ auto ArvGeneric::call_log_return(const char *func_description, Func &&func, Args
     return ret;
 }
 #define CALL_RETURN(func, ...) \
-  this->call_log_return(#func, func, __VA_ARGS__)
+  this->call_log_return(#func "(" #__VA_ARGS__ ")", func, __VA_ARGS__)
 
 const char *ArvGeneric::vendor_name()
 {

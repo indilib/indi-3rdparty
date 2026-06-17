@@ -76,10 +76,12 @@ static class Loader
 public:
     Loader()
     {
-        auto camera = arv::ArvFactory::find_first_available();
-        IDLog("Found Camera: %s\n", camera->device_id());
-        auto gigeccd = new GigECCD(std::move(camera));
-        cameras.push_back(std::unique_ptr<GigECCD>(gigeccd));
+        for (auto camera_index : arv::ArvFactory()) {
+            auto camera = camera_index.instantiate();
+            IDLog("Found Camera: %s\n", camera->device_id());
+            auto gigeccd = new GigECCD(std::move(camera));
+            cameras.push_back(std::unique_ptr<GigECCD>(gigeccd));
+        }
     }
 } loader;
 

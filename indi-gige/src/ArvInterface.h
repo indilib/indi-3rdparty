@@ -25,6 +25,7 @@
 #include <string>
 #include <utility>
 #include <memory>
+#include <iterator>
 #include <functional>
 
 namespace arv
@@ -160,9 +161,83 @@ class ArvCamera
 class ArvFactory
 {
   public:
+    /** Find, instantiate, and return a unique_ptr of the first available
+     * ArvCamera.
+     */
     static std::unique_ptr<ArvCamera> find_first_available(void);
 
-    //TODO: add iterative support to add all discovered cameras
+    /** Camera device index, used by the camera iterator and to instantiate an
+     * ArvCamera.
+     */
+    class Index {
+        int index;
+      public:
+        Index(int index) : index(index) { }
+
+        /** Attempt to create a camera instance for the camera index.
+         * Does *not* update the device list.
+         */
+        std::unique_ptr<ArvCamera> instantiate() const;
+
+        Index & operator++() {
+          ++this->index;
+          return *this;
+        }
+        bool operator==(const Index & other) const {
+          return this->index == other.index;
+        }
+        bool operator!=(const Index & other) const {
+          return this->index != other.index;
+        }
+    };
+
+    /** Camera index iterator. */
+    class Iterator {
+        Index index;
+    public:
+        // 1. Mandatory STL iterator traits
+        using iterator_category = std::input_iterator_tag;
+        using value_type        = Index;
+        using difference_type   = std::ptrdiff_t;
+        using pointer           = const Index*;
+        using reference         = const Index&;
+
+        Iterator(Index index) : index(index) { }
+
+        /** Dereference operator. */
+        reference operator*() const {
+            return index;
+        }
+
+        /** Prefix increment operator. */
+        Iterator& operator++() {
+            ++this->index;
+            return *this;
+        }
+
+        // Postfix increment operator
+        Iterator operator++(int) {
+            Iterator temp = *this;
+            ++(*this);
+            return temp;
+        }
+
+        // Comparison operators
+        bool operator!=(const Iterator& other) const {
+            return this->index != other.index;
+        }
+
+        bool operator==(const Iterator& other) const {
+            return this->index == other.index;
+        }
+    };
+
+    /** Updates the list of devices and returns the iterator to the first. */
+    Iterator begin();
+    /** Returns an iterator to the currently known end.
+     * This function does *not* update the list of devices.
+     */
+    Iterator end();
 };
 
 } /* Namepsace */

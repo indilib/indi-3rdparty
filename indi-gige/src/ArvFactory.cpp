@@ -26,27 +26,49 @@
 
 #define BLACKFLY_MODEL "BFLY-PGE-31S4M"
 
+namespace arv {
+  std::unique_ptr<arv::ArvCamera> create_camera(unsigned int index)
+  {
+      if (index >= arv_get_n_devices())
+          /* no devices found */
+          return nullptr;
+
+      const char *device_id = arv_get_device_id(index);
+      const char *model_name = arv_get_device_model(index);
+
+      if (memmem(model_name, strlen(model_name), BLACKFLY_MODEL, strlen(BLACKFLY_MODEL)))
+      {
+          printf("Creating BlackFly... for %s-%s\n", model_name, device_id);
+          return std::unique_ptr<ArvCamera>(new BlackFly(device_id, model_name));
+      }
+      else
+      {
+          printf("Creating Generic... for %s-%s\n", model_name, device_id);
+          return std::unique_ptr<ArvCamera>(new ArvGeneric(device_id, model_name));
+      }
+  }
+}
+
 std::unique_ptr<arv::ArvCamera> ArvFactory::find_first_available(void)
 {
     /* We first ensure the library knows of all available devices and info */
     arv_update_device_list();
+    return create_camera(0);
+}
 
-    if (arv_get_n_devices() == 0)
-        /* no devices found */
-        return nullptr;
+ArvFactory::Iterator ArvFactory::begin(void)
+{
+    /* We first ensure the library knows of all available devices and info */
+    arv_update_device_list();
+    return ArvFactory::Iterator(0);
+}
 
+ArvFactory::Iterator ArvFactory::end(void)
+{
+    return ArvFactory::Iterator(arv_get_n_devices());
+}
 
-    const char *device_id = arv_get_device_id(0);
-    const char *model_name = arv_get_device_model(0);
-
-    if (memmem(model_name, strlen(model_name), BLACKFLY_MODEL, strlen(BLACKFLY_MODEL)))
-    {
-        printf("Creating BlackFly... for %s-%s\n", model_name, device_id);
-        return std::unique_ptr<ArvCamera>(new BlackFly(device_id, model_name));
-    }
-    else
-    {
-        printf("Creating Generic... for %s-%s\n", model_name, device_id);
-        return std::unique_ptr<ArvCamera>(new ArvGeneric(device_id, model_name));
-    }
+std::unique_ptr<arv::ArvCamera> ArvFactory::Index::instantiate(void) const
+{
+    return create_camera(this->index);
 }
