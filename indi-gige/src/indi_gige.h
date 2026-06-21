@@ -21,7 +21,12 @@
 #define GENERIC_CCD_H
 
 #include <indiccd.h>
-#include <iostream>
+
+#include <string>
+#include <thread>
+#include <atomic>
+#include <memory>
+#include <condition_variable>
 
 #include "ArvInterface.h"
 
@@ -30,46 +35,63 @@ using namespace std;
 class GigECCD : public INDI::CCD
 {
   public:
-    GigECCD(arv::ArvCamera *camera);
+    GigECCD(std::unique_ptr<arv::ArvCamera> camera);
     virtual ~GigECCD();
 
-    const char *getDefaultName();
+    virtual const char *getDefaultName() override;
 
-    bool initProperties();
-    bool updateProperties();
+    virtual bool initProperties() override;
+    virtual bool updateProperties() override;
 
-    bool Connect();
-    bool Disconnect();
+    virtual bool Connect() override;
+    virtual bool Disconnect() override;
 
-    bool StartExposure(float duration);
-    bool AbortExposure();
+    virtual bool StartExposure(float duration) override;
+    virtual bool AbortExposure() override;
+    /** Request streaming to start.
+     * This should not be called with camera_mutex locked. */
+    virtual bool StartStreaming() override;
+    /** Request streaming to stop.
+     * This should not be called with camera_mutex locked. */
+    virtual bool StopStreaming() override;
 
   protected:
-    void TimerHit();
-    virtual bool UpdateCCDFrame(int x, int y, int w, int h);
-    virtual bool UpdateCCDBin(int binx, int biny);
-    virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType);
+    virtual void TimerHit() override;
+    virtual bool UpdateCCDFrame(int x, int y, int w, int h) override;
+    virtual bool UpdateCCDBin(int binx, int biny) override;
+    virtual bool UpdateCCDFrameType(INDI::CCDChip::CCD_FRAME fType) override;
+    virtual void addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSRecord> &fitsKeyword) override;
+    virtual bool saveConfigItems(FILE *fp) override;
 
   private:
     void _delete_indi_properties(void);
     void _update_indi_properties(void);
-    bool _update_geometry(void);
+    void _update_bin(void); /// update binning to INDI from hardware
+    bool _update_geometry(void); /// update geometry to INDI from hardware
     void _update_image(uint8_t const *const data, size_t size);
-    static void _receive_image_hook(void *const class_ptr, uint8_t const *const data, size_t size);
 
     void _handle_failed(void);
     void _handle_timeout(struct timeval *const tv, uint32_t timeout_us);
+    void start_streaming_thread();
+    /** Request streaming to stop and the streaming thread to quit.
+     * This should not be called with camera_mutex locked. */
+    void stop_streaming_thread();
 
-    arv::ArvCamera *camera;
-    char name[32];
+    std::unique_ptr<arv::ArvCamera> camera;
+    std::recursive_mutex camera_mutex;
     int timer_id;
     struct timeval exposure_start_time;
     struct timeval exposure_transfer_time;
 
+    std::thread streaming_thread;
+    std::atomic<bool> streaming_thread_stop_requested {false};
+    std::atomic<bool> streaming_thread_active {false};
+    std::condition_variable_any streaming_thread_condition;
+
     /* Indi properties */
 
-    INumber indiprop_gain[1];
-    INumberVectorProperty indiprop_gain_prop;
+    INDI::PropertyNumber GainNP {1};
+    INDI::PropertyNumber PixelSizeNP {1};
     IText indiprop_info[3] {};
     ITextVectorProperty indiprop_info_prop;
 

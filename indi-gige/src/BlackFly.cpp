@@ -19,9 +19,12 @@
 #include "ArvGeneric.h"
 #include "BlackFly.h"
 
+#include <string>
+
 using namespace arv;
 
-BlackFly::BlackFly(void *camera_device) : ArvGeneric(camera_device)
+BlackFly::BlackFly(std::string device_id, std::string model_name)
+: ArvGeneric(device_id, model_name)
 {
     printf("%s\n", __PRETTY_FUNCTION__);
 }
@@ -41,7 +44,6 @@ bool BlackFly::_custom_settings()
     }
 
     gboolean result;
-    guint32 val;
     GError *error = nullptr;
 
     int i;
@@ -69,17 +71,6 @@ error:
     return false;
 }
 
-bool BlackFly::connect(void)
-{
-    printf("%s\n", __PRETTY_FUNCTION__);
-    bool const ret = ArvGeneric::connect();
-    if (ret)
-    {
-        this->_configure();
-    }
-    return ret;
-}
-
 void BlackFly::_fixup(void)
 {
     ::ArvDevice *dev = this->dev;
@@ -94,7 +85,6 @@ void BlackFly::_fixup(void)
     }
 
     gboolean result;
-    guint32 val;
     GError *error = nullptr;
 
     int i;
@@ -115,13 +105,6 @@ void BlackFly::exposure_start(void)
     ArvGeneric::exposure_start();
 }
 
-bool BlackFly::_configure(void)
-{
-    printf("%s\n", __PRETTY_FUNCTION__);
-    this->_set_initial_config();
-    return this->_get_initial_config();
-}
-
 bool BlackFly::_get_initial_config(void)
 {
     printf("%s\n", __PRETTY_FUNCTION__);
@@ -133,11 +116,12 @@ bool BlackFly::_get_initial_config(void)
     /* Probably can find this somewhere in genicam, too, but it depends on framerate
      * and the maximum exposure is consequently not published */
     this->cam.exposure.update(5000, 11900000);
+    return true;
 }
 
 bool BlackFly::_set_initial_config(void)
 {
     printf("%s\n", __PRETTY_FUNCTION__);
     ArvGeneric::_set_initial_config();
-    this->_custom_settings();
+    return this->_custom_settings();
 }
