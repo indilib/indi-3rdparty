@@ -170,7 +170,7 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
 class MockBackend : public AtikEfwUsb::Backend
 {
     public:
-        void addDevice(AtikEfwUsb::DeviceInfo info, MockState state)
+        void addDevice(const AtikEfwUsb::DeviceInfo &info, MockState state)
         {
             devices_.push_back(info);
             states_[keyFor(info)] = std::move(state);

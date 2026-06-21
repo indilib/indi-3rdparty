@@ -96,27 +96,33 @@ int decodeByte(uint8_t value)
 
 bool parseStatusResponse(const std::vector<uint8_t> &data, int *position, int *slots)
 {
-    // Some wheel firmware returns one frame containing the status command and values.
-    auto start = data.begin();
-    while (start != data.end())
+    std::vector<int> compactValues;
+    size_t start = 0;
+    while (start < data.size())
     {
-        start = std::find(start, data.end(), kFrameByte);
-        if (start == data.end())
+        while (start < data.size() && data[start] != kFrameByte)
+            start++;
+        if (start == data.size())
             break;
 
-        auto end = std::find(start + 1, data.end(), kFrameByte);
-        if (end == data.end())
+        size_t end = start + 1;
+        while (end < data.size() && data[end] != kFrameByte)
+            end++;
+        if (end == data.size())
             break;
 
-        if (end - start >= 3 && *(start + 1) == kCmdStatus)
+        size_t payloadSize = end - start - 1;
+
+        // Some wheel firmware returns one frame containing the status command and values.
+        if (payloadSize >= 2 && data[start + 1] == kCmdStatus)
         {
-            int decodedPosition = decodeByte(*(start + 2));
+            int decodedPosition = decodeByte(data[start + 2]);
             if (decodedPosition > 0 && position)
                 *position = decodedPosition;
 
-            if (end - start >= 4)
+            if (payloadSize >= 3)
             {
-                int decodedSlots = decodeByte(*(start + 3));
+                int decodedSlots = decodeByte(data[start + 3]);
                 if (decodedSlots > 0 && slots)
                     *slots = decodedSlots;
             }
@@ -124,39 +130,24 @@ bool parseStatusResponse(const std::vector<uint8_t> &data, int *position, int *s
             return (decodedPosition > 0);
         }
 
-        start = end + 1;
-    }
-
-    // EFW2 hardware also returns two compact frames: #position##slot-count#.
-    std::vector<int> values;
-    start = data.begin();
-    while (start != data.end())
-    {
-        start = std::find(start, data.end(), kFrameByte);
-        if (start == data.end())
-            break;
-
-        auto end = std::find(start + 1, data.end(), kFrameByte);
-        if (end == data.end())
-            break;
-
-        if (end - start == 2)
+        // EFW2 hardware also returns two compact frames: #position##slot-count#.
+        if (payloadSize == 1)
         {
-            int value = decodeByte(*(start + 1));
+            int value = decodeByte(data[start + 1]);
             if (value > 0 && value <= kMaxSlots)
-                values.push_back(value);
+                compactValues.push_back(value);
         }
 
         start = end + 1;
     }
 
-    if (values.empty())
+    if (compactValues.empty())
         return false;
 
     if (position)
-        *position = values[0];
-    if (slots && values.size() > 1)
-        *slots = values[1];
+        *position = compactValues[0];
+    if (slots && compactValues.size() > 1)
+        *slots = compactValues[1];
     return true;
 }
 
@@ -340,10 +331,7 @@ AtikEFW::AtikEFW(const DeviceDescriptor &desc, AtikEfwUsb::Backend &backend)
     setDeviceName(desc.name.c_str());
 }
 
-AtikEFW::~AtikEFW()
-{
-    Disconnect();
-}
+AtikEFW::~AtikEFW() = default;
 
 const char *AtikEFW::getDefaultName()
 {
