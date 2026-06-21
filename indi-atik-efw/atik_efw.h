@@ -26,6 +26,7 @@
 
 #include <indifilterwheel.h>
 
+#include <chrono>
 #include <memory>
 #include <string>
 #include <vector>
@@ -69,7 +70,6 @@ class AtikEFW : public INDI::FilterWheel
         bool configureDevice();
         bool sendStatus(bool requireParse, int *slotCount, int *currentSlot);
         bool sendCommand(const std::vector<uint8_t> &command);
-        bool readResponse(std::vector<uint8_t> *response);
         void applySlotCount(int slots, bool updateProperty);
 
         AtikEfwUsb::Backend &backend_;
@@ -77,6 +77,8 @@ class AtikEFW : public INDI::FilterWheel
         std::unique_ptr<AtikEfwUsb::DeviceHandle> handle_;
         int slotCountHint_ {0};
         int currentSlotHint_ {0};
+        bool movementPending_ {false};
+        std::chrono::steady_clock::time_point movementStartedAt_;
 
         INDI::PropertyNumber SlotCountNP {1};
 };
