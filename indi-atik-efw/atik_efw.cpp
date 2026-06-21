@@ -25,6 +25,7 @@
 #include "config.h"
 
 #include <algorithm>
+#include <chrono>
 #include <deque>
 #include <iomanip>
 #include <memory>
@@ -53,9 +54,11 @@ constexpr uint16_t kFtdiFlowValue = 0x0303;
 constexpr unsigned int kControlTimeoutMs = 1000;
 constexpr unsigned int kReadTimeoutMs = 1000;
 constexpr unsigned int kWriteTimeoutMs = 1000;
+constexpr int kMaxStatusReadAttempts = 4;
 constexpr useconds_t kUsbResetDelayUs = 1000000;
 constexpr useconds_t kFtdiDelayUs = 200000;
 constexpr useconds_t kStatusDelayUs = 100000;
+constexpr std::chrono::milliseconds kMoveFallbackDelay {1500};
 constexpr int kDefaultSlots = 5;
 constexpr int kMaxSlots = 16;
 constexpr int kMaxResponseBytes = 64;
@@ -75,6 +78,9 @@ std::string bytesToHex(const std::vector<uint8_t> &data)
 
 std::vector<uint8_t> sanitizeResponse(const std::vector<uint8_t> &raw)
 {
+    if (raw.size() == 2)
+        return {};
+
     if (raw.size() >= 3 && raw[0] != kFrameByte && raw[2] == kFrameByte)
         return {raw.begin() + 2, raw.end()};
 
@@ -90,16 +96,17 @@ int decodeByte(uint8_t value)
 
 bool parseStatusResponse(const std::vector<uint8_t> &data, int *position, int *slots)
 {
+    // Some wheel firmware returns one frame containing the status command and values.
     auto start = data.begin();
     while (start != data.end())
     {
         start = std::find(start, data.end(), kFrameByte);
         if (start == data.end())
-            return false;
+            break;
 
         auto end = std::find(start + 1, data.end(), kFrameByte);
         if (end == data.end())
-            return false;
+            break;
 
         if (end - start >= 3 && *(start + 1) == kCmdStatus)
         {
@@ -120,7 +127,37 @@ bool parseStatusResponse(const std::vector<uint8_t> &data, int *position, int *s
         start = end + 1;
     }
 
-    return false;
+    // EFW2 hardware also returns two compact frames: #position##slot-count#.
+    std::vector<int> values;
+    start = data.begin();
+    while (start != data.end())
+    {
+        start = std::find(start, data.end(), kFrameByte);
+        if (start == data.end())
+            break;
+
+        auto end = std::find(start + 1, data.end(), kFrameByte);
+        if (end == data.end())
+            break;
+
+        if (end - start == 2)
+        {
+            int value = decodeByte(*(start + 1));
+            if (value > 0 && value <= kMaxSlots)
+                values.push_back(value);
+        }
+
+        start = end + 1;
+    }
+
+    if (values.empty())
+        return false;
+
+    if (position)
+        *position = values[0];
+    if (slots && values.size() > 1)
+        *slots = values[1];
+    return true;
 }
 
 bool writeCommand(AtikEfwUsb::DeviceHandle &handle, const std::vector<uint8_t> &command)
@@ -129,18 +166,55 @@ bool writeCommand(AtikEfwUsb::DeviceHandle &handle, const std::vector<uint8_t> &
     return (rc == static_cast<int>(command.size()));
 }
 
-bool readResponse(AtikEfwUsb::DeviceHandle &handle, std::vector<uint8_t> *response)
+enum class StatusReadResult
 {
-    if (!response)
-        return false;
+    NoResponse,
+    Unparsed,
+    Parsed
+};
 
-    unsigned char buffer[kMaxResponseBytes] = {0};
-    int rc = handle.read(kEndpointIn, buffer, sizeof(buffer), kReadTimeoutMs);
-    if (rc <= 0)
-        return false;
+StatusReadResult readStatusResponse(AtikEfwUsb::DeviceHandle &handle, std::vector<uint8_t> *rawResponse,
+                                    int *position, int *slots)
+{
+    std::vector<uint8_t> raw;
+    std::vector<uint8_t> cleaned;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(kReadTimeoutMs);
 
-    response->assign(buffer, buffer + rc);
-    return true;
+    for (int attempt = 0; attempt < kMaxStatusReadAttempts; attempt++)
+    {
+        auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
+                             deadline - std::chrono::steady_clock::now()).count();
+        if (remaining <= 0)
+            break;
+
+        unsigned char buffer[kMaxResponseBytes] = {0};
+        int rc = handle.read(kEndpointIn, buffer, sizeof(buffer), static_cast<unsigned int>(remaining));
+        if (rc <= 0)
+            break;
+
+        std::vector<uint8_t> packet(buffer, buffer + rc);
+        raw.insert(raw.end(), packet.begin(), packet.end());
+
+        auto payload = sanitizeResponse(packet);
+        cleaned.insert(cleaned.end(), payload.begin(), payload.end());
+
+        int parsedPosition = 0;
+        int parsedSlots = 0;
+        if (parseStatusResponse(cleaned, &parsedPosition, &parsedSlots))
+        {
+            if (rawResponse)
+                *rawResponse = std::move(raw);
+            if (position)
+                *position = parsedPosition;
+            if (slots)
+                *slots = parsedSlots;
+            return StatusReadResult::Parsed;
+        }
+    }
+
+    if (rawResponse)
+        *rawResponse = raw;
+    return raw.empty() ? StatusReadResult::NoResponse : StatusReadResult::Unparsed;
 }
 
 bool initializeWheel(AtikEfwUsb::DeviceHandle &handle, std::string *error)
@@ -199,19 +273,10 @@ bool probeStatus(AtikEfwUsb::DeviceHandle &handle, bool requireParse, int *slotC
 
     usleep(kStatusDelayUs);
 
-    std::vector<uint8_t> response;
-    if (!readResponse(handle, &response))
-        return false;
-
-    if (raw)
-        *raw = response;
-
-    auto cleaned = sanitizeResponse(response);
     int slots = 0;
     int position = 0;
-    bool parsed = parseStatusResponse(cleaned, &position, &slots);
-
-    if (parsed)
+    auto result = readStatusResponse(handle, raw, &position, &slots);
+    if (result == StatusReadResult::Parsed)
     {
         if (slotCount)
             *slotCount = slots;
@@ -219,7 +284,7 @@ bool probeStatus(AtikEfwUsb::DeviceHandle &handle, bool requireParse, int *slotC
             *currentSlot = position;
     }
 
-    return parsed || !requireParse;
+    return result == StatusReadResult::Parsed || (!requireParse && result == StatusReadResult::Unparsed);
 }
 
 std::string buildDeviceName(const AtikEfwUsb::DeviceInfo &info, size_t index, size_t count)
@@ -402,24 +467,6 @@ bool AtikEFW::sendCommand(const std::vector<uint8_t> &command)
     return true;
 }
 
-bool AtikEFW::readResponse(std::vector<uint8_t> *response)
-{
-    if (!handle_ || !response)
-        return false;
-
-    unsigned char buffer[kMaxResponseBytes] = {0};
-    int rc = handle_->read(kEndpointIn, buffer, sizeof(buffer), kReadTimeoutMs);
-    if (rc <= 0)
-    {
-        LOGF_WARN("%s: no response (%d)", getDeviceName(), rc);
-        return false;
-    }
-
-    response->assign(buffer, buffer + rc);
-    LOGF_DEBUG("%s: raw response %s", getDeviceName(), bytesToHex(*response).c_str());
-    return true;
-}
-
 bool AtikEFW::sendStatus(bool requireParse, int *slotCount, int *currentSlot)
 {
     const std::vector<uint8_t> statusCommand {kFrameByte, kCmdStatus, 0x00, kFrameByte};
@@ -430,17 +477,19 @@ bool AtikEFW::sendStatus(bool requireParse, int *slotCount, int *currentSlot)
     usleep(kStatusDelayUs);
 
     std::vector<uint8_t> response;
-    if (!readResponse(&response))
-        return false;
-
-    auto cleaned = sanitizeResponse(response);
     int slots = 0;
     int position = 0;
-    bool parsed = parseStatusResponse(cleaned, &position, &slots);
+    auto result = readStatusResponse(*handle_, &response, &position, &slots);
 
-    if (!parsed)
+    if (!response.empty())
+        LOGF_DEBUG("%s: raw response %s", getDeviceName(), bytesToHex(response).c_str());
+
+    if (result != StatusReadResult::Parsed)
     {
-        LOGF_WARN("%s: unparsed status response %s", getDeviceName(), bytesToHex(response).c_str());
+        if (result == StatusReadResult::NoResponse)
+            LOGF_WARN("%s: no status response", getDeviceName());
+        else
+            LOGF_WARN("%s: unparsed status response %s", getDeviceName(), bytesToHex(response).c_str());
         return !requireParse;
     }
 
@@ -486,6 +535,8 @@ void AtikEFW::applySlotCount(int slots, bool updateProperty)
 
 bool AtikEFW::Connect()
 {
+    movementPending_ = false;
+
     if (isSimulation())
     {
         int slots = slotCountHint_ > 0 ? slotCountHint_ : kDefaultSlots;
@@ -516,7 +567,7 @@ bool AtikEFW::Connect()
     int detectedPosition = 0;
     if (!sendStatus(false, &detectedSlots, &detectedPosition))
     {
-        LOGF_ERROR("%s: no status response, aborting connection", getDeviceName());
+        LOGF_ERROR("%s: failed to send status command", getDeviceName());
         handle_.reset();
         return false;
     }
@@ -530,6 +581,7 @@ bool AtikEFW::Connect()
     CurrentFilter = (detectedPosition > 0) ? detectedPosition : currentSlotHint_;
     if (CurrentFilter <= 0)
         CurrentFilter = 1;
+    currentSlotHint_ = CurrentFilter;
 
     applySlotCount(slots, true);
 
@@ -546,6 +598,7 @@ bool AtikEFW::Connect()
 
 bool AtikEFW::Disconnect()
 {
+    movementPending_ = false;
     handle_.reset();
     return true;
 }
@@ -585,6 +638,8 @@ bool AtikEFW::SelectFilter(int targetFilter)
         return false;
     }
 
+    movementPending_ = true;
+    movementStartedAt_ = std::chrono::steady_clock::now();
     return true;
 }
 
@@ -601,6 +656,21 @@ int AtikEFW::QueryFilter()
     int position = 0;
     if (!sendStatus(true, &slots, &position))
     {
+        if (movementPending_ && std::chrono::steady_clock::now() - movementStartedAt_ >= kMoveFallbackDelay)
+        {
+            LOGF_WARN("%s: status unavailable after filter change; assuming target slot %d",
+                      getDeviceName(), TargetFilter);
+            CurrentFilter = TargetFilter;
+            currentSlotHint_ = CurrentFilter;
+            movementPending_ = false;
+            FilterSlotNP[0].setValue(CurrentFilter);
+            FilterSlotNP.apply();
+            return CurrentFilter;
+        }
+
+        if (movementPending_)
+            return -1;
+
         FilterSlotNP.setState(IPS_ALERT);
         FilterSlotNP.apply();
         return -1;
@@ -612,6 +682,9 @@ int AtikEFW::QueryFilter()
     if (position > 0)
     {
         CurrentFilter = position;
+        currentSlotHint_ = CurrentFilter;
+        if (CurrentFilter == TargetFilter)
+            movementPending_ = false;
         FilterSlotNP[0].setValue(CurrentFilter);
         FilterSlotNP.apply();
         return CurrentFilter;

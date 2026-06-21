@@ -25,8 +25,10 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <chrono>
 #include <map>
 #include <string>
+#include <thread>
 #include <utility>
 #include <vector>
 
@@ -39,8 +41,11 @@ struct MockState
     int currentSlot {1};
     bool statusOk {true};
     bool asciiStatus {false};
+    bool compactStatus {false};
     bool malformedStatus {false};
     bool resetOk {true};
+    int statusOnlyReads {0};
+    int readsSinceStatus {0};
     int openCount {0};
     int resetCount {0};
     int detachCount {0};
@@ -103,6 +108,7 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
             if (payload.size() >= 4 && payload[0] == 0x23 && payload[1] == 0x04)
             {
                 state_.lastCommand = MockState::LastCommand::Status;
+                state_.readsSinceStatus = 0;
             }
             else if (payload.size() >= 4 && payload[0] == 0x23 && payload[1] == 0x01)
             {
@@ -121,12 +127,19 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
             if (!state_.statusOk || state_.lastCommand != MockState::LastCommand::Status)
                 return 0;
 
+            if (state_.readsSinceStatus++ < state_.statusOnlyReads)
+            {
+                std::vector<uint8_t> response = {0x01, 0x60};
+                int toCopy = std::min(length, static_cast<int>(response.size()));
+                std::copy_n(response.begin(), toCopy, data);
+                return toCopy;
+            }
+
             if (state_.malformedStatus)
             {
-                std::vector<uint8_t> response = {0x60, 0x01, 0x23, 0x04, 0x00, 0x23};
+                std::vector<uint8_t> response = {0x01, 0x60, 0x23, 0x04, 0x00, 0x23};
                 int toCopy = std::min(length, static_cast<int>(response.size()));
-                for (int i = 0; i < toCopy; i++)
-                    data[i] = response[i];
+                std::copy_n(response.begin(), toCopy, data);
                 return toCopy;
             }
 
@@ -138,12 +151,14 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
                 slots = static_cast<uint8_t>('0' + state_.slotCount);
             }
 
-            std::vector<uint8_t> response = {0x60, 0x01, 0x23, 0x04,
-                                             current, slots, 0x23};
+            std::vector<uint8_t> response;
+            if (state_.compactStatus)
+                response = {0x01, 0x60, 0x23, current, 0x23, 0x23, slots, 0x23};
+            else
+                response = {0x01, 0x60, 0x23, 0x04, current, slots, 0x23};
 
             int toCopy = std::min(length, static_cast<int>(response.size()));
-            for (int i = 0; i < toCopy; i++)
-                data[i] = response[i];
+            std::copy_n(response.begin(), toCopy, data);
 
             return toCopy;
         }
@@ -295,7 +310,7 @@ TEST(AtikEFWDriver, ConnectSelectsAndQueries)
     ASSERT_TRUE(wheel.SelectFilter(5));
     auto &writes = backend.stateFor(device).writes;
     ASSERT_FALSE(writes.empty());
-    EXPECT_EQ(writes.back(), (std::vector<uint8_t>{0x23, 0x01, 5, 0x23}));
+    EXPECT_EQ(writes.back(), (std::vector<uint8_t> {0x23, 0x01, 5, 0x23}));
 
     EXPECT_EQ(wheel.QueryFilter(), 5);
 }
@@ -364,6 +379,43 @@ TEST(AtikEFWDriver, PreservesBinarySlotOneWhenStrippingFtdiStatus)
     EXPECT_TRUE(devices[0].slotCountKnown);
 }
 
+TEST(AtikEFWDriver, ParsesCapturedCompactStatusResponse)
+{
+    MockBackend backend;
+    MockState state;
+    state.slotCount = 5;
+    state.currentSlot = 1;
+    state.compactStatus = true;
+
+    auto device = makeDevice(3, 12, {9});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_EQ(devices[0].slotCount, 5);
+    EXPECT_EQ(devices[0].currentSlot, 1);
+    EXPECT_TRUE(devices[0].slotCountKnown);
+}
+
+TEST(AtikEFWDriver, SkipsFtdiStatusOnlyPackets)
+{
+    MockBackend backend;
+    MockState state;
+    state.slotCount = 7;
+    state.currentSlot = 3;
+    state.compactStatus = true;
+    state.statusOnlyReads = 2;
+
+    auto device = makeDevice(3, 13, {10});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_EQ(devices[0].slotCount, 7);
+    EXPECT_EQ(devices[0].currentSlot, 3);
+    EXPECT_TRUE(devices[0].slotCountKnown);
+}
+
 TEST(AtikEFWDriver, QueryRejectsMalformedStatus)
 {
     MockBackend backend;
@@ -385,7 +437,7 @@ TEST(AtikEFWDriver, QueryRejectsMalformedStatus)
     EXPECT_EQ(wheel.QueryFilter(), -1);
 }
 
-TEST(AtikEFWDriver, ConnectFailsWithoutStatusResponse)
+TEST(AtikEFWDriver, ConnectUsesHintsWithoutStatusResponse)
 {
     MockBackend backend;
     MockState state;
@@ -400,8 +452,55 @@ TEST(AtikEFWDriver, ConnectFailsWithoutStatusResponse)
 
     TestAtikEFW wheel(devices[0], backend);
     ASSERT_TRUE(wheel.initProperties());
-    EXPECT_FALSE(wheel.Connect());
+    EXPECT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.maxSlots(), 5);
+    EXPECT_EQ(wheel.currentFilter(), 1);
     EXPECT_EQ(backend.stateFor(device).resetCount, 1);
+}
+
+TEST(AtikEFWDriver, ConnectUsesHintsForFtdiStatusOnlyResponse)
+{
+    MockBackend backend;
+    MockState state;
+    state.statusOnlyReads = 100;
+
+    auto device = makeDevice(5, 15, {9});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+    EXPECT_FALSE(devices[0].slotCountKnown);
+
+    TestAtikEFW wheel(devices[0], backend);
+    ASSERT_TRUE(wheel.initProperties());
+    EXPECT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.maxSlots(), 5);
+    EXPECT_EQ(wheel.currentFilter(), 1);
+}
+
+TEST(AtikEFWDriver, CompletesMoveWhenStatusRemainsUnavailable)
+{
+    MockBackend backend;
+    MockState state;
+    state.slotCount = 5;
+    state.currentSlot = 1;
+
+    auto device = makeDevice(6, 14, {8});
+    backend.addDevice(device, state);
+
+    auto devices = AtikEFW::Enumerate(backend);
+    ASSERT_EQ(devices.size(), 1u);
+
+    TestAtikEFW wheel(devices[0], backend);
+    ASSERT_TRUE(wheel.initProperties());
+    ASSERT_TRUE(wheel.Connect());
+    ASSERT_TRUE(wheel.SelectFilter(4));
+
+    backend.stateFor(device).statusOk = false;
+    std::this_thread::sleep_for(std::chrono::milliseconds(1600));
+
+    EXPECT_EQ(wheel.QueryFilter(), 4);
+    EXPECT_EQ(wheel.currentFilter(), 4);
 }
 
 int main(int argc, char **argv)
