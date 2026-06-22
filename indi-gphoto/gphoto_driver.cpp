@@ -2363,7 +2363,7 @@ int gphoto_manual_focus(gphoto_driver *gphoto, int speed, char *errMsg)
         }
         case GP_WIDGET_RANGE:
         {
-            int rval = speed;
+            float rval = speed;
 
             /* Range is on Nikon from -32768 <-> 32768 */
             if (strstr(device, "Nikon"))
@@ -2393,6 +2393,11 @@ int gphoto_manual_focus(gphoto_driver *gphoto, int speed, char *errMsg)
                         break;
                 }
             }
+
+            /* Reset to 0 first so the camera registers a change on repeated calls */
+            const float zero = 0;
+            gp_widget_set_value(gphoto->focus_widget->widget, &zero);
+            gphoto_set_config(gphoto->camera, gphoto->config, gphoto->context);
 
             rc = gp_widget_set_value(gphoto->focus_widget->widget, &rval);
             if (rc < GP_OK)
