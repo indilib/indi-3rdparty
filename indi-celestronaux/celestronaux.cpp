@@ -331,9 +331,13 @@ bool CelestronAUX::initProperties()
 
     // Cord Wrap Position
     CordWrapPositionSP[CORDWRAP_N].fill("CORDWRAP_N", "North", ISS_ON);
+    CordWrapPositionSP[CORDWRAP_NE].fill("CORDWRAP_NE", "North-East", ISS_ON);
     CordWrapPositionSP[CORDWRAP_E].fill("CORDWRAP_E", "East",  ISS_OFF);
+    CordWrapPositionSP[CORDWRAP_SE].fill("CORDWRAP_SE", "South-East",  ISS_OFF);
     CordWrapPositionSP[CORDWRAP_S].fill("CORDWRAP_S", "South", ISS_OFF);
+    CordWrapPositionSP[CORDWRAP_SW].fill("CORDWRAP_SW", "South-West", ISS_OFF);
     CordWrapPositionSP[CORDWRAP_W].fill("CORDWRAP_W", "West",  ISS_OFF);
+    CordWrapPositionSP[CORDWRAP_NW].fill("CORDWRAP_NW", "North-West",  ISS_OFF);
     CordWrapPositionSP.fill(getDeviceName(), "CORDWRAP_POS", "CW Position", CORDWRAP_TAB, IP_RW, ISR_1OFMANY, 60,  IPS_IDLE);
 
     // Cord Wrap / Park Base
@@ -585,7 +589,7 @@ bool CelestronAUX::updateProperties()
             getCordWrapPosition();
             double cordWrapAngle = range360(m_CordWrapPosition / STEPS_PER_DEGREE);
             LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
-            CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 90))].s = ISS_ON;
+            CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 45))].s = ISS_ON;
             defineProperty(CordWrapPositionSP);
             defineProperty(CordWrapBaseSP);
         }
@@ -1052,14 +1056,26 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
                 case CORDWRAP_N:
                     m_RequestedCordwrapPos = 0;
                     break;
+                case CORDWRAP_NE:
+                    m_RequestedCordwrapPos = 45;
+                    break;
                 case CORDWRAP_E:
                     m_RequestedCordwrapPos = 90;
+                    break;
+                case CORDWRAP_SE:
+                    m_RequestedCordwrapPos = 135;
                     break;
                 case CORDWRAP_S:
                     m_RequestedCordwrapPos = 180;
                     break;
+                case CORDWRAP_SW:
+                    m_RequestedCordwrapPos = 225;
+                    break;
                 case CORDWRAP_W:
                     m_RequestedCordwrapPos = 270;
+                    break;
+                case CORDWRAP_NW:
+                    m_RequestedCordwrapPos = 315;
                     break;
                 default:
                     m_RequestedCordwrapPos = 0;
