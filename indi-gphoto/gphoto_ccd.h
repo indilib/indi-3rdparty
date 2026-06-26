@@ -208,6 +208,8 @@ class GPhotoCCD : public INDI::CCD, public INDI::FocuserInterface
         // Upload file, used for testing purposes under simulation under native mode
         INDI::PropertyText UploadFileTP {1};
         INDI::PropertyBlob imageBP {INDI::Property()};
+        // Target liveview FPS
+        INDI::PropertyNumber TargetLiveviewFPSNP {2};
 
         Camera * camera = nullptr;
 
