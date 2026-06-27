@@ -157,6 +157,7 @@ class INDILibCamera : public INDI::CCD
         INDI::PropertySwitch AdjustExposureModeSP {0}, AdjustAwbModeSP {0}, AdjustMeteringModeSP {0}, AdjustDenoiseModeSP {0} ;
         INDI::PropertyNumber AdjustmentNP {AdjustAwbBlue + 1};
         INDI::PropertyNumber GainNP {1};
+        INDI::PropertySwitch GainConversionSP {2};
 
         // std::unique_ptr<RPiCamApp> m_CameraApp;
         // std::unique_ptr<RPiCamEncoder> m_CameraEncoder;
@@ -168,6 +169,16 @@ class INDILibCamera : public INDI::CCD
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
         uint8_t m_CameraIndex;
         libcamera::ControlList m_ControlList;
+
+        enum class GainConversionMode
+        {
+            DynamicRange,
+            LowNoise
+        };
+
+        bool readGainConversionMode(GainConversionMode &mode) const;
+        bool writeGainConversionMode(GainConversionMode mode);
+        void updateGainConversionUI();
 
         RpiCamProperties getAvailableCamProperties();
 };
