@@ -210,7 +210,14 @@ uint32_t Skywatcher::GetDEPeriod()
 uint32_t Skywatcher::GetlastreadRAIndexer()
 {
     if (MountCode != 0x04 && MountCode != 0x05 && MountCode != 0x20 && MountCode != 0x25 && MountCode != 0x45)
+    {
         throw EQModError(EQModError::ErrInvalidCmd, "Incorrect mount type");
+    }
+    if (MountCode == 0x45 && MCVersion == 0x33a)
+    {
+        // 150i with motor firmware 3.58 will crash the driver
+        throw EQModError(EQModError::ErrInvalidCmd, "No firmware support");
+    }
     DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis1]));
     return lastreadIndexer[Axis1];
 }
@@ -218,7 +225,14 @@ uint32_t Skywatcher::GetlastreadRAIndexer()
 uint32_t Skywatcher::GetlastreadDEIndexer()
 {
     if (MountCode != 0x04 && MountCode != 0x05 && MountCode != 0x20 && MountCode != 0x25 && MountCode != 0x45)
+    {
         throw EQModError(EQModError::ErrInvalidCmd, "Incorrect mount type");
+    }
+    if (MountCode == 0x45 && MCVersion == 0x33a)
+    {
+        // 150i with motor firmware 3.58 will crash the driver
+        throw EQModError(EQModError::ErrInvalidCmd, "No firmware support");
+    }
     DEBUGF(telescope->DBG_SCOPE_STATUS, "%s() = %ld", __FUNCTION__, static_cast<long>(lastreadIndexer[Axis2]));
     return lastreadIndexer[Axis2];
 }
