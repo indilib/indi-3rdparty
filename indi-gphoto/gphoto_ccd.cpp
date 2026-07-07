@@ -338,12 +338,11 @@ bool GPhotoCCD::initProperties()
     SetCCDCapability(CCD_CAN_SUBFRAME | CCD_CAN_BIN | CCD_CAN_ABORT | CCD_HAS_BAYER | CCD_HAS_STREAMING);
 
     //Liveview Target FPS
-    TargetLiveviewFPSNP[0].fill("TargetFPS", "TargetFPS", "%.1f", 1,60, 0.1, 30);
-    TargetLiveviewFPSNP[1].fill("Wait", "Wait(mS)", "%1.0f", 0, 1000, 1, 0);
-    TargetLiveviewFPSNP.fill(getDeviceName(), "TARGET_FPS", "Target FPS", STREAM_TAB, IP_RW, 60, IPS_IDLE);
-    TargetLiveviewFPSNP.load();
+    FrameWaitNP[0].fill("Wait", "Wait(mS)", "%1.0f", 0, 1000, 1, 0);
+    FrameWaitNP.fill(getDeviceName(), "FRAME_WAIT", "Frame Wait", STREAM_TAB, IP_RW, 60, IPS_IDLE);
+    FrameWaitNP.load();
 
-    Streamer->setStreamingExposureEnabled(false);
+    Streamer->setStreamingExposureEnabled(true);
 
 #if 0
     FI::SetCapability(FOCUSER_HAS_VARIABLE_SPEED);
@@ -456,7 +455,7 @@ bool GPhotoCCD::updateProperties()
 
         defineProperty(ForceBULBSP);
         defineProperty(DownloadTimeoutNP);
-        defineProperty(TargetLiveviewFPSNP);
+        defineProperty(FrameWaitNP);
     }
     else
     {
@@ -483,7 +482,7 @@ bool GPhotoCCD::updateProperties()
 
         deleteProperty(ForceBULBSP);
         deleteProperty(DownloadTimeoutNP);
-        deleteProperty(TargetLiveviewFPSNP);
+        deleteProperty(FrameWaitNP);
 
         HideExtendedOptions();
     }
@@ -814,11 +813,11 @@ bool GPhotoCCD::ISNewNumber(const char * dev, const char * name, double values[]
         }
 
         //Liveview FPS
-        if (TargetLiveviewFPSNP.isNameMatch(name)){
-            TargetLiveviewFPSNP.update(values, names, n);
-            TargetLiveviewFPSNP.setState(IPS_OK);
-            TargetLiveviewFPSNP.apply();
-            saveConfig(TargetLiveviewFPSNP);
+        if (FrameWaitNP.isNameMatch(name)){
+            FrameWaitNP.update(values, names, n);
+            FrameWaitNP.setState(IPS_OK);
+            FrameWaitNP.apply();
+            saveConfig(FrameWaitNP);
             return true;
         }
 
@@ -1983,6 +1982,7 @@ void GPhotoCCD::streamLiveView()
     }
 
     char errMsg[MAXRBUF] = {0};
+
     while (true)
     {
         std::chrono::system_clock::time_point start = std::chrono::system_clock::now();
@@ -2105,8 +2105,8 @@ void GPhotoCCD::streamLiveView()
 
         std::chrono::duration<double> sec = std::chrono::system_clock::now() - start;
         int sleepMS = sec.count()*1000;
-        sleepMS = 1000/TargetLiveviewFPSNP[0].value - sleepMS;
-        sleepMS = sleepMS < 0 ? TargetLiveviewFPSNP[1].value:sleepMS + TargetLiveviewFPSNP[1].value;                 
+        sleepMS = 1000/Streamer->getTargetFPS() - sleepMS;
+        sleepMS = sleepMS < 0 ? FrameWaitNP[0].value:sleepMS + FrameWaitNP[0].value;                 
         std::this_thread::sleep_for(std::chrono::milliseconds(sleepMS));
     }
 
