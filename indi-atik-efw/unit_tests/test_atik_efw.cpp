@@ -26,7 +26,7 @@
 
 #include <algorithm>
 #include <chrono>
-#include <map>
+#include <memory>
 #include <string>
 #include <thread>
 #include <utility>
@@ -43,15 +43,9 @@ struct MockState
     bool asciiStatus {false};
     bool compactStatus {false};
     bool malformedStatus {false};
-    bool resetOk {true};
-    int statusOnlyReads {0};
-    int readsSinceStatus {0};
-    int openCount {0};
-    int resetCount {0};
-    int detachCount {0};
-    int setConfigurationCount {0};
-    int claimInterfaceCount {0};
-    int controlTransferCount {0};
+    bool statusOnlyResponse {false};
+    int statusOnlyPackets {0};
+    int flushCount {0};
     enum class LastCommand
     {
         None,
@@ -60,87 +54,76 @@ struct MockState
     };
     LastCommand lastCommand {LastCommand::None};
     std::vector<std::vector<uint8_t>> writes;
+    std::vector<uint8_t> readQueue;
 };
 
-class MockHandle : public AtikEfwUsb::DeviceHandle
+class MockTransport : public AtikEFW::Transport
 {
     public:
-        explicit MockHandle(MockState &state) : state_(state) {}
+        explicit MockTransport(MockState state) : state_(std::move(state)) {}
 
-        bool reset() override
+        MockState &state()
         {
-            state_.resetCount++;
-            return state_.resetOk;
+            return state_;
         }
 
-        bool detachKernelDriver(int) override
+        int write(const uint8_t *data, size_t length, unsigned int) override
         {
-            state_.detachCount++;
-            return true;
-        }
-
-        bool setConfiguration(int) override
-        {
-            state_.setConfigurationCount++;
-            return true;
-        }
-
-        bool claimInterface(int) override
-        {
-            state_.claimInterfaceCount++;
-            return true;
-        }
-
-        int controlTransfer(uint8_t, uint8_t, uint16_t, uint16_t, unsigned char *, uint16_t, unsigned int) override
-        {
-            state_.controlTransferCount++;
-            return 0;
-        }
-
-        int write(uint8_t endpoint, const unsigned char *data, int length, unsigned int) override
-        {
-            if (endpoint != 0x02)
-                return -1;
-
             std::vector<uint8_t> payload(data, data + length);
             state_.writes.push_back(payload);
 
             if (payload.size() >= 4 && payload[0] == 0x23 && payload[1] == 0x04)
             {
                 state_.lastCommand = MockState::LastCommand::Status;
-                state_.readsSinceStatus = 0;
+                prepareStatusResponse();
             }
             else if (payload.size() >= 4 && payload[0] == 0x23 && payload[1] == 0x01)
             {
                 state_.lastCommand = MockState::LastCommand::SetPosition;
                 state_.currentSlot = payload[2];
+                state_.readQueue.clear();
             }
 
-            return length;
+            return static_cast<int>(length);
         }
 
-        int read(uint8_t endpoint, unsigned char *data, int length, unsigned int) override
+        int read(uint8_t *data, size_t length, unsigned int) override
         {
-            if (endpoint != 0x81)
-                return -1;
-
-            if (!state_.statusOk || state_.lastCommand != MockState::LastCommand::Status)
+            if (data == nullptr || length == 0 || state_.readQueue.empty())
                 return 0;
 
-            if (state_.readsSinceStatus++ < state_.statusOnlyReads)
+            size_t toCopy = std::min(length, state_.readQueue.size());
+            std::copy_n(state_.readQueue.begin(), toCopy, data);
+            state_.readQueue.erase(state_.readQueue.begin(), state_.readQueue.begin() + static_cast<std::ptrdiff_t>(toCopy));
+            return static_cast<int>(toCopy);
+        }
+
+        void flush() override
+        {
+            state_.flushCount++;
+            state_.readQueue.clear();
+        }
+
+    private:
+        void prepareStatusResponse()
+        {
+            state_.readQueue.clear();
+            if (!state_.statusOk)
+                return;
+
+            for (int i = 0; i < state_.statusOnlyPackets; i++)
             {
-                std::vector<uint8_t> response = {0x01, 0x60};
-                int toCopy = std::min(length, static_cast<int>(response.size()));
-                std::copy_n(response.begin(), toCopy, data);
-                return toCopy;
+                state_.readQueue.push_back(0x01);
+                state_.readQueue.push_back(0x60);
             }
+
+            if (state_.statusOnlyResponse)
+                return;
 
             if (state_.malformedStatus)
             {
-                std::vector<uint8_t> response = {0x01, 0x60, 0x23, 0x04, 0x00, 0x23};
-                int toCopy = std::min(length, static_cast<int>(response.size()));
-                std::copy_n(response.begin(), toCopy, data);
-                return toCopy;
+                state_.readQueue.insert(state_.readQueue.end(), {0x01, 0x60, 0x23, 0x04, 0x00, 0x23});
+                return;
             }
 
             uint8_t current = static_cast<uint8_t>(state_.currentSlot);
@@ -151,71 +134,13 @@ class MockHandle : public AtikEfwUsb::DeviceHandle
                 slots = static_cast<uint8_t>('0' + state_.slotCount);
             }
 
-            std::vector<uint8_t> response;
             if (state_.compactStatus)
-                response = {0x01, 0x60, 0x23, current, 0x23, 0x23, slots, 0x23};
+                state_.readQueue.insert(state_.readQueue.end(), {0x01, 0x60, 0x23, current, 0x23, 0x23, slots, 0x23});
             else
-                response = {0x01, 0x60, 0x23, 0x04, current, slots, 0x23};
-
-            int toCopy = std::min(length, static_cast<int>(response.size()));
-            std::copy_n(response.begin(), toCopy, data);
-
-            return toCopy;
+                state_.readQueue.insert(state_.readQueue.end(), {0x01, 0x60, 0x23, 0x04, current, slots, 0x23});
         }
 
-    private:
-        MockState &state_;
-};
-
-class MockBackend : public AtikEfwUsb::Backend
-{
-    public:
-        void addDevice(const AtikEfwUsb::DeviceInfo &info, MockState state)
-        {
-            devices_.push_back(info);
-            states_[keyFor(info)] = std::move(state);
-        }
-
-        MockState &stateFor(const AtikEfwUsb::DeviceInfo &info)
-        {
-            return states_.at(keyFor(info));
-        }
-
-        std::vector<AtikEfwUsb::DeviceInfo> listDevices(uint16_t vendorId, uint16_t productId) override
-        {
-            std::vector<AtikEfwUsb::DeviceInfo> matches;
-            for (const auto &device : devices_)
-            {
-                if (device.vendorId == vendorId && device.productId == productId)
-                    matches.push_back(device);
-            }
-            return matches;
-        }
-
-        std::unique_ptr<AtikEfwUsb::DeviceHandle> open(const AtikEfwUsb::DeviceInfo &info) override
-        {
-            openAttempts_++;
-            auto it = states_.find(keyFor(info));
-            if (it == states_.end())
-                return nullptr;
-            it->second.openCount++;
-            return std::make_unique<MockHandle>(it->second);
-        }
-
-        int openAttempts() const
-        {
-            return openAttempts_;
-        }
-
-    private:
-        static std::string keyFor(const AtikEfwUsb::DeviceInfo &info)
-        {
-            return std::to_string(info.bus) + ":" + std::to_string(info.address);
-        }
-
-        std::vector<AtikEfwUsb::DeviceInfo> devices_;
-        std::map<std::string, MockState> states_;
-        int openAttempts_ {0};
+        MockState state_;
 };
 
 class TestAtikEFW : public AtikEFW
@@ -238,97 +163,47 @@ class TestAtikEFW : public AtikEFW
         }
 };
 
-AtikEfwUsb::DeviceInfo makeDevice(uint8_t bus, uint8_t address, std::vector<uint8_t> ports)
+AtikEFW::DeviceDescriptor makeDescriptor(int slots = 5, int currentSlot = 1)
 {
-    AtikEfwUsb::DeviceInfo info;
-    info.vendorId = 0x0403;
-    info.productId = 0xaf01;
-    info.bus = bus;
-    info.address = address;
-    info.ports = std::move(ports);
-    return info;
+    AtikEFW::DeviceDescriptor desc;
+    desc.name = "Atik EFW";
+    desc.slotCount = slots;
+    desc.currentSlot = currentSlot;
+    return desc;
 }
 
 } // namespace
 
-TEST(AtikEFWDriver, EnumerateUsesHandshake)
-{
-    MockBackend backend;
-
-    MockState okState;
-    okState.slotCount = 7;
-    okState.currentSlot = 2;
-    okState.statusOk = true;
-
-    MockState badState;
-    badState.statusOk = false;
-
-    auto deviceOk = makeDevice(1, 5, {3});
-    auto deviceBad = makeDevice(1, 6, {4});
-
-    backend.addDevice(deviceOk, okState);
-    backend.addDevice(deviceBad, badState);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 2u);
-    EXPECT_EQ(devices[0].slotCount, 7);
-    EXPECT_EQ(devices[0].currentSlot, 2);
-    EXPECT_TRUE(devices[0].slotCountKnown);
-    EXPECT_NE(devices[0].name.find("1-3"), std::string::npos);
-
-    EXPECT_EQ(devices[1].slotCount, 5);
-    EXPECT_EQ(devices[1].currentSlot, 1);
-    EXPECT_FALSE(devices[1].slotCountKnown);
-    EXPECT_NE(devices[1].name.find("1-4"), std::string::npos);
-}
-
 TEST(AtikEFWDriver, ConnectSelectsAndQueries)
 {
-    MockBackend backend;
     MockState state;
     state.slotCount = 8;
     state.currentSlot = 3;
-    state.statusOk = true;
 
-    auto device = makeDevice(2, 7, {2, 1});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-
-    TestAtikEFW wheel(devices[0], backend);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
     ASSERT_TRUE(wheel.initProperties());
+
     ASSERT_TRUE(wheel.Connect());
     EXPECT_EQ(wheel.maxSlots(), 8);
     EXPECT_EQ(wheel.currentFilter(), 3);
-    EXPECT_EQ(backend.stateFor(device).resetCount, 1);
-    EXPECT_EQ(backend.stateFor(device).openCount, 3);
-    EXPECT_EQ(backend.stateFor(device).setConfigurationCount, 2);
-    EXPECT_EQ(backend.stateFor(device).claimInterfaceCount, 2);
-    EXPECT_EQ(backend.stateFor(device).controlTransferCount, 6);
+    EXPECT_EQ(transport->state().flushCount, 1);
 
     ASSERT_TRUE(wheel.SelectFilter(5));
-    auto &writes = backend.stateFor(device).writes;
+    auto &writes = transport->state().writes;
     ASSERT_FALSE(writes.empty());
     EXPECT_EQ(writes.back(), (std::vector<uint8_t> {0x23, 0x01, 5, 0x23}));
 
     EXPECT_EQ(wheel.QueryFilter(), 5);
 }
 
-TEST(AtikEFWDriver, SimulationConnectsWithoutUsb)
+TEST(AtikEFWDriver, SimulationConnectsWithoutTransport)
 {
-    MockBackend backend;
-    AtikEFW::DeviceDescriptor desc;
-    desc.name = "Atik EFW";
-    desc.slotCount = 6;
-    desc.currentSlot = 2;
-
-    TestAtikEFW wheel(desc, backend);
+    TestAtikEFW wheel(makeDescriptor(6, 2));
     ASSERT_TRUE(wheel.initProperties());
     wheel.setSimulation(true);
 
     ASSERT_TRUE(wheel.Connect());
-    EXPECT_EQ(backend.openAttempts(), 0);
     EXPECT_EQ(wheel.maxSlots(), 6);
     EXPECT_EQ(wheel.currentFilter(), 2);
 
@@ -340,98 +215,71 @@ TEST(AtikEFWDriver, SimulationConnectsWithoutUsb)
 
 TEST(AtikEFWDriver, ParsesAsciiStatusBytes)
 {
-    MockBackend backend;
     MockState state;
     state.slotCount = 8;
     state.currentSlot = 4;
     state.asciiStatus = true;
 
-    auto device = makeDevice(3, 8, {5});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_EQ(devices[0].slotCount, 8);
-    EXPECT_EQ(devices[0].currentSlot, 4);
-    EXPECT_TRUE(devices[0].slotCountKnown);
-
-    TestAtikEFW wheel(devices[0], backend);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
     ASSERT_TRUE(wheel.initProperties());
     ASSERT_TRUE(wheel.Connect());
     EXPECT_EQ(wheel.maxSlots(), 8);
     EXPECT_EQ(wheel.currentFilter(), 4);
 }
 
-TEST(AtikEFWDriver, PreservesBinarySlotOneWhenStrippingFtdiStatus)
+TEST(AtikEFWDriver, PreservesBinarySlotOne)
 {
-    MockBackend backend;
     MockState state;
     state.slotCount = 5;
     state.currentSlot = 1;
 
-    auto device = makeDevice(3, 11, {8});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_EQ(devices[0].slotCount, 5);
-    EXPECT_EQ(devices[0].currentSlot, 1);
-    EXPECT_TRUE(devices[0].slotCountKnown);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
+    ASSERT_TRUE(wheel.initProperties());
+    ASSERT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.maxSlots(), 5);
+    EXPECT_EQ(wheel.currentFilter(), 1);
 }
 
 TEST(AtikEFWDriver, ParsesCapturedCompactStatusResponse)
 {
-    MockBackend backend;
     MockState state;
     state.slotCount = 5;
     state.currentSlot = 1;
     state.compactStatus = true;
 
-    auto device = makeDevice(3, 12, {9});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_EQ(devices[0].slotCount, 5);
-    EXPECT_EQ(devices[0].currentSlot, 1);
-    EXPECT_TRUE(devices[0].slotCountKnown);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
+    ASSERT_TRUE(wheel.initProperties());
+    ASSERT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.maxSlots(), 5);
+    EXPECT_EQ(wheel.currentFilter(), 1);
 }
 
 TEST(AtikEFWDriver, SkipsFtdiStatusOnlyPackets)
 {
-    MockBackend backend;
     MockState state;
     state.slotCount = 7;
     state.currentSlot = 3;
     state.compactStatus = true;
-    state.statusOnlyReads = 2;
+    state.statusOnlyPackets = 2;
 
-    auto device = makeDevice(3, 13, {10});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_EQ(devices[0].slotCount, 7);
-    EXPECT_EQ(devices[0].currentSlot, 3);
-    EXPECT_TRUE(devices[0].slotCountKnown);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
+    ASSERT_TRUE(wheel.initProperties());
+    ASSERT_TRUE(wheel.Connect());
+    EXPECT_EQ(wheel.maxSlots(), 7);
+    EXPECT_EQ(wheel.currentFilter(), 3);
 }
 
 TEST(AtikEFWDriver, QueryRejectsMalformedStatus)
 {
-    MockBackend backend;
     MockState state;
     state.malformedStatus = true;
 
-    auto device = makeDevice(4, 9, {6});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_FALSE(devices[0].slotCountKnown);
-    EXPECT_EQ(devices[0].slotCount, 5);
-    EXPECT_EQ(devices[0].currentSlot, 1);
-
-    TestAtikEFW wheel(devices[0], backend);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
     ASSERT_TRUE(wheel.initProperties());
     ASSERT_TRUE(wheel.Connect());
     EXPECT_EQ(wheel.QueryFilter(), -1);
@@ -439,39 +287,25 @@ TEST(AtikEFWDriver, QueryRejectsMalformedStatus)
 
 TEST(AtikEFWDriver, ConnectUsesHintsWithoutStatusResponse)
 {
-    MockBackend backend;
     MockState state;
     state.statusOk = false;
 
-    auto device = makeDevice(5, 10, {7});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_FALSE(devices[0].slotCountKnown);
-
-    TestAtikEFW wheel(devices[0], backend);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
     ASSERT_TRUE(wheel.initProperties());
     EXPECT_TRUE(wheel.Connect());
     EXPECT_EQ(wheel.maxSlots(), 5);
     EXPECT_EQ(wheel.currentFilter(), 1);
-    EXPECT_EQ(backend.stateFor(device).resetCount, 1);
 }
 
 TEST(AtikEFWDriver, ConnectUsesHintsForFtdiStatusOnlyResponse)
 {
-    MockBackend backend;
     MockState state;
-    state.statusOnlyReads = 100;
+    state.statusOnlyPackets = 16;
+    state.statusOnlyResponse = true;
 
-    auto device = makeDevice(5, 15, {9});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-    EXPECT_FALSE(devices[0].slotCountKnown);
-
-    TestAtikEFW wheel(devices[0], backend);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
     ASSERT_TRUE(wheel.initProperties());
     EXPECT_TRUE(wheel.Connect());
     EXPECT_EQ(wheel.maxSlots(), 5);
@@ -480,23 +314,17 @@ TEST(AtikEFWDriver, ConnectUsesHintsForFtdiStatusOnlyResponse)
 
 TEST(AtikEFWDriver, CompletesMoveWhenStatusRemainsUnavailable)
 {
-    MockBackend backend;
     MockState state;
     state.slotCount = 5;
     state.currentSlot = 1;
 
-    auto device = makeDevice(6, 14, {8});
-    backend.addDevice(device, state);
-
-    auto devices = AtikEFW::Enumerate(backend);
-    ASSERT_EQ(devices.size(), 1u);
-
-    TestAtikEFW wheel(devices[0], backend);
+    auto transport = std::make_shared<MockTransport>(state);
+    TestAtikEFW wheel(makeDescriptor(), transport);
     ASSERT_TRUE(wheel.initProperties());
     ASSERT_TRUE(wheel.Connect());
     ASSERT_TRUE(wheel.SelectFilter(4));
 
-    backend.stateFor(device).statusOk = false;
+    transport->state().statusOk = false;
     std::this_thread::sleep_for(std::chrono::milliseconds(1600));
 
     EXPECT_EQ(wheel.QueryFilter(), 4);

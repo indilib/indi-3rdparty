@@ -24,44 +24,79 @@
 
 #include "config.h"
 
+#include <connectionplugins/connectionserial.h>
+#include <indicom.h>
+
 #include <algorithm>
 #include <chrono>
-#include <deque>
 #include <iomanip>
 #include <memory>
 #include <sstream>
 #include <stdlib.h>
 #include <string.h>
+#include <termios.h>
 #include <unistd.h>
 
 namespace
 {
 
-constexpr uint16_t kVendorId = 0x0403;
-constexpr uint16_t kProductId = 0xaf01;
-constexpr uint8_t kInterface = 0;
-constexpr uint8_t kEndpointOut = 0x02;
-constexpr uint8_t kEndpointIn = 0x81;
 constexpr uint8_t kFrameByte = 0x23;
 constexpr uint8_t kCmdSetPosition = 0x01;
 constexpr uint8_t kCmdStatus = 0x04;
-constexpr uint8_t kFtdiRequestType = 0x40;
-constexpr uint8_t kFtdiReset = 0x00;
-constexpr uint8_t kFtdiSetBaud = 0x03;
-constexpr uint8_t kFtdiSetFlow = 0x01;
-constexpr uint16_t kFtdiBaudValue = 0x4138;
-constexpr uint16_t kFtdiFlowValue = 0x0303;
-constexpr unsigned int kControlTimeoutMs = 1000;
 constexpr unsigned int kReadTimeoutMs = 1000;
 constexpr unsigned int kWriteTimeoutMs = 1000;
-constexpr int kMaxStatusReadAttempts = 4;
-constexpr useconds_t kUsbResetDelayUs = 1000000;
-constexpr useconds_t kFtdiDelayUs = 200000;
+constexpr useconds_t kSerialSettleDelayUs = 200000;
 constexpr useconds_t kStatusDelayUs = 100000;
 constexpr std::chrono::milliseconds kMoveFallbackDelay {1500};
 constexpr int kDefaultSlots = 5;
 constexpr int kMaxSlots = 16;
 constexpr int kMaxResponseBytes = 64;
+
+class TtyTransport : public AtikEFW::Transport
+{
+    public:
+        explicit TtyTransport(int fd) : fd_(fd) {}
+
+        int write(const uint8_t *data, size_t length, unsigned int) override
+        {
+            if (fd_ < 0 || data == nullptr || length == 0)
+                return -1;
+
+            int written = 0;
+            int rc = tty_write(fd_, reinterpret_cast<const char *>(data), static_cast<int>(length), &written);
+            if (rc != TTY_OK)
+                return -rc;
+
+            return written;
+        }
+
+        int read(uint8_t *data, size_t length, unsigned int timeoutMs) override
+        {
+            if (fd_ < 0 || data == nullptr || length == 0)
+                return -1;
+
+            int bytesRead = 0;
+            long timeoutSeconds = static_cast<long>(timeoutMs / 1000);
+            long timeoutMicroseconds = static_cast<long>((timeoutMs % 1000) * 1000);
+            int rc = tty_read_expanded(fd_, reinterpret_cast<char *>(data), static_cast<int>(length),
+                                       timeoutSeconds, timeoutMicroseconds, &bytesRead);
+            if (rc == TTY_TIME_OUT)
+                return 0;
+            if (rc != TTY_OK)
+                return -rc;
+
+            return bytesRead;
+        }
+
+        void flush() override
+        {
+            if (fd_ >= 0)
+                tcflush(fd_, TCIOFLUSH);
+        }
+
+    private:
+        int fd_ {-1};
+};
 
 std::string bytesToHex(const std::vector<uint8_t> &data)
 {
@@ -74,17 +109,6 @@ std::string bytesToHex(const std::vector<uint8_t> &data)
             << static_cast<int>(data[i]);
     }
     return oss.str();
-}
-
-std::vector<uint8_t> sanitizeResponse(const std::vector<uint8_t> &raw)
-{
-    if (raw.size() == 2)
-        return {};
-
-    if (raw.size() >= 3 && raw[0] != kFrameByte && raw[2] == kFrameByte)
-        return {raw.begin() + 2, raw.end()};
-
-    return raw;
 }
 
 int decodeByte(uint8_t value)
@@ -130,7 +154,7 @@ bool parseStatusResponse(const std::vector<uint8_t> &data, int *position, int *s
             return (decodedPosition > 0);
         }
 
-        // EFW2 hardware also returns two compact frames: #position##slot-count#.
+        // Captured hardware also returns two compact frames: #position##slot-count#.
         if (payloadSize == 1)
         {
             int value = decodeByte(data[start + 1]);
@@ -151,12 +175,6 @@ bool parseStatusResponse(const std::vector<uint8_t> &data, int *position, int *s
     return true;
 }
 
-bool writeCommand(AtikEfwUsb::DeviceHandle &handle, const std::vector<uint8_t> &command)
-{
-    int rc = handle.write(kEndpointOut, command.data(), static_cast<int>(command.size()), kWriteTimeoutMs);
-    return (rc == static_cast<int>(command.size()));
-}
-
 enum class StatusReadResult
 {
     NoResponse,
@@ -164,34 +182,29 @@ enum class StatusReadResult
     Parsed
 };
 
-StatusReadResult readStatusResponse(AtikEfwUsb::DeviceHandle &handle, std::vector<uint8_t> *rawResponse,
+StatusReadResult readStatusResponse(AtikEFW::Transport &transport, std::vector<uint8_t> *rawResponse,
                                     int *position, int *slots)
 {
     std::vector<uint8_t> raw;
-    std::vector<uint8_t> cleaned;
     auto deadline = std::chrono::steady_clock::now() + std::chrono::milliseconds(kReadTimeoutMs);
 
-    for (int attempt = 0; attempt < kMaxStatusReadAttempts; attempt++)
+    while (raw.size() < static_cast<size_t>(kMaxResponseBytes))
     {
         auto remaining = std::chrono::duration_cast<std::chrono::milliseconds>(
                              deadline - std::chrono::steady_clock::now()).count();
         if (remaining <= 0)
             break;
 
-        unsigned char buffer[kMaxResponseBytes] = {0};
-        int rc = handle.read(kEndpointIn, buffer, sizeof(buffer), static_cast<unsigned int>(remaining));
+        uint8_t byte = 0;
+        int rc = transport.read(&byte, 1, static_cast<unsigned int>(remaining));
         if (rc <= 0)
             break;
 
-        std::vector<uint8_t> packet(buffer, buffer + rc);
-        raw.insert(raw.end(), packet.begin(), packet.end());
-
-        auto payload = sanitizeResponse(packet);
-        cleaned.insert(cleaned.end(), payload.begin(), payload.end());
+        raw.push_back(byte);
 
         int parsedPosition = 0;
         int parsedSlots = 0;
-        if (parseStatusResponse(cleaned, &parsedPosition, &parsedSlots))
+        if (parseStatusResponse(raw, &parsedPosition, &parsedSlots))
         {
             if (rawResponse)
                 *rawResponse = std::move(raw);
@@ -208,127 +221,39 @@ StatusReadResult readStatusResponse(AtikEfwUsb::DeviceHandle &handle, std::vecto
     return raw.empty() ? StatusReadResult::NoResponse : StatusReadResult::Unparsed;
 }
 
-bool initializeWheel(AtikEfwUsb::DeviceHandle &handle, std::string *error)
-{
-    handle.detachKernelDriver(kInterface);
-
-    if (!handle.setConfiguration(1))
-    {
-        if (error)
-            *error = "Failed to set USB configuration";
-        return false;
-    }
-
-    if (!handle.claimInterface(kInterface))
-    {
-        if (error)
-            *error = "Failed to claim USB interface";
-        return false;
-    }
-
-    if (handle.controlTransfer(kFtdiRequestType, kFtdiReset, 0, 0, nullptr, 0, kControlTimeoutMs) < 0)
-    {
-        if (error)
-            *error = "Failed to reset FTDI interface";
-        return false;
-    }
-
-    if (handle.controlTransfer(kFtdiRequestType, kFtdiSetBaud, kFtdiBaudValue, 0, nullptr, 0, kControlTimeoutMs) < 0)
-    {
-        if (error)
-            *error = "Failed to set FTDI baud rate";
-        return false;
-    }
-
-    if (handle.controlTransfer(kFtdiRequestType, kFtdiSetFlow, kFtdiFlowValue, 0, nullptr, 0, kControlTimeoutMs) < 0)
-    {
-        if (error)
-            *error = "Failed to set FTDI flow control";
-        return false;
-    }
-
-    usleep(kFtdiDelayUs);
-
-    unsigned char flush[kMaxResponseBytes] = {0};
-    handle.read(kEndpointIn, flush, sizeof(flush), 100);
-    return true;
-}
-
-bool probeStatus(AtikEfwUsb::DeviceHandle &handle, bool requireParse, int *slotCount, int *currentSlot,
-                 std::vector<uint8_t> *raw)
-{
-    const std::vector<uint8_t> statusCommand {kFrameByte, kCmdStatus, 0x00, kFrameByte};
-
-    if (!writeCommand(handle, statusCommand))
-        return false;
-
-    usleep(kStatusDelayUs);
-
-    int slots = 0;
-    int position = 0;
-    auto result = readStatusResponse(handle, raw, &position, &slots);
-    if (result == StatusReadResult::Parsed)
-    {
-        if (slotCount)
-            *slotCount = slots;
-        if (currentSlot)
-            *currentSlot = position;
-    }
-
-    return result == StatusReadResult::Parsed || (!requireParse && result == StatusReadResult::Unparsed);
-}
-
-std::string buildDeviceName(const AtikEfwUsb::DeviceInfo &info, size_t index, size_t count)
-{
-    std::string name = "Atik EFW";
-    const char *envDev = getenv("INDIDEV");
-    if (envDev && envDev[0] && count == 1)
-        name = envDev;
-
-    std::string path = AtikEfwUsb::formatDevicePath(info);
-    if (!path.empty())
-        name += " " + path;
-    else if (count > 1)
-        name += " " + std::to_string(index + 1);
-
-    return name;
-}
-
 } // namespace
 
 #ifndef ATIK_EFW_DISABLE_LOADER
 static class Loader
 {
-        std::deque<std::unique_ptr<AtikEFW>> wheels;
+        std::unique_ptr<AtikEFW> wheel;
     public:
         Loader()
         {
-            auto &backend = AtikEfwUsb::defaultBackend();
-            auto devices = AtikEFW::Enumerate(backend);
-            if (devices.empty())
-            {
-                AtikEFW::DeviceDescriptor desc;
-                desc.name = buildDeviceName(desc.info, 0, 1);
-                desc.slotCount = kDefaultSlots;
-                desc.currentSlot = 1;
-                devices.push_back(std::move(desc));
-                IDLog("Atik EFW: no USB wheel detected; exposing simulation-capable device.\n");
-            }
-
-            for (const auto &device : devices)
-                wheels.push_back(std::make_unique<AtikEFW>(device, backend));
+            AtikEFW::DeviceDescriptor desc;
+            const char *envDev = getenv("INDIDEV");
+            if (envDev && envDev[0])
+                desc.name = envDev;
+            desc.slotCount = kDefaultSlots;
+            desc.currentSlot = 1;
+            wheel = std::make_unique<AtikEFW>(desc);
         }
 } loader;
 #endif
 
-AtikEFW::AtikEFW(const DeviceDescriptor &desc, AtikEfwUsb::Backend &backend)
-    : backend_(backend)
-    , deviceInfo_(desc.info)
+AtikEFW::AtikEFW() : AtikEFW(DeviceDescriptor {})
+{
+}
+
+AtikEFW::AtikEFW(const DeviceDescriptor &desc, std::shared_ptr<Transport> transport)
+    : injectedTransport_(std::move(transport))
     , slotCountHint_(desc.slotCount > 0 ? desc.slotCount : kDefaultSlots)
     , currentSlotHint_(desc.currentSlot > 0 ? desc.currentSlot : 1)
 {
+    setFilterConnection(CONNECTION_SERIAL);
     setVersion(ATIK_EFW_VERSION_MAJOR, ATIK_EFW_VERSION_MINOR);
-    setDeviceName(desc.name.c_str());
+    if (!desc.name.empty())
+        setDeviceName(desc.name.c_str());
 }
 
 AtikEFW::~AtikEFW() = default;
@@ -341,6 +266,12 @@ const char *AtikEFW::getDefaultName()
 bool AtikEFW::initProperties()
 {
     INDI::FilterWheel::initProperties();
+
+    if (serialConnection)
+    {
+        serialConnection->setDefaultBaudRate(Connection::Serial::B_9600);
+        serialConnection->setPortMatchPattern("0403.*af01|af01|Atik.*EFW|EFW1");
+    }
 
     SlotCountNP[0].fill("SLOTS", "Slots", "%.0f", 1, kMaxSlots, 1, slotCountHint_);
     SlotCountNP.fill(getDeviceName(), "FILTER_SLOTS", "Slots", OPTIONS_TAB, IP_RW, 60, IPS_IDLE);
@@ -398,53 +329,118 @@ bool AtikEFW::saveConfigItems(FILE *fp)
     return true;
 }
 
-bool AtikEFW::openHandle()
+bool AtikEFW::Connect()
 {
-    handle_ = backend_.open(deviceInfo_);
-    if (!handle_)
+    movementPending_ = false;
+
+    if (isSimulation())
+        return connectSimulation();
+
+    if (injectedTransport_)
     {
-        LOGF_ERROR("Failed to open USB device for %s", getDeviceName());
-        return false;
+        activeTransport_ = injectedTransport_;
+        activeTransport_->flush();
+        return connectTransport();
     }
 
+    return INDI::DefaultDevice::Connect();
+}
+
+bool AtikEFW::Disconnect()
+{
+    movementPending_ = false;
+    activeTransport_.reset();
+
+    if (isSimulation() || injectedTransport_)
+        return true;
+
+    return INDI::DefaultDevice::Disconnect();
+}
+
+bool AtikEFW::Handshake()
+{
+    movementPending_ = false;
+
+    if (isSimulation())
+        return connectSimulation();
+
+    if (injectedTransport_)
+    {
+        activeTransport_ = injectedTransport_;
+    }
+    else
+    {
+        if (PortFD < 0)
+        {
+            LOG_ERROR("Serial connection has no valid file descriptor.");
+            return false;
+        }
+
+        activeTransport_ = std::make_shared<TtyTransport>(PortFD);
+    }
+
+    activeTransport_->flush();
+    usleep(kSerialSettleDelayUs);
+
+    // The previous libusb transport configured FTDI RTS/CTS flow control directly.
+    // INDI serial uses raw 9600 8N1 without hardware flow control; see README.md.
+    LOG_DEBUG("Using INDI serial transport at 9600 8N1 without hardware flow control.");
+
+    return connectTransport();
+}
+
+bool AtikEFW::connectSimulation()
+{
+    int slots = slotCountHint_ > 0 ? slotCountHint_ : kDefaultSlots;
+    CurrentFilter = currentSlotHint_ > 0 ? currentSlotHint_ : 1;
+    applySlotCount(slots, true);
+    TargetFilter = CurrentFilter;
+    LOGF_INFO("%s simulation connected (slots=%d, current=%d)", getDeviceName(), slots, CurrentFilter);
+    SetTimer(getCurrentPollingPeriod());
     return true;
 }
 
-bool AtikEFW::resetAndReopenHandle()
+bool AtikEFW::connectTransport()
 {
-    if (!handle_)
-        return false;
-
-    if (!handle_->reset())
-        LOGF_WARN("%s: USB device reset failed, continuing with reopen", getDeviceName());
-
-    handle_.reset();
-    usleep(kUsbResetDelayUs);
-
-    return openHandle();
-}
-
-bool AtikEFW::configureDevice()
-{
-    if (!handle_)
-        return false;
-
-    std::string error;
-    if (!initializeWheel(*handle_, &error))
+    int detectedSlots = 0;
+    int detectedPosition = 0;
+    if (!sendStatus(false, &detectedSlots, &detectedPosition))
     {
-        LOGF_ERROR("%s: %s", getDeviceName(), error.c_str());
+        LOGF_ERROR("%s: failed to send status command", getDeviceName());
+        activeTransport_.reset();
         return false;
     }
 
+    int slots = detectedSlots > 0 ? detectedSlots : slotCountHint_;
+    if (slots <= 0)
+        slots = kDefaultSlots;
+    if (slots > kMaxSlots)
+        slots = kMaxSlots;
+
+    CurrentFilter = (detectedPosition > 0) ? detectedPosition : currentSlotHint_;
+    if (CurrentFilter <= 0)
+        CurrentFilter = 1;
+    currentSlotHint_ = CurrentFilter;
+
+    applySlotCount(slots, true);
+
+    FilterSlotNP[0].setValue(CurrentFilter);
+    FilterSlotNP.apply();
+
+    TargetFilter = CurrentFilter;
+
+    LOGF_INFO("%s connected (slots=%d, current=%d)", getDeviceName(), slots, CurrentFilter);
+
+    SetTimer(getCurrentPollingPeriod());
     return true;
 }
 
 bool AtikEFW::sendCommand(const std::vector<uint8_t> &command)
 {
-    if (!handle_)
+    if (!activeTransport_)
         return false;
 
-    int rc = handle_->write(kEndpointOut, command.data(), static_cast<int>(command.size()), kWriteTimeoutMs);
+    int rc = activeTransport_->write(command.data(), command.size(), kWriteTimeoutMs);
     if (rc != static_cast<int>(command.size()))
     {
         LOGF_ERROR("%s: failed to write command (%d)", getDeviceName(), rc);
@@ -467,7 +463,7 @@ bool AtikEFW::sendStatus(bool requireParse, int *slotCount, int *currentSlot)
     std::vector<uint8_t> response;
     int slots = 0;
     int position = 0;
-    auto result = readStatusResponse(*handle_, &response, &position, &slots);
+    auto result = readStatusResponse(*activeTransport_, &response, &position, &slots);
 
     if (!response.empty())
         LOGF_DEBUG("%s: raw response %s", getDeviceName(), bytesToHex(response).c_str());
@@ -519,76 +515,6 @@ void AtikEFW::applySlotCount(int slots, bool updateProperty)
         SlotCountNP.setState(IPS_OK);
         SlotCountNP.apply();
     }
-}
-
-bool AtikEFW::Connect()
-{
-    movementPending_ = false;
-
-    if (isSimulation())
-    {
-        int slots = slotCountHint_ > 0 ? slotCountHint_ : kDefaultSlots;
-        CurrentFilter = currentSlotHint_ > 0 ? currentSlotHint_ : 1;
-        applySlotCount(slots, true);
-        TargetFilter = CurrentFilter;
-        LOGF_INFO("%s simulation connected (slots=%d, current=%d)", getDeviceName(), slots, CurrentFilter);
-        SetTimer(getCurrentPollingPeriod());
-        return true;
-    }
-
-    if (!openHandle())
-        return false;
-
-    if (!resetAndReopenHandle())
-    {
-        handle_.reset();
-        return false;
-    }
-
-    if (!configureDevice())
-    {
-        handle_.reset();
-        return false;
-    }
-
-    int detectedSlots = 0;
-    int detectedPosition = 0;
-    if (!sendStatus(false, &detectedSlots, &detectedPosition))
-    {
-        LOGF_ERROR("%s: failed to send status command", getDeviceName());
-        handle_.reset();
-        return false;
-    }
-
-    int slots = detectedSlots > 0 ? detectedSlots : slotCountHint_;
-    if (slots <= 0)
-        slots = kDefaultSlots;
-    if (slots > kMaxSlots)
-        slots = kMaxSlots;
-
-    CurrentFilter = (detectedPosition > 0) ? detectedPosition : currentSlotHint_;
-    if (CurrentFilter <= 0)
-        CurrentFilter = 1;
-    currentSlotHint_ = CurrentFilter;
-
-    applySlotCount(slots, true);
-
-    FilterSlotNP[0].setValue(CurrentFilter);
-    FilterSlotNP.apply();
-
-    TargetFilter = CurrentFilter;
-
-    LOGF_INFO("%s connected (slots=%d, current=%d)", getDeviceName(), slots, CurrentFilter);
-
-    SetTimer(getCurrentPollingPeriod());
-    return true;
-}
-
-bool AtikEFW::Disconnect()
-{
-    movementPending_ = false;
-    handle_.reset();
-    return true;
 }
 
 void AtikEFW::TimerHit()
@@ -681,63 +607,4 @@ int AtikEFW::QueryFilter()
     FilterSlotNP.setState(IPS_ALERT);
     FilterSlotNP.apply();
     return -1;
-}
-
-std::vector<AtikEFW::DeviceDescriptor> AtikEFW::Enumerate(AtikEfwUsb::Backend &backend)
-{
-    std::vector<DeviceDescriptor> detected;
-    auto devices = backend.listDevices(kVendorId, kProductId);
-
-    if (devices.empty())
-    {
-        IDLog("No Atik EFW detected.\n");
-        return detected;
-    }
-
-    for (size_t i = 0; i < devices.size(); i++)
-    {
-        DeviceDescriptor desc;
-        desc.info = devices[i];
-        desc.name = buildDeviceName(devices[i], i, devices.size());
-        desc.slotCount = kDefaultSlots;
-        desc.currentSlot = 1;
-        desc.slotCountKnown = false;
-
-        auto handle = backend.open(devices[i]);
-        if (!handle)
-        {
-            IDLog("Atik EFW: failed to open USB device on bus %u address %u.\n",
-                  devices[i].bus, devices[i].address);
-            detected.push_back(std::move(desc));
-            continue;
-        }
-
-        std::string error;
-        if (!initializeWheel(*handle, &error))
-        {
-            IDLog("Atik EFW: init failed on bus %u address %u (%s).\n",
-                  devices[i].bus, devices[i].address, error.c_str());
-            detected.push_back(std::move(desc));
-            continue;
-        }
-
-        int slots = 0;
-        int position = 0;
-        std::vector<uint8_t> raw;
-        if (!probeStatus(*handle, false, &slots, &position, &raw))
-        {
-            IDLog("Atik EFW: status probe failed on bus %u address %u.\n",
-                  devices[i].bus, devices[i].address);
-        }
-        else
-        {
-            desc.slotCount = slots > 0 ? slots : kDefaultSlots;
-            desc.currentSlot = position > 0 ? position : 1;
-            desc.slotCountKnown = (slots > 0);
-        }
-
-        detected.push_back(std::move(desc));
-    }
-
-    return detected;
 }
