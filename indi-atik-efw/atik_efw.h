@@ -22,11 +22,11 @@
 
 #pragma once
 
-#include "atik_efw_usb.h"
-
 #include <indifilterwheel.h>
 
 #include <chrono>
+#include <cstddef>
+#include <cstdint>
 #include <memory>
 #include <string>
 #include <vector>
@@ -34,16 +34,25 @@
 class AtikEFW : public INDI::FilterWheel
 {
     public:
+        class Transport
+        {
+            public:
+                virtual ~Transport() = default;
+
+                virtual int write(const uint8_t *data, size_t length, unsigned int timeoutMs) = 0;
+                virtual int read(uint8_t *data, size_t length, unsigned int timeoutMs) = 0;
+                virtual void flush() = 0;
+        };
+
         struct DeviceDescriptor
         {
-            AtikEfwUsb::DeviceInfo info;
             std::string name;
             int slotCount {0};
             int currentSlot {0};
-            bool slotCountKnown {false};
         };
 
-        AtikEFW(const DeviceDescriptor &desc, AtikEfwUsb::Backend &backend);
+        AtikEFW();
+        explicit AtikEFW(const DeviceDescriptor &desc, std::shared_ptr<Transport> transport = nullptr);
         ~AtikEFW() override;
 
         const char *getDefaultName() override;
@@ -56,25 +65,21 @@ class AtikEFW : public INDI::FilterWheel
         bool updateProperties() override;
         bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         bool saveConfigItems(FILE *fp) override;
+        bool Handshake() override;
 
         int QueryFilter() override;
         bool SelectFilter(int targetFilter) override;
         void TimerHit() override;
 
-    public:
-        static std::vector<DeviceDescriptor> Enumerate(AtikEfwUsb::Backend &backend);
-
     private:
-        bool openHandle();
-        bool resetAndReopenHandle();
-        bool configureDevice();
+        bool connectSimulation();
+        bool connectTransport();
         bool sendStatus(bool requireParse, int *slotCount, int *currentSlot);
         bool sendCommand(const std::vector<uint8_t> &command);
         void applySlotCount(int slots, bool updateProperty);
 
-        AtikEfwUsb::Backend &backend_;
-        AtikEfwUsb::DeviceInfo deviceInfo_;
-        std::unique_ptr<AtikEfwUsb::DeviceHandle> handle_;
+        std::shared_ptr<Transport> injectedTransport_;
+        std::shared_ptr<Transport> activeTransport_;
         int slotCountHint_ {0};
         int currentSlotHint_ {0};
         bool movementPending_ {false};

@@ -2,7 +2,7 @@
 Name: indi-atik-efw
 Version:2.1.3.git
 Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
-Summary: INDI driver for Atik USB electronic filter wheels
+Summary: INDI driver for Atik serial electronic filter wheels
 
 License: LGPLv2
 URL: https://indilib.org
@@ -12,10 +12,9 @@ BuildRequires: cmake
 BuildRequires: indi-libs
 BuildRequires: indi-devel
 BuildRequires: libnova-devel
-BuildRequires: pkgconfig(libusb-1.0)
 
 %description
-INDI driver for Atik USB electronic filter wheels.
+INDI driver for Atik serial electronic filter wheels.
 
 
 %prep

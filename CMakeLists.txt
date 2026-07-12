@@ -577,7 +577,7 @@ else(BUILD_LIBS)
     endif(ATIK_FOUND)
   endif(WITH_ATIK)
 
-  ## ATIK EFW (USB)
+  ## ATIK EFW (serial)
   if(WITH_ATIK_EFW)
     add_subdirectory(indi-atik-efw)
   endif(WITH_ATIK_EFW)
