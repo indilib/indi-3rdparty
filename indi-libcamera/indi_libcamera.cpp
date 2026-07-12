@@ -621,6 +621,10 @@ RpiCamProperties INDILibCamera::getAvailableCamProperties()
     
     config->validate();
     cam->configure(config.get());
+    // Save the negotiated StillCapture stream size.
+    // This is used to initialize the CCD geometry during Connect().
+    m_CaptureWidth = config->at(0).size.width;
+    m_CaptureHeight = config->at(0).size.height;
     
     const auto &controls = cam->controls();
     
@@ -926,10 +930,30 @@ void INDILibCamera::default_signal_handler(int signal_number)
 bool INDILibCamera::Connect()
 {
     LOGF_INFO("Connecting to %s", getDeviceName());
-    auto pas = m_ControlList.get(properties::PixelArraySize);
-    // no idea why the IMX290 returns an uneven number of pixels, so just round down
-    auto width = 2.0 * (pas->width / 2);
-    auto height = pas->height;
+
+    // Use the negotiated StillCapture stream size when available.
+    // PixelArraySize describes the sensor array and may differ from
+    // the actual capture stream dimensions on some cameras.
+    uint32_t width = m_CaptureWidth;
+    uint32_t height = m_CaptureHeight;
+
+    if (width == 0 || height == 0)
+    {
+        auto pas = m_ControlList.get(properties::PixelArraySize);
+
+        if (pas)
+        {
+            // no idea why the IMX290 returns an uneven number of pixels, so just round down
+            width = 2 * (pas->width / 2);
+            height = pas->height;
+            LOG_WARN("Negotiated stream size unavailable, falling back to PixelArraySize.");
+        }
+        else
+        {
+            LOG_ERROR("Unable to determine CCD size.");
+            return false;
+        }
+    }
 
     PrimaryCCD.setResolution(width, height);
     UpdateCCDFrame(0, 0, width, height);

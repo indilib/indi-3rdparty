@@ -45,7 +45,7 @@ struct RpiCamProperties
         T max;
         T def;
     };
-    
+
     ControlRange<float> brightness    = {-1.0f, 1.0f, 0.0f};
     ControlRange<float> contrast      = {0.0f, 15.99f, 1.0f};
     ControlRange<float> saturation    = {0.0f, 15.99f, 1.0f};
@@ -167,6 +167,10 @@ class INDILibCamera : public INDI::CCD
         int m_black_levels[4] {0, 0, 0, 0};
         int m_LiveVideoWidth {-1}, m_LiveVideoHeight {-1};
         uint8_t m_CameraIndex;
+
+        uint32_t m_CaptureWidth = 0;
+        uint32_t m_CaptureHeight = 0;
+
         libcamera::ControlList m_ControlList;
 
         RpiCamProperties getAvailableCamProperties();
