@@ -43,8 +43,17 @@
 #include <libraw.h>
 #include <jpeglib.h>
 
+#include <fstream>
+#include <cerrno>
+#include <cstring>
 
 #define CONTROL_TAB "Controls"
+
+namespace
+{
+constexpr const char *HCG_SYSFS =
+    "/sys/module/imx290/parameters/hcg_mode";
+}
 
 static class Loader
 {
@@ -777,6 +786,10 @@ bool INDILibCamera::initProperties()
     GainNP[0].fill("GAIN", "Gain", "%.2f", props.gain.min, props.gain.max, 1.00, props.gain.def);
     GainNP.fill(getDeviceName(), "CCD_GAIN", "Gain", IMAGE_CONTROLS_TAB, IP_RW, 60, IPS_IDLE);
 
+    GainConversionSP[0].fill("LCG", "Dynamic Range (LCG)", ISS_ON);
+    GainConversionSP[1].fill("HCG", "Low Noise (HCG)", ISS_OFF);
+    GainConversionSP.fill(getDeviceName(), "GAIN_CONVERSION", "Gain Conversion", IMAGE_CONTROLS_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
     uint32_t cap = 0;
     cap |= CCD_HAS_BAYER;
     cap |= CCD_HAS_STREAMING;
@@ -814,6 +827,14 @@ bool INDILibCamera::updateProperties()
         defineProperty(TemperatureNP);
         defineProperty(AdjustmentNP);
         defineProperty(GainNP);
+
+        GainConversionMode currentMode;
+        if (readGainConversionMode(currentMode))
+        {
+            defineProperty(GainConversionSP);
+            updateGainConversionUI();
+        }
+
         defineProperty(AdjustExposureModeSP);
         defineProperty(AdjustAwbModeSP);
         defineProperty(AdjustMeteringModeSP);
@@ -824,6 +845,7 @@ bool INDILibCamera::updateProperties()
         deleteProperty(TemperatureNP);
         deleteProperty(AdjustmentNP);
         deleteProperty(GainNP);
+        deleteProperty(GainConversionSP);
         deleteProperty(AdjustExposureModeSP);
         deleteProperty(AdjustAwbModeSP);
         deleteProperty(AdjustMeteringModeSP);
@@ -1086,6 +1108,28 @@ bool INDILibCamera::ISNewSwitch(const char *dev, const char *name, ISState * sta
             }, true);
             return true;
         }
+
+        // Gain Conversion
+        if (GainConversionSP.isNameMatch(name))
+        {
+            updateProperty(GainConversionSP, states, names, n, [this, names]()
+            {
+                GainConversionMode mode =
+                    (strcmp(names[0], "HCG") == 0)
+                        ? GainConversionMode::LowNoise
+                        : GainConversionMode::DynamicRange;
+
+                if (!writeGainConversionMode(mode))
+                    return false;
+
+                updateGainConversionUI();
+
+                return true;
+            }, true);
+
+            return true;
+        }
+
     }
 
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
@@ -1598,3 +1642,79 @@ INDI_PIXEL_FORMAT INDILibCamera::bayerToPixelFormat(const char *bayer)
 
     return INDI_MONO;
 }
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
+bool INDILibCamera::readGainConversionMode(GainConversionMode &mode) const
+{
+    std::ifstream file(HCG_SYSFS);
+
+    if (!file)
+        return false;
+
+    std::string value;
+    file >> value;
+
+    if (!value.empty() &&
+        (value[0] == 'Y' || value[0] == 'y'))
+    {
+        mode = GainConversionMode::LowNoise;
+    }
+    else
+    {
+        mode = GainConversionMode::DynamicRange;
+    }
+
+    return true;
+}
+
+void INDILibCamera::updateGainConversionUI()
+{
+    GainConversionMode mode;
+
+    if (!readGainConversionMode(mode))
+        return;
+
+    GainConversionSP.reset();
+
+    if (mode == GainConversionMode::LowNoise)
+        GainConversionSP[1].setState(ISS_ON);
+    else
+        GainConversionSP[0].setState(ISS_ON);
+
+    GainConversionSP.setState(IPS_OK);
+    GainConversionSP.apply();
+}
+
+bool INDILibCamera::writeGainConversionMode(GainConversionMode mode)
+{
+    std::ofstream file(HCG_SYSFS);
+
+    if (!file)
+    {
+        LOGF_ERROR("No write permission for %s. Configure write permissions or run indiserver with appropriate privileges.",
+                    HCG_SYSFS);
+        return false;
+    }
+
+    if (mode == GainConversionMode::LowNoise)
+        file << '1';
+    else
+        file << '0';
+
+    file.flush();
+
+    if (!file.good())
+    {
+        LOGF_ERROR("Failed writing to %s: %s",
+                    HCG_SYSFS,
+                    strerror(errno));
+        return false;
+    }
+
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////
