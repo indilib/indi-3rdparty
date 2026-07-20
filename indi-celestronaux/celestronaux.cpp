@@ -4051,21 +4051,8 @@ bool CelestronAUX::configureSerialPort(bool useFlowControl)
     else
         tty_setting.c_cflag &= ~CRTSCTS;
 
-    // Ensure 8N1 settings
-    tty_setting.c_cflag &= ~PARENB;
-    tty_setting.c_cflag &= ~CSTOPB;
-    tty_setting.c_cflag &= ~CSIZE;
-    tty_setting.c_cflag |= CS8;
-
-    // Raw mode
-    tty_setting.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
-    tty_setting.c_oflag &= ~OPOST;
-    tty_setting.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
-    tty_setting.c_cflag |= CREAD | CLOCAL;
-
-    // Read timeout handled by tty_read (VMIN=0, VTIME=10 -> 1 sec)
-    tty_setting.c_cc[VMIN] = 0;
-    tty_setting.c_cc[VTIME] = 10;
+    // Preserve all other settings (baud rate, parity, data bits, VMIN/VTIME, etc.)
+    // set by INDI base class. Only modify the specific flags above.
 
     if (tcsetattr(PortFD, TCSANOW, &tty_setting))
     {
