@@ -146,6 +146,11 @@ bool QHYCCD::initProperties()
     IUFillNumberVector(&HumidityNP, HumidityN, 1, getDeviceName(), "CCD_HUMIDITY", "Humidity", MAIN_CONTROL_TAB,
                        IP_RO, 60, IPS_IDLE);
 
+    // CAA Rotator (angle in degrees, negative for reverse rotation)
+    IUFillNumber(&CAARotatorN[0], "CAA_ANGLE", "Angle (°)", "%.2f", -360, 360, 0.1, 0);
+    IUFillNumberVector(&CAARotatorNP, CAARotatorN, 1, getDeviceName(), "CAA_ROTATOR", "CAA Rotator", MAIN_CONTROL_TAB,
+                       IP_RW, 60, IPS_IDLE);
+
     // Cooler Mode
     IUFillSwitch(&CoolerModeS[COOLER_AUTOMATIC], "COOLER_AUTOMATIC", "Auto", ISS_ON);
     IUFillSwitch(&CoolerModeS[COOLER_MANUAL], "COOLER_MANUAL", "Manual", ISS_OFF);
@@ -534,6 +539,29 @@ bool QHYCCD::updateProperties()
             defineProperty(&USBTrafficNP);
         }
 
+        if (HasCAA)
+        {
+            double min = 0, max = 0, step = 0;
+            if (!isSimulation())
+            {
+                int ret = GetQHYCCDParamMinMaxStep(m_CameraHandle, CONTROL_CAA_ROTATOR, &min, &max, &step);
+                if (ret == QHYCCD_SUCCESS)
+                {
+                    // Allow negative angle for reverse rotation
+                    CAARotatorN[0].min  = (min <= 0 ? min : -360);
+                    CAARotatorN[0].max  = max;
+                    CAARotatorN[0].step = (step > 0 ? step : 0.1);
+                }
+                CAARotatorN[0].value = GetQHYCCDParam(m_CameraHandle, CONTROL_CAA_ROTATOR);
+            }
+            defineProperty(&CAARotatorNP);
+            LOG_INFO("CAA Rotator: supported, control panel enabled");
+        }
+        else
+        {
+            LOG_INFO("CAA Rotator (control 95): not supported");
+        }
+
         defineProperty(&USBBufferNP);
 
         defineProperty(&SDKVersionTP);
@@ -614,6 +642,9 @@ bool QHYCCD::updateProperties()
 
         if (HasUSBTraffic)
             deleteProperty(USBTrafficNP.name);
+
+        if (HasCAA)
+            deleteProperty(CAARotatorNP.name);
 
         deleteProperty(USBBufferNP.name);
 
@@ -1041,6 +1072,17 @@ bool QHYCCD::Connect()
         }
 
         LOGF_INFO("Humidity Support: %s", HasHumidity ? "True" : "False");
+
+        ////////////////////////////////////////////////////////////////////
+        /// CAA Rotator Support (CONTROL_CAA_ROTATOR = 95)
+        ////////////////////////////////////////////////////////////////////
+        ret = IsQHYCCDControlAvailable(m_CameraHandle, CONTROL_CAA_ROTATOR);
+        if (ret == QHYCCD_SUCCESS)
+        {
+            HasCAA = true;
+        }
+        LOGF_INFO("CAA Rotator (control 95): %s (SDK result=%u)", HasCAA ? "supported" : "not supported", ret);
+
         ////////////////////////////////////////////////////////////////////
         /// Overscan Area Support
         ////////////////////////////////////////////////////////////////////
@@ -1974,6 +2016,30 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
         }
 
         //////////////////////////////////////////////////////////////////////
+        /// CAA Rotator Control (angle in degrees, negative = reverse)
+        //////////////////////////////////////////////////////////////////////
+        else if (!strcmp(name, CAARotatorNP.name))
+        {
+            double currentAngle = CAARotatorN[0].value;
+            IUUpdateNumber(&CAARotatorNP, values, names, n);
+            int rc = SetQHYCCDParam(m_CameraHandle, CONTROL_CAA_ROTATOR, CAARotatorN[0].value);
+            if (rc == QHYCCD_SUCCESS)
+            {
+                CAARotatorNP.s = IPS_OK;
+                saveConfig(true, CAARotatorNP.name);
+                LOGF_INFO("CAA Rotator angle set to %.2f°", CAARotatorN[0].value);
+            }
+            else
+            {
+                CAARotatorNP.s = IPS_ALERT;
+                CAARotatorN[0].value = currentAngle;
+                LOGF_ERROR("Failed to set CAA Rotator angle: %d", rc);
+            }
+            IDSetNumber(&CAARotatorNP, nullptr);
+            return true;
+        }
+
+        //////////////////////////////////////////////////////////////////////
         /// USB Buffer Control
         //////////////////////////////////////////////////////////////////////
         else if (!strcmp(name, USBBufferNP.name))
@@ -2289,6 +2355,9 @@ bool QHYCCD::saveConfigItems(FILE *fp)
 
     if (HasUSBTraffic)
         IUSaveConfigNumber(fp, &USBTrafficNP);
+
+    if (HasCAA)
+        IUSaveConfigNumber(fp, &CAARotatorNP);
 
     if (HasAmpGlow)
         IUSaveConfigSwitch(fp, &AMPGlowSP);

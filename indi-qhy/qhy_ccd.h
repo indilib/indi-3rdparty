@@ -187,6 +187,11 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         // Humidity Readout
         INumber HumidityN[1];
         INumberVectorProperty HumidityNP;
+
+        // CAA Rotator (if camera supports CONTROL_CAA_ROTATOR=95)
+        INumber CAARotatorN[1];
+        INumberVectorProperty CAARotatorNP;
+
         /////////////////////////////////////////////////////////////////////////////
         /// Properties: Utility Controls
         /////////////////////////////////////////////////////////////////////////////
@@ -447,6 +452,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
         bool HasReadMode { false };
         bool HasGPS { false };
         bool HasHumidity { false };
+        bool HasCAA { false };
         bool HasAmpGlow { false };
         //NEW CODE - Add support for overscan/calibration area
         bool HasOverscanArea { false };
