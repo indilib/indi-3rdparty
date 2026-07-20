@@ -126,6 +126,13 @@ bool CelestronAUX::Handshake()
     {
         if (getActiveConnection() == serialConnection)
         {
+            // Configure serial port to prevent CP210x DTR/RTS reset on open
+            // AUX/PC port (19200 baud) uses hardware flow control (RTS/CTS)
+            // HC/USB port (9600 baud) does not use flow control
+            bool useFlowControl = (PortTypeSP[PORT_AUX_PC].getState() == ISS_ON);
+            if (!configureSerialPort(useFlowControl))
+                return false;
+
             if (PortTypeSP[PORT_AUX_PC].getState() == ISS_ON)
             {
                 serialConnection->setDefaultBaudRate(Connection::Serial::B_19200);
@@ -4003,9 +4010,66 @@ bool CelestronAUX::tty_set_speed(speed_t speed)
         return false;
     }
 
+    // Preserve port configuration flags (CLOCAL, HUPCL, CRTSCTS) after baud rate change
+    // AUX/PC port (19200 baud) uses hardware flow control, HC/USB port (9600 baud) does not
+    bool useFlowControl = (PortTypeSP[PORT_AUX_PC].getState() == ISS_ON);
+    tty_setting.c_cflag |= CLOCAL;     // Don't assert DTR/RTS on open
+    tty_setting.c_cflag &= ~HUPCL;     // Don't drop DTR/RTS on close
+    if (useFlowControl)
+        tty_setting.c_cflag |= CRTSCTS;  // AUX/PC needs hardware flow control
+    else
+        tty_setting.c_cflag &= ~CRTSCTS; // HC/USB no flow control
+
     if (tcsetattr(PortFD, TCSANOW, &tty_setting))
     {
         LOGF_ERROR("Error setting tty attributes %s(%d).", strerror(errno), errno);
+        return false;
+    }
+return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+/// Configure serial port to prevent CP210x DTR/RTS reset on open/close
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::configureSerialPort(bool useFlowControl)
+{
+    struct termios tty_setting;
+
+    if (tcgetattr(PortFD, &tty_setting))
+    {
+        LOGF_ERROR("Error getting tty attributes for port config: %s(%d).", strerror(errno), errno);
+        return false;
+    }
+
+    // Ignore modem control lines - prevents DTR/RTS assertion on open
+    tty_setting.c_cflag |= CLOCAL;
+    // Don't drop DTR/RTS on close
+    tty_setting.c_cflag &= ~HUPCL;
+    // Hardware flow control: AUX/PC port needs it, HC/USB does not
+    if (useFlowControl)
+        tty_setting.c_cflag |= CRTSCTS;
+    else
+        tty_setting.c_cflag &= ~CRTSCTS;
+
+    // Ensure 8N1 settings
+    tty_setting.c_cflag &= ~PARENB;
+    tty_setting.c_cflag &= ~CSTOPB;
+    tty_setting.c_cflag &= ~CSIZE;
+    tty_setting.c_cflag |= CS8;
+
+    // Raw mode
+    tty_setting.c_iflag &= ~(IGNBRK | BRKINT | PARMRK | ISTRIP | INLCR | IGNCR | ICRNL | IXON);
+    tty_setting.c_oflag &= ~OPOST;
+    tty_setting.c_lflag &= ~(ECHO | ECHONL | ICANON | ISIG | IEXTEN);
+    tty_setting.c_cflag |= CREAD | CLOCAL;
+
+    // Read timeout handled by tty_read (VMIN=0, VTIME=10 -> 1 sec)
+    tty_setting.c_cc[VMIN] = 0;
+    tty_setting.c_cc[VTIME] = 10;
+
+    if (tcsetattr(PortFD, TCSANOW, &tty_setting))
+    {
+        LOGF_ERROR("Error setting tty attributes for port config: %s(%d).", strerror(errno), errno);
         return false;
     }
 
@@ -4014,6 +4078,7 @@ bool CelestronAUX::tty_set_speed(speed_t speed)
 
 /////////////////////////////////////////////////////////////////////////////////////
 ///
+
 /////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::hex_dump(char *buf, AUXBuffer data, size_t size)
 {
