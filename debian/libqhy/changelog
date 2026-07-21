@@ -1,3 +1,9 @@
+libqhy (26.7.21) bullseye; urgency=medium
+
+  * Upstream release.
+
+ -- Jasem Mutlaq <mutlaqja@ikarustech.com>  Tue, 21 Jul 2026 05:51:05 +0000
+
 libqhy (26.6.6) bullseye; urgency=medium
 
   * Fixed issue is 85-qhyccd.rules file.
