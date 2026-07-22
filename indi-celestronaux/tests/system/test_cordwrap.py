@@ -6,8 +6,13 @@ from .conftest import DEVICE_NAME, driver_client_context
 
 
 def get_config_value(property_name, switch_name=None):
-    """Read a property value from the config file."""
-    config_dir = os.environ.get("INDICONFIG", os.path.expanduser("~/.indi"))
+    """Read a property value from the config file.
+
+    Requires the INDICONFIG environment variable to be set (provided by the
+    local_config_dir fixture) so that the test-local config is always used
+    instead of the real user config at ~/.indi.
+    """
+    config_dir = os.environ["INDICONFIG"]
     config_path = os.path.join(config_dir, "Celestron AUX_config.xml")
     if not os.path.exists(config_path):
         return None
