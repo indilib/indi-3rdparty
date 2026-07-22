@@ -392,6 +392,7 @@ class CelestronAUX :
         int aux_tty_read(char *buf, int bufsiz, int timeout, int *n);
         int aux_tty_write (char *buf, int bufsiz, float timeout, int *n);
         bool tty_set_speed(speed_t speed);
+        bool configureSerialPort(bool useFlowControl);
 
         // connection
         bool m_IsRTSCTS {false};

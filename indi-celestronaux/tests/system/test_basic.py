@@ -12,7 +12,7 @@ def test_firmware_info(indiserver_process):
             prop = await client.wait_for_condition(
                 DEVICE_NAME,
                 "Firmware Info",
-                lambda p: p["values"].get("Ra/AZM version", "").startswith("7"),
+                lambda p: p["values"].get("AZM", "").startswith("7"),
                 timeout=15,
             )
             assert prop is not None

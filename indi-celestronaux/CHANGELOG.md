@@ -1,5 +1,13 @@
 # Changelog - indi-celestronaux System Tests
 
+## [2026-07-20 20:15] - Version 1.7.0 - CP210x DTR/RTS Reset Fix
+- **Fixed CP210x microcontroller reset issue** on ESP32-based mounts (HBG3 adapter)
+- Added `configureSerialPort()` method to set `CLOCAL` (no DTR/RTS assert on open), `~HUPCL` (no DTR/RTS drop on close), and conditional `CRTSCTS`
+- **AUX/PC port (19200 baud)**: Hardware flow control (RTS/CTS half-duplex) preserved
+- **HC/USB port (9600 baud)**: No flow control, prevents spurious resets
+- Flags preserved in `tty_set_speed()` during baud rate changes
+- Eliminates hard ESP32 reset on connect/disconnect/reconnect cycles
+
 ## [2026-01-30 11:45] - Test Stabilization & Bug Fixes
 - **Corrected Switch Elements**: Fixed all tests to use correct element names for `TELESCOPE_SLEW_RATE` (`8x` instead of `9`) and `ALIGNMENT_SUBSYSTEM_ACTIVE` (`ALIGNMENT SUBSYSTEM ACTIVE` instead of `On`).
 - **Enhanced 1-Star Precision Test**: Implemented dynamic RA/Dec calculation based on current LST/Horizon position. Increased precision requirement to 60 seconds.
