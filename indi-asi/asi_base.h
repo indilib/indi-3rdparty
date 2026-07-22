@@ -34,6 +34,7 @@
 
 #include <indiccd.h>
 #include <inditimer.h>
+#include <indielapsedtimer.h>
 
 class SingleWorker;
 class ASIBase : public INDI::CCD
@@ -57,6 +58,8 @@ class ASIBase : public INDI::CCD
         virtual bool AbortExposure() override;
 
     protected:
+
+        virtual void checkTemperatureTarget() override;
 
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
@@ -99,6 +102,10 @@ class ASIBase : public INDI::CCD
     protected:
         double mTargetTemperature;
         double mCurrentTemperature;
+        bool mCoolerWarmingUp {false};
+        double mWarmupLastTemperature {0};
+        double mSavedCoolingTarget {100.0}; // sentinel: no valid target saved yet
+        INDI::ElapsedTimer mCoolerZeroPowerTimer; // measures how long temperature has been stable
         INDI::Timer mTimerTemperature;
         void temperatureTimerTimeout();
 
@@ -124,8 +131,23 @@ class ASIBase : public INDI::CCD
         /** Update SER recorder video format */
         void updateRecorderFormat();
 
-        /** Control cooler */
+        /** Control cooler, updates CoolerSP switch/state */
         bool activateCooler(bool enable);
+
+        /** Raw TEC power toggle, does not touch CoolerSP so callers can control the switch presentation */
+        bool setCoolerPower(bool enable);
+
+        /** Ramp temperature toward ambient, keeping the Cooler switch busy, then switch the cooler off */
+        void beginCoolerWarmup();
+
+        /** Cancel an in-progress cooler warm-up, e.g. because the cooler was switched back on */
+        void cancelCoolerWarmup();
+
+        /** Finish an in-progress cooler warm-up by switching the cooler off for good */
+        void finishCoolerWarmup(const char *reason);
+
+        /** After re-enabling the cooler, ramp back to the previously saved target temperature */
+        void resumeCooling();
 
         /** Set Video Format */
         bool setVideoFormat(uint8_t index);
@@ -142,6 +164,7 @@ class ASIBase : public INDI::CCD
         /** Additional Properties to INDI::CCD */
         INDI::PropertyNumber  CoolerNP {1};
         INDI::PropertySwitch  CoolerSP {2};
+        INDI::PropertyNumber  WarmupTargetNP {1};
 
         INDI::PropertyNumber  ControlNP {0};
         INDI::PropertySwitch  ControlSP {0};
