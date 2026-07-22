@@ -253,6 +253,18 @@ void CelestronAUX::ISGetProperties(const char *dev)
 {
     INDI::Telescope::ISGetProperties(dev);
     defineProperty(PortTypeSP);
+
+    // Load saved cord-wrap configuration before connection
+    loadConfig(true, CordWrapToggleSP.getName());
+    loadConfig(true, CordWrapPositionSP.getName());
+    loadConfig(true, CordWrapBaseSP.getName());
+
+    // Restore m_RequestedCordwrapPos from saved config
+    int configPosIdx = 0;
+    if (IUGetConfigOnSwitchIndex(getDeviceName(), CordWrapPositionSP.getName(), &configPosIdx) == 0)
+        m_RequestedCordwrapPos = configPosIdx * 45;
+    else
+        m_RequestedCordwrapPos = 0;  // Default to North
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -331,7 +343,7 @@ bool CelestronAUX::initProperties()
 
     // Cord Wrap Position
     CordWrapPositionSP[CORDWRAP_N].fill("CORDWRAP_N", "North", ISS_ON);
-    CordWrapPositionSP[CORDWRAP_NE].fill("CORDWRAP_NE", "North-East", ISS_ON);
+    CordWrapPositionSP[CORDWRAP_NE].fill("CORDWRAP_NE", "North-East", ISS_OFF);
     CordWrapPositionSP[CORDWRAP_E].fill("CORDWRAP_E", "East",  ISS_OFF);
     CordWrapPositionSP[CORDWRAP_SE].fill("CORDWRAP_SE", "South-East",  ISS_OFF);
     CordWrapPositionSP[CORDWRAP_S].fill("CORDWRAP_S", "South", ISS_OFF);
@@ -580,16 +592,32 @@ bool CelestronAUX::updateProperties()
         // Cord wrap Enabled?
         if (m_MountType == ALT_AZ)
         {
-            getCordWrapEnabled();
-            CordWrapToggleSP[INDI_ENABLED].s   = m_CordWrapActive ? ISS_ON : ISS_OFF;
-            CordWrapToggleSP[INDI_DISABLED].s  = m_CordWrapActive ? ISS_OFF : ISS_ON;
+            bool enabled = false;
+            if (getCordWrapEnabled(enabled))
+            {
+                CordWrapToggleSP[INDI_ENABLED].s   = enabled ? ISS_ON : ISS_OFF;
+                CordWrapToggleSP[INDI_DISABLED].s  = enabled ? ISS_OFF : ISS_ON;
+            }
+            else
+            {
+                // Query failed - keep loaded config values (already set by loadConfig)
+                LOG_INFO("Using saved cord wrap config (mount query failed)");
+            }
             defineProperty(CordWrapToggleSP);
 
             // Cord wrap Position?
-            getCordWrapPosition();
-            double cordWrapAngle = range360(m_CordWrapPosition / STEPS_PER_DEGREE);
-            LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
-            CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 45))].s = ISS_ON;
+            uint32_t position = 0;
+            if (getCordWrapPosition(position))
+            {
+                double cordWrapAngle = range360(position / STEPS_PER_DEGREE);
+                LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
+                CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 45))].s = ISS_ON;
+            }
+            else
+            {
+                LOG_INFO("Using saved cord wrap position config (mount query failed)");
+                // Config already loaded - properties already have correct values
+            }
             defineProperty(CordWrapPositionSP);
             defineProperty(CordWrapBaseSP);
         }
@@ -1036,10 +1064,39 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             CordWrapToggleSP.update(states, names, n);
             const bool toEnable = CordWrapToggleSP[INDI_ENABLED].s == ISS_ON;
             LOGF_INFO("Cord Wrap is %s.", toEnable ? "enabled" : "disabled");
-            setCordWrapEnabled(toEnable);
-            getCordWrapEnabled();
+
+            if (toEnable)
+            {
+                // Enable and write current position
+                if (!setCordWrapEnabled(true))
+                {
+                    CordWrapToggleSP.setState(IPS_ALERT);
+                    CordWrapToggleSP.apply();
+                    return true;
+                }
+                if (!writeCordWrapToMount())
+                {
+                    CordWrapToggleSP.setState(IPS_ALERT);
+                    CordWrapToggleSP.apply();
+                    return true;
+                }
+            }
+            else
+            {
+                // Disable only - don't touch position
+                if (!setCordWrapEnabled(false))
+                {
+                    CordWrapToggleSP.setState(IPS_ALERT);
+                    CordWrapToggleSP.apply();
+                    return true;
+                }
+            }
+
+            bool enabled = false;
+            getCordWrapEnabled(enabled);
             CordWrapToggleSP.setState(IPS_OK);
             CordWrapToggleSP.apply();
+            saveConfig(CordWrapToggleSP);
 
             return true;
         }
@@ -1082,7 +1139,8 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
                     break;
             }
 
-            syncCoordWrapPosition();
+            writeCordWrapToMount();
+            saveConfig(CordWrapPositionSP);
             return true;
         }
 
@@ -1114,8 +1172,11 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         if (CordWrapBaseSP.isNameMatch(name))
         {
             CordWrapBaseSP.update(states, names, n);
+            // Write current position to mount using new mode convention
+            writeCordWrapToMount();
             CordWrapBaseSP.setState(IPS_OK);
             CordWrapBaseSP.apply();
+            saveConfig(CordWrapBaseSP);
             return true;
         }
 
@@ -1338,19 +1399,95 @@ double CelestronAUX::getNorthAz()
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::readCordWrapFromMount()
+{
+    if (m_MountType != ALT_AZ)
+        return true;
+
+    bool enabled = false;
+    uint32_t position = 0;
+    bool ok = true;
+
+    if (!getCordWrapEnabled(enabled))
+    {
+        LOG_WARN("Failed to read cord wrap enabled status from mount");
+        ok = false;
+    }
+    if (!getCordWrapPosition(position))
+    {
+        LOG_WARN("Failed to read cord wrap position from mount");
+        ok = false;
+    }
+
+    if (ok)
+    {
+        m_CordWrapActive = enabled;
+        m_CordWrapPosition = position;
+
+        // Update INDI properties to match mount
+        CordWrapToggleSP[INDI_ENABLED].s   = enabled ? ISS_ON : ISS_OFF;
+        CordWrapToggleSP[INDI_DISABLED].s  = enabled ? ISS_OFF : ISS_ON;
+
+        double angle = range360(position / STEPS_PER_DEGREE);
+        int idx = static_cast<int>(std::floor(angle / 45)) % 8;
+        for (int i = 0; i < 8; ++i)
+            CordWrapPositionSP[i].s = (i == idx) ? ISS_ON : ISS_OFF;
+    }
+    return ok;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
+bool CelestronAUX::writeCordWrapToMount()
+{
+    if (m_MountType != ALT_AZ)
+        return true;
+
+    uint32_t encoderPos = 0;
+
+    if (CordWrapBaseSP[CW_BASE_SKY].s == ISS_ON)
+    {
+        // Sky mode: m_RequestedCordwrapPos is sky-relative (degrees from alignment north)
+        encoderPos = static_cast<uint32_t>(range360(m_RequestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE);
+    }
+    else
+    {
+        // Encoder mode: m_RequestedCordwrapPos is encoder-relative (degrees from mount base)
+        encoderPos = static_cast<uint32_t>(range360(m_RequestedCordwrapPos) * STEPS_PER_DEGREE);
+    }
+
+    if (!setCordWrapPosition(encoderPos))
+    {
+        LOG_ERROR("Failed to write cord wrap position to mount");
+        return false;
+    }
+
+    // Read back to verify
+    uint32_t actualPos = 0;
+    if (!getCordWrapPosition(actualPos))
+    {
+        LOG_WARN("Failed to verify cord wrap position after write");
+        return false;
+    }
+
+    m_CordWrapPosition = actualPos;
+    return true;
+}
+
+/////////////////////////////////////////////////////////////////////////////////////
+///
+/////////////////////////////////////////////////////////////////////////////////////
 void CelestronAUX::syncCoordWrapPosition()
 {
     // No coord wrap for equatorial mounts.
     if (m_MountType != ALT_AZ)
         return;
 
-    uint32_t coordWrapPosition = 0;
-    if (CordWrapBaseSP[CW_BASE_SKY].s == ISS_ON)
-        coordWrapPosition = range360(m_RequestedCordwrapPos + getNorthAz()) * STEPS_PER_DEGREE;
+    if (isCordWrapSkyMode())
+        writeCordWrapToMount();
     else
-        coordWrapPosition = range360(m_RequestedCordwrapPos) * STEPS_PER_DEGREE;
-    setCordWrapPosition(coordWrapPosition);
-    getCordWrapPosition();
+        readCordWrapFromMount();
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
@@ -2941,12 +3078,16 @@ bool CelestronAUX::setCordWrapEnabled(bool enable)
     return true;
 };
 
-bool CelestronAUX::getCordWrapEnabled()
+bool CelestronAUX::getCordWrapEnabled(bool &enabled)
 {
     AUXCommand command(MC_POLL_CORDWRAP, APP, AZM);
-    sendAUXCommand(command);
-    readAUXResponse(command);
-    return m_CordWrapActive;
+    if (!sendAUXCommand(command) || !readAUXResponse(command))
+    {
+        LOG_DEBUG("getCordWrapEnabled: communication failed");
+        return false;
+    }
+    enabled = m_CordWrapActive;
+    return true;
 };
 
 
@@ -2965,12 +3106,16 @@ bool CelestronAUX::setCordWrapPosition(uint32_t steps)
 /////////////////////////////////////////////////////////////////////////////////////
 ///
 /////////////////////////////////////////////////////////////////////////////////////
-uint32_t CelestronAUX::getCordWrapPosition()
+bool CelestronAUX::getCordWrapPosition(uint32_t &position)
 {
     AUXCommand command(MC_GET_CORDWRAP_POS, APP, AZM);
-    sendAUXCommand(command);
-    readAUXResponse(command);
-    return m_CordWrapPosition;
+    if (!sendAUXCommand(command) || !readAUXResponse(command))
+    {
+        LOG_DEBUG("getCordWrapPosition: communication failed");
+        return false;
+    }
+    position = m_CordWrapPosition;
+    return true;
 };
 
 /////////////////////////////////////////////////////////////////////////////////////

@@ -127,6 +127,9 @@ class CelestronAUX :
 
         // Public to enable setting from ISSnoop
         void syncCoordWrapPosition();
+        bool readCordWrapFromMount();
+        bool writeCordWrapToMount();
+        bool isCordWrapSkyMode() const { return CordWrapBaseSP[CW_BASE_SKY].s == ISS_ON; }
 
     protected:
         virtual void ISGetProperties(const char *dev) override;
@@ -237,9 +240,9 @@ class CelestronAUX :
         /// Coord Wrap
         /////////////////////////////////////////////////////////////////////////////////////
         bool setCordWrapEnabled(bool enable);
-        bool getCordWrapEnabled();
+        bool getCordWrapEnabled(bool &enabled);
         bool setCordWrapPosition(uint32_t steps);
-        uint32_t getCordWrapPosition();
+        bool getCordWrapPosition(uint32_t &position);
 
         /////////////////////////////////////////////////////////////////////////////////////
         /// Focus
