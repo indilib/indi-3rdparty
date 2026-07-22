@@ -363,7 +363,7 @@ class CelestronAUX :
         // Coord Wrap
         bool m_CordWrapActive {false};
         int32_t m_CordWrapPosition {0};
-        uint32_t m_RequestedCordwrapPos;
+        uint32_t m_RequestedCordwrapPos {0};
 
         // Focus
         bool m_FocusEnabled {false};

@@ -599,20 +599,28 @@ bool CelestronAUX::updateProperties()
         // Cord wrap Enabled?
         if (m_MountType == ALT_AZ)
         {
+            defineProperty(CordWrapToggleSP);
+            defineProperty(CordWrapPositionSP);
+            defineProperty(CordWrapBaseSP);
+
+            // Load saved config as baseline for reliable restore on reconnect
+            loadConfig(true, CordWrapToggleSP.getName());
+            loadConfig(true, CordWrapPositionSP.getName());
+            loadConfig(true, CordWrapBaseSP.getName());
+
+            // Try to read from mount - override config if successful
             bool enabled = false;
             if (getCordWrapEnabled(enabled))
             {
                 CordWrapToggleSP[INDI_ENABLED].s   = enabled ? ISS_ON : ISS_OFF;
                 CordWrapToggleSP[INDI_DISABLED].s  = enabled ? ISS_OFF : ISS_ON;
+                LOGF_INFO("Cord Wrap is %s.", enabled ? "enabled" : "disabled");
             }
             else
             {
-                // Query failed - keep loaded config values (already set by loadConfig)
                 LOG_INFO("Using saved cord wrap config (mount query failed)");
             }
-            defineProperty(CordWrapToggleSP);
 
-            // Cord wrap Position?
             uint32_t position = 0;
             if (getCordWrapPosition(position))
             {
@@ -625,10 +633,13 @@ bool CelestronAUX::updateProperties()
             else
             {
                 LOG_INFO("Using saved cord wrap position config (mount query failed)");
-                // Config already loaded - properties already have correct values
             }
-            defineProperty(CordWrapPositionSP);
-            defineProperty(CordWrapBaseSP);
+
+            // Sync member variables from property state
+            m_CordWrapActive = CordWrapToggleSP[INDI_ENABLED].s == ISS_ON;
+            int onIdx = CordWrapPositionSP.findOnSwitchIndex();
+            if (onIdx >= 0)
+                m_RequestedCordwrapPos = onIdx * 45;
         }
 
         // Slew limits
@@ -2925,7 +2936,31 @@ bool CelestronAUX::startupWithoutHC()
             return false;
     }
 
-    data[0] = 0xc0;
+    // Set cord wrap position: Mount → Config → Default (North)
+    uint32_t cordWrapPos = 0;
+    if (getCordWrapPosition(cordWrapPos))
+    {
+        LOGF_INFO("startupWithoutHC: using mount cord wrap position %.0f°",
+                  cordWrapPos / STEPS_PER_DEGREE);
+    }
+    else
+    {
+        int configPosIdx = 0;
+        if (IUGetConfigOnSwitchIndex(getDeviceName(), CordWrapPositionSP.getName(), &configPosIdx) == 0)
+        {
+            cordWrapPos = static_cast<uint32_t>(configPosIdx * 45.0 * STEPS_PER_DEGREE);
+            LOGF_INFO("startupWithoutHC: using config cord wrap position %.0f°", configPosIdx * 45.0);
+        }
+        else
+        {
+            LOG_INFO("startupWithoutHC: using default cord wrap position 0° (North)");
+        }
+    }
+
+    data[0] = static_cast<uint8_t>((cordWrapPos >> 16) & 0xFF);
+    data[1] = static_cast<uint8_t>((cordWrapPos >> 8) & 0xFF);
+    data[2] = static_cast<uint8_t>(cordWrapPos & 0xFF);
+
     for (int i = 0; i < 2; i++)
     {
         command = AUXCommand(MC_SET_CORDWRAP_POS, APP, i == AXIS_AZ ? AZM : ALT, data);
