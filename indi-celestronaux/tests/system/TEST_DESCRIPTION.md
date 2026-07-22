@@ -8,7 +8,7 @@ Focus on low-level communication, driver stability, and raw motor control.
 ### `test_firmware_info`
 *   **Purpose:** Verifies that the driver correctly retrieves firmware versions from the AUX bus components.
 *   **Procedure:** Connects to the mount and checks the `Firmware Info` property.
-*   **Verification:** Confirms that `Ra/AZM version` starts with "7" (the version reported by `caux-sim`). It ignores the Mother Board version as it is often reported as `Unknown` in production.
+*   **Verification:** Confirms that `AZM` version starts with "7" (the version reported by `caux-sim`). It ignores the Mother Board version as it is often reported as `Unknown` in production.
 
 ### `test_manual_motion`
 *   **Purpose:** Validates the NSWE direction button logic and raw slewing.
