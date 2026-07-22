@@ -617,6 +617,7 @@ bool CelestronAUX::updateProperties()
             if (getCordWrapPosition(position))
             {
                 double cordWrapAngle = range360(position / STEPS_PER_DEGREE);
+                LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
                 const int idx = static_cast<int>(std::floor(cordWrapAngle / 45)) % 8;
                 for (int i = 0; i < 8; ++i)
                     CordWrapPositionSP[i].s = (i == idx) ? ISS_ON : ISS_OFF;
@@ -1101,7 +1102,13 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
             }
 
             bool enabled = false;
-            getCordWrapEnabled(enabled);
+            if (!getCordWrapEnabled(enabled))
+            {
+                CordWrapToggleSP.setState(IPS_ALERT);
+                CordWrapToggleSP.apply();
+                return true;
+            }
+            LOGF_INFO("Cord Wrap is %s.", enabled ? "enabled" : "disabled");
             CordWrapToggleSP.setState(IPS_OK);
             CordWrapToggleSP.apply();
             saveConfig(CordWrapToggleSP);
@@ -1147,7 +1154,12 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
                     break;
             }
 
-            writeCordWrapToMount();
+            if (!writeCordWrapToMount())
+            {
+                CordWrapPositionSP.setState(IPS_ALERT);
+                CordWrapPositionSP.apply();
+                return true;
+            }
             saveConfig(CordWrapPositionSP);
             return true;
         }
@@ -1181,7 +1193,12 @@ bool CelestronAUX::ISNewSwitch(const char *dev, const char *name, ISState *state
         {
             CordWrapBaseSP.update(states, names, n);
             // Write current position to mount using new mode convention
-            writeCordWrapToMount();
+            if (!writeCordWrapToMount())
+            {
+                CordWrapBaseSP.setState(IPS_ALERT);
+                CordWrapBaseSP.apply();
+                return true;
+            }
             CordWrapBaseSP.setState(IPS_OK);
             CordWrapBaseSP.apply();
             saveConfig(CordWrapBaseSP);
