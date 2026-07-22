@@ -617,8 +617,9 @@ bool CelestronAUX::updateProperties()
             if (getCordWrapPosition(position))
             {
                 double cordWrapAngle = range360(position / STEPS_PER_DEGREE);
-                LOGF_INFO("Cord Wrap position angle %.2f", cordWrapAngle);
-                CordWrapPositionSP[static_cast<int>(std::floor(cordWrapAngle / 45))].s = ISS_ON;
+                const int idx = static_cast<int>(std::floor(cordWrapAngle / 45)) % 8;
+                for (int i = 0; i < 8; ++i)
+                    CordWrapPositionSP[i].s = (i == idx) ? ISS_ON : ISS_OFF;
             }
             else
             {
