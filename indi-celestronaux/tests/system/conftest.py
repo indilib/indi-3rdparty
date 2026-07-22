@@ -34,6 +34,19 @@ def is_port_open(port):
 
 
 @pytest.fixture(scope="session")
+def local_config_dir(tmp_path_factory):
+    """
+    Creates a temporary local config directory and sets INDICONFIG so
+    the driver writes its config there instead of ~/.indi.
+    This prevents tests from clobbering a developer's real driver config.
+    """
+    config_dir = tmp_path_factory.mktemp("indi_config")
+    os.environ["INDICONFIG"] = str(config_dir)
+    yield str(config_dir)
+    os.environ.pop("INDICONFIG", None)
+
+
+@pytest.fixture(scope="session")
 def simulator_process():
     """
     Manages the simulator lifecycle.
@@ -90,7 +103,7 @@ def simulator_process():
 
 
 @pytest.fixture(scope="session")
-def indiserver_process(simulator_process):
+def indiserver_process(simulator_process, local_config_dir):
     """
     Manages the indiserver lifecycle.
     """
