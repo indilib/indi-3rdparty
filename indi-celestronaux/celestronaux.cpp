@@ -4025,7 +4025,7 @@ bool CelestronAUX::tty_set_speed(speed_t speed)
         LOGF_ERROR("Error setting tty attributes %s(%d).", strerror(errno), errno);
         return false;
     }
-return true;
+    return true;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////
