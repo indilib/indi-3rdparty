@@ -1391,7 +1391,9 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         //reset_settings(gphoto);
 
         // A ptp reset is needed by Sony A7II and A7III
-        if (strstr(gphoto->manufacturer, "Sony") && strstr(gphoto->model, "ILCE"))
+        // However, this session reset wrecks the A7RIV, preventing capture of successive frames
+        if (strstr(gphoto->manufacturer, "Sony") && strstr(gphoto->model, "ILCE")
+                && !strstr(gphoto->model, "7RM4"))
             gp_camera_exit(gphoto->camera, gphoto->context);
 
         return result;
