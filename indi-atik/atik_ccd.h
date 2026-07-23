@@ -43,6 +43,7 @@ class ATIKCCD : public INDI::CCD, public INDI::FilterInterface
         virtual int SetTemperature(double temperature) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
+        virtual bool SetCoolerEnabled(bool enable) override;
 
         static void debugCallbackHelper(void *context, const char *message);
 

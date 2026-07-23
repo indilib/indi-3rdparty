@@ -679,19 +679,28 @@ bool SBIGCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
         {
             IUUpdateSwitch(&CoolerSP, states, names, n);
             bool coolerON = CoolerS[0].s == ISS_ON;
-            if (SetTemperatureRegulation(TemperatureNP[0].getValue(), coolerON) == CE_NO_ERROR)
+            if (coolerON)
             {
-                CoolerSP.s = coolerON ? IPS_OK : IPS_IDLE;
-                LOGF_INFO("Cooler turned %s.", coolerON ? "On" : "Off");
+                cancelCoolerWarmup();
+                if (SetCoolerEnabled(true))
+                {
+                    CoolerSP.s = IPS_BUSY;
+                    IDSetSwitch(&CoolerSP, nullptr);
+                    resumeCoolingAfterWarmup();
+                    return true;
+                }
+                CoolerSP.s = IPS_ALERT;
+                LOG_ERROR("Failed to control cooler.");
                 IDSetSwitch(&CoolerSP, nullptr);
-
+                return false;
+            }
+            else
+            {
+                CoolerSP.s = IPS_BUSY;
+                IDSetSwitch(&CoolerSP, nullptr);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
                 return true;
             }
-
-            CoolerSP.s = IPS_ALERT;
-            LOG_ERROR("Failed to control cooler.");
-            IDSetSwitch(&CoolerSP, nullptr);
-            return false;
         }
         // AO Center
         else if (!strcmp(name, CenterSP.name))
@@ -1030,7 +1039,7 @@ int SBIGCCD::SetTemperature(double temperature)
         // Set property to busy and poll in ISPoll for CCD temp
         TemperatureRequest = temperature;
         LOGF_INFO("Temperature set to %+.1fC", temperature);
-        if (CoolerS[0].s != ISS_ON)
+        if (!m_CoolerWarmingUp && CoolerS[0].s != ISS_ON)
         {
             CoolerS[0].s = ISS_ON;
             CoolerS[1].s = ISS_OFF;
@@ -1041,6 +1050,22 @@ int SBIGCCD::SetTemperature(double temperature)
     }
     LOG_ERROR("Failed to set temperature");
     return -1;
+}
+
+bool SBIGCCD::SetCoolerEnabled(bool enable)
+{
+    if (SetTemperatureRegulation(TemperatureNP[0].getValue(), enable) == CE_NO_ERROR)
+    {
+        if (!enable)
+        {
+            CoolerSP.s = IPS_IDLE;
+            IDSetSwitch(&CoolerSP, nullptr);
+        }
+        LOGF_INFO("Cooler turned %s.", enable ? "On" : "Off");
+        return true;
+    }
+    LOG_ERROR("Failed to control cooler.");
+    return false;
 }
 
 int SBIGCCD::StartExposure(INDI::CCDChip *targetChip, double duration)
@@ -2540,6 +2565,7 @@ void SBIGCCD::updateTemperature()
             LOGF_DEBUG("CCD temperature %+.1f [C], TE cooler: %.1f [%%].", ccdTemp, power);
         }
         TemperatureNP[0].setValue(ccdTemp);
+        coolerWarmupTick(ccdTemp);
         // Check the TE cooler if inside the range:
         if (power <= CCD_COOLER_THRESHOLD)
         {

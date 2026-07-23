@@ -89,6 +89,9 @@ class SVBONYBase : public INDI::CCD
 
         virtual bool SetCaptureFormat(uint8_t index) override;
 
+        /** Toggle the hardware TEC.  Called by the base-class warm-up machinery. */
+        virtual bool SetCoolerEnabled(bool enable) override;
+
         /** Get the current Bayer string used */
         const char *getBayerString() const;
 

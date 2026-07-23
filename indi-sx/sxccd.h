@@ -68,6 +68,7 @@ class SXCCD : public INDI::CCD
         bool DidGuideLatch;
         bool InGuideExposure;
         char GuideStatus;
+        bool m_CoolerEnabled {false};
 
     protected:
         const char *getDefaultName();
@@ -79,6 +80,7 @@ class SXCCD : public INDI::CCD
         bool Connect();
         bool Disconnect();
         int SetTemperature(double temperature);
+        bool SetCoolerEnabled(bool enable);
         bool StartExposure(float n);
         bool AbortExposure();
         bool StartGuideExposure(float n);

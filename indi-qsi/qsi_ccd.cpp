@@ -470,7 +470,8 @@ int QSICCD::SetTemperature(double temperature)
     if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
 
-    activateCooler(true);
+    if (!m_CoolerWarmingUp)
+        activateCooler(true);
 
     try
     {
@@ -542,9 +543,17 @@ bool QSICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
                 return false;
 
             if (CoolerS[0].s == ISS_ON)
+            {
+                cancelCoolerWarmup();
                 activateCooler(true);
+                resumeCoolingAfterWarmup();
+            }
             else
-                activateCooler(false);
+            {
+                CoolerSP.s = IPS_BUSY;
+                IDSetSwitch(&CoolerSP, nullptr);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+            }
 
             return true;
         }
@@ -1124,6 +1133,59 @@ void QSICCD::activateCooler(bool enable)
     }
 }
 
+bool QSICCD::SetCoolerEnabled(bool enable)
+{
+    bool coolerOn;
+
+    if (enable)
+    {
+        try
+        {
+            QSICam.get_CoolerOn(&coolerOn);
+        }
+        catch (std::runtime_error &err)
+        {
+            LOGF_ERROR("Error: CoolerOn() failed. %s.", err.what());
+            return false;
+        }
+
+        if (!coolerOn)
+        {
+            try
+            {
+                QSICam.put_CoolerOn(true);
+            }
+            catch (std::runtime_error &err)
+            {
+                LOGF_ERROR("Error: put_CoolerOn(true) failed. %s.", err.what());
+                return false;
+            }
+        }
+    }
+    else
+    {
+        try
+        {
+            QSICam.get_CoolerOn(&coolerOn);
+            if (coolerOn)
+                QSICam.put_CoolerOn(false);
+        }
+        catch (std::runtime_error &err)
+        {
+            LOGF_ERROR("Error: CoolerOn() failed. %s.", err.what());
+            return false;
+        }
+
+        CoolerS[0].s = ISS_OFF;
+        CoolerS[1].s = ISS_ON;
+        CoolerSP.s   = IPS_IDLE;
+        LOG_INFO("Cooler is OFF.");
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
+
+    return true;
+}
+
 void QSICCD::shutterControl()
 {
     bool hasShutter;
@@ -1282,6 +1344,8 @@ void QSICCD::TimerHit()
         case IPS_ALERT:
             break;
     }
+
+    coolerWarmupTick(TemperatureNP[0].getValue());
 
     switch (CoolerNP.s)
     {

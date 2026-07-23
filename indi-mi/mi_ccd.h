@@ -42,6 +42,7 @@ class MICCD : public INDI::CCD, public INDI::FilterInterface
         virtual bool Disconnect() override;
 
         virtual int SetTemperature(double temperature) override;
+        virtual bool SetCoolerEnabled(bool enable) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
 

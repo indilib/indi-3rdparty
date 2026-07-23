@@ -941,7 +941,18 @@ bool SVBONYBase::ISNewSwitch(const char *dev, const char *name, ISState *states,
                 return true;
             }
 
-            activateCooler(CoolerSP[0].getState() == ISS_ON);
+            if (CoolerSP[0].getState() == ISS_ON)
+            {
+                cancelCoolerWarmup();
+                if (activateCooler(true))
+                    resumeCoolingAfterWarmup();
+            }
+            else
+            {
+                CoolerSP.setState(IPS_BUSY);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                CoolerSP.apply();
+            }
 
             return true;
         }
@@ -1003,14 +1014,26 @@ bool SVBONYBase::setVideoFormat(uint8_t index)
 int SVBONYBase::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    // #PS: how will it warm up?
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if (activateCooler(true) == false)
+    // Enable the hardware TEC without touching CoolerSP; the caller is responsible for the
+    // switch presentation (e.g. during warm-up the switch stays in the OFF+BUSY state).
+    if (!SetCoolerEnabled(true))
     {
         LOG_ERROR("Failed to activate cooler.");
         return -1;
+    }
+
+    // Update CoolerSP only when we are not in a warm-up sequence.
+    // During warm-up, CoolerSP is already IPS_BUSY with OFF selected; flipping it back to
+    // ON+BUSY here would confuse the user.
+    if (!m_CoolerWarmingUp && CoolerSP.getState() != IPS_BUSY)
+    {
+        CoolerSP[0].setState(ISS_ON);
+        CoolerSP[1].setState(ISS_OFF);
+        CoolerSP.setState(IPS_BUSY);
+        CoolerSP.apply();
     }
 
     SVB_ERROR_CODE ret;
@@ -1029,23 +1052,47 @@ int SVBONYBase::SetTemperature(double temperature)
     return 0;
 }
 
-bool SVBONYBase::activateCooler(bool enable)
+bool SVBONYBase::SetCoolerEnabled(bool enable)
 {
-    SVB_ERROR_CODE ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_COOLER_ENABLE, enable ? SVB_TRUE : SVB_FALSE, SVB_FALSE);
+    SVB_ERROR_CODE ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_COOLER_ENABLE,
+                                            enable ? SVB_TRUE : SVB_FALSE, SVB_FALSE);
     if (ret != SVB_SUCCESS)
     {
-        CoolerSP.setState(IPS_ALERT);
-        LOGF_ERROR("Failed to activate cooler (%s).", Helpers::toString(ret));
+        LOGF_ERROR("Failed to set cooler enabled (%s).", Helpers::toString(ret));
+        return false;
     }
-    else
-    {
-        CoolerSP[0].setState(enable ? ISS_ON  : ISS_OFF);
-        CoolerSP[1].setState(enable ? ISS_OFF : ISS_ON);
-        CoolerSP.setState(enable ? IPS_BUSY : IPS_IDLE);
-    }
-    CoolerSP.apply();
 
-    return (ret == SVB_SUCCESS);
+    if (!enable)
+    {
+        CoolerSP[0].setState(ISS_OFF);
+        CoolerSP[1].setState(ISS_ON);
+        CoolerSP.setState(IPS_IDLE);
+        CoolerSP.apply();
+    }
+    // When enabling, leave CoolerSP for the caller to update (e.g. activateCooler or ISNewSwitch).
+
+    return true;
+}
+
+bool SVBONYBase::activateCooler(bool enable)
+{
+    bool success = SetCoolerEnabled(enable);
+    if (!success)
+    {
+        CoolerSP.setState(IPS_ALERT);
+        CoolerSP.apply();
+    }
+    else if (enable)
+    {
+        // SetCoolerEnabled(true) intentionally leaves CoolerSP alone; set it here.
+        CoolerSP[0].setState(ISS_ON);
+        CoolerSP[1].setState(ISS_OFF);
+        CoolerSP.setState(IPS_BUSY);
+        CoolerSP.apply();
+    }
+    // If !enable, SetCoolerEnabled already updated CoolerSP to IPS_IDLE.
+
+    return success;
 }
 
 bool SVBONYBase::StartExposure(float duration)
@@ -1194,6 +1241,7 @@ void SVBONYBase::temperatureTimerTimeout()
     else
     {
         mCurrentTemperature = value / 10.0;
+        coolerWarmupTick(mCurrentTemperature);
     }
 
     // Update if there is a change

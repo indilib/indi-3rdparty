@@ -54,6 +54,7 @@ class SSG3CCD : public INDI::CCD
     virtual bool AbortExposure() override;
     virtual void TimerHit() override;
     virtual int SetTemperature(double temperature) override;
+    virtual bool SetCoolerEnabled(bool enable) override;
     // Guide Port
     virtual IPState GuideNorth(uint32_t ms) override;
     virtual IPState GuideSouth(uint32_t ms) override;
@@ -69,7 +70,6 @@ class SSG3CCD : public INDI::CCD
     // Utility functions
     void setupParams();
     void grabImage();
-    bool activateCooler(bool enable);
     void updateTemperature(void);
 
 

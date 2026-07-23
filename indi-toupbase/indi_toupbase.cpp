@@ -1183,7 +1183,18 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             if (m_CoolerSP.isUpdated(states, names, n))
             {
                 m_CoolerSP.update(states, names, n);
-                activateCooler(m_CoolerSP[INDI_ENABLED].getState() == ISS_ON);
+                if (m_CoolerSP[INDI_ENABLED].getState() == ISS_ON)
+                {
+                    cancelCoolerWarmup();
+                    if (SetCoolerEnabled(true))
+                        resumeCoolingAfterWarmup();
+                }
+                else
+                {
+                    m_CoolerSP.setState(IPS_BUSY);
+                    beginCoolerWarmup(TemperatureNP[0].getValue());
+                    m_CoolerSP.apply();
+                }
             }
             else
             {
@@ -1622,7 +1633,7 @@ bool ToupBase::StopStreaming()
 int ToupBase::SetTemperature(double temperature)
 {
     // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
-    if (temperature < TemperatureNP[0].getValue() && activateCooler(true) == false)
+    if (temperature < TemperatureNP[0].getValue() && SetCoolerEnabled(true) == false)
     {
         LOG_ERROR("Failed to toggle cooler.");
         return -1;
@@ -1642,7 +1653,7 @@ int ToupBase::SetTemperature(double temperature)
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ToupBase::activateCooler(bool enable)
+bool ToupBase::SetCoolerEnabled(bool enable)
 {
     int val = 0;
     auto isCoolerOn = false;
@@ -1666,19 +1677,28 @@ bool ToupBase::activateCooler(bool enable)
     }
     else
     {
-        m_CoolerSP[enable ? INDI_ENABLED : INDI_DISABLED].setState(ISS_ON);
-        m_CoolerSP.setState(enable ? IPS_BUSY : IPS_IDLE);
-        m_CoolerSP.apply();
-
-        /* turn on TEC may force to turn on the fan */
-        if (enable && (m_Instance->model->flag & CP(FLAG_FAN)))
+        if (enable)
         {
-            int fan = 0;
-            FP(get_Option(m_Handle, CP(OPTION_FAN), &fan));
-            m_FanSP.reset();
-            for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
-                m_FanSP[i].setState((fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF);
-            m_FanSP.apply();
+            m_CoolerSP[INDI_ENABLED].setState(ISS_ON);
+            m_CoolerSP.setState(IPS_BUSY);
+            m_CoolerSP.apply();
+
+            /* turn on TEC may force to turn on the fan */
+            if (m_Instance->model->flag & CP(FLAG_FAN))
+            {
+                int fan = 0;
+                FP(get_Option(m_Handle, CP(OPTION_FAN), &fan));
+                m_FanSP.reset();
+                for (unsigned i = 0; i <= m_Instance->model->maxfanspeed; ++i)
+                    m_FanSP[i].setState((fan == static_cast<int>(i)) ? ISS_ON : ISS_OFF);
+                m_FanSP.apply();
+            }
+        }
+        else
+        {
+            m_CoolerSP[INDI_DISABLED].setState(ISS_ON);
+            m_CoolerSP.setState(IPS_IDLE);
+            m_CoolerSP.apply();
         }
 
         return true;
@@ -1885,6 +1905,7 @@ void ToupBase::TimerHit()
             TemperatureNP.setState(IPS_OK);
 
         TemperatureNP[0].setValue(nTemperature / 10.0);
+        coolerWarmupTick(TemperatureNP[0].getValue());
 
         auto threshold = HasCooler() ? 0.1 : 0.2;
 

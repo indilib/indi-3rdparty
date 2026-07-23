@@ -991,7 +991,24 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 return true;
             }
 
-            activateCooler(CoolerSP[0].getState() == ISS_ON);
+            if (CoolerSP[0].getState() == ISS_ON)
+            {
+                // User wants cooler ON: cancel any ongoing warm-up, enable hardware,
+                // then resume cooling toward the previously saved target.
+                cancelCoolerWarmup();
+                CoolerSP.setState(IPS_BUSY);
+                if (SetCoolerEnabled(true))
+                    resumeCoolingAfterWarmup();
+                CoolerSP.apply();
+            }
+            else
+            {
+                // User wants cooler OFF: begin gradual warm-up.
+                // beginCoolerWarmup() will call SetCoolerEnabled(false) when done.
+                CoolerSP.setState(IPS_BUSY);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                CoolerSP.apply();
+            }
 
             return true;
         }
@@ -1084,10 +1101,20 @@ int POABase::SetTemperature(double temperature)
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if (activateCooler(true) == false)
+    if (!SetCoolerEnabled(true))
     {
         LOG_ERROR("Failed to activate cooler.");
         return -1;
+    }
+
+    // Only update the switch display when not in a warm-up sequence (during warm-up, CoolerSP
+    // stays BUSY with OFF selected until SetCoolerEnabled(false) finalises the sequence).
+    if (!m_CoolerWarmingUp && CoolerSP.getState() != IPS_BUSY)
+    {
+        CoolerSP[0].setState(ISS_ON);
+        CoolerSP[1].setState(ISS_OFF);
+        CoolerSP.setState(IPS_BUSY);
+        CoolerSP.apply();
     }
 
     POAErrors ret;
@@ -1127,6 +1154,30 @@ bool POABase::activateCooler(bool enable)
     CoolerSP.apply();
 
     return (ret == POA_OK);
+}
+
+bool POABase::SetCoolerEnabled(bool enable)
+{
+    POAConfigValue confVal;
+    confVal.boolValue = enable ? POA_TRUE : POA_FALSE;
+    POAErrors ret = POASetConfig(mCameraInfo.cameraID, POA_COOLER, confVal, POA_FALSE);
+    if (ret != POA_OK)
+    {
+        CoolerSP.setState(IPS_ALERT);
+        LOGF_ERROR("Failed to set cooler (%s).", Helpers::toString(ret));
+        CoolerSP.apply();
+        return false;
+    }
+
+    if (!enable)
+    {
+        CoolerSP[0].setState(ISS_OFF);
+        CoolerSP[1].setState(ISS_ON);
+        CoolerSP.setState(IPS_IDLE);
+        CoolerSP.apply();
+    }
+
+    return true;
 }
 
 bool POABase::StartExposure(float duration)
@@ -1403,6 +1454,8 @@ void POABase::temperatureTimerTimeout()
     else
     {
         mCurrentTemperature = value;
+        // Drive the base-class warm-up ramp (no-op when not warming up).
+        coolerWarmupTick(mCurrentTemperature);
         // If cooling is active, show goal status
         //        if (CoolerSP[0].getState() == ISS_ON)
         //        {

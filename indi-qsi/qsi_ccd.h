@@ -60,6 +60,7 @@ protected:
     bool Disconnect() override;
 
     int SetTemperature(double temperature) override;
+    bool SetCoolerEnabled(bool enable) override;
     bool StartExposure(float duration) override;
     bool AbortExposure() override;
 

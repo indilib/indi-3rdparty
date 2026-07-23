@@ -54,6 +54,7 @@ class NightscapeCCD : public INDI::CCD
     bool StartExposure(float duration) override;
     bool AbortExposure() override;
     int SetTemperature(double temperature) override;
+    bool SetCoolerEnabled(bool enable) override;
     void TimerHit() override;
     bool saveConfigItems(FILE *fp) override;
 

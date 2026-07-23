@@ -363,9 +363,10 @@ void SXCCD::TimerHit()
         {
             unsigned char status;
             unsigned short temperature;
-            sxSetCooler(handle, (unsigned char)(CoolerS[0].s == ISS_ON),
+            sxSetCooler(handle, (unsigned char)m_CoolerEnabled,
                         (unsigned short)(TemperatureRequest * 10 + 2730), &status, &temperature);
             TemperatureNP[0].setValue((temperature - 2730) / 10.0);
+            coolerWarmupTick(TemperatureNP[0].getValue());
             if (TemperatureReported != TemperatureNP[0].getValue())
             {
                 TemperatureReported = TemperatureNP[0].getValue();
@@ -389,11 +390,12 @@ int SXCCD::SetTemperature(double temperature)
 {
     int result         = 0;
     TemperatureRequest = temperature;
+    m_CoolerEnabled    = true;
     unsigned char status;
     unsigned short sx_temperature;
-    sxSetCooler(handle, (unsigned char)(CoolerS[0].s == ISS_ON), (unsigned short)(TemperatureRequest * 10 + 2730),
+    sxSetCooler(handle, 1, (unsigned short)(TemperatureRequest * 10 + 2730),
                 &status, &sx_temperature);
-    TemperatureReported =(sx_temperature - 2730) / 10.0;
+    TemperatureReported = (sx_temperature - 2730) / 10.0;
     TemperatureNP[0].setValue((sx_temperature - 2730) / 10.0);
 
     if (std::fabs(TemperatureRequest - TemperatureReported) < 1)
@@ -401,12 +403,36 @@ int SXCCD::SetTemperature(double temperature)
     else
         result = 0;
 
-    CoolerSP.s   = IPS_OK;
-    CoolerS[0].s = ISS_ON;
-    CoolerS[1].s = ISS_OFF;
-    IDSetSwitch(&CoolerSP, nullptr);
+    // Only update cooler switch state when not already in an active/warmup state.
+    if (CoolerSP.s == IPS_IDLE)
+    {
+        CoolerSP.s   = IPS_BUSY;
+        CoolerS[0].s = ISS_ON;
+        CoolerS[1].s = ISS_OFF;
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
 
     return result;
+}
+
+bool SXCCD::SetCoolerEnabled(bool enable)
+{
+    m_CoolerEnabled = enable;
+    unsigned char status;
+    unsigned short temperature;
+    sxSetCooler(handle, (unsigned char)enable, (unsigned short)(TemperatureRequest * 10 + 2730),
+                &status, &temperature);
+    TemperatureReported = (temperature - 2730) / 10.0;
+    TemperatureNP[0].setValue((temperature - 2730) / 10.0);
+    TemperatureNP.setState(IPS_OK);
+    TemperatureNP.apply();
+
+    if (!enable)
+    {
+        CoolerSP.s = IPS_IDLE;
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
+    return true;
 }
 
 bool SXCCD::StartExposure(float n)
@@ -767,17 +793,22 @@ bool SXCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
     else if (strcmp(name, CoolerSP.name) == 0)
     {
         IUUpdateSwitch(&CoolerSP, states, names, n);
-        CoolerSP.s = IPS_OK;
-        IDSetSwitch(&CoolerSP, nullptr);
-        unsigned char status;
-        unsigned short temperature;
-        sxSetCooler(handle, (unsigned char)(CoolerS[0].s == ISS_ON), (unsigned short)(TemperatureRequest * 10 + 2730),
-                    &status, &temperature);
-        TemperatureReported = (temperature - 2730) / 10.0;
-        TemperatureNP[0].setValue((temperature - 2730) / 10.0);
-
-        TemperatureNP.setState(IPS_OK);
-        TemperatureNP.apply();
+        if (CoolerS[0].s == ISS_ON)
+        {
+            // Cooler ON: cancel any in-progress warm-up, then enable hardware.
+            cancelCoolerWarmup();
+            CoolerSP.s = IPS_BUSY;
+            IDSetSwitch(&CoolerSP, nullptr);
+            if (SetCoolerEnabled(true))
+                resumeCoolingAfterWarmup();
+        }
+        else
+        {
+            // Cooler OFF: start gradual warm-up; base class calls SetCoolerEnabled(false) when done.
+            CoolerSP.s = IPS_BUSY;
+            IDSetSwitch(&CoolerSP, nullptr);
+            beginCoolerWarmup(TemperatureNP[0].getValue());
+        }
         result = true;
     }
     //    else if (strcmp(name, BayerSP.name) == 0)

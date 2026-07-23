@@ -411,6 +411,25 @@ int NightscapeCCD::SetTemperature(double temperature)
 }
 
 /**************************************************************************************
+** Base class requests hardware cooler enable/disable (called by warm-up machinery)
+***************************************************************************************/
+bool NightscapeCCD::SetCoolerEnabled(bool enable)
+{
+    cooler = enable;
+    LOGF_INFO("Cooler is now %s", enable ? "ON" : "OFF");
+    m->sendtemp(setTemp, cooler);
+    dn->setActTemp(currentCCDTemperature.getValue());
+    if (!enable)
+    {
+        IUResetSwitch(&CoolerSP);
+        CoolerS[1].s = ISS_ON; // COOLER_OFF switch active
+        CoolerSP.s = IPS_IDLE;
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
+    return true;
+}
+
+/**************************************************************************************
 ** How much longer until exposure is done?
 ***************************************************************************************/
 float NightscapeCCD::CalcTimeLeft(timeval start, float req)
@@ -521,6 +540,7 @@ void NightscapeCCD::TimerHit()
             }
             ntemps++;
             dn->setActTemp(currentCCDTemperature.getValue());
+            coolerWarmupTick(currentCCDTemperature.getValue());
 
             /* If target temperature is higher, then increase current CCD temperature */
             //            if (fabs(currentCCDTemperature - TemperatureRequest)  < 0.1)
@@ -624,12 +644,23 @@ bool NightscapeCCD::ISNewSwitch (const char *dev, const char *name, ISState *sta
                 return true;
             }
             IUUpdateSwitch(&CoolerSP, states, names, n);
-            cooler = !IUFindOnSwitchIndex(&CoolerSP);
-            LOGF_INFO( "Cooler is now %s", CoolerS[!cooler].label);
-            CoolerSP.s = IPS_OK;
-            IDSetSwitch(&CoolerSP, nullptr);
-            m->sendtemp(setTemp, cooler);
-            dn->setActTemp(currentCCDTemperature.getValue());
+            bool turningOn = !strcmp(actionName, CoolerS[0].name); // CoolerS[0] = COOLER_ON
+            if (turningOn)
+            {
+                cancelCoolerWarmup();
+                CoolerSP.s = IPS_BUSY;
+                IDSetSwitch(&CoolerSP, nullptr);
+                if (SetCoolerEnabled(true))
+                {
+                    resumeCoolingAfterWarmup();
+                }
+            }
+            else
+            {
+                CoolerSP.s = IPS_BUSY;
+                beginCoolerWarmup(currentCCDTemperature.getValue());
+                IDSetSwitch(&CoolerSP, nullptr);
+            }
             return true;
 
         }

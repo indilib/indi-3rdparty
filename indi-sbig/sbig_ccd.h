@@ -161,6 +161,7 @@ class SBIGCCD : public INDI::CCD, public INDI::FilterInterface
 
         virtual void TimerHit() override;
         virtual int SetTemperature(double temperature) override;
+        virtual bool SetCoolerEnabled(bool enable) override;
 
 
         virtual bool saveConfigItems(FILE *fp) override;

@@ -41,9 +41,6 @@
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
 #define TEMP_THRESHOLD          .25  /* Differential temperature threshold (C)*/
-#define TEMP_AMBIENT_DEFAULT    25.0  /* Default warm-up target on cooler off (C), ASI SDK has no ambient sensor */
-#define WARMUP_STABLE_MS        60000 /* Temperature must be stable this long before warm-up is considered done */
-#define WARMUP_STABLE_DELTA     0.5   /* Maximum temperature change (C) that counts as "stable" */
 
 #define CONTROL_TAB "Controls"
 
@@ -406,9 +403,6 @@ bool ASIBase::initProperties()
     CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0);
     CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
-    WarmupTargetNP[0].fill("TEMPERATURE", "Temperature (C)", "%.1f", -50., 50., 1., TEMP_AMBIENT_DEFAULT);
-    WarmupTargetNP.fill(getDeviceName(), "CCD_WARMUP_TARGET", "Warm Up Target", MAIN_CONTROL_TAB, IP_RW, 60, IPS_IDLE);
-
     ControlNP.fill(getDeviceName(), "CCD_CONTROLS",      "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
     ControlSP.fill(getDeviceName(), "CCD_CONTROLS_MODE", "Set Auto", CONTROL_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
 
@@ -511,8 +505,6 @@ bool ASIBase::updateProperties()
             loadConfig(true, CoolerNP.getName());
             defineProperty(CoolerSP);
             loadConfig(true, CoolerSP.getName());
-            defineProperty(WarmupTargetNP);
-            loadConfig(true, WarmupTargetNP.getName());
         }
         // Even if there is no cooler, we define temperature property as READ ONLY
         else
@@ -574,7 +566,6 @@ bool ASIBase::updateProperties()
         {
             deleteProperty(CoolerNP);
             deleteProperty(CoolerSP);
-            deleteProperty(WarmupTargetNP);
         }
         else
             deleteProperty(TemperatureNP);
@@ -875,15 +866,6 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
             return true;
         }
 
-        if (WarmupTargetNP.isNameMatch(name))
-        {
-            WarmupTargetNP.update(values, names, n);
-            WarmupTargetNP.setState(IPS_OK);
-            WarmupTargetNP.apply();
-            saveConfig(WarmupTargetNP);
-            return true;
-        }
-
         // An explicit temperature request supersedes any warm-up-on-cooler-off in progress.
         if (TemperatureNP.isNameMatch(name))
             cancelCoolerWarmup();
@@ -983,11 +965,17 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             if (CoolerSP[0].getState() == ISS_ON)
             {
                 cancelCoolerWarmup();
-                activateCooler(true);
-                resumeCooling();
+                CoolerSP.setState(IPS_BUSY);
+                CoolerSP.apply();
+                if (SetCoolerEnabled(true))
+                    resumeCoolingAfterWarmup();
             }
             else
-                beginCoolerWarmup();
+            {
+                CoolerSP.setState(IPS_BUSY);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                CoolerSP.apply();
+            }
 
             return true;
         }
@@ -1110,13 +1098,19 @@ int ASIBase::SetTemperature(double temperature)
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    // While warming up towards ambient, keep the TEC engaged without flipping CoolerSP back to ON -
-    // activateCooler() would otherwise re-apply ISS_ON on every ~60s ramp step.
-    bool coolerOk = mCoolerWarmingUp ? setCoolerPower(true) : activateCooler(true);
-    if (!coolerOk)
+    if (!SetCoolerEnabled(true))
     {
         LOG_ERROR("Failed to activate cooler.");
         return -1;
+    }
+
+    // Update CoolerSP display if not already showing an active/warmup state
+    if (CoolerSP.getState() == IPS_IDLE)
+    {
+        CoolerSP[0].setState(ISS_ON);
+        CoolerSP[1].setState(ISS_OFF);
+        CoolerSP.setState(IPS_BUSY);
+        CoolerSP.apply();
     }
 
     ASI_ERROR_CODE ret;
@@ -1134,164 +1128,26 @@ int ASIBase::SetTemperature(double temperature)
     return 0;
 }
 
-bool ASIBase::setCoolerPower(bool enable)
+bool ASIBase::SetCoolerEnabled(bool enable)
 {
     ASI_ERROR_CODE ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE);
     if (ret != ASI_SUCCESS)
-        LOGF_ERROR("Failed to activate cooler (%s).", Helpers::toString(ret));
-
-    return (ret == ASI_SUCCESS);
-}
-
-bool ASIBase::activateCooler(bool enable)
-{
-    bool success = setCoolerPower(enable);
-    if (!success)
+    {
+        LOGF_ERROR("Failed to set cooler power (%s).", Helpers::toString(ret));
         CoolerSP.setState(IPS_ALERT);
-    else
-    {
-        CoolerSP[0].setState(enable ? ISS_ON  : ISS_OFF);
-        CoolerSP[1].setState(enable ? ISS_OFF : ISS_ON);
-        CoolerSP.setState(enable ? IPS_BUSY : IPS_IDLE);
-    }
-    CoolerSP.apply();
-
-    return success;
-}
-
-void ASIBase::beginCoolerWarmup()
-{
-    // Gradual warm-up only makes sense when temperature ramping is enabled; otherwise cut power immediately.
-    if (TemperatureRampNP[RAMP_SLOPE].getValue() == 0)
-    {
-        activateCooler(false);
-        return;
+        CoolerSP.apply();
+        return false;
     }
 
-    // Save before we overwrite m_TargetTemperature with the ambient value below.
-    // m_TargetTemperature (base class) holds the user's original cooling setpoint as set via
-    // ISNewNumber; mTargetTemperature (our own member) only holds the last ramp step.
-    mSavedCoolingTarget = m_TargetTemperature;
-
-    double ambientTemperature = WarmupTargetNP[0].getValue();
-    double currentTemperature = TemperatureNP[0].getValue();
-
-    // Already close enough to ambient, just cut power immediately.
-    if (std::abs(ambientTemperature - currentTemperature) <= TemperatureRampNP[RAMP_THRESHOLD].getValue())
+    if (!enable)
     {
-        activateCooler(false);
-        return;
+        CoolerSP[0].setState(ISS_OFF);
+        CoolerSP[1].setState(ISS_ON);
+        CoolerSP.setState(IPS_IDLE);
+        CoolerSP.apply();
     }
 
-    // Reflect the OFF request on the switch right away, but keep it busy until ambient is reached.
-    CoolerSP[0].setState(ISS_OFF);
-    CoolerSP[1].setState(ISS_ON);
-    CoolerSP.setState(IPS_BUSY);
-    CoolerSP.apply();
-
-    mCoolerWarmingUp = true;
-    mWarmupLastTemperature = mCurrentTemperature;
-    mCoolerZeroPowerTimer.start();
-
-    double nextTemperature = (ambientTemperature < currentTemperature)
-                              ? std::max(ambientTemperature, currentTemperature - TemperatureRampNP[RAMP_SLOPE].getValue())
-                              : std::min(ambientTemperature, currentTemperature + TemperatureRampNP[RAMP_SLOPE].getValue());
-
-    int rc = SetTemperature(nextTemperature);
-    if (rc == -1)
-    {
-        LOG_ERROR("Failed to initiate cooler warm-up, turning cooler off immediately.");
-        mCoolerWarmingUp = false;
-        activateCooler(false);
-        return;
-    }
-
-    if (rc == 1)
-    {
-        // SetTemperature() considered us already at the next step, we're effectively at ambient.
-        mCoolerWarmingUp = false;
-        activateCooler(false);
-        return;
-    }
-
-    m_TemperatureElapsedTimer.start();
-    m_TargetTemperature = ambientTemperature;
-    m_TemperatureCheckTimer.start();
-    TemperatureNP.setState(IPS_BUSY);
-    TemperatureNP.apply();
-
-    LOGF_INFO("Cooler is warming up to ambient temperature (%.1f C)...", ambientTemperature);
-}
-
-void ASIBase::cancelCoolerWarmup()
-{
-    if (!mCoolerWarmingUp)
-        return;
-
-    mCoolerWarmingUp = false;
-    m_TemperatureCheckTimer.stop();
-
-    if (TemperatureNP.getState() == IPS_BUSY)
-    {
-        TemperatureNP.setState(IPS_OK);
-        TemperatureNP.apply();
-    }
-}
-
-void ASIBase::finishCoolerWarmup(const char *reason)
-{
-    if (!mCoolerWarmingUp)
-        return;
-
-    mCoolerWarmingUp = false;
-    m_TemperatureCheckTimer.stop();
-
-    if (TemperatureNP.getState() == IPS_BUSY)
-    {
-        TemperatureNP.setState(IPS_OK);
-        TemperatureNP.apply();
-    }
-
-    activateCooler(false);
-    LOGF_INFO("Cooler is now off, %s.", reason);
-}
-
-void ASIBase::resumeCooling()
-{
-    // Nothing saved yet (cooler activated for the first time, never warmed up before)
-    // or saved target is not actually below the current temperature – nothing to do.
-    if (mSavedCoolingTarget >= TemperatureNP[0].getValue())
-        return;
-
-    double nextTemperature = mSavedCoolingTarget;
-    if (TemperatureRampNP[RAMP_SLOPE].getValue() != 0)
-        nextTemperature = std::max(mSavedCoolingTarget,
-                                   TemperatureNP[0].getValue() - TemperatureRampNP[RAMP_SLOPE].getValue());
-
-    int rc = SetTemperature(nextTemperature);
-    if (rc == 0)
-    {
-        if (TemperatureRampNP[RAMP_SLOPE].getValue() != 0)
-            m_TemperatureElapsedTimer.start();
-        m_TargetTemperature = mSavedCoolingTarget;
-        m_TemperatureCheckTimer.start();
-        TemperatureNP.setState(IPS_BUSY);
-        TemperatureNP.apply();
-        LOGF_INFO("Resuming cooling to %.2f C.", mSavedCoolingTarget);
-    }
-    else if (rc == 1)
-    {
-        TemperatureNP.setState(IPS_OK);
-        TemperatureNP.apply();
-    }
-}
-
-void ASIBase::checkTemperatureTarget()
-{
-    INDI::CCD::checkTemperatureTarget();
-
-    if (mCoolerWarmingUp && TemperatureNP.getState() != IPS_BUSY)
-        finishCoolerWarmup("ambient temperature reached");
+    return true;
 }
 
 bool ASIBase::StartExposure(float duration)
@@ -1593,6 +1449,8 @@ void ASIBase::temperatureTimerTimeout()
         TemperatureNP.apply();
     }
 
+    coolerWarmupTick(mCurrentTemperature);
+
     if (HasCooler())
     {
         ret = ASIGetControlValue(mCameraInfo.CameraID, ASI_COOLER_POWER_PERC, &value, &isAuto);
@@ -1605,23 +1463,6 @@ void ASIBase::temperatureTimerTimeout()
         {
             CoolerNP[0].setValue(value);
             CoolerNP.setState(value > 0 ? IPS_BUSY : IPS_IDLE);
-
-            // Secondary completion check: ASI TECs are unidirectional — they cannot heat,
-            // so power stays at 0% for the entire warm-up ramp regardless of progress.
-            // A sustained 0% therefore tells us nothing useful during warm-up.
-            // Instead check temperature stability: once the reading stops changing the camera
-            // has reached thermal equilibrium with its environment (which may be below the
-            // configured warm-up target if room temperature is cooler than 25 °C).
-            if (mCoolerWarmingUp)
-            {
-                if (std::abs(mCurrentTemperature - mWarmupLastTemperature) > WARMUP_STABLE_DELTA)
-                {
-                    mWarmupLastTemperature = mCurrentTemperature;
-                    mCoolerZeroPowerTimer.start();
-                }
-                else if (mCoolerZeroPowerTimer.hasExpired(WARMUP_STABLE_MS))
-                    finishCoolerWarmup("temperature has stabilized");
-            }
         }
         CoolerNP.apply();
     }
@@ -1893,7 +1734,6 @@ bool ASIBase::saveConfigItems(FILE *fp)
     if (HasCooler())
     {
         CoolerSP.save(fp);
-        WarmupTargetNP.save(fp);
     }
 
     if (!ControlNP.isEmpty())

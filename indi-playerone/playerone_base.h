@@ -56,6 +56,7 @@ class POABase : public INDI::CCD
         virtual int SetTemperature(double temperature) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
+        virtual bool SetCoolerEnabled(bool enable) override;
 
     protected:
 

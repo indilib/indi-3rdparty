@@ -1656,19 +1656,16 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
 
             bool enabled = (CoolerS[COOLER_ON].s == ISS_ON);
 
-            // If explicitly enabled, we always set temperature to 0
+            // If explicitly enabled, cancel any in-progress warm-up then resume cooling.
             if (enabled)
             {
+                cancelCoolerWarmup();
                 if (HasCoolerAutoMode)
                 {
-                    double targetTemperature = TemperatureNP[0].getValue();
-                    if (targetTemperature > 0)
-                        targetTemperature = 0;
-                    if (SetTemperature(targetTemperature) == 0)
-                    {
-                        TemperatureNP.setState(IPS_BUSY);
-                        TemperatureNP.apply();
-                    }
+                    CoolerSP.s = IPS_BUSY;
+                    IDSetSwitch(&CoolerSP, nullptr);
+                    if (SetCoolerEnabled(true))
+                        resumeCoolingAfterWarmup();
                     return true;
                 }
                 else
@@ -1683,32 +1680,9 @@ bool QHYCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, cha
             }
             else
             {
-                if (HasCoolerManualMode)
-                {
-                    m_PWMRequest = 0;
-                    m_TemperatureRequest = 30;
-                    SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, 0);
-
-                    CoolerSP.s = IPS_IDLE;
-                    IDSetSwitch(&CoolerSP, nullptr);
-
-                    TemperatureNP.setState(IPS_IDLE);
-                    TemperatureNP.apply();
-
-                    setCoolerMode(COOLER_MANUAL);
-                    LOG_INFO("Camera is warming up.");
-                }
-                else
-                {
-                    // Warm up the camera in auto mode
-                    if (SetTemperature(30) == 0)
-                    {
-                        TemperatureNP.setState(IPS_IDLE);
-                        TemperatureNP.apply();
-                    }
-                    LOG_INFO("Camera is warming up.");
-                    return true;
-                }
+                CoolerSP.s = IPS_BUSY;
+                IDSetSwitch(&CoolerSP, nullptr);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
             }
 
             return true;
@@ -2222,6 +2196,54 @@ void QHYCCD::setCoolerEnabled(bool enable)
     IDSetSwitch(&CoolerSP, nullptr);
 }
 
+bool QHYCCD::SetCoolerEnabled(bool enable)
+{
+    if (!enable)
+    {
+        if (HasCoolerManualMode)
+        {
+            m_PWMRequest = 0;
+            m_TemperatureRequest = 30;
+            SetQHYCCDParam(m_CameraHandle, CONTROL_MANULPWM, 0);
+        }
+        else
+        {
+            // Auto-mode only: leave the SDK targeting 30 °C so the hardware idles at ambient.
+            m_TemperatureRequest = 30;
+        }
+
+        IUResetSwitch(&CoolerSP);
+        CoolerS[COOLER_ON].s = ISS_OFF;
+        CoolerS[COOLER_OFF].s = ISS_ON;
+        CoolerSP.s = IPS_IDLE;
+        IDSetSwitch(&CoolerSP, nullptr);
+
+        TemperatureNP.setState(IPS_IDLE);
+        TemperatureNP.apply();
+
+        return true;
+    }
+    else
+    {
+        if (HasCoolerAutoMode)
+        {
+            // Start cooling toward 0 °C by default (or hold current if already below 0).
+            double targetTemperature = TemperatureNP[0].getValue();
+            if (targetTemperature > 0)
+                targetTemperature = 0;
+            m_TemperatureRequest = targetTemperature;
+            m_PWMRequest = -1;
+            SetQHYCCDParam(m_CameraHandle, CONTROL_COOLER, m_TemperatureRequest);
+            setCoolerMode(COOLER_AUTOMATIC);
+
+            TemperatureNP.setState(IPS_BUSY);
+            TemperatureNP.apply();
+        }
+        // CoolerSP is already IPS_BUSY — set by the caller.
+        return true;
+    }
+}
+
 bool QHYCCD::isQHY5PIIC()
 {
     return std::string(m_CamID, 9) == "QHY5PII-C";
@@ -2270,6 +2292,8 @@ void QHYCCD::updateTemperature()
         currentTemperature   = GetQHYCCDParam(m_CameraHandle, CONTROL_CURTEMP);
         currentCoolingPower = GetQHYCCDParam(m_CameraHandle, CONTROL_CURPWM);
     }
+
+    coolerWarmupTick(currentTemperature);
 
     // Only update if above update threshold
     if (std::abs(currentTemperature - TemperatureNP[0].getValue()) > UPDATE_THRESHOLD)
