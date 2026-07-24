@@ -399,8 +399,9 @@ bool NightscapeCCD::AbortExposure()
 /**************************************************************************************
 ** Client is asking us to set a new temperature
 ***************************************************************************************/
-int NightscapeCCD::SetTemperature(double temperature)
+int NightscapeCCD::SetTemperature(double temperature, bool enableCooler)
 {
+    INDI_UNUSED(enableCooler);
     setTemp = TemperatureRequest = temperature;
     m->sendtemp(setTemp, cooler);
     dn->setSetTemp(setTemp);

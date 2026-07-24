@@ -1243,7 +1243,7 @@ bool QHYCCD::setupParams()
     return true;
 }
 
-int QHYCCD::SetTemperature(double temperature)
+int QHYCCD::SetTemperature(double temperature, bool enableCooler)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
     if (fabs(temperature - TemperatureNP[0].getValue()) < UPDATE_THRESHOLD)
@@ -1256,8 +1256,11 @@ int QHYCCD::SetTemperature(double temperature)
 
     SetQHYCCDParam(m_CameraHandle, CONTROL_COOLER, m_TemperatureRequest);
 
-    setCoolerEnabled(m_TemperatureRequest <= TemperatureNP[0].getValue());
-    setCoolerMode(COOLER_AUTOMATIC);
+    if (enableCooler)
+    {
+        setCoolerEnabled(m_TemperatureRequest <= TemperatureNP[0].getValue());
+        setCoolerMode(COOLER_AUTOMATIC);
+    }
     return 0;
 }
 

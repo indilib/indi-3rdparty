@@ -1094,27 +1094,26 @@ bool POABase::setVideoFormat(uint8_t index)
     return true;
 }
 
-int POABase::SetTemperature(double temperature)
+int POABase::SetTemperature(double temperature, bool enableCooler)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    // #PS: how will it warm up?
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if (!SetCoolerEnabled(true))
+    if (enableCooler)
     {
-        LOG_ERROR("Failed to activate cooler.");
-        return -1;
-    }
-
-    // Only update the switch display when not in a warm-up sequence (during warm-up, CoolerSP
-    // stays BUSY with OFF selected until SetCoolerEnabled(false) finalises the sequence).
-    if (!m_CoolerWarmingUp && CoolerSP.getState() != IPS_BUSY)
-    {
-        CoolerSP[0].setState(ISS_ON);
-        CoolerSP[1].setState(ISS_OFF);
-        CoolerSP.setState(IPS_BUSY);
-        CoolerSP.apply();
+        if (!SetCoolerEnabled(true))
+        {
+            LOG_ERROR("Failed to activate cooler.");
+            return -1;
+        }
+        if (CoolerSP[0].getState() == ISS_OFF)
+        {
+            CoolerSP[0].setState(ISS_ON);
+            CoolerSP[1].setState(ISS_OFF);
+            CoolerSP.setState(IPS_BUSY);
+            CoolerSP.apply();
+        }
     }
 
     POAErrors ret;

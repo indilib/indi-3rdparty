@@ -489,8 +489,9 @@ bool FLICCD::setupParams()
     return true;
 }
 
-int FLICCD::SetTemperature(double temperature)
+int FLICCD::SetTemperature(double temperature, bool enableCooler )
 {
+    INDI_UNUSED(enableCooler);
     int err = 0;
 
     if (!sim && (err = FLISetTemperature(fli_dev, temperature)))

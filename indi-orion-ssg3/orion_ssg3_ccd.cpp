@@ -436,7 +436,7 @@ void SSG3CCD::grabImage()
 /**
  * Set the CCD temperature
  */
-int SSG3CCD::SetTemperature(double temperature)
+int SSG3CCD::SetTemperature(double temperature, bool enableCooler)
 {
     LOGF_INFO("Setting temperature to %.2f C.", temperature);
 
@@ -445,7 +445,7 @@ int SSG3CCD::SetTemperature(double temperature)
     if (std::abs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
         return 1;
 
-    if (!SetCoolerEnabled(true))
+    if (enableCooler && !SetCoolerEnabled(true))
     {
         return -1;
     }

@@ -66,7 +66,7 @@ class QHYCCD : public INDI::CCD, public INDI::FilterInterface
     protected:
 
         // Temperature
-        virtual int SetTemperature(double temperature) override;
+        virtual int SetTemperature(double temperature, bool enableCooler = false) override;
         virtual bool SetCoolerEnabled(bool enable) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;

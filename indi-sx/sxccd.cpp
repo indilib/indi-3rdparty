@@ -386,7 +386,7 @@ void SXCCD::TimerHit()
         SetTimer(TIMER);
 }
 
-int SXCCD::SetTemperature(double temperature)
+int SXCCD::SetTemperature(double temperature, bool enableCooler)
 {
     int result         = 0;
     TemperatureRequest = temperature;
@@ -404,7 +404,7 @@ int SXCCD::SetTemperature(double temperature)
         result = 0;
 
     // Only update cooler switch state when not already in an active/warmup state.
-    if (CoolerSP.s == IPS_IDLE)
+    if (enableCooler && CoolerSP.s == IPS_IDLE)
     {
         CoolerSP.s   = IPS_BUSY;
         CoolerS[0].s = ISS_ON;

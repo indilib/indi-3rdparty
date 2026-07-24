@@ -79,7 +79,7 @@ class SXCCD : public INDI::CCD
         bool UpdateCCDBin(int hor, int ver);
         bool Connect();
         bool Disconnect();
-        int SetTemperature(double temperature);
+        int SetTemperature(double temperature, bool enableCooler = false);
         bool SetCoolerEnabled(bool enable);
         bool StartExposure(float n);
         bool AbortExposure();

@@ -1011,29 +1011,26 @@ bool SVBONYBase::setVideoFormat(uint8_t index)
     return true;
 }
 
-int SVBONYBase::SetTemperature(double temperature)
+int SVBONYBase::SetTemperature(double temperature, bool enableCooler)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    // Enable the hardware TEC without touching CoolerSP; the caller is responsible for the
-    // switch presentation (e.g. during warm-up the switch stays in the OFF+BUSY state).
-    if (!SetCoolerEnabled(true))
+    if (enableCooler)
     {
-        LOG_ERROR("Failed to activate cooler.");
-        return -1;
-    }
-
-    // Update CoolerSP only when we are not in a warm-up sequence.
-    // During warm-up, CoolerSP is already IPS_BUSY with OFF selected; flipping it back to
-    // ON+BUSY here would confuse the user.
-    if (!m_CoolerWarmingUp && CoolerSP.getState() != IPS_BUSY)
-    {
-        CoolerSP[0].setState(ISS_ON);
-        CoolerSP[1].setState(ISS_OFF);
-        CoolerSP.setState(IPS_BUSY);
-        CoolerSP.apply();
+        if (!SetCoolerEnabled(true))
+        {
+            LOG_ERROR("Failed to activate cooler.");
+            return -1;
+        }
+        if (CoolerSP[0].getState() == ISS_OFF)
+        {
+            CoolerSP[0].setState(ISS_ON);
+            CoolerSP[1].setState(ISS_OFF);
+            CoolerSP.setState(IPS_BUSY);
+            CoolerSP.apply();
+        }
     }
 
     SVB_ERROR_CODE ret;

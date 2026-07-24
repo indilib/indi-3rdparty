@@ -1047,7 +1047,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
-int ATIKCCD::SetTemperature(double temperature)
+int ATIKCCD::SetTemperature(double temperature, bool enableCooler)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
     if (fabs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
@@ -1069,7 +1069,7 @@ int ATIKCCD::SetTemperature(double temperature)
 
     // Skip the CoolerSP display update during a warm-up sequence — the switch stays BUSY with
     // OFF selected until SetCoolerEnabled(false) finalises the ramp.
-    if (!m_CoolerWarmingUp)
+    if (enableCooler)
         activateCooler(true);
 
     return 0;

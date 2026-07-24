@@ -322,13 +322,13 @@ bool ApogeeCCD::getCameraParams()
     return true;
 }
 
-int ApogeeCCD::SetTemperature(double temperature)
+int ApogeeCCD::SetTemperature(double temperature, bool enableCooler)
 {
     // If less than 0.1 of a degree, let's just return OK
     if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
 
-    if (!m_CoolerWarmingUp)
+    if (enableCooler)
         activateCooler(true);
 
     try

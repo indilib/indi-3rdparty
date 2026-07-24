@@ -1630,10 +1630,10 @@ bool ToupBase::StopStreaming()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-int ToupBase::SetTemperature(double temperature)
+int ToupBase::SetTemperature(double temperature, bool enableCooler)
 {
     // JM 2023.11.21: Only activate cooler if the requested temperature is below current temperature
-    if (temperature < TemperatureNP[0].getValue() && SetCoolerEnabled(true) == false)
+    if (enableCooler && temperature < TemperatureNP[0].getValue() && SetCoolerEnabled(true) == false)
     {
         LOG_ERROR("Failed to toggle cooler.");
         return -1;

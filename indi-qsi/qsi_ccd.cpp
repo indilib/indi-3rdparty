@@ -445,7 +445,7 @@ bool QSICCD::setupParams()
     return true;
 }
 
-int QSICCD::SetTemperature(double temperature)
+int QSICCD::SetTemperature(double temperature, bool enableCooler)
 {
     bool canSetTemp;
     try
@@ -470,7 +470,7 @@ int QSICCD::SetTemperature(double temperature)
     if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
 
-    if (!m_CoolerWarmingUp)
+    if (enableCooler)
         activateCooler(true);
 
     try

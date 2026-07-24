@@ -477,8 +477,9 @@ bool MICCD::setupParams()
     return true;
 }
 
-int MICCD::SetTemperature(double temperature)
+int MICCD::SetTemperature(double temperature, bool enableCooler)
 {
+    INDI_UNUSED(enableCooler);
     // If there difference, for example, is less than TEMP_THRESHOLD degrees, let's immediately return OK.
     if (fabs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
         return 1;

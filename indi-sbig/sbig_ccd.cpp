@@ -1030,7 +1030,7 @@ bool SBIGCCD::setupParams()
     return true;
 }
 
-int SBIGCCD::SetTemperature(double temperature)
+int SBIGCCD::SetTemperature(double temperature, bool enableCooler)
 {
     if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
@@ -1039,7 +1039,7 @@ int SBIGCCD::SetTemperature(double temperature)
         // Set property to busy and poll in ISPoll for CCD temp
         TemperatureRequest = temperature;
         LOGF_INFO("Temperature set to %+.1fC", temperature);
-        if (!m_CoolerWarmingUp && CoolerS[0].s != ISS_ON)
+        if (enableCooler && CoolerS[0].s != ISS_ON)
         {
             CoolerS[0].s = ISS_ON;
             CoolerS[1].s = ISS_OFF;
