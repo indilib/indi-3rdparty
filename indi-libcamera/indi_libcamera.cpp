@@ -31,6 +31,8 @@
 #include "core/rpicam_encoder.hpp"
 #include "output/output.hpp"
 
+#include <libcamera/camera_manager.h>
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -48,6 +50,8 @@
 #include <cstring>
 
 #define CONTROL_TAB "Controls"
+
+static constexpr const char *DRIVER_NAME = "LibCamera";
 
 namespace
 {
@@ -99,7 +103,8 @@ INDILibCamera::INDILibCamera(uint8_t index, std::shared_ptr<libcamera::Camera> c
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
     auto model = m_ControlList.get(properties::Model).value();
-    auto fullName = std::string("LibCamera ")
+    auto fullName = std::string(DRIVER_NAME)
+              + " "
               + std::string(model)
               + "-"
               + std::to_string(index);
@@ -111,7 +116,7 @@ INDILibCamera::INDILibCamera(uint8_t index, std::shared_ptr<libcamera::Camera> c
 /////////////////////////////////////////////////////////////////////////////
 const char *INDILibCamera::getDefaultName()
 {
-    return "LibCamera";
+    return DRIVER_NAME;
 }
 
 /////////////////////////////////////////////////////////////////////////////
@@ -733,6 +738,10 @@ bool INDILibCamera::initProperties()
 
     LOGF_DEBUG("Initializing properties for %s", getDeviceName());
     INDI::CCD::initProperties();
+
+    LibCameraVersionTP[0].fill("VERSION", "Version", libcamera::CameraManager::version().c_str());
+    LibCameraVersionTP.fill(getDeviceName(), "LIBCAMERA_VERSION", "LibCamera", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    registerProperty(LibCameraVersionTP);
 
     // Temperature is read-only (sensor temp, no cooler control).
     // IP_RO causes the base class to include CCD-TEMP in FITS automatically.

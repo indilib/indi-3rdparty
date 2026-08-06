@@ -154,6 +154,7 @@ class INDILibCamera : public INDI::CCD
             AdjustAwbRed, AdjustAwbBlue
         };
 
+        INDI::PropertyText  LibCameraVersionTP {1};
         INDI::PropertySwitch AdjustExposureModeSP {0}, AdjustAwbModeSP {0}, AdjustMeteringModeSP {0}, AdjustDenoiseModeSP {0} ;
         INDI::PropertyNumber AdjustmentNP {AdjustAwbBlue + 1};
         INDI::PropertyNumber GainNP {1};
