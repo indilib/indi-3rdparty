@@ -31,6 +31,8 @@
 #include "core/rpicam_encoder.hpp"
 #include "output/output.hpp"
 
+#include <libcamera/camera_manager.h>
+
 #include <algorithm>
 #include <cmath>
 #include <vector>
@@ -736,6 +738,10 @@ bool INDILibCamera::initProperties()
 
     LOGF_DEBUG("Initializing properties for %s", getDeviceName());
     INDI::CCD::initProperties();
+
+    LibCameraVersionTP[0].fill("VERSION", "Version", libcamera::CameraManager::version().c_str());
+    LibCameraVersionTP.fill(getDeviceName(), "LIBCAMERA_VERSION", "LibCamera", INFO_TAB, IP_RO, 60, IPS_IDLE);
+    registerProperty(LibCameraVersionTP);
 
     // Temperature is read-only (sensor temp, no cooler control).
     // IP_RO causes the base class to include CCD-TEMP in FITS automatically.
