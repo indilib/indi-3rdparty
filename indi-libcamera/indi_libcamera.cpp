@@ -49,6 +49,8 @@
 
 #define CONTROL_TAB "Controls"
 
+static constexpr const char *DRIVER_NAME = "LibCamera";
+
 namespace
 {
 constexpr const char *HCG_SYSFS =
@@ -99,7 +101,8 @@ INDILibCamera::INDILibCamera(uint8_t index, std::shared_ptr<libcamera::Camera> c
     setVersion(LIBCAMERA_VERSION_MAJOR, LIBCAMERA_VERSION_MINOR);
     signal(SIGBUS, default_signal_handler);
     auto model = m_ControlList.get(properties::Model).value();
-    auto fullName = std::string("LibCamera ")
+    auto fullName = std::string(DRIVER_NAME)
+              + " "
               + std::string(model)
               + "-"
               + std::to_string(index);
@@ -111,7 +114,7 @@ INDILibCamera::INDILibCamera(uint8_t index, std::shared_ptr<libcamera::Camera> c
 /////////////////////////////////////////////////////////////////////////////
 const char *INDILibCamera::getDefaultName()
 {
-    return "LibCamera";
+    return DRIVER_NAME;
 }
 
 /////////////////////////////////////////////////////////////////////////////
