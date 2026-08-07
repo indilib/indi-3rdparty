@@ -206,8 +206,9 @@ bool FishCampCCD::setGain(double gain)
     return true;
 }
 
-int FishCampCCD::SetTemperature(double temperature)
+int FishCampCCD::SetTemperature(double temperature, bool enableCooler)
 {
+    INDI_UNUSED(enableCooler);
     TemperatureRequest = temperature;
 
     int rc = fcUsb_cmd_setTemperature(cameraNum, TemperatureRequest);

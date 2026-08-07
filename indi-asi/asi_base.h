@@ -34,6 +34,7 @@
 
 #include <indiccd.h>
 #include <inditimer.h>
+#include <indielapsedtimer.h>
 
 class SingleWorker;
 class ASIBase : public INDI::CCD
@@ -52,7 +53,8 @@ class ASIBase : public INDI::CCD
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-        virtual int SetTemperature(double temperature) override;
+        virtual int SetTemperature(double temperature, bool enableCooler = false) override;
+        virtual bool SetCoolerEnabled(bool enable) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
 
@@ -123,9 +125,6 @@ class ASIBase : public INDI::CCD
 
         /** Update SER recorder video format */
         void updateRecorderFormat();
-
-        /** Control cooler */
-        bool activateCooler(bool enable);
 
         /** Set Video Format */
         bool setVideoFormat(uint8_t index);

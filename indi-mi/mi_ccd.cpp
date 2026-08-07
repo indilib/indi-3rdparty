@@ -477,8 +477,9 @@ bool MICCD::setupParams()
     return true;
 }
 
-int MICCD::SetTemperature(double temperature)
+int MICCD::SetTemperature(double temperature, bool enableCooler)
 {
+    INDI_UNUSED(enableCooler);
     // If there difference, for example, is less than TEMP_THRESHOLD degrees, let's immediately return OK.
     if (fabs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
         return 1;
@@ -494,6 +495,35 @@ int MICCD::SetTemperature(double temperature)
     }
 
     return 0;
+}
+
+bool MICCD::SetCoolerEnabled(bool enable)
+{
+    if (isSimulation())
+    {
+        if (!enable)
+        {
+            CoolerSP.s = IPS_IDLE;
+            IDSetSwitch(&CoolerSP, nullptr);
+        }
+        return true;
+    }
+
+    double temp = enable ? TemperatureRequest : TEMP_COOLER_OFF;
+    if (gxccd_set_temperature(cameraHandle, temp) < 0)
+    {
+        char errorStr[MAX_ERROR_LEN];
+        gxccd_get_last_error(cameraHandle, errorStr, sizeof(errorStr));
+        LOGF_ERROR("Setting temperature failed: %s.", errorStr);
+        return false;
+    }
+
+    if (!enable)
+    {
+        CoolerSP.s = IPS_IDLE;
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
+    return true;
 }
 
 bool MICCD::StartExposure(float duration)
@@ -791,21 +821,25 @@ bool MICCD::ISNewSwitch(const char *dev, const char *name, ISState *states, char
         }
         else if (!strcmp(name, CoolerSP.name))
         {
-
             IUUpdateSwitch(&CoolerSP, states, names, n);
-            CoolerSP.s = IPS_OK;
 
-            if (HasCooler() && !isSimulation())
+            if (HasCooler())
             {
                 bool on = !IUFindOnSwitchIndex(&CoolerSP);
-                double temp = on ? TemperatureRequest : TEMP_COOLER_OFF;
 
-                if (gxccd_set_temperature(cameraHandle, temp) < 0)
+                if (on)
                 {
-                    char errorStr[MAX_ERROR_LEN];
-                    gxccd_get_last_error(cameraHandle, errorStr, sizeof(errorStr));
-                    LOGF_ERROR("Setting temperature failed: %s.", errorStr);
-                    CoolerSP.s = IPS_ALERT;
+                    cancelCoolerWarmup();
+                    CoolerSP.s = IPS_OK;
+                    if (SetCoolerEnabled(true))
+                        resumeCoolingAfterWarmup();
+                    else
+                        CoolerSP.s = IPS_ALERT;
+                }
+                else
+                {
+                    CoolerSP.s = IPS_BUSY;
+                    beginCoolerWarmup(TemperatureNP[0].getValue());
                 }
             }
 
@@ -966,6 +1000,7 @@ void MICCD::updateTemperature()
     }
 
     TemperatureNP[0].setValue(ccdtemp);
+    coolerWarmupTick(ccdtemp);
     CoolerN[0].value      = ccdpower * 100.0;
 
     //    if (TemperatureNP.s == IPS_BUSY && fabs(TemperatureN[0].value - TemperatureRequest) <= TEMP_THRESHOLD)
