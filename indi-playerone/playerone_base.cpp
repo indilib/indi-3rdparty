@@ -149,7 +149,8 @@ bool POABase::stopExposure()
 void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 {
     POAErrors ret;
-    double ExposureRequest = 1.0 / Streamer->getTargetFPS();
+    double currentTargetFPS = Streamer->getTargetFPS();
+    double ExposureRequest = 1.0 / currentTargetFPS;
     POAConfigValue confVal;
 #ifdef USE_POA_EXP
     confVal.floatValue = static_cast<double>(ExposureRequest * 0.95);
@@ -176,6 +177,28 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 
     while (!isAbortToQuit)
     {
+        // Re-poll the target FPS each iteration: INDI's StreamManager updates
+        // it when the client writes STREAMING_EXPOSURE_VALUE, but this worker
+        // otherwise locks in the exposure captured at stream start and
+        // silently ignores every subsequent mid-stream exposure change —
+        // clients are forced to stop and restart the stream just to adjust
+        // brightness.
+        double newTargetFPS = Streamer->getTargetFPS();
+        if (std::abs(newTargetFPS - currentTargetFPS) > 0.001 && newTargetFPS > 0)
+        {
+            currentTargetFPS = newTargetFPS;
+            ExposureRequest = 1.0 / currentTargetFPS;
+#ifdef USE_POA_EXP
+            confVal.floatValue = static_cast<double>(ExposureRequest * 0.95);
+            POASetConfig(mCameraInfo.cameraID, POA_EXP, confVal, POA_FALSE);
+#else
+            confVal.intValue = static_cast<long>(ExposureRequest * 950000.0);
+            POASetConfig(mCameraInfo.cameraID, POA_EXPOSURE, confVal, POA_FALSE);
+#endif
+            waitMS = static_cast<int>((ExposureRequest * 1000.0) + 500);
+            LOGF_INFO("Streaming exposure updated mid-stream: target FPS %.3f", currentTargetFPS);
+        }
+
         ret = POAGetImageData(mCameraInfo.cameraID, targetFrame, totalBytes, waitMS);
         if (ret != POA_OK)
         {
