@@ -74,6 +74,9 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Sun Aug 9 2026 Hiroshi Saito <hiro3110g@gmail.com>
+- BugFix: Error handling of getImageData()/getExposure()
+- Replace usleep() to wait_for()
 * Sat Jan 24 2026 Hiroshi Saito <hiro3110g@gmail.com>
 - Update PlayerOneCamera SDK to v3.10.0
 - Update PlayerOnePW SDK to v1.2.3

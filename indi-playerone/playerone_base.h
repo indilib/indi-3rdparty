@@ -28,6 +28,8 @@
 #include "indisinglethreadpool.h"
 
 #include <vector>
+#include <mutex>
+#include <condition_variable>
 
 #include <indiccd.h>
 #include <inditimer.h>
@@ -88,6 +90,8 @@ class POABase : public INDI::CCD
 
     protected:
         INDI::SingleThreadPool mWorker;
+        std::mutex mExposureMutex;
+        std::condition_variable mExposureWakeup;
         void workerStreamVideo(const std::atomic_bool &isAbortToQuit);
         void workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int blinks, float duration);
         void workerExposure(const std::atomic_bool &isAbortToQuit, float duration);

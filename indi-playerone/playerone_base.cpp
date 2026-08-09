@@ -35,6 +35,8 @@
 #include <vector>
 #include <map>
 #include <unistd.h>
+#include <thread>
+#include <chrono>
 
 
 
@@ -83,7 +85,7 @@ long POABase::getExposure()
     if(error != POA_OK)
     {
         LOGF_ERROR("get exposure failed:  (%s).", Helpers::toString(error));
-        return false;
+        return -1;
     }
 
     return exposValue.intValue;
@@ -123,12 +125,18 @@ bool POABase::isImgDataAvailable()
 bool POABase::getImageData(unsigned char *pDataBuffer, unsigned long size)
 {
     long exposureUs = getExposure();
-    POAErrors error = POAGetImageData(mCameraInfo.cameraID, pDataBuffer, size, exposureUs /1000 + 500);
+    if (exposureUs < 0)
+    {
+        LOG_ERROR("GetImageData failed because getExposure() returned an error.");
+        return false;
+    }
+
+    POAErrors error = POAGetImageData(mCameraInfo.cameraID, pDataBuffer, size, exposureUs / 1000 + 500);
 
     if (error != POA_OK )
         LOGF_ERROR("GetImageData failed:  (%s).", Helpers::toString(error));
 
-    return error == POA_OK ? true : false;
+    return error == POA_OK;
 }
 
 bool POABase::stopExposure()
@@ -168,6 +176,7 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
     if (ret != POA_OK)
     {
         LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
+        return;
     }
 
     uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
@@ -186,7 +195,8 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
                 break;
             }
 
-            usleep(100);
+            std::unique_lock<std::mutex> waitLock(mExposureMutex);
+            mExposureWakeup.wait_for(waitLock, std::chrono::milliseconds(100), [&isAbortToQuit](){ return isAbortToQuit.load(); });
             continue;
         }
 
@@ -215,7 +225,7 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
 
     ret = POASetConfig(mCameraInfo.cameraID, POA_EXP, confVal, POA_FALSE);
 #else
-    confVal.intValue = duration * 1000 * 1000;
+    confVal.intValue = static_cast<long>(duration * 1000 * 1000);
 
     LOGF_DEBUG("Blinking %ld time(s) before exposure.", blinks);
 
@@ -223,7 +233,11 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
 #endif
     if (ret != POA_OK)
     {
+#ifdef USE_POA_EXP
+        LOGF_ERROR("Failed to set blink exposure to %.6fs (%s).", confVal.floatValue, Helpers::toString(ret));
+#else
         LOGF_ERROR("Failed to set blink exposure to %ldus (%s).", confVal.intValue, Helpers::toString(ret));
+#endif
         return;
     }
 
@@ -243,7 +257,10 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
             if (isAbortToQuit)
                 return;
 
-            usleep(100 * 1000);
+            std::unique_lock<std::mutex> stateLock(mExposureMutex);
+            mExposureWakeup.wait_for(stateLock, std::chrono::milliseconds(100), [&isAbortToQuit](){ return isAbortToQuit.load(); });
+            if (isAbortToQuit)
+                return;
             ret = POAGetCameraState(mCameraInfo.cameraID, &status);
         }
         while (ret == POA_OK && status == STATE_EXPOSING);
@@ -292,9 +309,11 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
             break;
         }
 
-        LOGF_WARN("Failed to start exposure, next try (%d)/%d", i , MAX_EXP_RETRIES );
-        // Wait 100ms before trying again
-        usleep(100 * 1000);
+        LOGF_WARN("Failed to start exposure, next try (%d)/%d", i, MAX_EXP_RETRIES);
+        std::unique_lock<std::mutex> retryLock(mExposureMutex);
+        mExposureWakeup.wait_for(retryLock, std::chrono::milliseconds(100), [&isAbortToQuit](){ return isAbortToQuit.load(); });
+        if (isAbortToQuit)
+            return;
     }
 
     if (!isExpose)
@@ -308,33 +327,39 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
     if (duration > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
-    /* loop delay when exposure TimeLeft < 0.6 seconds */
-    int delay = 1000;
+    const auto longDelay   = std::chrono::milliseconds(500);
+    const auto mediumDelay = std::chrono::milliseconds(10);
+    const auto shortDelay  = std::chrono::milliseconds(1);
 
     float timeLeft;
 
-    while(!isImgDataAvailable()) {
+    std::unique_lock<std::mutex> lock(mExposureMutex);
+    while (!isAbortToQuit)
+    {
+        if (isImgDataAvailable())
+            break;
 
-       timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
+        timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
+        if (timeLeft > 0)
+            PrimaryCCD.setExposureLeft(timeLeft);
 
-       if (timeLeft > 0 )
-         PrimaryCCD.setExposureLeft(timeLeft);
-
-       if (isAbortToQuit)
-            return;
-
-       /* Refresh every 0.5 seconds if timeleft > 0.6 else refresh every 1000(delay) microseconds  */
-       if (timeLeft > 0.6 )
-       {
-           PrimaryCCD.setExposureLeft(timeLeft);
-           LOGF_DEBUG("TimeLeft: %3.1f seconds ...", timeLeft );
-           /* wait 0.5s */
-           usleep(500000);
-       }
-       else
-           usleep(delay);
-
+        if (timeLeft > 1.1)
+        {
+            LOGF_DEBUG("TimeLeft: %3.1f seconds ...", timeLeft);
+            mExposureWakeup.wait_for(lock, longDelay, [&isAbortToQuit](){ return isAbortToQuit.load(); });
+        }
+        else if (timeLeft > 0.2)
+        {
+            mExposureWakeup.wait_for(lock, mediumDelay, [&isAbortToQuit](){ return isAbortToQuit.load(); });
+        }
+        else
+        {
+            mExposureWakeup.wait_for(lock, shortDelay, [&isAbortToQuit](){ return isAbortToQuit.load(); });
+        }
     }
+
+    if (isAbortToQuit)
+        return;
 
     LOG_DEBUG("End while isImgDataAvaiable");
 
@@ -1141,6 +1166,7 @@ bool POABase::AbortExposure()
     LOG_DEBUG("Aborting exposure...");
 
     mWorker.quit();
+    mExposureWakeup.notify_all();
 
     POAStopExposure(mCameraInfo.cameraID);
     return true;
@@ -1180,6 +1206,9 @@ bool POABase::StartStreaming()
 bool POABase::StopStreaming()
 {
     mWorker.quit();
+    mExposureWakeup.notify_all();
+
+    POAStopExposure(mCameraInfo.cameraID);
     return true;
 }
 
@@ -1286,7 +1315,7 @@ int POABase::grabImage(float duration)
         buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
         if (buffer == nullptr)
         {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24).", getDeviceName());
+            LOGF_ERROR("%s: malloc failed (RGB 24).", getDeviceName());
             return -1;
         }
     }
@@ -1461,7 +1490,7 @@ IPState POABase::guidePulse(INDI::Timer &timer, float ms, POAConfig dir)
 
     if (ms < 1)
     {
-        usleep(ms * 1000);
+        std::this_thread::sleep_for(std::chrono::duration<double, std::milli>(ms * 1000.0));
         timer.timeout();
         return IPS_OK;
     }
