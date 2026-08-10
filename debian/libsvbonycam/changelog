@@ -1,3 +1,9 @@
+libsvbonycam (60.32226.20260808) jammy; urgency=medium
+
+  * Upstream release
+
+ -- svbony <svbony@svbony.com>  Mon, 10 Aug 2026 09:27:23 +0800
+
 libsvbonycam (57.27591.20250122) jammy; urgency=medium
 
   * Upstream release
