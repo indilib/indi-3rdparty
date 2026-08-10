@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libtoupcam)
 
-set (LIBTOUPCAM_VERSION "60.31631")
+set (LIBTOUPCAM_VERSION "60.32226")
 set (LIBTOUPCAM_SOVERSION "60")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)

@@ -1,3 +1,9 @@
+libaltaircam (60.32226.20260808) jammy; urgency=medium
+
+  * Upstream release
+
+ -- altair <altair@altair.com>  Mon, 10 Aug 2026 08:51:41 +0800
+
 libaltaircam (60.31631.20260606) jammy; urgency=medium
 
   * Upstream release

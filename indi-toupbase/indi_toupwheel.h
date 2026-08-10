@@ -75,6 +75,8 @@ class ToupWheel : public INDI::FilterWheel
         };
         int SpinningDirection = 0;
 
+        INDI::PropertySwitch SpeedSP {2};
+
         THAND m_Handle { nullptr };
         const XP(DeviceV2) *m_Instance;
 };

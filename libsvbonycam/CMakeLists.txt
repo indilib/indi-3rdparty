@@ -1,8 +1,8 @@
 cmake_minimum_required(VERSION 3.16)
 project (libsvbonycam)
 
-set (LIBSVBONYCAM_VERSION "57.27348")
-set (LIBSVBONYCAM_SOVERSION "57")
+set (LIBSVBONYCAM_VERSION "60.32226")
+set (LIBSVBONYCAM_SOVERSION "60")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 

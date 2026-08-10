@@ -132,6 +132,17 @@ bool ToupWheel::updateProperties()
         SpinningDirectionSP.load();
 
         defineProperty(SpinningDirectionSP);
+
+        {
+            int speed = 2;
+            if (SUCCEEDED(FP(get_Int(m_Handle, "FilterWheelSpeed", &speed))))
+            {
+                SpeedSP[TCFW_SD_CLOCKWISE].fill("LOWSPEED", "Low Speed", (speed < 2) ? ISS_ON : ISS_OFF);
+                SpeedSP[TCFW_SD_AUTO].fill("HIGHSPEED", "High Speed", (speed >= 2) ? ISS_ON : ISS_OFF);
+                SpeedSP.fill(getDeviceName(), "SPEED", "Speed", FILTER_TAB, IP_RW, ISR_1OFMANY, 0, IPS_IDLE);
+                defineProperty(SpeedSP);
+            }
+        }
     }
     else
     {
@@ -260,6 +271,14 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             saveConfig(SpinningDirectionSP);
             return true;
         }
+        else if (SpeedSP.isNameMatch(name))
+        {
+            SpeedSP.update(states, names, n);
+            SpeedSP.setState(IPS_OK);
+            SpeedSP.apply();
+            FP(put_Int(m_Handle, "FilterWheelSpeed", SpinningDirectionSP.findOnSwitchIndex() ? 1 : 2));
+            return true;
+        }
     }
 
     return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
@@ -303,7 +322,7 @@ int ToupWheel::QueryFilter()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ToupWheel::saveConfigItems(FILE * fp)
+bool ToupWheel::saveConfigItems(FILE *fp)
 {
     INDI::FilterWheel::saveConfigItems(fp);
 
