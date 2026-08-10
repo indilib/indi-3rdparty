@@ -1,3 +1,9 @@
+libmallincam (60.32226.20260808) jammy; urgency=medium
+
+  * Upstream release
+
+ -- procom <procom@procom.com>  Mon, 10 Aug 2026 08:52:13 +0800
+
 libmallincam (60.31631.20260606) jammy; urgency=medium
 
   * Upstream release

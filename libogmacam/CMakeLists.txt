@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 project (libogmacam)
 
-set (LIBOGMACAM_VERSION "60.31631")
+set (LIBOGMACAM_VERSION "60.32226")
 set (LIBOGMACAM_SOVERSION "60")
 
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
