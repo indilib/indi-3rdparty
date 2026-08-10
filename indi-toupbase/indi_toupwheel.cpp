@@ -276,7 +276,7 @@ bool ToupWheel::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             SpeedSP.update(states, names, n);
             SpeedSP.setState(IPS_OK);
             SpeedSP.apply();
-            FP(put_Int(m_Handle, "FilterWheelSpeed", SpinningDirectionSP.findOnSwitchIndex() ? 1 : 2);
+            FP(put_Int(m_Handle, "FilterWheelSpeed", SpinningDirectionSP.findOnSwitchIndex() ? 1 : 2));
             return true;
         }
     }
@@ -322,7 +322,7 @@ int ToupWheel::QueryFilter()
 ////////////////////////////////////////////////////////////////////////////////////////////////////
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////////
-bool ToupWheel::saveConfigItems(FILE * fp)
+bool ToupWheel::saveConfigItems(FILE *fp)
 {
     INDI::FilterWheel::saveConfigItems(fp);
 
