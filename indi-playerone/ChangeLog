@@ -1,3 +1,7 @@
+v1.24
+* Available exposure change during video streaming
+* Refactor with thin, type-safe C++ wrapper for C SDK
+
 v1.23
 * BugFix: Error handling of getImageData()/getExposure()
 * Replace usleep() to wait_for()

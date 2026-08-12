@@ -74,6 +74,9 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Wed Aug 12 2026 Hiroshi Saito <hiro3110g@gmail.com>
+- Available exposure change during video streaming
+- Refactor with thin, type-safe C++ wrapper for C SDK
 * Sun Aug 9 2026 Hiroshi Saito <hiro3110g@gmail.com>
 - BugFix: Error handling of getImageData()/getExposure()
 - Replace usleep() to wait_for()
