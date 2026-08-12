@@ -139,24 +139,6 @@ class POABase : public INDI::CCD
         /** Can the camera flip the image horizontally and vertically */
         bool hasFlipControl();
 
-        /** Set exposure */
-        bool setExposure(long expoUs, bool isAuto); //Microsecond
-
-        /** Get exposure */
-        long getExposure();
-
-        /** Start exposure */
-        bool startExposure();
-
-        /** Stop exposure */
-        bool stopExposure();
-
-        /** Check if image data is available */
-        bool isImgDataAvailable();
-
-        /** Get Image Data */
-        bool getImageData(unsigned char *pDataBuffer, unsigned long size);
-
         /** Compatibilities for ZWO cameras */
         POAErrors POASetROIFormat(int CameraID, int width, int height, int bin, POAImgFormat imgType);
         POAErrors POAGetROIFormat(int CameraID, int *width, int *height, int *bin, POAImgFormat *imgType);
@@ -199,8 +181,4 @@ class POABase : public INDI::CCD
         uint8_t mExposureRetry {0};
         POAImgFormat                      mCurrentVideoFormat;
         std::vector<POAConfigAttributes>  mControlCaps;
-
-
-
-
 };
