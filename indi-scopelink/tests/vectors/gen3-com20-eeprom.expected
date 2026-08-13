@@ -1,0 +1,29 @@
+# What the frames in gen3-com20-eeprom.wire decode to.
+#
+# The wear counters are not in the order a reader expects: the dataset counter comes first and the page
+# erase counter last. Decoded here by hand from the payload
+#
+#     00 20 | 00 0A | 00 02 | 00 02 | 00 02 | 00 02 | 00 00 | 00 01
+#
+# which is exactly the case a hand written test would have got wrong, and the reason for recording it.
+
+identification.hardwareMajor       = 3
+identification.hardwareMinor       = 0
+identification.interfaceMajor      = 1
+identification.interfaceMinor      = 0
+identification.hardwareIdentifier  = 2B002E000D4330364E353020
+identification.softwareIdentifier  = 0DB6680E44C2851919E2FFEBFFAA93F257C3321C
+
+capabilities.statusFrameLength     = 60
+capabilities.dtcSnapshotLength     = 48
+capabilities.hasUsbHub             = 1
+capabilities.hasSmartSwitches      = 1
+capabilities.hasTemperatureSensor  = 1
+
+eeprom.datasetCounter           = 32
+eeprom.learntDataCounter        = 10
+eeprom.faultStoreBlock1Counter  = 2
+eeprom.faultStoreBlock2Counter  = 2
+eeprom.faultStoreBlock3Counter  = 2
+eeprom.faultStoreBlock4Counter  = 2
+eeprom.pageEraseCounter         = 1

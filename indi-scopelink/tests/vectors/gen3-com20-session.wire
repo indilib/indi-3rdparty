@@ -1,0 +1,32 @@
+# Generation 3 controller, unit 2B002E000D4330364E353020, firmware 0DB6680E44C2851919E2FFEBFFAA93F257C3321C
+# Captured 2026-08-11 with:  scopelink-cli --port /dev/ttyACM0 --verbose faults
+#
+# One whole session: identification, the capability read, the clock set, two status frames and the fault
+# store. This unit has a working infrared sensor, so the ambient and mirror readings here are real ones
+# rather than the 0xFFFF a failed sensor reports.
+
+# --- Identification -------------------------------------------------------------------------------
+-> AA 55 12 00
+<- AA 55 12 04 03 00 01 00
+-> AA 55 07 00
+<- AA 55 07 0C 2B 00 2E 00 0D 43 30 36 4E 35 30 20
+-> AA 55 09 00
+<- AA 55 09 28 30 64 62 36 36 38 30 65 34 34 63 32 38 35 31 39 31 39 65 32 66 66 65 62 66 66 61 61 39 33 66 32 35 37 63 33 33 32 31 63
+
+# --- Is the temperature sensor fitted? Identifier 0x0302 ---------------------------------------------
+-> AA 55 08 03 00 03 02
+<- AA 55 08 04 00 03 02 01
+
+# --- Clock set. The request carries the moment of capture, so a replay matches it on the command only.
+-> AA 55 17 07 07 EA 08 0B 14 2F 08
+<- AA 55 17 01 01
+
+# --- Status, once from the open and once for the command ---------------------------------------------
+-> AA 55 01 00
+<- AA 55 01 38 34 EF 0C AA 35 08 34 95 00 2F 0C CA 01 01 00 00 00 00 00 19 00 19 3B 15 3A DD 02 00 00 0F 42 40 02 00 00 00 00 00 00 00 00 00 00 00 00 03 03 3F 01 00 00 00 01 01 00 00
+-> AA 55 01 00
+<- AA 55 01 38 34 E8 0C A9 35 08 34 9C 00 2F 0C CC 01 01 00 00 00 00 00 19 00 19 3B 15 3A DD 02 00 00 0F 42 40 02 00 00 00 00 00 00 00 00 00 00 00 00 03 03 3F 01 00 00 00 01 01 00 00
+
+# --- Fault store, holding one stored and no longer active code ---------------------------------------
+-> AA 55 05 00
+<- AA 55 05 38 07 01 00 01 00 00 01 00 00 00 00 00 7F FF 7F FF 7F FF 7F FF 7F FF 7F FF 7F FF 00 00 07 E9 01 01 00 00 00 03 00 03 00 00 01 01 01 01 00 00 00 00 00 00 00 00 01 01 00 00
