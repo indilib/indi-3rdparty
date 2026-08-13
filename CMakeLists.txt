@@ -263,6 +263,7 @@ option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
 option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
+option(WITH_SCOPELINK "Install ScopeLink Driver" On)
 option(WITH_OCS "Install OCS Driver" On)
 option(WITH_GPIO "Install GPIO Driver" On)
 option(WITH_TICFOCUSER-NG "Install TICFOCUSER-NG Driver" On)
@@ -523,6 +524,11 @@ else(BUILD_LIBS)
   if(WITH_ROLLOFFINO)
     add_subdirectory(indi-rolloffino)
   endif(WITH_ROLLOFFINO)
+
+  ## ScopeLink
+  if(WITH_SCOPELINK)
+    add_subdirectory(indi-scopelink)
+  endif(WITH_SCOPELINK)
 
   ## Shelyak
   if(WITH_SHELYAK)
