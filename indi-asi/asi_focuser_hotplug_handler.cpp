@@ -90,7 +90,26 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
         return nullptr;
     }
 
+    // Check if a device with this ID is already managed (before touching the hardware)
+    for (const auto& device : m_internalFocusers)
+    {
+        if (device->getEAFInfo().ID == focuserID)
+        {
+            LOGF_DEBUG("HotPlugManager: Device with focuser ID %d already managed, not creating new.", focuserID);
+            return device;
+        }
+    }
+
+    // Single open/close cycle: read properties AND serial number in one session.
+    // Performing multiple rapid EAFOpen/EAFClose cycles on the same device (as the
+    // previous code did: once here for the property, then again in
+    // getSerialNumberFromID) can trigger a libusb assertion failure
+    // ("usbi_mutex_lock: Assertion `pthread_mutex_lock(mutex) == 0' failed") and
+    // abort the driver, because the SDK's internal HID/USB teardown from the first
+    // close may not have completed before the next open. The failure is
+    // timing-dependent and shows up intermittently at profile load / enumeration.
     EAF_INFO eafInfo;
+    std::string serialNumber;
     bool foundFocuser = false;
     int numFocusers = EAFGetNum();
     if (numFocusers >= 0)
@@ -100,17 +119,28 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
             int id;
             if (EAFGetID(i, &id) == EAF_SUCCESS && id == focuserID)
             {
-                // Open device to get properties
+                // Open the device once and query everything we need.
                 if (EAFOpen(id) == EAF_SUCCESS)
                 {
                     if (EAFGetProperty(id, &eafInfo) == EAF_SUCCESS)
                     {
                         foundFocuser = true;
-                        EAFClose(id);
-                        break;
+
+                        // Read the serial number while the device is still open.
+                        EAF_SN sn;
+                        if (EAFGetSerialNumber(id, &sn) == EAF_SUCCESS)
+                        {
+                            char snChars[17];
+                            sprintf(snChars, "%02X%02X%02X%02X%02X%02X%02X%02X",
+                                    sn.id[0], sn.id[1], sn.id[2], sn.id[3],
+                                    sn.id[4], sn.id[5], sn.id[6], sn.id[7]);
+                            snChars[16] = 0;
+                            serialNumber = snChars;
+                        }
                     }
                     EAFClose(id);
                 }
+                break;
             }
         }
     }
@@ -119,16 +149,6 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
     {
         LOGF_ERROR("HotPlugManager: Failed to get focuser info for ID: %d", focuserID);
         return nullptr;
-    }
-
-    // Check if a device with this ID is already managed
-    for (const auto& device : m_internalFocusers)
-    {
-        if (device->getEAFInfo().ID == focuserID)
-        {
-            LOGF_DEBUG("HotPlugManager: Device with focuser ID %d already managed, not creating new.", focuserID);
-            return device;
-        }
     }
 
     // Generate a unique name for the new device
@@ -153,9 +173,6 @@ std::shared_ptr<DefaultDevice> ASIEAFHotPlugHandler::createDevice(const std::str
             uniqueName = baseName + " " + std::to_string(index);
         }
     }
-
-    // Retrieve serial number for the ASIEAF constructor
-    std::string serialNumber = getSerialNumberFromID(focuserID);
 
     std::shared_ptr<ASIEAF> newDevice = std::make_shared<ASIEAF>(eafInfo, uniqueName.c_str(), serialNumber);
     m_internalFocusers.push_back(newDevice);
