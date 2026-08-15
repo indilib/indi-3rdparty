@@ -342,17 +342,22 @@ bool SSG3CCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 CoolerSP.apply();
                 return true;
             }
-            CoolerSP.update(states, names, n);
-            CoolerSP.setState(IPS_OK);
-            CoolerSP.apply();
 
             if (CoolerSP[0].getState() == ISS_OFF)
             {
-                activateCooler(false);
+                // Cooler is being turned off – begin gradual warm-up
+                CoolerSP.setState(IPS_BUSY);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                CoolerSP.apply();
             }
             else
             {
-                activateCooler(true);
+                // Cooler is being turned on – cancel any ongoing warm-up
+                cancelCoolerWarmup();
+                if (SetCoolerEnabled(true))
+                {
+                    resumeCoolingAfterWarmup();
+                }
             }
 
             return true;
@@ -431,7 +436,7 @@ void SSG3CCD::grabImage()
 /**
  * Set the CCD temperature
  */
-int SSG3CCD::SetTemperature(double temperature)
+int SSG3CCD::SetTemperature(double temperature, bool enableCooler)
 {
     LOGF_INFO("Setting temperature to %.2f C.", temperature);
 
@@ -440,7 +445,7 @@ int SSG3CCD::SetTemperature(double temperature)
     if (std::abs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
         return 1;
 
-    if (!activateCooler(true))
+    if (enableCooler && !SetCoolerEnabled(true))
     {
         return -1;
     }
@@ -448,11 +453,10 @@ int SSG3CCD::SetTemperature(double temperature)
     return 0;
 }
 
-bool SSG3CCD::activateCooler(bool enable)
+bool SSG3CCD::SetCoolerEnabled(bool enable)
 {
     int rc;
 
-    CoolerSP.reset();
     if (enable)
     {
         rc = orion_ssg3_set_temperature(&ssg3, TemperatureRequest);
@@ -464,9 +468,15 @@ bool SSG3CCD::activateCooler(bool enable)
             return false;
         }
 
-        CoolerSP[COOLER_ON].setState(ISS_ON);
-        CoolerSP[COOLER_OFF].setState(ISS_OFF);
-        CoolerSP.setState(IPS_OK);
+        // Only flip the switch to ON when not in a warm-up sequence.  During warm-up the switch
+        // stays BUSY+OFF until SetCoolerEnabled(false) finishes the ramp.
+        if (!m_CoolerWarmingUp)
+        {
+            CoolerSP.reset();
+            CoolerSP[COOLER_ON].setState(ISS_ON);
+            CoolerSP.setState(IPS_BUSY);
+            CoolerSP.apply();
+        }
     }
     else
     {
@@ -479,12 +489,11 @@ bool SSG3CCD::activateCooler(bool enable)
             return false;
         }
 
-        CoolerSP[COOLER_ON].setState(ISS_OFF);
+        CoolerSP.reset();
         CoolerSP[COOLER_OFF].setState(ISS_ON);
         CoolerSP.setState(IPS_IDLE);
+        CoolerSP.apply();
     }
-
-    CoolerSP.apply();
     return true;
 }
 
@@ -505,6 +514,8 @@ void SSG3CCD::updateTemperature(void)
         TemperatureNP.setState(IPS_OK);
     }
     TemperatureNP.apply();
+
+    coolerWarmupTick(TemperatureNP[0].getValue());
 
     if (CoolerSP[COOLER_ON].getState() == ISS_ON)
     {

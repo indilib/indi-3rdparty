@@ -322,13 +322,14 @@ bool ApogeeCCD::getCameraParams()
     return true;
 }
 
-int ApogeeCCD::SetTemperature(double temperature)
+int ApogeeCCD::SetTemperature(double temperature, bool enableCooler)
 {
     // If less than 0.1 of a degree, let's just return OK
     if (fabs(temperature - TemperatureNP[0].getValue()) < 0.1)
         return 1;
 
-    activateCooler(true);
+    if (enableCooler)
+        activateCooler(true);
 
     try
     {
@@ -437,9 +438,17 @@ bool ApogeeCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 return false;
 
             if (CoolerS[0].s == ISS_ON)
+            {
+                cancelCoolerWarmup();
                 activateCooler(true);
+                resumeCoolingAfterWarmup();
+            }
             else
-                activateCooler(false);
+            {
+                CoolerSP.s = IPS_BUSY;
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                IDSetSwitch(&CoolerSP, nullptr);
+            }
 
             return true;
         }
@@ -1255,6 +1264,42 @@ void ApogeeCCD::activateCooler(bool enable)
     IDSetSwitch(&CoolerSP, nullptr);
 }
 
+bool ApogeeCCD::SetCoolerEnabled(bool enable)
+{
+    if (isSimulation())
+    {
+        CoolerS[0].s = enable ? ISS_ON : ISS_OFF;
+        CoolerS[1].s = enable ? ISS_OFF : ISS_ON;
+        if (!enable)
+        {
+            CoolerSP.s = IPS_IDLE;
+            IDSetSwitch(&CoolerSP, nullptr);
+        }
+        return true;
+    }
+
+    try
+    {
+        bool coolerOn = ApgCam->IsCoolerOn();
+        if ((enable && !coolerOn) || (!enable && coolerOn))
+            ApgCam->SetCooler(enable);
+    }
+    catch (std::runtime_error &err)
+    {
+        LOGF_ERROR("SetCooler failed. %s.", err.what());
+        return false;
+    }
+
+    CoolerS[0].s = enable ? ISS_ON : ISS_OFF;
+    CoolerS[1].s = enable ? ISS_OFF : ISS_ON;
+    if (!enable)
+    {
+        CoolerSP.s = IPS_IDLE;
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
+    return true;
+}
+
 void ApogeeCCD::TimerHit()
 {
     long timeleft;
@@ -1320,6 +1365,7 @@ void ApogeeCCD::TimerHit()
                 TemperatureNP[0].setValue(ccdTemp);
                 TemperatureNP.apply();
             }
+            coolerWarmupTick(ccdTemp);
             break;
 
         case IPS_BUSY:
@@ -1344,6 +1390,7 @@ void ApogeeCCD::TimerHit()
 
             TemperatureNP[0].setValue(ccdTemp);
             TemperatureNP.apply();
+            coolerWarmupTick(ccdTemp);
             break;
 
         case IPS_ALERT:

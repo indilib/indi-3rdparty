@@ -865,6 +865,10 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
             saveConfig(BlinkNP);
             return true;
         }
+
+        // An explicit temperature request supersedes any warm-up-on-cooler-off in progress.
+        if (TemperatureNP.isNameMatch(name))
+            cancelCoolerWarmup();
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -958,7 +962,20 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 return true;
             }
 
-            activateCooler(CoolerSP[0].getState() == ISS_ON);
+            if (CoolerSP[0].getState() == ISS_ON)
+            {
+                cancelCoolerWarmup();
+                CoolerSP.setState(IPS_BUSY);
+                CoolerSP.apply();
+                if (SetCoolerEnabled(true))
+                    resumeCoolingAfterWarmup();
+            }
+            else
+            {
+                CoolerSP.setState(IPS_BUSY);
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                CoolerSP.apply();
+            }
 
             return true;
         }
@@ -1075,17 +1092,26 @@ bool ASIBase::setVideoFormat(uint8_t index)
     return true;
 }
 
-int ASIBase::SetTemperature(double temperature)
+int ASIBase::SetTemperature(double temperature, bool enableCooler)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    // #PS: how will it warm up?
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if (activateCooler(true) == false)
+    if (enableCooler)
     {
-        LOG_ERROR("Failed to activate cooler.");
-        return -1;
+        if (!SetCoolerEnabled(true))
+        {
+            LOG_ERROR("Failed to activate cooler.");
+            return -1;
+        }
+        if (CoolerSP[0].getState() == ISS_OFF)
+        {
+            CoolerSP[0].setState(ISS_ON);
+            CoolerSP[1].setState(ISS_OFF);
+            CoolerSP.setState(IPS_BUSY);
+            CoolerSP.apply();
+        }
     }
 
     ASI_ERROR_CODE ret;
@@ -1103,23 +1129,26 @@ int ASIBase::SetTemperature(double temperature)
     return 0;
 }
 
-bool ASIBase::activateCooler(bool enable)
+bool ASIBase::SetCoolerEnabled(bool enable)
 {
     ASI_ERROR_CODE ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, enable ? ASI_TRUE : ASI_FALSE, ASI_FALSE);
     if (ret != ASI_SUCCESS)
     {
+        LOGF_ERROR("Failed to set cooler power (%s).", Helpers::toString(ret));
         CoolerSP.setState(IPS_ALERT);
-        LOGF_ERROR("Failed to activate cooler (%s).", Helpers::toString(ret));
+        CoolerSP.apply();
+        return false;
     }
-    else
-    {
-        CoolerSP[0].setState(enable ? ISS_ON  : ISS_OFF);
-        CoolerSP[1].setState(enable ? ISS_OFF : ISS_ON);
-        CoolerSP.setState(enable ? IPS_BUSY : IPS_IDLE);
-    }
-    CoolerSP.apply();
 
-    return (ret == ASI_SUCCESS);
+    if (!enable)
+    {
+        CoolerSP[0].setState(ISS_OFF);
+        CoolerSP[1].setState(ISS_ON);
+        CoolerSP.setState(IPS_IDLE);
+        CoolerSP.apply();
+    }
+
+    return true;
 }
 
 bool ASIBase::StartExposure(float duration)
@@ -1421,6 +1450,8 @@ void ASIBase::temperatureTimerTimeout()
         TemperatureNP.apply();
     }
 
+    coolerWarmupTick(mCurrentTemperature);
+
     if (HasCooler())
     {
         ret = ASIGetControlValue(mCameraInfo.CameraID, ASI_COOLER_POWER_PERC, &value, &isAuto);
@@ -1702,7 +1733,9 @@ bool ASIBase::saveConfigItems(FILE *fp)
     INDI::CCD::saveConfigItems(fp);
 
     if (HasCooler())
+    {
         CoolerSP.save(fp);
+    }
 
     if (!ControlNP.isEmpty())
         ControlNP.save(fp);
