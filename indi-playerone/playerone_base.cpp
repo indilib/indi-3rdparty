@@ -32,6 +32,8 @@
 
 #include <algorithm>
 #include <cmath>
+#include <memory>
+#include <new>
 #include <vector>
 #include <map>
 #include <unistd.h>
@@ -56,13 +58,14 @@ const char *POABase::getBayerString() const
 void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 {
     POAErrors ret;
-    double lastExposure = 1.0 / Streamer->getTargetFPS();
+    double lastExposure = mStreamExposureS.load(std::memory_order_relaxed);
     double expoS = static_cast<double>(lastExposure * 0.95);
  
     ret = Helpers::SetConfig(mCameraInfo.cameraID, POA_EXP, expoS, POA_FALSE);
     if (ret != POA_OK)
     {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        return;
     }
 
     ret = POAStartExposure(mCameraInfo.cameraID, POA_FALSE);    // start video exposure
@@ -76,6 +79,13 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
     uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
     int waitMS           = static_cast<int>((lastExposure * 1000.0) + 500);
     double currentExposure;
+
+    if (targetFrame == nullptr || totalBytes == 0)
+    {
+        LOGF_ERROR("Invalid video frame buffer: address=%p, size=%u.", targetFrame, totalBytes);
+        POAStopExposure(mCameraInfo.cameraID);
+        return;
+    }
 
     while (!isAbortToQuit)
     {
@@ -94,7 +104,7 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
             continue;
         }
 
-        currentExposure = 1.0 / Streamer->getTargetFPS();
+        currentExposure = mStreamExposureS.load(std::memory_order_relaxed);
         if (currentExposure != lastExposure)
         {
             expoS = static_cast<double>(currentExposure * 0.95);
@@ -103,10 +113,12 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
             {
                 LOGF_ERROR("Failed to update exposure (%s).", Helpers::toString(ret));
             }
-
-            LOGF_INFO("Streaming exposure updated: %.5f", currentExposure);
-            waitMS = static_cast<int>((currentExposure * 1000.0) + 500);
-            lastExposure = currentExposure;
+            else
+            {
+                LOGF_INFO("Streaming exposure updated: %.5f", currentExposure);
+                waitMS = static_cast<int>((currentExposure * 1000.0) + 500);
+                lastExposure = currentExposure;
+            }
         }
 
         if (mCurrentVideoFormat == POA_RGB24)
@@ -160,10 +172,10 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
         }
         while (ret == POA_OK && status == STATE_EXPOSING);
 
-        POABool pIsReady = POA_FALSE;
-        ret = POAImageReady(mCameraInfo.cameraID, &pIsReady);
+        POABool isReady = POA_FALSE;
+        ret = POAImageReady(mCameraInfo.cameraID, &isReady);
 
-        if (!pIsReady)
+        if (!isReady)
         {
             LOGF_ERROR("Blink exposure failed, status %d (%s).", status, Helpers::toString(ret));
             LOGF_ERROR("Blink exposure failed (%s).", Helpers::toString(ret));
@@ -173,9 +185,7 @@ void POABase::workerBlinkExposure(const std::atomic_bool &isAbortToQuit, int bli
     while (--blinks > 0);
 
     if (blinks > 0)
-    {
         LOGF_WARN("%ld blink exposure(s) NOT done.", blinks);
-    }
 }
 
 void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float duration)
@@ -195,6 +205,7 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
     if(ret != POA_OK)
     {
         LOGF_ERROR("Failed to set exposure duration (%s)", Helpers::toString(ret));
+        return;
     }
 
     // Try exposure for MAX_EXP_RETRIES times
@@ -231,33 +242,24 @@ void POABase::workerExposure(const std::atomic_bool &isAbortToQuit, float durati
 
     std::unique_lock<std::mutex> lock(mExposureMutex);
 
-    POABool pIsReady = POA_FALSE;
+    POABool isReady = POA_FALSE;
     while (!isAbortToQuit)
     {
-        ret = POAImageReady(mCameraInfo.cameraID , &pIsReady);
-        if (ret == POA_OK)
-        {
-            if (pIsReady == POA_TRUE)
-                break;
-        }
+        isReady = POA_FALSE;
+        ret = POAImageReady(mCameraInfo.cameraID , &isReady);
+        if (ret == POA_OK && isReady == POA_TRUE)
+            break;
 
         timeLeft = std::max(duration - exposureTimer.elapsed() / 1000.0, 0.0);
         if (timeLeft > 0)
             PrimaryCCD.setExposureLeft(timeLeft);
 
         if (timeLeft > 1.1)
-        {
-            LOGF_DEBUG("TimeLeft: %3.1f seconds ...", timeLeft);
             mExposureWakeup.wait_for(lock, longDelay, [&isAbortToQuit](){ return isAbortToQuit.load(); });
-        }
         else if (timeLeft > 0.2)
-        {
             mExposureWakeup.wait_for(lock, mediumDelay, [&isAbortToQuit](){ return isAbortToQuit.load(); });
-        }
         else
-        {
             mExposureWakeup.wait_for(lock, shortDelay, [&isAbortToQuit](){ return isAbortToQuit.load(); });
-        }
     }
 
     if (isAbortToQuit)
@@ -455,9 +457,7 @@ bool POABase::updateProperties()
             defineProperty(NicknameTP);
         }
         if (!SensorModeSP.isEmpty())
-        {
             defineProperty(SensorModeSP);
-        }
     }
     else
     {
@@ -476,9 +476,7 @@ bool POABase::updateProperties()
             deleteProperty(ControlSP);
 
         if (hasFlipControl())
-        {
             deleteProperty(FlipSP);
-        }
 
         if (!VideoFormatSP.isEmpty())
             deleteProperty(VideoFormatSP);
@@ -493,9 +491,7 @@ bool POABase::updateProperties()
         deleteProperty(ADCDepthNP);
 
         if (!SensorModeSP.isEmpty())
-        {
             deleteProperty(SensorModeSP);
-        }
     }
 
     return true;
@@ -797,7 +793,15 @@ bool POABase::ISNewNumber(const char *dev, const char *name, double values[], ch
         }
     }
 
-    return INDI::CCD::ISNewNumber(dev, name, values, names, n);
+    // Apply STREAMING_EXPOSURE (and everything else) in the base class first,
+    // then publish the new target exposure for the streaming worker thread.
+    const bool result = INDI::CCD::ISNewNumber(dev, name, values, names, n);
+
+    if (result && Streamer && dev != nullptr && !strcmp(dev, getDeviceName()) &&
+            name != nullptr && !strcmp(name, "STREAMING_EXPOSURE"))
+        mStreamExposureS.store(Streamer->getTargetExposure(), std::memory_order_relaxed);
+
+    return result;
 }
 
 bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
@@ -861,20 +865,14 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
             if (FlipSP[FLIP_HORIZONTAL].getState() == ISS_ON)
             {
                 if (FlipSP[FLIP_VERTICAL].getState() == ISS_ON)
-                {
                     flip = POA_FLIP_BOTH;
-                }
                 else
-                {
                     flip = POA_FLIP_HORI;
-                }
             }
             else
             {
                 if (FlipSP[FLIP_VERTICAL].getState() == ISS_ON)
-                {
                     flip = POA_FLIP_VERT;
-                }
             }
 
             POABool value = POA_TRUE; // value will be ignored by SetConfig()
@@ -889,7 +887,7 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             // Compensate bayer pattern (effective for RAW data format)
             char bayer[5];
-            POABayerCompensationByFlip(flip, bayer);
+            POABayerCompensationByFlip(flip, bayer, sizeof(bayer));
             BayerTP[2].setText(bayer);
 
             FlipSP.setState(IPS_OK);
@@ -1087,6 +1085,8 @@ bool POABase::StartStreaming()
         }
     }
 #endif
+    // Seed the worker's exposure snapshot in case STREAMING_EXPOSURE was never set by the client.
+    mStreamExposureS.store(Streamer->getTargetExposure(), std::memory_order_relaxed);
     mWorker.start(std::bind(&POABase::workerStreamVideo, this, std::placeholders::_1));
     return true;
 }
@@ -1114,6 +1114,7 @@ bool POABase::UpdateCCDFrame(int x, int y, int w, int h)
         LOGF_INFO("Invalid width request %d", w);
         return false;
     }
+
     if (subH > static_cast<uint32_t>(PrimaryCCD.getYRes() / binY))
     {
         LOGF_INFO("Invalid height request %d", h);
@@ -1128,6 +1129,7 @@ bool POABase::UpdateCCDFrame(int x, int y, int w, int h)
         LOGF_INFO("Incompatible frame width %dpx. Reducing by %dpx.", subW, subW % 4);
         warn_roi_width = false;
     }
+
     if (warn_roi_height && subH % 2 > 0)
     {
         LOGF_INFO("Incompatible frame height %dpx. Reducing by %dpx.", subH, subH % 2);
@@ -1192,6 +1194,7 @@ int POABase::grabImage(float duration)
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     uint8_t *image = PrimaryCCD.getFrameBuffer();
     uint8_t *buffer = image;
+    std::unique_ptr<uint8_t[]> bufferOwner;
 
     uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
     uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
@@ -1200,7 +1203,8 @@ int POABase::grabImage(float duration)
 
     if (type == POA_RGB24)
     {
-        buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
+        bufferOwner.reset(new (std::nothrow) uint8_t[nTotalBytes]);
+        buffer = bufferOwner.get();
         if (buffer == nullptr)
         {
             LOGF_ERROR("%s: malloc failed (RGB 24).", getDeviceName());
@@ -1225,8 +1229,6 @@ int POABase::grabImage(float duration)
             "Failed to get data after exposure (%dx%d #%d channels) (%s).",
             subW, subH, nChannels, Helpers::toString(ret)
         );
-        if (type == POA_RGB24)
-            free(buffer);
         return -1;
     }
 
@@ -1246,7 +1248,6 @@ int POABase::grabImage(float duration)
             *dstR++ = *src++;
         }
 
-        free(buffer);
     }
     guard.unlock();
 
@@ -1275,18 +1276,15 @@ bool POABase::isMonoBinActive()
     if (ret != POA_OK)
     {
         if (ret != POA_ERROR_INVALID_CONFIG)
-        {
             LOGF_ERROR("Failed to get mono bin information (%s).", Helpers::toString(ret));
-        }
+
         return false;
     }
     monoBin = (value == POA_TRUE);
 #endif
 
     if (monoBin == 0)
-    {
         return false;
-    }
 
     int width = 0, height = 0, bin = 1;
     POAImgFormat imgType = POA_RAW8;
@@ -1303,10 +1301,10 @@ bool POABase::isMonoBinActive()
 bool POABase::hasFlipControl()
 {
     if (find_if(begin(mControlCaps), end(mControlCaps), [](POAConfigAttributes cap)
-{
-    return cap.configID == POA_FLIP_BOTH;
-}) == end(mControlCaps))
-    return false;
+    {
+        return cap.configID == POA_FLIP_BOTH;
+    }) == end(mControlCaps))
+        return false;
     else
         return true;
 }
@@ -1338,10 +1336,8 @@ void POABase::temperatureTimerTimeout()
     }
 
     // Update if there is a change
-    if (
-        std::abs(mCurrentTemperature - TemperatureNP[0].getValue()) > 0.05 ||
-        TemperatureNP.getState() != newState
-    )
+    if (std::abs(mCurrentTemperature - TemperatureNP[0].getValue()) > 0.05 ||
+        TemperatureNP.getState() != newState)
     {
         TemperatureNP.setState(newState);
         TemperatureNP[0].setValue(mCurrentTemperature);
@@ -1586,15 +1582,11 @@ void POABase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
     // e-/ADU
     auto np = ControlNP.findWidgetByName("Gain");
     if (np)
-    {
         fitsKeywords.push_back({"GAIN", np->value, 3, "Gain"});
-    }
 
     np = ControlNP.findWidgetByName("Offset");
     if (np)
-    {
         fitsKeywords.push_back({"OFFSET", np->value, 3, "Offset"});
-    }
 }
 
 bool POABase::saveConfigItems(FILE *fp)
@@ -1670,23 +1662,26 @@ POAErrors POABase::POAPulseGuideOff(int cameraID, POAConfig dir)
 }
 
 // Compensate bayer pttern by flip (effective for RAW data format)
-POAErrors POABase::POABayerCompensationByFlip(POAConfig flip, char *dest)
+POAErrors POABase::POABayerCompensationByFlip(POAConfig flip, char *dest, size_t destSize)
 {
     const char *src = getBayerString();
+
+    if (destSize < 5)
+        return POA_ERROR_OUT_OF_LIMIT;
 
     switch (flip)
     {
         case POA_FLIP_NONE:
-            sprintf(dest, "%c%c%c%c", src[0], src[1], src[2], src[3]);
+            snprintf(dest, destSize, "%c%c%c%c", src[0], src[1], src[2], src[3]);
             break;
         case POA_FLIP_HORI:
-            sprintf(dest, "%c%c%c%c", src[1], src[0], src[3], src[2]);
+            snprintf(dest, destSize, "%c%c%c%c", src[1], src[0], src[3], src[2]);
             break;
         case POA_FLIP_VERT:
-            sprintf(dest, "%c%c%c%c", src[2], src[3], src[0], src[1]);
+            snprintf(dest, destSize, "%c%c%c%c", src[2], src[3], src[0], src[1]);
             break;
         case POA_FLIP_BOTH:
-            sprintf(dest, "%c%c%c%c", src[3], src[2], src[1], src[0]);
+            snprintf(dest, destSize, "%c%c%c%c", src[3], src[2], src[1], src[0]);
             break;
         default:
             return POA_ERROR_INVALID_ARGU;
