@@ -22,6 +22,9 @@
 
 #include <indisinglethreadpool.h>
 #include <stdint.h>
+#include <atomic>
+#include <condition_variable>
+#include <mutex>
 
 #include "core/rpicam_app.hpp"
 #include "core/rpicam_encoder.hpp"
@@ -184,6 +187,12 @@ class INDILibCamera : public INDI::CCD
         bool readGainConversionMode(GainConversionMode &mode) const;
         bool writeGainConversionMode(GainConversionMode mode);
         void updateGainConversionUI();
+
+        // Fast exposure loop state
+        std::atomic<bool> m_fastExposureActive { false };
+        std::atomic<int> m_fastExposureSignals { 0 };
+        std::mutex m_fastExposureMutex;
+        std::condition_variable m_fastExposureCV;
 
         RpiCamProperties getAvailableCamProperties();
 };
