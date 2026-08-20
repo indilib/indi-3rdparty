@@ -123,4 +123,185 @@ INDI_PIXEL_FORMAT pixelFormat(POAImgFormat type, POABayerPattern pattern, bool i
     return INDI_MONO;
 }
 
+// Thin, type-safe C++ wrapper around the PlayerOne C SDK.
+// Uses templates and type traits to map C++ types to POA value types.
+template <typename T>
+struct ConfigValueTraits;
+
+// long -> VAL_INT
+template <>
+struct ConfigValueTraits<long>
+{
+    static POAValueType type()
+    {
+        return VAL_INT;
+    }
+};
+
+// double -> VAL_FLOAT
+template <>
+struct ConfigValueTraits<double>
+{
+    static POAValueType type()
+    {
+        return VAL_FLOAT;
+    }
+};
+
+// POABool -> VAL_BOOL
+template <>
+struct ConfigValueTraits<POABool>
+{
+    static POAValueType type()
+    {
+        return VAL_BOOL;
+    }
+};
+
+// C++ value -> POAConfigValue
+inline POAConfigValue ToConfigValue(long value)
+{
+    POAConfigValue configValue = {};
+    configValue.intValue = value;
+
+    return configValue;
+}
+
+inline POAConfigValue ToConfigValue(double value)
+{
+    POAConfigValue configValue = {};
+    configValue.floatValue = value;
+
+    return configValue;
+}
+
+inline POAConfigValue ToConfigValue(POABool value)
+{
+    POAConfigValue configValue = {};
+    configValue.boolValue = value;
+
+    return configValue;
+}
+
+// POAConfigValue -> C++ value
+inline void FromConfigValue(
+    const POAConfigValue& configValue,
+    long& value)
+{
+    value = configValue.intValue;
+}
+
+inline void FromConfigValue(
+    const POAConfigValue& configValue,
+    double& value)
+{
+    value = configValue.floatValue;
+}
+
+inline void FromConfigValue(
+    const POAConfigValue& configValue,
+    POABool& value)
+{
+    value = configValue.boolValue;
+}
+
+// Check C++ type against SDK type
+template <typename T>
+bool IsConfigValueTypeValid(POAValueType sdkType)
+{
+    return ConfigValueTraits<T>::type() == sdkType;
+}
+
+// ============================================================================
+// SetConfig
+// ============================================================================
+template <typename T>
+POAErrors SetConfig(
+    int cameraID,
+    POAConfig config,
+    T value,
+    POABool isAuto = POA_FALSE)
+{
+    POAValueType sdkType;
+
+    POAErrors error =
+        POAGetConfigValueType(
+            config,
+            &sdkType);
+
+    if (error != POA_OK)
+        return error;
+
+    if (!IsConfigValueTypeValid<T>(sdkType))
+        return POA_ERROR_INVALID_ARGU;
+
+    return POASetConfig(
+        cameraID,
+        config,
+        ToConfigValue(value),
+        isAuto);
+}
+
+// ============================================================================
+// GetConfig
+// ============================================================================
+template <typename T>
+POAErrors GetConfig(
+    int cameraID,
+    POAConfig config,
+    T& value,
+    POABool* pIsAuto)
+{
+    POAValueType sdkType;
+
+    POAErrors error =
+        POAGetConfigValueType(
+            config,
+            &sdkType);
+
+    if (error != POA_OK)
+        return error;
+
+    if (!IsConfigValueTypeValid<T>(sdkType))
+        return POA_ERROR_INVALID_ARGU;
+
+    POAConfigValue configValue = {};
+    POABool isAuto = POA_FALSE;
+
+    error =
+        POAGetConfig(
+            cameraID,
+            config,
+            &configValue,
+            &isAuto);
+
+    if (error != POA_OK)
+        return error;
+
+    FromConfigValue(
+        configValue,
+        value);
+
+    if (pIsAuto != nullptr)
+        *pIsAuto = isAuto;
+
+    return POA_OK;
+}
+
+// ============================================================================
+// GetConfig without isAuto
+// ============================================================================
+template <typename T>
+POAErrors GetConfig(
+    int cameraID,
+    POAConfig config,
+    T& value)
+{
+    return GetConfig(
+        cameraID,
+        config,
+        value,
+        nullptr);
+}
+
 }

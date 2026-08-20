@@ -1,3 +1,10 @@
+indi-playerone (1.24) bionic; urgency=low
+
+  * Available exposure change during video streaming
+  * Refactor with thin, type-safe C++ wrapper for C SDK
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Wed, 12 Aug 2026 12:00:00 +0900
+
 indi-playerone (1.23) bionic; urgency=low
 
   * BugFix: Error handling of getImageData()/getExposure()

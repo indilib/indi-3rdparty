@@ -129,6 +129,7 @@ static class Loader
                 }
                 else
                     name += " " + std::to_string(i);
+
                 wheels.push_back(std::unique_ptr<POAWHEEL>(new POAWHEEL(info, name.c_str())));
                 num_wheels_ok++;
             }
@@ -242,9 +243,7 @@ bool POAWHEEL::Connect()
 bool POAWHEEL::Disconnect()
 {
     if (isSimulation())
-    {
         LOG_INFO("Simulation disconnected.");
-    }
     else if (fw_id >= 0)
     {
         PWErrors result = POAClosePW(fw_id);
@@ -332,9 +331,7 @@ bool POAWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, c
             CalibrateS[0].s = ISS_OFF;
 
             if (isSimulation())
-            {
                 return true;
-            }
 
             CalibrateSP.s   = IPS_BUSY;
             IDSetSwitch(&CalibrateSP, nullptr);
@@ -450,13 +447,9 @@ void POAWHEEL::TimerHit()
     QueryFilter();
 
     if (CurrentFilter != TargetFilter)
-    {
         SetTimer(getCurrentPollingPeriod());
-    }
     else
-    {
         SelectFilterDone(CurrentFilter);
-    }
 }
 
 bool POAWHEEL::saveConfigItems(FILE *fp)
