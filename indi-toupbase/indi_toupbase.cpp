@@ -156,6 +156,10 @@ bool ToupBase::initProperties()
     ///////////////////////////////////////////////////////////////////////////////////
     m_OffsetNP[0].fill("OFFSET", "Value", "%.f", 0, 255, 1, 0);
     m_OffsetNP.fill(getDeviceName(), "CCD_OFFSET", "Offset", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
+    // Load the saved offset so it can be applied to the camera in setupParams(). The camera
+    // does not persist the black level (get_Option returns the default), so it must be
+    // restored from config and re-applied after any sensor-mode change that resets it.
+    m_OffsetNP.load();
 
     ///////////////////////////////////////////////////////////////////////////////////
     // R/G/B/Y Level Range
@@ -238,6 +242,7 @@ bool ToupBase::initProperties()
     m_LowNoiseSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
     m_LowNoiseSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
     m_LowNoiseSP.fill(getDeviceName(), "TC_LOW_NOISE", "Low Noise Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    m_LowNoiseSP.load();
 
     // Tail Light
     m_TailLightSP[INDI_ENABLED].fill("INDI_ENABLED", "ON", ISS_OFF);
@@ -262,6 +267,7 @@ bool ToupBase::initProperties()
     m_HighFullwellSP[INDI_DISABLED].fill("INDI_DISABLED", "OFF", ISS_ON);
     m_HighFullwellSP.fill(getDeviceName(), "TC_HIGHFULLWELL", "High Fullwell Mode", CONTROL_TAB, IP_RW, ISR_1OFMANY, 60,
                           IPS_IDLE);
+    m_HighFullwellSP.load();
 
     if (m_Instance->model->flag & CP(FLAG_FAN))
     {
@@ -675,35 +681,49 @@ void ToupBase::setupParams()
         LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
     }
 
-    // Read tail light status from camera and sync INDI switch
+    // Apply the saved/configured tail light status to the camera.
+    // The switch is populated from config via m_TailLightSP.load() in initProperties(),
+    // so push that value to the hardware here. Reading the camera's power-on default and
+    // syncing the switch to it (as was done previously) discards the user's saved setting,
+    // because a later loadConfig sees no change (the switch already holds the saved value)
+    // and therefore never writes it to the camera.
     if (m_SupportTailLight)
     {
-        int currentTailLightValue = 0;
-        rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
-        if (SUCCEEDED(rc))
-        {
-            m_TailLightSP.reset();
-            if (currentTailLightValue >= 0 && currentTailLightValue < static_cast<int>(m_TailLightSP.size()))
-                m_TailLightSP[currentTailLightValue].setState(ISS_ON);
-        }
-        else
-        {
-            LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
-        }
+        int targetTailLight = (m_TailLightSP[INDI_ENABLED].getState() == ISS_ON) ? 1 : 0;
+        rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), targetTailLight));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
     }
 
-    // Read conversion gain from camera and sync INDI switch
-    int currentConversionGain = 0;
-    rc = FP(get_Option(m_Handle, CP(OPTION_CG), &currentConversionGain));
-    if (SUCCEEDED(rc))
+    // Apply the saved/configured conversion gain to the camera.
+    // Loaded from config via m_ConversionGainSP.load() in initProperties(); push it to the
+    // hardware so darks/bias and lights are all taken at the configured conversion gain,
+    // regardless of whether/when the client issues a subsequent loadConfig.
+    if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
     {
-        m_ConversionGainSP.reset();
-        if (currentConversionGain >= 0 && currentConversionGain < static_cast<int>(m_ConversionGainSP.size()))
-            m_ConversionGainSP[currentConversionGain].setState(ISS_ON);
+        int targetConversionGain = m_ConversionGainSP.findOnSwitchIndex();
+        if (targetConversionGain < 0)
+            targetConversionGain = GAIN_LOW;
+        rc = FP(put_Option(m_Handle, CP(OPTION_CG), targetConversionGain));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set camera gain conversion setting. %s", errorCodes(rc).c_str());
     }
-    else
+
+    // Apply the saved low-noise and high-fullwell modes to the camera. These are sensor-mode
+    // options that (like conversion gain) reset the black level when changed, so they must be
+    // applied here BEFORE the offset is written below, which is why the offset is applied last.
+    if (m_Instance->model->flag & CP(FLAG_LOW_NOISE))
     {
-        LOGF_ERROR("Failed to get camera gain conversion setting. %s", errorCodes(rc).c_str());
+        rc = FP(put_Option(m_Handle, CP(OPTION_LOW_NOISE), m_LowNoiseSP[INDI_ENABLED].getState()));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set low noise mode. %s", errorCodes(rc).c_str());
+    }
+
+    if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
+    {
+        rc = FP(put_Option(m_Handle, CP(OPTION_HIGH_FULLWELL), m_HighFullwellSP[INDI_ENABLED].getState()));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set high fullwell mode. %s", errorCodes(rc).c_str());
     }
 
     uint16_t nMax = 0, nDef = 0;
@@ -820,6 +840,16 @@ void ToupBase::setupParams()
     // Set range of black level based on max bit depth RAW
     int bLevelStep = 1 << (m_maxBitDepth - 8);
     m_OffsetNP[0].setMax(CP(BLACKLEVEL8_MAX) * bLevelStep);
+    m_OffsetNP.updateMinMax();
+
+    // Apply the saved offset (black level) to the camera LAST, after conversion gain,
+    // low noise, high fullwell, resolution and bit depth. Those sensor-mode changes reset
+    // the camera's black level, so applying the offset last ensures the configured value
+    // actually takes effect (see issue #1238: offset shown correctly in FITS but the sensor
+    // was left at its default, clipping darks/bias).
+    rc = FP(put_Option(m_Handle, CP(OPTION_BLACKLEVEL), static_cast<int>(m_OffsetNP[0].getValue())));
+    if (FAILED(rc))
+        LOGF_ERROR("Failed to set offset (black level). %s", errorCodes(rc).c_str());
 
     // Allocate memory
     allocateFrameBuffer();
