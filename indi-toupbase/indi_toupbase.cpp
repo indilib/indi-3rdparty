@@ -675,35 +675,32 @@ void ToupBase::setupParams()
         LOGF_ERROR("Failed to set software trigger mode. %s", errorCodes(rc).c_str());
     }
 
-    // Read tail light status from camera and sync INDI switch
+    // Apply the saved/configured tail light status to the camera.
+    // The switch is populated from config via m_TailLightSP.load() in initProperties(),
+    // so push that value to the hardware here. Reading the camera's power-on default and
+    // syncing the switch to it (as was done previously) discards the user's saved setting,
+    // because a later loadConfig sees no change (the switch already holds the saved value)
+    // and therefore never writes it to the camera.
     if (m_SupportTailLight)
     {
-        int currentTailLightValue = 0;
-        rc = FP(get_Option(m_Handle, CP(OPTION_TAILLIGHT), &currentTailLightValue));
-        if (SUCCEEDED(rc))
-        {
-            m_TailLightSP.reset();
-            if (currentTailLightValue >= 0 && currentTailLightValue < static_cast<int>(m_TailLightSP.size()))
-                m_TailLightSP[currentTailLightValue].setState(ISS_ON);
-        }
-        else
-        {
-            LOGF_ERROR("Failed to get camera tail light status. %s", errorCodes(rc).c_str());
-        }
+        int targetTailLight = (m_TailLightSP[INDI_ENABLED].getState() == ISS_ON) ? 1 : 0;
+        rc = FP(put_Option(m_Handle, CP(OPTION_TAILLIGHT), targetTailLight));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set camera tail light status. %s", errorCodes(rc).c_str());
     }
 
-    // Read conversion gain from camera and sync INDI switch
-    int currentConversionGain = 0;
-    rc = FP(get_Option(m_Handle, CP(OPTION_CG), &currentConversionGain));
-    if (SUCCEEDED(rc))
+    // Apply the saved/configured conversion gain to the camera.
+    // Loaded from config via m_ConversionGainSP.load() in initProperties(); push it to the
+    // hardware so darks/bias and lights are all taken at the configured conversion gain,
+    // regardless of whether/when the client issues a subsequent loadConfig.
+    if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
     {
-        m_ConversionGainSP.reset();
-        if (currentConversionGain >= 0 && currentConversionGain < static_cast<int>(m_ConversionGainSP.size()))
-            m_ConversionGainSP[currentConversionGain].setState(ISS_ON);
-    }
-    else
-    {
-        LOGF_ERROR("Failed to get camera gain conversion setting. %s", errorCodes(rc).c_str());
+        int targetConversionGain = m_ConversionGainSP.findOnSwitchIndex();
+        if (targetConversionGain < 0)
+            targetConversionGain = GAIN_LOW;
+        rc = FP(put_Option(m_Handle, CP(OPTION_CG), targetConversionGain));
+        if (FAILED(rc))
+            LOGF_ERROR("Failed to set camera gain conversion setting. %s", errorCodes(rc).c_str());
     }
 
     uint16_t nMax = 0, nDef = 0;
