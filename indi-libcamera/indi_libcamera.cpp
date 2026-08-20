@@ -34,6 +34,7 @@
 #include <libcamera/camera_manager.h>
 
 #include <algorithm>
+#include <chrono>
 #include <cmath>
 #include <vector>
 #include <map>
@@ -260,283 +261,354 @@ void INDILibCamera::workerExposure(const std::atomic_bool &isAboutToQuit, float 
         app.StopCamera();
         app.Teardown();
         app.CloseCamera();
-    }
-
-    RPiCamApp::Msg msg = app.Wait();
-    if (msg.type != RPiCamApp::MsgType::RequestComplete)
-    {
-        PrimaryCCD.setExposureFailed();
-        app.StopCamera();
-        app.Teardown();
-        app.CloseCamera();
-        LOGF_ERROR("Exposure failed: %d", msg.type);
-        return;
-    }
-    else if (isAboutToQuit)
-    {
-        app.StopCamera();
-        app.Teardown();
-        app.CloseCamera();
         return;
     }
 
-    bool raw = CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG;
-    auto stream = raw ? app.RawStream() : app.StillStream();
-    auto payload = std::get<CompletedRequestPtr>(msg.payload);
-    StreamInfo info = app.GetStreamInfo(stream);
-    BufferReadSync r(&app, payload->buffers[stream]);
-    const std::vector<libcamera::Span<uint8_t >> mem = r.Get();
-
-    try
+    bool keepCapturing = true;
+    while (keepCapturing && !isAboutToQuit)
     {
+        RPiCamApp::Msg msg = app.Wait();
+        if (msg.type != RPiCamApp::MsgType::RequestComplete)
+        {
+            PrimaryCCD.setExposureFailed();
+            LOGF_ERROR("Exposure failed: %d", msg.type);
+            m_fastExposureActive = false;
+            app.StopCamera();
+            app.Teardown();
+            app.CloseCamera();
+            return;
+        }
+        else if (isAboutToQuit)
+        {
+            m_fastExposureActive = false;
+            app.StopCamera();
+            app.Teardown();
+            app.CloseCamera();
+            return;
+        }
+
+        bool raw = CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG;
+        auto stream = raw ? app.RawStream() : app.StillStream();
+        libcamera::ControlList frameMetadata;
         char filename[MAXINDIFORMAT] {0};
 
-        if (raw)
+        // --- Early-release scope ---
+        // payload and r are destroyed at scope exit, triggering queueRequest so the
+        // camera immediately starts the next frame while we process the saved file.
+        try
         {
-            strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
-            dng_save(mem, info, payload->metadata, filename, app.CameraId(), options);
-        }
-        else
-        {
-            strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
-            jpeg_save(mem, info, payload->metadata, filename, app.CameraId(), options);
-        }
+            auto payload = std::move(std::get<CompletedRequestPtr>(msg.payload));
+            StreamInfo info = app.GetStreamInfo(stream);
+            BufferReadSync r(&app, payload->buffers[stream]);
+            const std::vector<libcamera::Span<uint8_t>> mem = r.Get();
 
-        char bayer_pattern[8] = {};
-        uint8_t * memptr = PrimaryCCD.getFrameBuffer();
-        size_t memsize = 0;
-        int naxis = 2, w = 0, h = 0, bpp = 8;
-
-        if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
-        {
-            if (CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG)
+            if (raw)
             {
-                if (!processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
-                {
-                    LOG_ERROR("Exposure failed to parse raw image.");
-                    PrimaryCCD.setExposureFailed();
-                    app.StopCamera();
-                    app.Teardown();
-                    app.CloseCamera();
-                    unlink(filename);
-                    return;
-                }
-
-                SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
-                BayerTP[2].setText(bayer_pattern);
-                BayerTP.apply();
-                m_csi_format_packed = options->Get().mode.packed;
-                m_bit_depth = options->Get().mode.bit_depth;
-                m_pixel_format = bayerToPixelFormat(bayer_pattern);
-                LOGF_INFO("Acquired image, mode: %s%d%s", bayer_pattern, m_bit_depth, m_csi_format_packed ? "P" : "U");
-
-                auto bl = payload->metadata.get(controls::SensorBlackLevels);
-                if (bl)
-                {
-                    if (m_pixel_format == INDI_MONO)
-                    {
-                        int black_level = static_cast<int>((*bl)[0] * (1 << m_bit_depth) / 65536.0);
-                        for (int i = 0; i < 4; i++)
-                        {
-                            m_black_levels[i] = black_level;
-                        }
-                        LOGF_INFO("Black level: %d", black_level);
-                    }
-                    else
-                    {
-                        for (int i = 0; i < 4; i++)
-                        {
-                            m_black_levels[i] = static_cast<int>((*bl)[i] * (1 << m_bit_depth) / 65536.0);
-                        }
-                        LOGF_INFO("Black levels: %d,%d,%d,%d", m_black_levels[0], m_black_levels[1], m_black_levels[2], m_black_levels[3]);
-                    }
-                }
-                else {
-                    LOG_WARN("no black level found, using default");
-                }
-                auto st = payload->metadata.get(controls::SensorTemperature);
-                if (st)
-                {
-                    LOGF_INFO("Sensor temp: %0.2f", *st);
-                    TemperatureNP[0].setValue(*st);
-                    TemperatureNP.setState(IPS_OK);
-                    TemperatureNP.apply();
-                }
+                strncpy(filename, "/tmp/output.dng", MAXINDIFORMAT);
+                dng_save(mem, info, payload->metadata, filename, app.CameraId(), options);
             }
             else
             {
-                if (!processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
-                {
-                    LOG_ERROR("Exposure failed to parse jpeg.");
-                    PrimaryCCD.setExposureFailed();
-                    app.StopCamera();
-                    app.Teardown();
-                    app.CloseCamera();
-                    unlink(filename);
-                    return;
-                }
-
-                LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis, w, h, bpp);
-
-                SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
+                strncpy(filename, "/tmp/output.jpg", MAXINDIFORMAT);
+                jpeg_save(mem, info, payload->metadata, filename, app.CameraId(), options);
             }
 
-            PrimaryCCD.setImageExtension("fits");
+            // Copy metadata before releasing payload
+            frameMetadata = payload->metadata;
+        }
+        catch (std::exception &e)
+        {
+            LOGF_ERROR("Error saving image: %s", e.what());
+            PrimaryCCD.setExposureFailed();
+            m_fastExposureActive = false;
+            app.StopCamera();
+            app.Teardown();
+            app.CloseCamera();
+            return;
+        }
+        // payload and r destroyed here → queueRequest → camera starts capturing next frame
 
-            uint16_t subW = PrimaryCCD.getSubW();
-            uint16_t subH = PrimaryCCD.getSubH();
+        // --- Post-capture processing (runs in parallel with the next frame exposure) ---
+        try
+        {
+            char bayer_pattern[8] = {};
+            uint8_t * memptr = PrimaryCCD.getFrameBuffer();
+            size_t memsize = 0;
+            int naxis = 2, w = 0, h = 0, bpp = 8;
 
-            // If subframing is requested
-            // If either axis is less than the image resolution
-            // then we subframe, given the OTHER axis is within range as well.
-            if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
+            if (EncodeFormatSP[FORMAT_FITS].getState() == ISS_ON)
             {
-
-                uint16_t subX = PrimaryCCD.getSubX();
-                uint16_t subY = PrimaryCCD.getSubY();
-
-                int subFrameSize     = subW * subH * bpp / 8 * ((naxis == 3) ? 3 : 1);
-                int oneFrameSize     = subW * subH * bpp / 8;
-
-                int lineW  = subW * bpp / 8;
-
-                LOGF_DEBUG("Subframing... subFrameSize: %d - oneFrameSize: %d - subX: %d - subY: %d - subW: %d - subH: %d",
-                           subFrameSize, oneFrameSize,
-                           subX, subY, subW, subH);
-
-                if (naxis == 2)
+                if (CaptureFormatSP.findOnSwitchIndex() == CAPTURE_DNG)
                 {
-                    // JM 2020-08-29: Using memmove since regions are overlaping
-                    // as proposed by Camiel Severijns on INDI forums.
-                    for (int i = subY; i < subY + subH; i++)
-                        memmove(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
+                    if (!processRAW(filename, &memptr, &memsize, &naxis, &w, &h, &bpp, bayer_pattern))
+                    {
+                        LOG_ERROR("Exposure failed to parse raw image.");
+                        PrimaryCCD.setExposureFailed();
+                        m_fastExposureActive = false;
+                        app.StopCamera();
+                        app.Teardown();
+                        app.CloseCamera();
+                        unlink(filename);
+                        return;
+                    }
+
+                    SetCCDCapability(GetCCDCapability() | CCD_HAS_BAYER);
+                    BayerTP[2].setText(bayer_pattern);
+                    BayerTP.apply();
+                    m_csi_format_packed = options->Get().mode.packed;
+                    m_bit_depth = options->Get().mode.bit_depth;
+                    m_pixel_format = bayerToPixelFormat(bayer_pattern);
+                    LOGF_INFO("Acquired image, mode: %s%d%s", bayer_pattern, m_bit_depth, m_csi_format_packed ? "P" : "U");
+
+                    auto bl = frameMetadata.get(controls::SensorBlackLevels);
+                    if (bl)
+                    {
+                        if (m_pixel_format == INDI_MONO)
+                        {
+                            int black_level = static_cast<int>((*bl)[0] * (1 << m_bit_depth) / 65536.0);
+                            for (int i = 0; i < 4; i++)
+                            {
+                                m_black_levels[i] = black_level;
+                            }
+                            LOGF_INFO("Black level: %d", black_level);
+                        }
+                        else
+                        {
+                            for (int i = 0; i < 4; i++)
+                            {
+                                m_black_levels[i] = static_cast<int>((*bl)[i] * (1 << m_bit_depth) / 65536.0);
+                            }
+                            LOGF_INFO("Black levels: %d,%d,%d,%d", m_black_levels[0], m_black_levels[1], m_black_levels[2], m_black_levels[3]);
+                        }
+                    }
+                    else {
+                        LOG_WARN("no black level found, using default");
+                    }
+                    auto st = frameMetadata.get(controls::SensorTemperature);
+                    if (st)
+                    {
+                        LOGF_INFO("Sensor temp: %0.2f", *st);
+                        TemperatureNP[0].setValue(*st);
+                        TemperatureNP.setState(IPS_OK);
+                        TemperatureNP.apply();
+                    }
                 }
                 else
                 {
-                    uint8_t * subR = memptr;
-                    uint8_t * subG = memptr + oneFrameSize;
-                    uint8_t * subB = memptr + oneFrameSize * 2;
-
-                    uint8_t * startR = memptr;
-                    uint8_t * startG = memptr + (w * h * bpp / 8);
-                    uint8_t * startB = memptr + (w * h * bpp / 8 * 2);
-
-                    for (int i = subY; i < subY + subH; i++)
+                    if (!processJPEG(filename, &memptr, &memsize, &naxis, &w, &h))
                     {
-                        memcpy(subR + (i - subY) * lineW, startR + (i * w + subX) * bpp / 8, lineW);
-                        memcpy(subG + (i - subY) * lineW, startG + (i * w + subX) * bpp / 8, lineW);
-                        memcpy(subB + (i - subY) * lineW, startB + (i * w + subX) * bpp / 8, lineW);
+                        LOG_ERROR("Exposure failed to parse jpeg.");
+                        PrimaryCCD.setExposureFailed();
+                        m_fastExposureActive = false;
+                        app.StopCamera();
+                        app.Teardown();
+                        app.CloseCamera();
+                        unlink(filename);
+                        return;
                     }
+
+                    LOGF_DEBUG("read_jpeg: memsize (%d) naxis (%d) w (%d) h (%d) bpp (%d)", memsize, naxis, w, h, bpp);
+
+                    SetCCDCapability(GetCCDCapability() & ~CCD_HAS_BAYER);
                 }
 
-                PrimaryCCD.setFrameBuffer(memptr);
-                PrimaryCCD.setFrameBufferSize(memsize, false);
-                PrimaryCCD.setResolution(w, h);
-                PrimaryCCD.setFrame(subX, subY, subW, subH);
-                PrimaryCCD.setNAxis(naxis);
-                PrimaryCCD.setBPP(bpp);
+                PrimaryCCD.setImageExtension("fits");
 
-                // binning if needed
-                if(PrimaryCCD.getBinX() > 1)
-                    PrimaryCCD.binBayerFrame();
+                uint16_t subW = PrimaryCCD.getSubW();
+                uint16_t subH = PrimaryCCD.getSubH();
+
+                // If subframing is requested
+                // If either axis is less than the image resolution
+                // then we subframe, given the OTHER axis is within range as well.
+                if ( (subW > 0 && subH > 0) && ((subW < w && subH <= h) || (subH < h && subW <= w)))
+                {
+
+                    uint16_t subX = PrimaryCCD.getSubX();
+                    uint16_t subY = PrimaryCCD.getSubY();
+
+                    int subFrameSize     = subW * subH * bpp / 8 * ((naxis == 3) ? 3 : 1);
+                    int oneFrameSize     = subW * subH * bpp / 8;
+
+                    int lineW  = subW * bpp / 8;
+
+                    LOGF_DEBUG("Subframing... subFrameSize: %d - oneFrameSize: %d - subX: %d - subY: %d - subW: %d - subH: %d",
+                               subFrameSize, oneFrameSize,
+                               subX, subY, subW, subH);
+
+                    if (naxis == 2)
+                    {
+                        // JM 2020-08-29: Using memmove since regions are overlaping
+                        // as proposed by Camiel Severijns on INDI forums.
+                        for (int i = subY; i < subY + subH; i++)
+                            memmove(memptr + (i - subY) * lineW, memptr + (i * w + subX) * bpp / 8, lineW);
+                    }
+                    else
+                    {
+                        uint8_t * subR = memptr;
+                        uint8_t * subG = memptr + oneFrameSize;
+                        uint8_t * subB = memptr + oneFrameSize * 2;
+
+                        uint8_t * startR = memptr;
+                        uint8_t * startG = memptr + (w * h * bpp / 8);
+                        uint8_t * startB = memptr + (w * h * bpp / 8 * 2);
+
+                        for (int i = subY; i < subY + subH; i++)
+                        {
+                            memcpy(subR + (i - subY) * lineW, startR + (i * w + subX) * bpp / 8, lineW);
+                            memcpy(subG + (i - subY) * lineW, startG + (i * w + subX) * bpp / 8, lineW);
+                            memcpy(subB + (i - subY) * lineW, startB + (i * w + subX) * bpp / 8, lineW);
+                        }
+                    }
+
+                    PrimaryCCD.setFrameBuffer(memptr);
+                    PrimaryCCD.setFrameBufferSize(memsize, false);
+                    PrimaryCCD.setResolution(w, h);
+                    PrimaryCCD.setFrame(subX, subY, subW, subH);
+                    PrimaryCCD.setNAxis(naxis);
+                    PrimaryCCD.setBPP(bpp);
+
+                    // binning if needed
+                    if(PrimaryCCD.getBinX() > 1)
+                        PrimaryCCD.binBayerFrame();
+                }
+                else
+                {
+                    if (PrimaryCCD.getSubW() != 0 && (w > PrimaryCCD.getSubW() || h > PrimaryCCD.getSubH()))
+                        LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purge configuration and update frame size to match camera size.",
+                                  w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+
+                    PrimaryCCD.setFrameBuffer(memptr);
+                    PrimaryCCD.setFrameBufferSize(memsize, false);
+                    PrimaryCCD.setResolution(w, h);
+                    PrimaryCCD.setFrame(0, 0, w, h);
+                    PrimaryCCD.setNAxis(naxis);
+                    PrimaryCCD.setBPP(bpp);
+
+                    // binning if needed
+                    if(PrimaryCCD.getBinX() > 1)
+                        PrimaryCCD.binBayerFrame();
+                }
             }
             else
             {
-                if (PrimaryCCD.getSubW() != 0 && (w > PrimaryCCD.getSubW() || h > PrimaryCCD.getSubH()))
-                    LOGF_WARN("Camera image size (%dx%d) is less than requested size (%d,%d). Purge configuration and update frame size to match camera size.",
-                              w, h, PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+                int fd = open(filename, O_RDONLY);
+                struct stat sb;
 
-                PrimaryCCD.setFrameBuffer(memptr);
-                PrimaryCCD.setFrameBufferSize(memsize, false);
-                PrimaryCCD.setResolution(w, h);
-                PrimaryCCD.setFrame(0, 0, w, h);
-                PrimaryCCD.setNAxis(naxis);
-                PrimaryCCD.setBPP(bpp);
+                // Get file size
+                if (fstat(fd, &sb) == -1)
+                {
+                    LOGF_ERROR("Error opening file %s: %s", filename, strerror(errno));
+                    PrimaryCCD.setExposureFailed();
+                    m_fastExposureActive = false;
+                    app.StopCamera();
+                    app.Teardown();
+                    app.CloseCamera();
+                    close(fd);
+                    return;
+                }
 
-                // binning if needed
-                if(PrimaryCCD.getBinX() > 1)
-                    PrimaryCCD.binBayerFrame();
+                // Copy file to memory using mmap
+                memsize = sb.st_size;
+                // Guard CCD Buffer content until we finish copying mmap buffer to it
+                std::unique_lock<std::mutex> guard(ccdBufferLock);
+                // If CCD Buffer size is different, allocate memory to file size
+                if (PrimaryCCD.getFrameBufferSize() != static_cast<int>(memsize))
+                {
+                    PrimaryCCD.setFrameBufferSize(memsize);
+                    memptr = PrimaryCCD.getFrameBuffer();
+                }
+                // mmap crashes randomly for some reason
+                if(0)
+                {
+
+                    void *mmap_mem = mmap(nullptr, memsize, PROT_READ, MAP_PRIVATE, fd, 0);
+                    if (mmap_mem == nullptr)
+                    {
+                        LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
+                        PrimaryCCD.setExposureFailed();
+                        m_fastExposureActive = false;
+                        app.StopCamera();
+                        app.Teardown();
+                        app.CloseCamera();
+                        close(fd);
+                        return;
+                    }
+
+                    // Copy mmap buffer to ccd buffer
+                    memcpy(memptr, mmap_mem, memsize);
+
+                    // Release mmap memory
+                    munmap(mmap_mem, memsize);
+                }
+                else
+                {
+                    ssize_t bytesRead = read(fd, memptr, memsize);
+                    if (bytesRead == -1 || static_cast<size_t>(bytesRead) < memsize)
+                    {
+                        LOGF_ERROR("Error reading file %s: %s or incomplete read (%zd/%zu bytes)", filename, strerror(errno), bytesRead, memsize);
+                        PrimaryCCD.setExposureFailed();
+                        m_fastExposureActive = false;
+                        app.StopCamera();
+                        app.Teardown();
+                        app.CloseCamera();
+                        close(fd);
+                        return;
+                    }
+                }
+                // Close file
+                close(fd);
+                // Set extension (eg. cr2..etc)
+                PrimaryCCD.setImageExtension(strchr(filename, '.') + 1);
+                // We are ready to unlock
+                guard.unlock();
             }
+
+            // Signal fast-exposure active before ExposureComplete so that StartExposure,
+            // called from the processFastExposure detached thread, routes to our CV
+            // instead of spawning a new worker.
+            m_fastExposureActive = (FastExposureToggleSP[INDI_ENABLED].getState() == ISS_ON);
+            if (m_fastExposureActive)
+            {
+                // Preset the timing baseline so processFastExposure sees m_UploadTime ≈ 0.
+                // The camera already started the next frame when we released the payload
+                // buffer earlier; the real inter-frame cost is app.Wait(), not processRAW.
+                FastExposureToggleStartup = std::chrono::system_clock::now() -
+                    std::chrono::milliseconds(static_cast<long long>(duration * 950));
+            }
+            ExposureComplete(&PrimaryCCD);
+        }
+        catch (std::exception &e)
+        {
+            LOGF_ERROR("Error saving image: %s", e.what());
+            PrimaryCCD.setExposureFailed();
+            m_fastExposureActive = false;
+            app.StopCamera();
+            app.Teardown();
+            app.CloseCamera();
+            return;
+        }
+
+        // Decide whether to loop for the next frame
+        if (m_fastExposureActive)
+        {
+            // Wait for StartExposure to signal us. processFastExposure calls StartExposure
+            // before doing any encoding/upload, so the signal arrives within ~100ms.
+            std::unique_lock<std::mutex> lock(m_fastExposureMutex);
+            bool gotSignal = m_fastExposureCV.wait_for(lock,
+                std::chrono::milliseconds(static_cast<long long>(duration * 1000) + 3000),
+                [this]() { return m_fastExposureSignals > 0 || !m_fastExposureActive; });
+            if (gotSignal && m_fastExposureSignals > 0)
+                m_fastExposureSignals--;
+            else
+                keepCapturing = false;
         }
         else
         {
-            int fd = open(filename, O_RDONLY);
-            struct stat sb;
-
-            // Get file size
-            if (fstat(fd, &sb) == -1)
-            {
-                LOGF_ERROR("Error opening file %s: %s", filename, strerror(errno));
-                PrimaryCCD.setExposureFailed();
-                app.StopCamera();
-                app.Teardown();
-                app.CloseCamera();
-                close(fd);
-                return;
-            }
-
-            // Copy file to memory using mmap
-            memsize = sb.st_size;
-            // Guard CCD Buffer content until we finish copying mmap buffer to it
-            std::unique_lock<std::mutex> guard(ccdBufferLock);
-            // If CCD Buffer size is different, allocate memory to file size
-            if (PrimaryCCD.getFrameBufferSize() != static_cast<int>(memsize))
-            {
-                PrimaryCCD.setFrameBufferSize(memsize);
-                memptr = PrimaryCCD.getFrameBuffer();
-            }
-            // mmap crashes randomly for some reason
-            if(0)
-            {
-
-                void *mmap_mem = mmap(nullptr, memsize, PROT_READ, MAP_PRIVATE, fd, 0);
-                if (mmap_mem == nullptr)
-                {
-                    LOGF_ERROR("Error reading file %s: %s", filename, strerror(errno));
-                    PrimaryCCD.setExposureFailed();
-                    app.StopCamera();
-                    app.Teardown();
-                    app.CloseCamera();
-                    close(fd);
-                    return;
-                }
-
-                // Copy mmap buffer to ccd buffer
-                memcpy(memptr, mmap_mem, memsize);
-
-                // Release mmap memory
-                munmap(mmap_mem, memsize);
-            }
-            else
-            {
-                ssize_t bytesRead = read(fd, memptr, memsize);
-                if (bytesRead == -1 || static_cast<size_t>(bytesRead) < memsize)
-                {
-                    LOGF_ERROR("Error reading file %s: %s or incomplete read (%zd/%zu bytes)", filename, strerror(errno), bytesRead, memsize);
-                    PrimaryCCD.setExposureFailed();
-                    app.StopCamera();
-                    app.Teardown();
-                    app.CloseCamera();
-                    close(fd);
-                    return;
-                }
-            }
-            // Close file
-            close(fd);
-            // Set extension (eg. cr2..etc)
-            PrimaryCCD.setImageExtension(strchr(filename, '.') + 1);
-            // We are ready to unlock
-            guard.unlock();
+            keepCapturing = false;
         }
+    }  // end while keepCapturing
 
-        ExposureComplete(&PrimaryCCD);
-    }
-    catch (std::exception &e)
-    {
-        LOGF_ERROR("Error saving image: %s", e.what());
-        PrimaryCCD.setExposureFailed();
-    }
-
+    m_fastExposureActive = false;
     app.StopCamera();
     app.Teardown();
     app.CloseCamera();
@@ -1152,6 +1224,14 @@ bool INDILibCamera::StartExposure(float duration)
 {
     Streamer->setPixelFormat(CaptureFormatSP.findOnSwitchIndex() == CAPTURE_JPG ? INDI_JPG : INDI_RGB);
     PrimaryCCD.setExposureDuration(duration);
+    // If the fast-exposure loop is already running, signal it rather than spawning a new worker
+    if (m_fastExposureActive.load())
+    {
+        std::unique_lock<std::mutex> lock(m_fastExposureMutex);
+        m_fastExposureSignals++;
+        m_fastExposureCV.notify_one();
+        return true;
+    }
     m_Worker.start(std::bind(&INDILibCamera::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
@@ -1162,6 +1242,13 @@ bool INDILibCamera::StartExposure(float duration)
 bool INDILibCamera::AbortExposure()
 {
     LOG_DEBUG("Aborting exposure...");
+    // Wake the fast-exposure loop so it can exit cleanly
+    {
+        std::unique_lock<std::mutex> lock(m_fastExposureMutex);
+        m_fastExposureActive = false;
+        m_fastExposureSignals = 0;
+        m_fastExposureCV.notify_all();
+    }
     m_Worker.quit();
     return true;
 }
