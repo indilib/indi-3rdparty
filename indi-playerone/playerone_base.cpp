@@ -797,7 +797,7 @@ bool POABase::ISNewNumber(const char *dev, const char *name, double values[], ch
     // then publish the new target exposure for the streaming worker thread.
     const bool result = INDI::CCD::ISNewNumber(dev, name, values, names, n);
 
-    if (result && Streamer && dev != nullptr && !strcmp(dev, getDeviceName()) &&
+    if (Streamer && dev != nullptr && !strcmp(dev, getDeviceName()) &&
             name != nullptr && !strcmp(name, "STREAMING_EXPOSURE"))
         mStreamExposureS.store(Streamer->getTargetExposure(), std::memory_order_relaxed);
 
