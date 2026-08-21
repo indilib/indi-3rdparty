@@ -1,0 +1,33 @@
+# Astrolabs ScopeLink - access rights
+#
+# Copyright (C) 2026 Astrolabs Hungary Kft.
+#
+# Owner:      Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+# Maintainer: Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+#
+# This program is free software; you can redistribute it and/or modify it under the terms of the GNU
+# General Public License as published by the Free Software Foundation; either version 2 of the License,
+# or (at your option) any later version.
+#
+# Without this the controller enumerates as /dev/ttyACMn owned by root:dialout, so the driver only works
+# for users who have been added to the dialout group.
+#
+# This file deliberately creates no device name of its own. ScopeLink currently uses STMicroelectronics'
+# generic Virtual COM Port identifiers, 0483:5740, which every STM32 device running the stock USB CDC
+# stack also reports - Nucleo boards, other vendors' controllers, home-built focusers - and the firmware
+# sets no product string either: a generation 3 unit reports ST's default, "STM32 Virtual ComPort in FS
+# Mode". Nothing in the descriptors distinguishes a ScopeLink from any other stock-stack STM32 device, so
+# a SYMLINK+= here would be handing the name "scopelink" to hardware that is not one.
+#
+# A product identifier of our own has been requested from STMicroelectronics. Once it is assigned the
+# match below becomes exact, and a symlink can be added with it.
+#
+# Until then, the stable per-unit name to point an Ekos profile at is the one systemd already derives
+# from the USB serial number:
+#
+#     /dev/serial/by-id/usb-STMicroelectronics_STM32_Virtual_ComPort_in_FS_Mode_205E35793630-if00
+#
+# Matching broadly for access rights is harmless: it grants the user at the console access to a serial
+# device they plugged in themselves, which is what a desktop distribution does for CDC devices anyway.
+
+SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="5740", MODE="0660", GROUP="dialout", TAG+="uaccess"

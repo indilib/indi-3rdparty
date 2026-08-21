@@ -1,0 +1,99 @@
+.\" ScopeLink INDI driver - manual page for the command line tool
+.\"
+.\" Copyright (C) 2026 Astrolabs Hungary Kft.
+.\"
+.\" Owner:      Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+.\" Maintainer: Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+.\"
+.\" This program is free software; you can redistribute it and/or modify it
+.\" under the terms of the GNU General Public License as published by the Free
+.\" Software Foundation; either version 2 of the License, or (at your option)
+.\" any later version.
+.TH SCOPELINK-CLI 1 "2026-08-12" "indi-scopelink 1.0" "INDI Drivers"
+.SH NAME
+scopelink-cli \- read and configure an Astrolabs ScopeLink controller from the command line
+.SH SYNOPSIS
+.B scopelink-cli
+.RB [ \-\-port
+.IR device ]
+.RB [ \-\-verbose ]
+.I command
+.RI [ argument ]
+.SH DESCRIPTION
+.B scopelink-cli
+talks to a ScopeLink controller directly, without libindi, a client or a running INDI server in the way.
+It exists mostly for support: "run this and send me what it prints" is a far shorter conversation than
+talking somebody through a graphical client over email.
+.PP
+The driver must not be connected to the same port at the same time.
+.SH OPTIONS
+.TP
+.BI \-\-port " device"
+Port to open. Defaults to
+.IR /dev/ttyACM0 .
+Prefer the per-unit name under
+.IR /dev/serial/by-id/ ,
+which does not renumber.
+.TP
+.B \-\-verbose
+Log every request and every response as hex, on standard error, along with the protocol layer's own
+messages. This is what a capture for the driver's conformance vectors is taken from.
+.SH COMMANDS
+.TP
+.B info
+Identification, capabilities and one status sample.
+.TP
+.B status
+One status sample.
+.TP
+.B parameters
+Every configuration identifier this controller holds, with its value.
+.TP
+.BI export " file"
+Write the whole configuration to
+.IR file ,
+in the format the vendor's Windows parameter editor reads and writes. Take one of these before changing
+anything: it is the only backup of a unit's calibration.
+.TP
+.BI import " file"
+Read
+.I file
+and write to the controller any value that differs. Values the connected generation does not hold are
+skipped. Configuration lives in EEPROM, which has a finite number of write cycles, so only differences
+are written.
+.TP
+.B faults
+The fault store, with the freeze frame captured when each code was raised.
+.TP
+.B clear-faults
+Clear every stored code, then read the store back. A code whose cause is still present reappears
+immediately, which is the point of reading it back.
+.TP
+.B eeprom
+The EEPROM wear counters.
+.SH EXAMPLES
+Identify whatever is on a port:
+.PP
+.RS
+.B scopelink-cli --port /dev/ttyACM0 info
+.RE
+.PP
+Back a unit's configuration up before changing it:
+.PP
+.RS
+.B scopelink-cli --port /dev/serial/by-id/usb-STMicroelectronics_STM32_Virtual_ComPort_in_FS_Mode_205E35793630-if00 export before.did
+.RE
+.PP
+Capture the wire traffic for a bug report:
+.PP
+.RS
+.B scopelink-cli --port /dev/ttyACM0 --verbose info 2>capture.log
+.RE
+.SH EXIT STATUS
+Zero when the command completed, non-zero when the controller could not be reached or did not answer
+usefully.
+.SH SEE ALSO
+.BR indi_scopelink (1),
+.BR scopelink-simulator (1)
+.SH AUTHOR
+Bence Toth <bence.toth@astrolabs.hu>, Astrolabs Hungary Kft.

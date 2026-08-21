@@ -1,0 +1,60 @@
+.\" ScopeLink INDI driver - manual page for the simulator
+.\"
+.\" Copyright (C) 2026 Astrolabs Hungary Kft.
+.\"
+.\" Owner:      Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+.\" Maintainer: Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+.\"
+.\" This program is free software; you can redistribute it and/or modify it
+.\" under the terms of the GNU General Public License as published by the Free
+.\" Software Foundation; either version 2 of the License, or (at your option)
+.\" any later version.
+.TH SCOPELINK-SIMULATOR 1 "2026-08-12" "indi-scopelink 1.0" "INDI Drivers"
+.SH NAME
+scopelink-simulator \- serve a simulated ScopeLink controller on a pseudo terminal
+.SH SYNOPSIS
+.B scopelink-simulator
+.RB [ \-\-generation
+.IR 2 | 3 ]
+.SH DESCRIPTION
+.B scopelink-simulator
+answers the ScopeLink wire protocol on a pseudo terminal, so that anything which expects a serial port
+can be exercised without a controller attached. It prints the path of the pseudo terminal it created and
+then serves one client until it is stopped.
+.PP
+Use it when the thing being tested is a port:
+.BR scopelink-cli (1),
+a client's port handling, or the driver's own serial path. To try the
+.B driver
+without hardware there is no need for this program at all \- turn the driver's
+.B SIMULATION
+switch on instead, which connects it to the same simulated controller directly. See
+.BR indi_scopelink (1).
+.PP
+It is not a model of the firmware. It answers every command the driver sends, with frame layouts taken
+from the same measurements the driver's parsers are built on, and it moves its motors at a plausible
+rate so that motion handling has something to follow. The values it reports are plausible rather than
+measured.
+.SH OPTIONS
+.TP
+.BI \-\-generation " 2|3"
+Hardware generation to imitate. Defaults to 3. The generations differ in what they offer, not only in
+what they report: generation 2 has no USB hub and no smart switch diagnostics.
+.TP
+.B \-\-help
+Print a usage summary and exit.
+.SH EXAMPLES
+.RS
+.nf
+.B scopelink-simulator --generation 3
+ScopeLink simulator, hardware generation 3
+Port: /dev/pts/7
+
+.B scopelink-cli --port /dev/pts/7 info
+.fi
+.RE
+.SH SEE ALSO
+.BR indi_scopelink (1),
+.BR scopelink-cli (1)
+.SH AUTHOR
+Bence Toth <bence.toth@astrolabs.hu>, Astrolabs Hungary Kft.

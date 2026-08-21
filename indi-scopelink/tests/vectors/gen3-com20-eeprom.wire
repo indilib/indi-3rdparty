@@ -1,0 +1,22 @@
+# Generation 3 controller, unit 2B002E000D4330364E353020
+# Captured 2026-08-11 with:  scopelink-cli --port /dev/ttyACM0 --verbose eeprom
+#
+# The wear counters, and the open sequence needed to get to them. Kept separate from the session vector
+# because it is a separate run against the same unit, and a vector file holds one recording.
+
+-> AA 55 12 00
+<- AA 55 12 04 03 00 01 00
+-> AA 55 07 00
+<- AA 55 07 0C 2B 00 2E 00 0D 43 30 36 4E 35 30 20
+-> AA 55 09 00
+<- AA 55 09 28 30 64 62 36 36 38 30 65 34 34 63 32 38 35 31 39 31 39 65 32 66 66 65 62 66 66 61 61 39 33 66 32 35 37 63 33 33 32 31 63
+-> AA 55 08 03 00 03 02
+<- AA 55 08 04 00 03 02 01
+-> AA 55 17 07 07 EA 08 0B 14 2F 08
+<- AA 55 17 01 01
+-> AA 55 01 00
+<- AA 55 01 38 34 E8 0C A9 35 02 34 95 00 2F 0C CC 01 01 00 00 00 00 00 19 00 19 3B 15 3A DD 02 00 00 0F 42 40 02 00 00 00 00 00 00 00 00 00 00 00 00 03 03 3F 01 00 00 00 01 01 00 00
+
+# --- Wear counters -----------------------------------------------------------------------------------
+-> AA 55 18 00
+<- AA 55 18 10 00 20 00 0A 00 02 00 02 00 02 00 02 00 00 00 01

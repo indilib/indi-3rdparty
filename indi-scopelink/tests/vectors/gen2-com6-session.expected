@@ -1,0 +1,83 @@
+# What the frames in gen2-com6-session.wire decode to.
+#
+# Read out of the frame by hand against the documented layout, not copied from what the driver printed.
+#
+# The status values are those of the FIRST status frame, the one the open takes. The second belongs to the
+# fault read, which refreshes the status itself to get a fault count that cannot already be stale.
+
+identification.hardwareMajor       = 2
+identification.hardwareMinor       = 0
+identification.interfaceMajor      = 1
+identification.interfaceMinor      = 0
+identification.hardwareIdentifier  = 09000E000C4330364E353020
+# The unit sends this one in lower case, unlike the generation 3 one; the driver upper-cases both.
+identification.softwareIdentifier  = 92E3F91ED237696CE9072369B3AED4F93F08CD76
+
+# Four bytes shorter than generation 3's status frame, fourteen shorter in the freeze frame, and neither
+# the USB hub nor the smart switch diagnostics exist here.
+capabilities.statusFrameLength     = 56
+capabilities.dtcSnapshotLength     = 34
+capabilities.hasUsbHub             = 0
+capabilities.hasSmartSwitches      = 0
+# Identifier 0x0302 does not exist on this generation, so the sensor is assumed fitted - which is the safe
+# assumption, and this unit does have one. It is simply broken.
+capabilities.hasTemperatureSensor  = 1
+
+# 34 8F = 13455 mV
+status.supplyVoltage               = 13455
+# 0C 72 = 3186 mV
+status.sensorSupplyVoltage         = 3186
+# 00 19 = 25 mV, both fans off
+status.fanAVoltage                 = 25
+# 00 06 = 6 mV
+status.fanBVoltage                 = 6
+# 00 2A = 42 C
+status.controllerTemperature       = 42
+# 0C AC = 3244 mV
+status.controllerSupplyVoltage     = 3244
+status.fanATargetDT                = 25
+status.fanBTargetDT                = 25
+# FF FF from a sensor that is not answering, on both readings
+status.ambientTemperatureRaw       = 65535
+status.ambientTemperatureValid     = 0
+status.mirrorTemperatureRaw        = 65535
+status.mirrorTemperatureValid      = 0
+# 00 03 0D 40 = 200000 steps, halted
+status.motor1Position              = 200000
+status.motor1Moving                = 0
+status.motor1Load                  = 0
+status.motor2Position              = 0
+status.motor2Moving                = 0
+status.flatboxDuty                 = 0
+status.powerSwitch1State           = 0
+status.powerSwitch2State           = 0
+status.fanAManualOverrideEnabled   = 0
+status.fanBManualOverrideEnabled   = 0
+status.storedFaultCount            = 1
+status.activeFaultCount            = 1
+status.cpuLoad                     = 4
+status.peakCpuLoad                 = 6
+# 3B = 59 percent
+status.stackUsage                  = 59
+# FF FF - the counter has saturated, which is what a sensor that has been failing for a long time does
+status.i2cErrorCounter             = 65535
+# No USB hub on this generation, so these are all off rather than absent
+status.usb1PowerActive             = 0
+status.usb2PowerActive             = 0
+status.usb1PowerFailure            = 0
+status.usb2PowerFailure            = 0
+
+# The infrared sensor timeout, still present. Its freeze frame holds 24 fields against generation 3's 36:
+# no auxiliary output voltages, no smart switch states and no USB hub states.
+faults.count                       = 1
+faults.0.code                      = 4
+faults.0.name                      = Infrared temperature sensor not answering (0x0004)
+faults.0.occurrenceCount           = 2
+faults.0.isActive                  = 1
+faults.0.snapshotFieldCount        = 24
+faults.0.timestamp                 = 2025-01-01 00:00:00
+# 34 8F in the freeze frame, the same rail the status frame reports
+faults.0.field.Supply voltage      = 13455
+faults.0.field.RTC year            = 2025
+# The proof that the generations really do carry different freeze frames
+faults.0.field.USB DS1 power active = (no such field)

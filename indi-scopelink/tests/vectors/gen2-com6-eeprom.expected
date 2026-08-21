@@ -1,0 +1,31 @@
+# What the frames in gen2-com6-eeprom.wire decode to.
+#
+# The counters are in the same odd order as on generation 3 - dataset first, page erase last - which is
+# what these two vectors together establish is a property of the protocol rather than of one unit:
+#
+#     00 03 | 00 08 | 00 07 | 00 01 | 00 01 | 00 01 | 00 00 | 00 00
+#
+# This unit has never had a page erased and has written its dataset three times; the fault store's first
+# block has been written seven times, which is the dead infrared sensor logging its timeout.
+
+identification.hardwareMajor       = 2
+identification.hardwareMinor       = 0
+identification.interfaceMajor      = 1
+identification.interfaceMinor      = 0
+identification.hardwareIdentifier  = 09000E000C4330364E353020
+# The unit sends this one in lower case, unlike the generation 3 one; the driver upper-cases both.
+identification.softwareIdentifier  = 92E3F91ED237696CE9072369B3AED4F93F08CD76
+
+capabilities.statusFrameLength     = 56
+capabilities.dtcSnapshotLength     = 34
+capabilities.hasUsbHub             = 0
+capabilities.hasSmartSwitches      = 0
+capabilities.hasTemperatureSensor  = 1
+
+eeprom.datasetCounter              = 3
+eeprom.learntDataCounter           = 8
+eeprom.faultStoreBlock1Counter     = 7
+eeprom.faultStoreBlock2Counter     = 1
+eeprom.faultStoreBlock3Counter     = 1
+eeprom.faultStoreBlock4Counter     = 1
+eeprom.pageEraseCounter            = 0

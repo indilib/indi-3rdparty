@@ -1,0 +1,73 @@
+.\" ScopeLink INDI driver - manual page
+.\"
+.\" Copyright (C) 2026 Astrolabs Hungary Kft.
+.\"
+.\" Owner:      Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+.\" Maintainer: Bence Toth (Astrolabs Hungary Kft.) <bence.toth@astrolabs.hu>
+.\"
+.\" This program is free software; you can redistribute it and/or modify it
+.\" under the terms of the GNU General Public License as published by the Free
+.\" Software Foundation; either version 2 of the License, or (at your option)
+.\" any later version.
+.TH INDI_SCOPELINK 1 "2026-08-12" "indi-scopelink 1.0" "INDI Drivers"
+.SH NAME
+indi_scopelink \- INDI driver for the Astrolabs ScopeLink telescope controller
+.SH SYNOPSIS
+.B indiserver
+.RI [ options ]
+.B indi_scopelink
+.SH DESCRIPTION
+.B indi_scopelink
+publishes one Astrolabs ScopeLink controller as a single INDI device. It is a driver, not a program to
+run by hand: an INDI server starts it and clients such as KStars or Ekos talk to it over the server.
+.PP
+One USB connection carries a stepper focuser, a motorised front flap over the telescope aperture, a flat
+panel, two mirror cooling fans and, depending on the hardware generation, two auxiliary power outputs and
+a powered USB hub. The driver claims the INDI focuser, light box and auxiliary interfaces on every
+controller, and the dust cap interface as well when the front flap is fitted and calibrated.
+.PP
+What a controller offers is read out of the hardware when the driver connects, so properties that a given
+generation does not have are never published rather than being published and failing.
+.SH USAGE
+Start the driver under an INDI server:
+.PP
+.RS
+.B indiserver -v indi_scopelink
+.RE
+.PP
+Then connect a client and set
+.B DEVICE_PORT
+to the controller's port. Prefer the per-unit name under
+.I /dev/serial/by-id/
+to
+.IR /dev/ttyACM n,
+which is renumbered whenever another CDC device is plugged in first.
+.SH SIMULATION
+Enabling the standard INDI
+.B SIMULATION
+switch before connecting makes the driver answer itself, with no port opened.
+.B SIMULATED_GENERATION
+on the Options tab selects which hardware generation it imitates, which is what makes the differences
+between them visible. See
+.BR scopelink-simulator (1)
+for the same simulated controller served on a pseudo terminal instead.
+.SH FILES
+.TP
+.I /usr/share/indi/indi_scopelink.xml
+Driver list entry, which is how clients find the driver.
+.TP
+.I /usr/lib/udev/rules.d/99-scopelink.rules
+Access rights for the controller.
+.TP
+.I ~/.indi/ScopeLink_config.xml
+Saved device configuration.
+.SH SEE ALSO
+.BR scopelink-cli (1),
+.BR scopelink-simulator (1),
+.BR indiserver (1)
+.PP
+Full documentation, including the Ekos walkthrough, is at
+.UR https://drivers.indilib.org/focusers/astrolabs/scopelink/scopelink
+.UE .
+.SH AUTHOR
+Bence Toth <bence.toth@astrolabs.hu>, Astrolabs Hungary Kft.
