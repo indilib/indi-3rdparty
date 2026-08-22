@@ -257,16 +257,25 @@ bool ASICAA::Connect()
     else
         ReverseRotatorSP.setState(IPS_ALERT);
 
-    // Get max degree limit
+    // Get max degree limit. If the read fails (or returns a non-positive,
+    // unusable value), fall back to a full turn. Otherwise a transient read
+    // error (e.g. a USB brown-out on an underpowered cable) would leave the
+    // limit at 0 and make MoveRotator reject every subsequent move with
+    // "Target angle ... exceeds max limit 0.00", effectively bricking motion.
     float maxDegree = 0;
     code = CAAGetMaxDegree(m_ID, &maxDegree);
-    if (code == CAA_SUCCESS)
+    if (code == CAA_SUCCESS && maxDegree > 0)
     {
         RotatorLimitsNP[0].setValue(maxDegree);
         RotatorLimitsNP.setState(IPS_OK);
     }
     else
+    {
+        LOGF_WARN("Failed to read max degree limit (code %d, value %.2f); falling back to 360.",
+                  code, maxDegree);
+        RotatorLimitsNP[0].setValue(360.0);
         RotatorLimitsNP.setState(IPS_ALERT);
+    }
 
     SetTimer(getCurrentPollingPeriod());
 
@@ -353,11 +362,13 @@ IPState ASICAA::MoveRotator(double angle)
         return IPS_ALERT;
     }
 
-    // Check if target angle exceeds max limit
-    if (angle > RotatorLimitsNP[0].getValue())
+    // Check if target angle exceeds max limit. Only enforce a positive limit:
+    // a non-positive value means the limit is unset or could not be read, and
+    // must not be allowed to lock out all motion.
+    double maxLimit = RotatorLimitsNP[0].getValue();
+    if (maxLimit > 0 && angle > maxLimit)
     {
-        LOGF_ERROR("Target angle %.2f exceeds max limit %.2f", angle,
-                   RotatorLimitsNP[0].getValue());
+        LOGF_ERROR("Target angle %.2f exceeds max limit %.2f", angle, maxLimit);
         return IPS_ALERT;
     }
 
