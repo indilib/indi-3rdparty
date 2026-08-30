@@ -2131,6 +2131,12 @@ void ToupBase::addFITSKeywords(INDI::CCDChip * targetChip, std::vector<INDI::FIT
         fitsKeywords.push_back({"LOWNOISE", m_LowNoiseSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "Low Noise"});
     if (m_Instance->model->flag & CP(FLAG_HIGH_FULLWELL))
         fitsKeywords.push_back({"FULLWELL", m_HighFullwellSP[INDI_ENABLED].getState() == ISS_ON ? "ON" : "OFF", "High Fullwell"});
+    if (m_Instance->model->flag & (CP(FLAG_CG) | CP(FLAG_CGHDR)))
+    {
+        auto onConversionGain = m_ConversionGainSP.findOnSwitch();
+        if (onConversionGain)
+            fitsKeywords.push_back({"CONVGAIN", onConversionGain->getLabel(), "Conversion Gain"});
+    }
     fitsKeywords.push_back({"SN", m_CameraTP[TC_CAMERA_SN].getText(), "Serial Number"});
     fitsKeywords.push_back({"PRODATE", m_CameraTP[TC_CAMERA_DATE].getText(), "Production Date"});
     fitsKeywords.push_back({"FIRMVER", m_CameraTP[TC_CAMERA_FW_VERSION].getText(), "Firmware Version"});
