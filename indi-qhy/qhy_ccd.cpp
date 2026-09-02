@@ -2362,6 +2362,9 @@ bool QHYCCD::saveConfigItems(FILE *fp)
     if (HasAmpGlow)
         IUSaveConfigSwitch(fp, &AMPGlowSP);
 
+    if (HasOverscanArea)
+        IUSaveConfigSwitch(fp, &OverscanAreaSP);
+
     if (HasGPS)
     {
         IUSaveConfigSwitch(fp, &GPSControlSP);
