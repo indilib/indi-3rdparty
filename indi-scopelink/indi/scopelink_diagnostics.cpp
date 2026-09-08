@@ -24,28 +24,17 @@ extern const char *PARAMETERS_TAB;
 // Configuration parameters
 // ---------------------------------------------------------------------------------------------------
 
-const char *ScopeLink::parameterGroupProperty(scopelink::DidGroup group)
+/**
+ * @brief The label a numeric parameter's element carries, which is where its unit goes.
+ *
+ * INDI number elements have no unit of their own, so it rides in the label. Without it the tab shows a
+ * column of bare numbers whose meaning depends on a display scale the user cannot see.
+ */
+static std::string parameterElementLabel(const scopelink::DidDescriptor &descriptor)
 {
-    switch (group)
-    {
-        case scopelink::DidGroup::FocuserMotor:
-            return "PARAMS_FOCUSER_MOTOR";
+    const std::string label(descriptor.label);
 
-        case scopelink::DidGroup::FlapMotor:
-            return "PARAMS_FLAP_MOTOR";
-
-        case scopelink::DidGroup::Fans:
-            return "PARAMS_FANS";
-
-        case scopelink::DidGroup::Temperature:
-            return "PARAMS_TEMPERATURE";
-
-        case scopelink::DidGroup::SmartSwitch:
-            return "PARAMS_SMART_SWITCH";
-
-        default:
-            return "PARAMS_OTHER";
-    }
+    return (descriptor.unit[0] == 0) ? label : (label + " (" + descriptor.unit + ")");
 }
 
 scopelink::Did *ScopeLink::findDid(uint32_t id)
@@ -63,43 +52,80 @@ void ScopeLink::buildParameterGroups()
 {
     m_parameterGroups.clear();
 
-    const scopelink::DidGroup order[] = { scopelink::DidGroup::FocuserMotor, scopelink::DidGroup::FlapMotor,
-                                          scopelink::DidGroup::Fans,         scopelink::DidGroup::Temperature,
-                                          scopelink::DidGroup::SmartSwitch,  scopelink::DidGroup::Miscellaneous };
-
-    for (const scopelink::DidGroup group : order)
+    // Walked in the firmware's own group order, and within a group in the order the catalogue is in,
+    // which is the order params.json lists them. Nothing here decides how the tab is laid out.
+    for (size_t index = 0; index < scopelink::catalogue::GroupCount; index++)
     {
-        std::vector<uint32_t> identifiers;
+        const scopelink::DidGroupInfo &info = scopelink::catalogue::Groups[index];
+
+        ParameterGroup published;
+        std::vector<const scopelink::Did *> numbers;
+        bool numbersAreReadOnly = true;
+
+        published.info = &info;
 
         for (const scopelink::Did &identifier : m_catalogue)
         {
-            if (identifier.group() == group)
-                identifiers.push_back(identifier.id());
+            const scopelink::DidDescriptor &descriptor = identifier.descriptor();
+
+            if (strcmp(descriptor.group, info.id) != 0)
+                continue;
+
+            if (!descriptor.isEnumerated())
+            {
+                numbers.push_back(&identifier);
+                published.identifiers.push_back(descriptor.id);
+                numbersAreReadOnly = numbersAreReadOnly && descriptor.readOnly;
+                continue;
+            }
+
+            ParameterSwitch entry;
+            const scopelink::DidOption *held = descriptor.findOption(identifier.value());
+
+            entry.id = descriptor.id;
+            entry.property.reset(new INDI::PropertySwitch(descriptor.optionCount));
+
+            for (size_t option = 0; option < descriptor.optionCount; option++)
+            {
+                (*entry.property)[option].fill(descriptor.options[option].name, descriptor.options[option].label,
+                                               (held == &descriptor.options[option]) ? ISS_ON : ISS_OFF);
+            }
+
+            entry.property->fill(getDeviceName(), descriptor.switchProperty, descriptor.qualifiedLabel().c_str(),
+                                 PARAMETERS_TAB, descriptor.readOnly ? IP_RO : IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+            published.switches.push_back(std::move(entry));
         }
 
-        if (identifiers.empty())
+        if (published.identifiers.empty() && published.switches.empty())
             continue;
 
-        ParameterGroup published;
-
-        published.group       = group;
-        published.identifiers = identifiers;
-        published.property.reset(new INDI::PropertyNumber(identifiers.size()));
-
-        for (size_t index = 0; index < identifiers.size(); index++)
+        if (!numbers.empty())
         {
-            const scopelink::Did *identifier = findDid(identifiers[index]);
+            published.property.reset(new INDI::PropertyNumber(numbers.size()));
 
-            // Ranges come from the storage type, which is the only limit the protocol itself defines.
-            // Anything narrower is firmware behaviour the controller enforces and reports by refusing
-            // the write, which is reported to the user as a failed write rather than guessed at here.
-            (*published.property)[index].fill(identifier->elementName().c_str(), identifier->description().c_str(),
-                                              "%.0f", identifier->minimum(), identifier->maximum(), 1,
-                                              identifier->value());
+            for (size_t element = 0; element < numbers.size(); element++)
+            {
+                const scopelink::Did &identifier           = *numbers[element];
+                const scopelink::DidDescriptor &descriptor = identifier.descriptor();
+
+                // The limits are the firmware's, not the storage type's, so a client sees what the
+                // controller will actually accept rather than what happens to fit in the field. They are
+                // in display units, as are the step and the value - the wire stays raw either way.
+                //
+                // The value is what has just been read from the controller rather than the firmware's
+                // default, because this is the value the client is given when the property is defined and
+                // nothing publishes it again before then.
+                (*published.property)[element].fill(
+                    descriptor.elementName().c_str(), parameterElementLabel(descriptor).c_str(),
+                    descriptor.numberFormat().c_str(), descriptor.toDisplay(descriptor.minimum),
+                    descriptor.toDisplay(descriptor.maximum), descriptor.step(),
+                    descriptor.toDisplay(identifier.value()));
+            }
+
+            published.property->fill(getDeviceName(), info.property, info.label, PARAMETERS_TAB,
+                                     numbersAreReadOnly ? IP_RO : IP_RW, 60, IPS_IDLE);
         }
-
-        published.property->fill(getDeviceName(), parameterGroupProperty(group), scopelink::didGroupName(group),
-                                 PARAMETERS_TAB, IP_RW, 60, IPS_IDLE);
 
         m_parameterGroups.push_back(std::move(published));
     }
@@ -136,30 +162,53 @@ void ScopeLink::publishParameterValues()
 {
     for (ParameterGroup &group : m_parameterGroups)
     {
-        bool complete = true;
-
-        for (size_t index = 0; index < group.identifiers.size(); index++)
+        if (group.property != nullptr)
         {
-            const scopelink::Did *identifier = findDid(group.identifiers[index]);
+            bool complete = true;
+
+            for (size_t index = 0; index < group.identifiers.size(); index++)
+            {
+                const scopelink::Did *identifier = findDid(group.identifiers[index]);
+
+                if (identifier == nullptr)
+                    continue;
+
+                (*group.property)[index].setValue(identifier->descriptor().toDisplay(identifier->value()));
+
+                if (!identifier->isAvailable())
+                    complete = false;
+            }
+
+            group.property->setState(complete ? IPS_OK : IPS_ALERT);
+            group.property->apply();
+        }
+
+        for (ParameterSwitch &entry : group.switches)
+        {
+            const scopelink::Did *identifier = findDid(entry.id);
 
             if (identifier == nullptr)
                 continue;
 
-            (*group.property)[index].setValue(identifier->value());
+            const scopelink::DidDescriptor &descriptor = identifier->descriptor();
+            const scopelink::DidOption *held           = descriptor.findOption(identifier->value());
 
-            if (!identifier->isAvailable())
-                complete = false;
+            for (size_t option = 0; option < descriptor.optionCount; option++)
+                (*entry.property)[option].setState((held == &descriptor.options[option]) ? ISS_ON : ISS_OFF);
+
+            // A value no setting stands for leaves every one off. It means the controller holds something
+            // this build does not know about, and turning the nearest setting on would hide that.
+            entry.property->setState((identifier->isAvailable() && (held != nullptr)) ? IPS_OK : IPS_ALERT);
+            entry.property->apply();
         }
-
-        group.property->setState(complete ? IPS_OK : IPS_ALERT);
-        group.property->apply();
     }
 }
 
 bool ScopeLink::applyParameterGroup(ParameterGroup &group, double values[], char *names[], int n)
 {
-    size_t written = 0;
-    size_t failed  = 0;
+    size_t written         = 0;
+    size_t failed          = 0;
+    bool touchedAssignment = false;
 
     // Only the elements the client actually sent are written. INDI sends the whole vector on a Set, so
     // without this every parameter in the group would be rewritten to the controller's EEPROM each time
@@ -174,15 +223,26 @@ bool ScopeLink::applyParameterGroup(ParameterGroup &group, double values[], char
             if ((identifier == nullptr) || (strcmp(names[index], identifier->elementName().c_str()) != 0))
                 continue;
 
-            const int requested = static_cast<int>(values[index]);
+            const scopelink::DidDescriptor &descriptor = identifier->descriptor();
+
+            if (descriptor.readOnly)
+            {
+                LOGF_ERROR("'%s' is read only.", identifier->description().c_str());
+                failed++;
+                break;
+            }
+
+            // Back to the raw value here and nowhere else: everything below this line, and everything the
+            // controller ever sees, is in whole raw steps.
+            const int requested = descriptor.fromDisplay(values[index]);
 
             if (requested == identifier->value())
                 break;
 
             if (!identifier->isInRange(requested))
             {
-                LOGF_ERROR("'%s' cannot hold %d; its range is %d to %d.", identifier->description().c_str(), requested,
-                           identifier->minimum(), identifier->maximum());
+                LOGF_ERROR("'%s' cannot hold %s; it accepts %s.", identifier->description().c_str(),
+                           descriptor.formatValue(requested).c_str(), descriptor.limitsText().c_str());
                 failed++;
                 break;
             }
@@ -194,7 +254,10 @@ bool ScopeLink::applyParameterGroup(ParameterGroup &group, double values[], char
             if (identifier->write(*m_device))
             {
                 written++;
-                LOGF_INFO("'%s' set to %d.", identifier->description().c_str(), requested);
+                touchedAssignment = touchedAssignment || isAssignmentIdentifier(identifier->id());
+
+                LOGF_INFO("'%s' set to %s.", identifier->description().c_str(),
+                          descriptor.formatValue(requested).c_str());
             }
             else
             {
@@ -220,42 +283,154 @@ bool ScopeLink::applyParameterGroup(ParameterGroup &group, double values[], char
 
     publishParameterValues();
 
-    group.property->setState((failed > 0) ? IPS_ALERT : IPS_OK);
-    group.property->apply();
+    if (group.property != nullptr)
+    {
+        group.property->setState((failed > 0) ? IPS_ALERT : IPS_OK);
+        group.property->apply();
+    }
 
     if ((written == 0) && (failed == 0))
         LOG_DEBUG("No configuration parameter changed.");
 
     // Some of these change what the driver has to know about the hardware, so the affected values are
-    // picked up again rather than waiting for a reconnect.
-    scopelink::Did *focuserTravel = findDid(FocuserMaximumPositionDid);
+    // picked up again rather than waiting for a reconnect. Writing one of the assignment's own identifiers
+    // goes further and changes which motor each of them belongs to, so that is re-read first and the
+    // travels are taken from wherever it now says they live.
+    if (touchedAssignment)
+        refreshMotorRoles();
+    else
+        adoptTravels();
 
-    if ((focuserTravel != nullptr) && focuserTravel->isAvailable() && (focuserTravel->value() != m_focuserTravel)
-        && (focuserTravel->value() > 0))
+    return true;
+}
+
+/**
+ * @brief True when an identifier is one of the ones that says which motor drives what.
+ *
+ * The whole 0x0400 block, the step multiplier and the steps per revolution included: all of them change
+ * something the driver worked out when it connected, and none of them can be picked up by reading a
+ * travel again.
+ */
+bool ScopeLink::isAssignmentIdentifier(uint32_t id)
+{
+    return (id >= 0x0400) && (id <= 0x0442);
+}
+
+void ScopeLink::adoptTravels()
+{
+    if (m_roles.hasFocuser())
     {
-        m_focuserTravel = focuserTravel->value();
+        const scopelink::Did *travel = findDid(scopelink::motor::maximumPositionDid(m_roles.focuserMotor().value()));
 
-        const int clientTravel = m_focuserTravel / m_stepMultiplier;
+        if ((travel != nullptr) && travel->isAvailable() && (travel->value() != m_focuserTravel)
+            && (travel->value() > 0))
+        {
+            m_focuserTravel = travel->value();
 
-        FocusMaxPosNP[0].setValue(clientTravel);
-        FocusMaxPosNP[0].setMinMax(0, clientTravel);
-        FocusAbsPosNP[0].setMinMax(0, clientTravel);
-        FocusMaxPosNP.apply();
-        FocusAbsPosNP.apply();
+            const int clientTravel = m_focuserTravel / m_stepMultiplier;
 
-        LOGF_INFO("Focuser travel is now %d controller steps.", m_focuserTravel);
+            FocusMaxPosNP[0].setValue(clientTravel);
+            FocusMaxPosNP[0].setMinMax(0, clientTravel);
+            FocusAbsPosNP[0].setMinMax(0, clientTravel);
+            FocusMaxPosNP.apply();
+            FocusAbsPosNP.apply();
+
+            LOGF_INFO("Focuser travel is now %d controller steps.", m_focuserTravel);
+        }
     }
 
-    scopelink::Did *flapTravel = findDid(FlapMaximumPositionDid);
-
-    if ((flapTravel != nullptr) && flapTravel->isAvailable() && (flapTravel->value() != m_flapTravel)
-        && (flapTravel->value() > 0))
+    if (m_roles.hasRotator())
     {
-        m_flapTravel = flapTravel->value();
+        const scopelink::Did *travel = findDid(scopelink::motor::maximumPositionDid(m_roles.rotatorMotor().value()));
+
+        if ((travel != nullptr) && travel->isAvailable() && (travel->value() != m_rotatorTravel)
+            && (travel->value() > 0) && (travel->value() != scopelink::motor::UncalibratedTravel))
+        {
+            m_rotatorTravel = travel->value();
+
+            LOGF_INFO("Rotator travel is now %d controller steps.", m_rotatorTravel);
+        }
+    }
+
+    if (!m_roles.hasFlap())
+        return;
+
+    const scopelink::Did *travel = findDid(scopelink::motor::maximumPositionDid(m_roles.flapMotors().front()));
+
+    if ((travel != nullptr) && travel->isAvailable() && (travel->value() != m_flapTravel) && (travel->value() > 0)
+        && (travel->value() != scopelink::motor::UncalibratedTravel))
+    {
+        m_flapTravel = travel->value();
         CapPositionNP[0].setMinMax(0, m_flapTravel);
 
         LOGF_INFO("Front flap travel is now %d controller steps.", m_flapTravel);
     }
+}
+
+bool ScopeLink::applyParameterSwitch(ParameterSwitch &entry, ISState *states, char *names[], int n)
+{
+    scopelink::Did *identifier = findDid(entry.id);
+
+    if (identifier == nullptr)
+        return false;
+
+    const scopelink::DidDescriptor &descriptor = identifier->descriptor();
+
+    if (descriptor.readOnly)
+    {
+        LOGF_ERROR("'%s' is read only.", identifier->description().c_str());
+        publishParameterValues();
+        return true;
+    }
+
+    entry.property->update(states, names, n);
+
+    const int chosen = entry.property->findOnSwitchIndex();
+    bool failed      = false;
+    bool written     = false;
+
+    if ((chosen >= 0) && (static_cast<size_t>(chosen) < descriptor.optionCount))
+    {
+        const int requested = descriptor.options[chosen].value;
+
+        if (requested != identifier->value())
+        {
+            const int previous = identifier->value();
+
+            identifier->setValue(requested);
+
+            if (identifier->write(*m_device))
+            {
+                written = true;
+
+                LOGF_INFO("'%s' set to %s.", identifier->description().c_str(),
+                          descriptor.formatValue(requested).c_str());
+            }
+            else
+            {
+                identifier->setValue(previous);
+                failed = true;
+                LOGF_ERROR("'%s' could not be written: %s", identifier->description().c_str(),
+                           identifier->lastError().c_str());
+            }
+        }
+    }
+
+    // Read back for the same reason a number is: what the switch shows afterwards is what the controller
+    // holds, not what was asked for.
+    identifier->read(*m_device);
+
+    publishParameterValues();
+
+    if (failed)
+    {
+        entry.property->setState(IPS_ALERT);
+        entry.property->apply();
+    }
+
+    // Every motor selection is a switch, so this is where an assignment is most often changed from.
+    if (written && isAssignmentIdentifier(entry.id))
+        refreshMotorRoles();
 
     return true;
 }
@@ -478,27 +653,88 @@ void ScopeLink::publishLinkHealth()
 // Calibration
 // ---------------------------------------------------------------------------------------------------
 
+void ScopeLink::buildCalibrationChannels()
+{
+    const int motors = m_device->capabilities().motorCount;
+
+    // Kept across a rebuild, so that re-reading the assignment does not move the page back to motor 1
+    // while somebody is calibrating motor 3.
+    const int selected = std::max(0, CalibrationMotorSP.findOnSwitchIndex());
+
+    m_calibrationChannels.clear();
+    CalibrationMotorSP.resize(static_cast<size_t>(motors));
+
+    for (int index = 0; index < motors; index++)
+    {
+        MotorChannel channel;
+
+        channel.name               = "Motor " + std::to_string(index + 1);
+        channel.motorId            = index;
+        channel.savedPositionDid   = scopelink::motor::lastPositionDid(index);
+        channel.maximumPositionDid = scopelink::motor::maximumPositionDid(index);
+
+        // Named by the stepper and labelled by what it currently drives. A motor with nothing assigned to
+        // it still has to be calibrated before it can usefully be assigned to anything, so the page offers
+        // every motor rather than only the ones that have a job.
+        std::string label = channel.name;
+
+        switch (m_roles.functionOf(index))
+        {
+            case scopelink::MotorFunction::Focuser:
+                label += " (focuser)";
+                break;
+
+            case scopelink::MotorFunction::Rotator:
+                label += " (rotator)";
+                break;
+
+            case scopelink::MotorFunction::Flap:
+                label += " (front flap)";
+                break;
+
+            default:
+                label += " (not assigned)";
+                break;
+        }
+
+        const std::string element = "MOTOR_" + std::to_string(index + 1);
+
+        CalibrationMotorSP[index].fill(element.c_str(), label.c_str(), (index == selected) ? ISS_ON : ISS_OFF);
+
+        m_calibrationChannels.push_back(channel);
+    }
+}
+
 ScopeLink::MotorChannel ScopeLink::selectedChannel() const
 {
-    if (CalibrationMotorSP[1].getState() == ISS_ON)
-        return { "Front flap", scopelink::motor::Flap, FlapSavedPositionDid, FlapMaximumPositionDid };
+    const int selected = CalibrationMotorSP.findOnSwitchIndex();
 
-    return { "Focuser", scopelink::motor::Focuser, FocuserSavedPositionDid, FocuserMaximumPositionDid };
+    if ((selected >= 0) && (static_cast<size_t>(selected) < m_calibrationChannels.size()))
+        return m_calibrationChannels[static_cast<size_t>(selected)];
+
+    // Nothing selected, or selected before the channels were built. The first motor is the safe answer:
+    // every controller has one, and its identifiers are the ones that exist on all of them.
+    return m_calibrationChannels.empty() ? MotorChannel{ "Motor 1", 0, scopelink::motor::lastPositionDid(0),
+                                                         scopelink::motor::maximumPositionDid(0) } :
+                                           m_calibrationChannels.front();
 }
 
 void ScopeLink::publishCalibration(const scopelink::Status &status)
 {
     const MotorChannel channel = selectedChannel();
-    const bool isFlap          = channel.motorId == scopelink::motor::Flap;
 
     const scopelink::Did *saved   = findDid(channel.savedPositionDid);
     const scopelink::Did *maximum = findDid(channel.maximumPositionDid);
 
-    CalibrationStatusNP[0].setValue(isFlap ? status.motor2Position : status.motor1Position);
+    // The channel already carries the motor index it calibrates, so the reading is asked for by that index
+    // rather than chosen between two named fields.
+    const scopelink::MotorReading reading = status.motor(channel.motorId);
+
+    CalibrationStatusNP[0].setValue(reading.position);
     CalibrationStatusNP[1].setValue((saved != nullptr) ? saved->value() : 0);
     CalibrationStatusNP[2].setValue((maximum != nullptr) ? maximum->value() : 0);
-    CalibrationStatusNP[3].setValue(isFlap ? status.motor2Load : status.motor1Load);
-    CalibrationStatusNP.setState((isFlap ? status.motor2Moving : status.motor1Moving) ? IPS_BUSY : IPS_OK);
+    CalibrationStatusNP[3].setValue(reading.load);
+    CalibrationStatusNP.setState(reading.moving ? IPS_BUSY : IPS_OK);
     CalibrationStatusNP.apply();
 }
 
@@ -516,8 +752,7 @@ void ScopeLink::calibrationJog(int steps)
     try
     {
         const scopelink::Status &status = m_device->requireStatus();
-        const long current =
-            (channel.motorId == scopelink::motor::Flap) ? status.motor2Position : status.motor1Position;
+        const long current              = status.motor(channel.motorId).position;
 
         long target = current + steps;
 
@@ -529,7 +764,7 @@ void ScopeLink::calibrationJog(int steps)
         m_device->moveMotor(channel.motorId, static_cast<int>(target));
         m_device->refreshStatus();
 
-        LOGF_INFO("%s jogging from %ld to %ld.", channel.name, current, target);
+        LOGF_INFO("%s jogging from %ld to %ld.", channel.name.c_str(), current, target);
     }
     catch (const std::exception &error)
     {
@@ -546,7 +781,7 @@ void ScopeLink::calibrationMarkMinimum()
         m_device->syncMotor(channel.motorId, 0);
         m_device->refreshStatus();
 
-        LOGF_INFO("%s: the current position is now zero.", channel.name);
+        LOGF_INFO("%s: the current position is now zero.", channel.name.c_str());
     }
     catch (const std::exception &error)
     {
@@ -568,7 +803,7 @@ void ScopeLink::calibrationMarkMaximum()
     try
     {
         const scopelink::Status &status = m_device->requireStatus();
-        const int current = (channel.motorId == scopelink::motor::Flap) ? status.motor2Position : status.motor1Position;
+        const int current               = status.motor(channel.motorId).position;
 
         if (current <= 0)
         {
@@ -586,7 +821,7 @@ void ScopeLink::calibrationMarkMaximum()
             return;
         }
 
-        LOGF_INFO("%s: the end of travel is now %d steps.", channel.name, current);
+        LOGF_INFO("%s: the end of travel is now %d steps.", channel.name.c_str(), current);
     }
     catch (const std::exception &error)
     {
@@ -643,7 +878,7 @@ void ScopeLink::calibrationReset()
 
     LOGF_WARN("%s calibration reset. The motor now believes it is in the middle of an unbounded travel; "
               "find both end stops and mark them before using it.",
-              channel.name);
+              channel.name.c_str());
 
     publishParameterValues();
 }

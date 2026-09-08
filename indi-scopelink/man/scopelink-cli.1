@@ -31,9 +31,11 @@ The driver must not be connected to the same port at the same time.
 .BI \-\-port " device"
 Port to open. Defaults to
 .IR /dev/ttyACM0 .
-Prefer the per-unit name under
+Prefer
+.IR /dev/scopelink ,
+which the udev rule gives a controller carrying the assigned USB identifiers, or the per-unit name under
 .IR /dev/serial/by-id/ ,
-which does not renumber.
+which does not renumber and tells two controllers apart.
 .TP
 .B \-\-verbose
 Log every request and every response as hex, on standard error, along with the protocol layer's own
@@ -71,6 +73,28 @@ immediately, which is the point of reading it back.
 .TP
 .B eeprom
 The EEPROM wear counters.
+.TP
+.BI flash " file"
+Write the firmware in
+.I file
+to the controller. Firmware is shipped as one encrypted file per unit, named after that unit's identifier
+\- the one
+.B info
+prints \- and a file named for anything else is refused before the controller is touched.
+.IP
+The controller restarts into its own boot loader, is erased and written, and restarts again, all on this
+one port. Leave it plugged in until the command returns. The command does not decrypt the file: the boot
+loader checks the container as it arrives, on the first piece and before it programs anything, and then
+verifies the result against a checksum it reads back out of the flash the firmware landed in.
+.IP
+Only the firmware area is erased. The controller keeps its configuration outside that area, so a unit's
+calibration is expected to survive; take an
+.B export
+first all the same.
+.IP
+An update that is interrupted leaves the controller in its boot loader with no firmware to run. That is
+recoverable and this same command is what recovers it: run it again, and it will find the boot loader
+already waiting rather than asking a firmware that is no longer there to restart.
 .SH EXAMPLES
 Identify whatever is on a port:
 .PP
@@ -88,6 +112,12 @@ Capture the wire traffic for a bug report:
 .PP
 .RS
 .B scopelink-cli --port /dev/ttyACM0 --verbose info 2>capture.log
+.RE
+.PP
+Install the firmware supplied for the unit whose identifier is 303132333435363738394142:
+.PP
+.RS
+.B scopelink-cli --port /dev/ttyACM0 flash 303132333435363738394142.bin
 .RE
 .SH EXIT STATUS
 Zero when the command completed, non-zero when the controller could not be reached or did not answer

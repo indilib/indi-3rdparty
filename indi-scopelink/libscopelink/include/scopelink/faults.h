@@ -23,9 +23,31 @@
 namespace scopelink
 {
 
-/** @brief The diagnostic trouble codes the controller can raise, in the firmware's own numbering. */
+/**
+ * @brief The faults a ScopeLink controller can record.
+ *
+ * These are identities, not wire values. The number a controller sends for a given fault depends on its
+ * generation - generation 4 inserted the third motor's two failures and four more USB ports into the
+ * middle of the list, which moved everything below them by six - so a number that arrives is looked up
+ * with Fault::codeFor rather than cast. Decoding a generation 4 store with the older numbering turns an
+ * over temperature error into a smart switch open load, which is the same kind of quiet mis-reading the
+ * per-generation freeze frame layout exists to prevent and is harder to notice.
+ *
+ * The order is the order the faults were introduced in, which up to IndependentWatchdogReset is also the
+ * numbering every controller before generation 4 uses. That is a coincidence worth nothing: both tables
+ * in faults.cpp are written out in their own controller's order rather than derived from this list.
+ */
 enum class FaultCode
 {
+    /**
+     * A number this driver has no name for.
+     *
+     * A controller running firmware newer than this driver can report a fault the driver was built
+     * before. Reported as this rather than refused: an unnamed fault is still worth showing a user
+     * together with the freeze frame taken when it happened, and Fault::wireCode keeps the number.
+     */
+    Unknown = -1,
+
     SmEepromFault = 0,
     EepromDatasetCorrupted,
     EepromDatasetReadFailure,
@@ -52,7 +74,29 @@ enum class FaultCode
     SmartSwitchAuxBOpenLoad,
     SmartSwitchAuxBShortToVcc,
     EcuOvertemperatureWarning,
-    EcuOvertemperatureError
+    EcuOvertemperatureError,
+
+    /** The previous run ended in an independent watchdog reset. */
+    IndependentWatchdogReset,
+
+    // Generation 4 onwards. Listed last because this is an introduction order, not a wire order - on the
+    // controller that has them, the third motor's failures sit beside the first two motors' and the four
+    // extra ports beside the first two ports.
+    MotorDriver3CommunicationFailure,
+    MotorDriver3InitialisationFailure,
+    UsbHubDs3Overcurrent,
+    UsbHubDs4Overcurrent,
+    UsbHubDs5Overcurrent,
+    UsbHubDs6Overcurrent,
+
+    /**
+     * The stored assignment of motors to the focuser, the rotator and the front flap is unusable.
+     *
+     * Generation 4 onwards. The controller refuses a write that would produce one, so this means its
+     * parameter block was defaulted or predates the rules. While it stands the controller reports every
+     * function as unconfigured and moves nothing.
+     */
+    MotorConfigurationInvalid
 };
 
 /** @brief One named field of a fault freeze frame. */
@@ -69,6 +113,16 @@ class Fault
 {
     public:
         FaultCode code{ FaultCode::SmEepromFault };
+
+        /**
+         * The number this controller sends for it.
+         *
+         * Kept beside the identity because it is what goes back to clear the fault, because it is what a
+         * support request has to quote against the firmware's own log, and because it is the only thing
+         * there is to show for a fault whose identity came out FaultCode::Unknown.
+         */
+        int wireCode{ 0 };
+
         uint32_t additionalData{ 0 };
         uint32_t occurrenceCount{ 0 };
         bool isActive{ false };
@@ -101,6 +155,22 @@ class Fault
 
         /** @brief What to call a code in a user interface, for codes that have not been read. */
         static const char *nameOf(FaultCode code);
+
+        /**
+         * @brief What fault a controller means by a number.
+         * @param wireCode The number, as it came over the wire
+         * @param hardwareMajor Generation of the controller that sent it
+         * @return The fault, or FaultCode::Unknown for a number this driver has no name for
+         */
+        static FaultCode codeFor(int wireCode, int hardwareMajor);
+
+        /**
+         * @brief What number a controller uses for a fault.
+         * @param code The fault
+         * @param hardwareMajor Generation of the controller
+         * @return The number, or -1 when this generation has no such fault
+         */
+        static int wireCodeOf(FaultCode code, int hardwareMajor);
 
     private:
         /** Length of the per-fault header that precedes the freeze frame. */

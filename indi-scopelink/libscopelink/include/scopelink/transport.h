@@ -65,6 +65,29 @@ class ISerialTransport
          */
         virtual bool reopen() = 0;
 
+        /**
+         * @brief Why the last reopen() failed, empty when none has.
+         *
+         * reopen() answers with a bool because most of its callers only need to know whether to carry on.
+         * The one that does need more is the firmware update, which spends half a minute reopening a port
+         * that is not there yet and has to tell the user at the end of it what was actually in the way -
+         * a device still enumerating and a device the user has no permission to open look identical
+         * without this.
+         */
+        virtual std::string lastError() const { return {}; }
+
+        /**
+         * @brief Changes how long a single read may wait for its bytes.
+         *
+         * A transport with no timing of its own ignores this, which is why it is not pure. For the ones
+         * that have, it exists for the firmware update: erasing a flash slot stalls the controller's
+         * processor until every page is done, and the checksum at the end of a download is calculated
+         * over the whole slot, so those two requests need far longer than the hundred ordinary transfers
+         * between them - and leaving the link that patient throughout would turn one dropped frame into a
+         * wait of half a minute.
+         */
+        virtual void setReceiveTimeout(int receiveTimeoutMs) { (void)receiveTimeoutMs; }
+
         /** @brief Human readable name of the port, for logs and error text. */
         virtual std::string name() const = 0;
 };
@@ -90,12 +113,15 @@ class FdSerialTransport : public ISerialTransport
         /** @brief Adopts a new descriptor, for instance after the driver has reconnected. */
         void setDescriptor(int fd);
 
+        int receiveTimeout() const { return m_receiveTimeoutMs; }
+
         bool isOpen() const override;
         void close() override;
         void discardBuffers() override;
         void write(const Frame &data) override;
         Frame read(size_t count) override;
         bool reopen() override;
+        void setReceiveTimeout(int receiveTimeoutMs) override;
         std::string name() const override;
 
     protected:
@@ -128,9 +154,13 @@ class PosixSerialTransport : public FdSerialTransport
 
         void close() override;
         bool reopen() override;
+        std::string lastError() const override { return m_lastError; }
 
     private:
         std::string m_devicePath;
+
+        /** Why the last reopen() failed, kept because reopen() itself can only answer yes or no. */
+        std::string m_lastError;
 };
 
 } // namespace scopelink

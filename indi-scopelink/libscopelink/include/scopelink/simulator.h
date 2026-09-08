@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include "scopelink/device.h"
 #include "scopelink/transport.h"
 #include "scopelink/types.h"
 
@@ -37,8 +38,22 @@ namespace scopelink
 class SimulatedController
 {
     public:
-        /** @param hardwareMajor Generation to imitate, 2 or 3. What it offers follows from that. */
-        explicit SimulatedController(int hardwareMajor);
+        /**
+         * @param hardwareMajor Generation to imitate, 2 to 4. What it offers follows from that - how many
+         *        motors it drives, how many downstream USB ports it reports, and which fault numbering it
+         *        speaks.
+         * @param interfaceMinor Interface version to report, 0 or 1
+         *
+         * The two are separate for the same reason the capability set keeps them apart: the same
+         * generation 3 board runs both interface versions, and 1.1 changes the frames it sends without
+         * changing anything about the board. Simulating only 1.0 is what let a driver that could not
+         * connect to a 1.1 controller at all pass its whole test suite.
+         *
+         * Generation 4 exists only on interface 1.1 - it is the board the assignment was built for - so a
+         * caller that asks for generation 4 on 1.0 gets a controller nobody makes. The tool that serves
+         * this refuses that pair rather than serving it.
+         */
+        explicit SimulatedController(int hardwareMajor, int interfaceMinor = 0);
 
         /** @brief Builds the reply to one request frame, or an empty frame for a command with no reply. */
         Frame handle(const Frame &request);
@@ -74,10 +89,27 @@ class SimulatedController
 
         Frame softwarePayload() const;
         Frame statusPayload() const;
+        uint8_t flapState() const;
         Frame faultPayload() const;
         Frame dataIdentifier(const Frame &payload);
         Frame motorCommand(const Frame &payload);
+        Frame functionCommand(const Frame &payload);
         Frame fanCommand(const Frame &payload);
+
+        /**
+         * @brief The assignment this controller holds in its configuration, worked out from its own
+         *        identifiers.
+         *
+         * What a client reads back, and what it changes by writing those identifiers. It is not what the
+         * controller is driving from - see @ref m_running.
+         */
+        MotorRoles storedRoles() const;
+
+        /** @brief Drives one motor of a function, or reports why it will not move. */
+        FunctionResponse driveMotor(int index, uint8_t subFunction, int position);
+
+        /** @brief The travel a motor has been calibrated to, or zero when it has never been. */
+        int travelOf(int index) const;
 
         int value(uint32_t did) const;
         size_t didLength(uint32_t did) const;
@@ -85,12 +117,37 @@ class SimulatedController
         uint8_t activeFaultCount() const;
 
         int m_hardwareMajor;
+        int m_interfaceMinor;
+
+        /** Derived once, so that the frames served here cannot disagree with the ones the driver expects. */
+        Capabilities m_capabilities;
+
         long m_lastTick{ 0 };
 
-        Motor m_focuser;
-        Motor m_flap;
-        uint8_t m_focuserStatus{ 2 };
-        uint8_t m_flapStatus{ 2 };
+        /**
+         * One entry per motor this generation drives, indexed the way the protocol numbers them.
+         *
+         * A list rather than a motor per job, because from interface 1.1 the job is a setting: what the
+         * wire carries is the motors in a row, and which of them opens the flap is answered by the
+         * identifiers this controller holds - see roles() - rather than by a mapping written out here.
+         */
+        std::vector<Motor> m_motors;
+
+        /** The status byte each motor last reported, as the status frame carries it. */
+        std::vector<uint8_t> m_motorStatus;
+
+        /**
+         * The assignment the running firmware is driving from: the stored one as it was when this
+         * controller started, and again whenever it is reset.
+         *
+         * Real firmware reads its configuration at startup and drives from that copy, so an assignment
+         * written while it runs is stored, reads back at once, and changes nothing about what the
+         * controller does - a function command for something only the new assignment names is refused as
+         * NotConfigured until it restarts. This used to be recomputed on every use, which made the
+         * simulator the one controller in the world where a new assignment took effect immediately, and
+         * let a driver that never told anybody to restart pass its whole test suite.
+         */
+        MotorRoles m_running;
 
         bool m_fanOverride[2]{ false, false };
         bool m_fanOn[2]{ false, false };
@@ -106,6 +163,11 @@ class SimulatedController
          * One stored fault: the infrared sensor communication timeout, still active. It is the fault a
          * developer is most likely to meet on a unit whose sensor has failed, and it gives the fault store
          * and its freeze frame something to show.
+         *
+         * Written here as the FaultCode identity, which the constructor turns into the number this
+         * generation sends for it. The two agree on every controller before generation 4 and part company
+         * on that one, so a literal here would have been the wrong fault on exactly the controller this
+         * translation exists for.
          */
         std::vector<StoredFault> m_faults{ StoredFault{ 4, 3, true } };
 };
@@ -121,8 +183,11 @@ class SimulatedController
 class SimulatedTransport : public ISerialTransport
 {
     public:
-        /** @param hardwareMajor Generation the simulated controller reports, 2 or 3. */
-        explicit SimulatedTransport(int hardwareMajor);
+        /**
+         * @param hardwareMajor Generation the simulated controller reports, 2 or 3
+         * @param interfaceMinor Interface version it reports, 0 or 1
+         */
+        explicit SimulatedTransport(int hardwareMajor, int interfaceMinor = 0);
 
         bool isOpen() const override;
         void close() override;

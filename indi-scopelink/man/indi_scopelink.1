@@ -21,13 +21,16 @@ indi_scopelink \- INDI driver for the Astrolabs ScopeLink telescope controller
 publishes one Astrolabs ScopeLink controller as a single INDI device. It is a driver, not a program to
 run by hand: an INDI server starts it and clients such as KStars or Ekos talk to it over the server.
 .PP
-One USB connection carries a stepper focuser, a motorised front flap over the telescope aperture, a flat
-panel, two mirror cooling fans and, depending on the hardware generation, two auxiliary power outputs and
-a powered USB hub. The driver claims the INDI focuser, light box and auxiliary interfaces on every
-controller, and the dust cap interface as well when the front flap is fitted and calibrated.
+One USB connection carries a stepper focuser, a field rotator, a motorised front flap over the telescope
+aperture, a flat panel, two mirror cooling fans and, depending on the hardware generation, two auxiliary
+power outputs and a powered USB hub. The driver claims the INDI light box and auxiliary interfaces on
+every controller; the focuser, rotator and dust cap interfaces are claimed for whichever of them the
+connected controller turns out to have a motor assigned to and calibrated for.
 .PP
 What a controller offers is read out of the hardware when the driver connects, so properties that a given
-generation does not have are never published rather than being published and failing.
+generation does not have are never published rather than being published and failing. From interface 1.1
+that includes which motor drives what, which the controller holds as a setting rather than having wired:
+the driver reads the assignment on connect and offers the devices it names.
 .SH USAGE
 Start the driver under an INDI server:
 .PP
@@ -37,18 +40,80 @@ Start the driver under an INDI server:
 .PP
 Then connect a client and set
 .B DEVICE_PORT
-to the controller's port. Prefer the per-unit name under
-.I /dev/serial/by-id/
-to
+to the controller's port. Anything but
 .IR /dev/ttyACM n,
-which is renumbered whenever another CDC device is plugged in first.
+which is renumbered whenever another CDC device is plugged in first: the udev rule names a controller
+.I /dev/scopelink
+from its USB identifiers, and where more than one is plugged in, the per-unit name under
+.I /dev/serial/by-id/
+tells them apart. A controller flashed before those identifiers were assigned has no
+.I /dev/scopelink
+and is reached by its by-id name.
+.SH MOTORS
+Up to interface 1.0 the motors were wired to their jobs: motor 1 focused, and motor 2 where there was one
+opened the front flap. From 1.1 the controller holds the mapping as a setting instead \- which motor
+focuses, which rotates, and which ones the flap is made of, in the order they open. The driver reads that
+assignment when it connects, names it in the log, and offers a focuser, a rotator or a dust cap only
+where the assignment names a motor and that motor has a calibrated travel.
+.PP
+The assignment is edited on the Parameters tab, under
+.BR Focuser ,
+.B Rotator
+and
+.BR "Front flap" ,
+and the settings offered are the motors the connected controller actually has. Its rules are the
+controller's own: nothing may name a motor that is not fitted, the flap parts must be a run without a gap
+in it, and no motor may be claimed by two functions.
+.PP
+A change needs the controller restarted, not just reconnected. The controller reads its configuration when
+it starts and drives from that copy, so an assignment written while it runs is stored but not acted on \-
+it goes on driving the one it started with, and refuses a command for anything the new one adds.
+.PP
+.B Restart controller
+on the Parameters tab does it: the controller restarts, the link drops for the few seconds it takes to
+leave the USB bus and come back, and the driver connects again by itself. That last part matters, because
+the devices published are settled at connection \- a client that has been handed a focuser cannot have a
+different one put underneath it.
+.PP
+The Calibration tab addresses a motor rather than a job, on every controller, and lists every motor the
+controller has labelled with what it currently drives.
+.SH FIRMWARE
+The Firmware tab replaces the controller's firmware. Put the path of the encrypted file supplied for this
+particular unit in
+.BR FIRMWARE_FILE ,
+then use
+.B Check the file
+to have it examined and
+.B Install firmware
+to write it. Every firmware file is named after the unit it belongs to, and one that is not is refused
+before the controller is touched.
+.PP
+No other software is needed. The controller carries a boot loader of its own which appears as the same
+serial port the firmware does, so the whole update is an ordinary conversation on the port the driver is
+already connected to \- there is no DFU mode, no second device on the bus, and nothing to run as root.
+The driver does not decrypt the file: the boot loader checks the container as it arrives and verifies the
+result against a checksum read back out of the flash the firmware landed in.
+.PP
+The update refuses to start while a motor is moving, and the device cannot be disconnected while one is
+running. Only the firmware area is erased \- the configuration is kept elsewhere and is expected to
+survive \- but the driver saves the whole configuration to
+.I ~/.indi/
+first, and puts back afterwards anything the new firmware does not already have right.
+.PP
+An update that is interrupted leaves the controller in its boot loader with no firmware to run. It still
+answers, and connecting to it says so and offers the Firmware tab and nothing else, which is what
+recovers it: install the firmware again.
+.PP
+Firmware updates are not simulated. The one question worth asking of an update is whether a real
+controller survives it, and that is the part a simulated port cannot answer.
 .SH SIMULATION
 Enabling the standard INDI
 .B SIMULATION
 switch before connecting makes the driver answer itself, with no port opened.
 .B SIMULATED_GENERATION
-on the Options tab selects which hardware generation it imitates, which is what makes the differences
-between them visible. See
+on the Options tab selects which controller it imitates, which is what makes the differences between them
+visible. There are four entries for three generations: the same generation 3 board runs interface 1.0 and
+1.1, and 1.1 is a different frame layout rather than a different board. See
 .BR scopelink-simulator (1)
 for the same simulated controller served on a pseudo terminal instead.
 .SH FILES
@@ -57,10 +122,15 @@ for the same simulated controller served on a pseudo terminal instead.
 Driver list entry, which is how clients find the driver.
 .TP
 .I /usr/lib/udev/rules.d/99-scopelink.rules
-Access rights for the controller.
+Access rights for the controller, and the
+.I /dev/scopelink
+name.
 .TP
 .I ~/.indi/ScopeLink_config.xml
 Saved device configuration.
+.TP
+.I ~/.indi/scopelink-<unit>-<timestamp>.par
+Configuration saved before a firmware update, in the format the vendor's Windows parameter editor reads.
 .SH SEE ALSO
 .BR scopelink-cli (1),
 .BR scopelink-simulator (1),

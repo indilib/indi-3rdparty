@@ -33,14 +33,22 @@ const char *Fault::nameOf(FaultCode code)
             return "EEPROM dataset write failure";
         case FaultCode::Mlx90614CommunicationTimeout:
             return "Infrared temperature sensor not answering";
+        // Named by motor rather than by what the motor drives. These read "Focuser" and "Flap" until
+        // generation 4, from a time when the assignment was a fact about the board; on a controller that
+        // holds the assignment as a setting, a name that said what it drove would be a name that is
+        // sometimes wrong, and wrong in the one place a user is trying to work out what has failed.
         case FaultCode::MotorDriver1CommunicationFailure:
-            return "Focuser motor driver communication failure";
+            return "Motor 1 driver communication failure";
         case FaultCode::MotorDriver1InitialisationFailure:
-            return "Focuser motor driver initialisation failure";
+            return "Motor 1 driver initialisation failure";
         case FaultCode::MotorDriver2CommunicationFailure:
-            return "Flap motor driver communication failure";
+            return "Motor 2 driver communication failure";
         case FaultCode::MotorDriver2InitialisationFailure:
-            return "Flap motor driver initialisation failure";
+            return "Motor 2 driver initialisation failure";
+        case FaultCode::MotorDriver3CommunicationFailure:
+            return "Motor 3 driver communication failure";
+        case FaultCode::MotorDriver3InitialisationFailure:
+            return "Motor 3 driver initialisation failure";
         case FaultCode::SupplyIrSensorOvercurrent:
             return "Infrared sensor supply overcurrent";
         case FaultCode::TargetHwidMismatch:
@@ -49,6 +57,14 @@ const char *Fault::nameOf(FaultCode code)
             return "USB downstream port 1 overcurrent";
         case FaultCode::UsbHubDs2Overcurrent:
             return "USB downstream port 2 overcurrent";
+        case FaultCode::UsbHubDs3Overcurrent:
+            return "USB downstream port 3 overcurrent";
+        case FaultCode::UsbHubDs4Overcurrent:
+            return "USB downstream port 4 overcurrent";
+        case FaultCode::UsbHubDs5Overcurrent:
+            return "USB downstream port 5 overcurrent";
+        case FaultCode::UsbHubDs6Overcurrent:
+            return "USB downstream port 6 overcurrent";
         case FaultCode::SmartSwitchFanAOvercurrent:
             return "Rear fan output overcurrent";
         case FaultCode::SmartSwitchFanAOpenLoad:
@@ -77,18 +93,148 @@ const char *Fault::nameOf(FaultCode code)
             return "Controller temperature warning";
         case FaultCode::EcuOvertemperatureError:
             return "Controller temperature error";
+        case FaultCode::IndependentWatchdogReset:
+            return "Independent watchdog reset";
+        case FaultCode::MotorConfigurationInvalid:
+            return "Motor assignment unusable";
+        case FaultCode::Unknown:
+            break;
     }
 
     return "Unknown fault";
+}
+
+namespace
+{
+
+/**
+ * @brief Fault numbering of every controller before generation 4, in wire order.
+ *
+ * Written out in the controller's own order rather than derived from the enumeration, so that it can be
+ * read straight off the firmware's fault definition list. That it happens to be the enumeration's own
+ * order as far as it goes is a coincidence of history, and not one to build the other table on.
+ */
+const FaultCode LegacyCodes[] = { FaultCode::SmEepromFault,
+                                  FaultCode::EepromDatasetCorrupted,
+                                  FaultCode::EepromDatasetReadFailure,
+                                  FaultCode::EepromDatasetWriteFailure,
+                                  FaultCode::Mlx90614CommunicationTimeout,
+                                  FaultCode::MotorDriver1CommunicationFailure,
+                                  FaultCode::MotorDriver1InitialisationFailure,
+                                  FaultCode::MotorDriver2CommunicationFailure,
+                                  FaultCode::MotorDriver2InitialisationFailure,
+                                  FaultCode::SupplyIrSensorOvercurrent,
+                                  FaultCode::TargetHwidMismatch,
+                                  FaultCode::UsbHubDs1Overcurrent,
+                                  FaultCode::UsbHubDs2Overcurrent,
+                                  FaultCode::SmartSwitchFanAOvercurrent,
+                                  FaultCode::SmartSwitchFanAOpenLoad,
+                                  FaultCode::SmartSwitchFanAShortToVcc,
+                                  FaultCode::SmartSwitchFanBOvercurrent,
+                                  FaultCode::SmartSwitchFanBOpenLoad,
+                                  FaultCode::SmartSwitchFanBShortToVcc,
+                                  FaultCode::SmartSwitchAuxAOvercurrent,
+                                  FaultCode::SmartSwitchAuxAOpenLoad,
+                                  FaultCode::SmartSwitchAuxAShortToVcc,
+                                  FaultCode::SmartSwitchAuxBOvercurrent,
+                                  FaultCode::SmartSwitchAuxBOpenLoad,
+                                  FaultCode::SmartSwitchAuxBShortToVcc,
+                                  FaultCode::EcuOvertemperatureWarning,
+                                  FaultCode::EcuOvertemperatureError,
+                                  FaultCode::IndependentWatchdogReset };
+
+/**
+ * @brief Fault numbering from generation 4, in wire order.
+ *
+ * Generation 4 did not append its new faults, it inserted them where they belonged: the third motor's two
+ * failures went in beside the first two motors' and four more USB overcurrents beside the first two, so
+ * every fault below them shifted by six.
+ */
+const FaultCode CurrentCodes[] = { FaultCode::SmEepromFault,
+                                   FaultCode::EepromDatasetCorrupted,
+                                   FaultCode::EepromDatasetReadFailure,
+                                   FaultCode::EepromDatasetWriteFailure,
+                                   FaultCode::Mlx90614CommunicationTimeout,
+                                   FaultCode::MotorDriver1CommunicationFailure,
+                                   FaultCode::MotorDriver1InitialisationFailure,
+                                   FaultCode::MotorDriver2CommunicationFailure,
+                                   FaultCode::MotorDriver2InitialisationFailure,
+                                   FaultCode::MotorDriver3CommunicationFailure,
+                                   FaultCode::MotorDriver3InitialisationFailure,
+                                   FaultCode::SupplyIrSensorOvercurrent,
+                                   FaultCode::TargetHwidMismatch,
+                                   FaultCode::UsbHubDs1Overcurrent,
+                                   FaultCode::UsbHubDs2Overcurrent,
+                                   FaultCode::UsbHubDs3Overcurrent,
+                                   FaultCode::UsbHubDs4Overcurrent,
+                                   FaultCode::UsbHubDs5Overcurrent,
+                                   FaultCode::UsbHubDs6Overcurrent,
+                                   FaultCode::SmartSwitchFanAOvercurrent,
+                                   FaultCode::SmartSwitchFanAOpenLoad,
+                                   FaultCode::SmartSwitchFanAShortToVcc,
+                                   FaultCode::SmartSwitchFanBOvercurrent,
+                                   FaultCode::SmartSwitchFanBOpenLoad,
+                                   FaultCode::SmartSwitchFanBShortToVcc,
+                                   FaultCode::SmartSwitchAuxAOvercurrent,
+                                   FaultCode::SmartSwitchAuxAOpenLoad,
+                                   FaultCode::SmartSwitchAuxAShortToVcc,
+                                   FaultCode::SmartSwitchAuxBOvercurrent,
+                                   FaultCode::SmartSwitchAuxBOpenLoad,
+                                   FaultCode::SmartSwitchAuxBShortToVcc,
+                                   FaultCode::EcuOvertemperatureWarning,
+                                   FaultCode::EcuOvertemperatureError,
+                                   FaultCode::IndependentWatchdogReset,
+                                   FaultCode::MotorConfigurationInvalid };
+
+/** @brief The numbering a given hardware generation uses, and how many entries it has. */
+const FaultCode *tableFor(int hardwareMajor, size_t &length)
+{
+    if (hardwareMajor > 3)
+    {
+        length = sizeof(CurrentCodes) / sizeof(CurrentCodes[0]);
+        return CurrentCodes;
+    }
+
+    length = sizeof(LegacyCodes) / sizeof(LegacyCodes[0]);
+    return LegacyCodes;
+}
+
+} // namespace
+
+FaultCode Fault::codeFor(int wireCode, int hardwareMajor)
+{
+    size_t length                 = 0;
+    const FaultCode * const table = tableFor(hardwareMajor, length);
+
+    if ((wireCode < 0) || (static_cast<size_t>(wireCode) >= length))
+        return FaultCode::Unknown;
+
+    return table[static_cast<size_t>(wireCode)];
+}
+
+int Fault::wireCodeOf(FaultCode code, int hardwareMajor)
+{
+    size_t length                 = 0;
+    const FaultCode * const table = tableFor(hardwareMajor, length);
+
+    for (size_t index = 0; index < length; index++)
+    {
+        if (table[index] == code)
+            return static_cast<int>(index);
+    }
+
+    return -1;
 }
 
 std::string Fault::codeName() const
 {
     char text[128];
 
-    // The numeric code is kept alongside the description because it is what a support request has to
-    // quote, and because a firmware newer than this driver can raise one the list above does not name.
-    snprintf(text, sizeof(text), "%s (0x%04X)", nameOf(code), static_cast<unsigned>(code));
+    // The wire number is kept alongside the description because it is what a support request has to quote
+    // against the firmware's own log, and because a firmware newer than this driver can raise one the list
+    // above does not name. The number, not the identity: they agree on every controller before generation
+    // 4 and part company on that one, and it is the controller's own number that is worth quoting.
+    snprintf(text, sizeof(text), "%s (0x%04X)", nameOf(code), static_cast<unsigned>(wireCode));
 
     return text;
 }
@@ -158,7 +304,7 @@ void Fault::buildSnapshotFields(const Frame &raw, const Capabilities &capabiliti
 {
     size_t offset = 0;
 
-    const auto add = [&](const char *name, size_t length)
+    const auto add = [&](const std::string &name, size_t length)
     {
         snapshot.push_back({ name, static_cast<int>(byte_order::toUInt(raw, offset, length)) });
         offset += length;
@@ -184,15 +330,45 @@ void Fault::buildSnapshotFields(const Frame &raw, const Capabilities &capabiliti
     add("RTC hour", 1);
     add("RTC minute", 1);
     add("RTC second", 1);
-    add("Motor 1 status", 1);
-    add("Motor 1 load", 1);
-    add("Flatbox duty", 1);
-    add("Motor 2 status", 1);
-    add("Motor 2 load", 1);
-    add("Digital input 1 state", 1);
-    add("Digital input 2 state", 1);
-    add("Digital input 3 state", 1);
-    add("Digital input 4 state", 1);
+    // The motors were brought together and the flat box moved after them when the smart switch monitoring
+    // went in, during generation 3 development. Before that the flat box sat between the two motors.
+    //
+    // All three are single bytes, so the freeze frame is the same length either way and reading it in the
+    // wrong order gives three fields the wrong names rather than an error. Both orders were the same code
+    // here until now, which put a generation 3 controller's flat box duty under "Motor 2 status" and its
+    // two motor bytes one field late - invisibly, because every fault a halted unit stores has all three
+    // of them at zero.
+    if (capabilities.hasSmartSwitchDiagnostics)
+    {
+        for (int motor = 0; motor < capabilities.motorCount; motor++)
+        {
+            const std::string index = std::to_string(motor + 1);
+
+            add("Motor " + index + " status", 1);
+            add("Motor " + index + " load", 1);
+        }
+
+        add("Flatbox duty", 1);
+    }
+    else
+    {
+        add("Motor 1 status", 1);
+        add("Motor 1 load", 1);
+        add("Flatbox duty", 1);
+        add("Motor 2 status", 1);
+        add("Motor 2 load", 1);
+    }
+
+    // Four digital inputs nothing was ever wired to. The firmware recorded them as zeros and interface
+    // 1.1 dropped them.
+    if (capabilities.hasDigitalInputs)
+    {
+        add("Digital input 1 state", 1);
+        add("Digital input 2 state", 1);
+        add("Digital input 3 state", 1);
+        add("Digital input 4 state", 1);
+    }
+
     add("Fan A state", 1);
     add("Fan B state", 1);
 
@@ -204,8 +380,13 @@ void Fault::buildSnapshotFields(const Frame &raw, const Capabilities &capabiliti
         add("Fan B smart switch error state", 1);
         add("Aux A smart switch error state", 1);
         add("Aux B smart switch error state", 1);
-        add("USB DS1 power active", 1);
-        add("USB DS2 power active", 1);
+    }
+
+    for (int port = 0; port < capabilities.usbDownstreamPortCount; port++)
+        add("USB DS" + std::to_string(port + 1) + " power active", 1);
+
+    if (capabilities.hasUsbPowerFailureReporting)
+    {
         add("USB DS1 power failure", 1);
         add("USB DS2 power failure", 1);
     }
@@ -267,7 +448,8 @@ std::vector<Fault> Fault::readAll(Device &device)
 
         Fault fault;
 
-        fault.code            = static_cast<FaultCode>(byte_order::toUInt(response, offset, 2));
+        fault.wireCode        = static_cast<int>(byte_order::toUInt(response, offset, 2));
+        fault.code            = codeFor(fault.wireCode, capabilities.hardwareMajor);
         fault.additionalData  = byte_order::toUInt(response, offset + 2, 2);
         fault.occurrenceCount = byte_order::toUInt(response, offset + 4, 1);
         fault.isActive        = byte_order::toBool(response, offset + 5);
@@ -285,7 +467,9 @@ std::vector<Fault> Fault::readAll(Device &device)
 
 void Fault::clear(Device &device) const
 {
-    const uint32_t value = static_cast<uint32_t>(code);
+    // The number this controller sends, not the identity: a fault is cleared by quoting back what it
+    // arrived as, and on generation 4 those two are six apart for most of the list.
+    const uint32_t value = static_cast<uint32_t>(wireCode);
 
     device.transact(command::ClearDtc,
                     Frame{ 0x03, static_cast<uint8_t>((value >> 8) & 0xff), static_cast<uint8_t>(value & 0xff) }, 7);

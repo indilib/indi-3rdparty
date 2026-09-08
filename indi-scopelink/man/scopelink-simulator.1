@@ -15,7 +15,9 @@ scopelink-simulator \- serve a simulated ScopeLink controller on a pseudo termin
 .SH SYNOPSIS
 .B scopelink-simulator
 .RB [ \-\-generation
-.IR 2 | 3 ]
+.IR 2 | 3 | 4 ]
+.RB [ \-\-interface\-minor
+.IR 0 | 1 ]
 .SH DESCRIPTION
 .B scopelink-simulator
 answers the ScopeLink wire protocol on a pseudo terminal, so that anything which expects a serial port
@@ -37,9 +39,28 @@ rate so that motion handling has something to follow. The values it reports are 
 measured.
 .SH OPTIONS
 .TP
-.BI \-\-generation " 2|3"
+.BI \-\-generation " 2|3|4"
 Hardware generation to imitate. Defaults to 3. The generations differ in what they offer, not only in
-what they report: generation 2 has no USB hub and no smart switch diagnostics.
+what they report: generation 2 has no USB hub and no smart switch diagnostics, generation 3 has a two
+port hub, and generation 4 has three motors and a six port hub.
+.TP
+.BI \-\-interface\-minor " 0|1"
+Diagnostic interface version to report, defaulting to 1.0 \- or to 1.1 on generation 4, which has no 1.0
+firmware. This is a separate axis from the generation, and it is the one that decides the frame layout:
+1.1 drops the four digital inputs out of the middle of both frames and puts the state of the front flap
+as a whole on the end of the status frame. The same generation 3 board runs either, so a status frame is
+60 bytes on 1.0 and 57 on 1.1. Asking for generation 4 on 1.0 is refused rather than served.
+.IP
+1.1 is also where the motors stop being wired to their jobs. A simulated 1.1 controller holds the motor
+assignment, applies the same rules to it that the firmware does, and answers the function commands that
+drive the focuser, the rotator and the front flap by name rather than by motor. A 1.0 one holds no
+assignment and refuses those commands, which is what makes the pair worth having.
+.IP
+It also takes that assignment when it starts, the way real firmware does: one written into it while it
+runs is stored and reads straight back, and every command still goes where the assignment it started with
+sends it. The reset command is what makes it read the configuration again, and that is what the driver's
+.B Restart controller
+action sends. Nothing else is reset, so the motors keep their positions.
 .TP
 .B \-\-help
 Print a usage summary and exit.
@@ -47,10 +68,18 @@ Print a usage summary and exit.
 .RS
 .nf
 .B scopelink-simulator --generation 3
-ScopeLink simulator, hardware generation 3
+ScopeLink simulator, hardware generation 3 on interface 1.0
 Port: /dev/pts/7
 
 .B scopelink-cli --port /dev/pts/7 info
+
+.B scopelink-simulator --generation 3 --interface-minor 1
+ScopeLink simulator, hardware generation 3 on interface 1.1
+Port: /dev/pts/8
+
+.B scopelink-simulator --generation 4
+ScopeLink simulator, hardware generation 4 on interface 1.1
+Port: /dev/pts/9
 .fi
 .RE
 .SH SEE ALSO

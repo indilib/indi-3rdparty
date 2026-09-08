@@ -15,6 +15,7 @@
 #include "scopelink/simulator.h"
 
 #include "scopelink/device.h"
+#include "scopelink/faults.h"
 #include "scopelink/parameters.h"
 
 #include <algorithm>
@@ -62,7 +63,8 @@ uint8_t SimulatedController::Motor::advance(long elapsedMs)
 // SimulatedController
 // ---------------------------------------------------------------------------------------------------
 
-SimulatedController::SimulatedController(int hardwareMajor) : m_hardwareMajor(hardwareMajor)
+SimulatedController::SimulatedController(int hardwareMajor, int interfaceMinor)
+    : m_hardwareMajor(hardwareMajor), m_interfaceMinor(interfaceMinor)
 {
     // Seeded from the same catalogue the driver reads, so that the simulator holds exactly the
     // identifiers a controller of this generation holds - no more, and no fewer. Seeding a hand-picked
@@ -71,21 +73,54 @@ SimulatedController::SimulatedController(int hardwareMajor) : m_hardwareMajor(ha
     // one on every connect.
     Identification identification;
 
-    identification.hardwareMajor = hardwareMajor;
+    identification.hardwareMajor  = hardwareMajor;
+    identification.interfaceMajor = 1;
+    identification.interfaceMinor = interfaceMinor;
 
     const Capabilities capabilities = Capabilities::of(identification, 1);
 
+    m_capabilities = capabilities;
+
     for (const Did &identifier : buildDidCatalogue(capabilities))
     {
-        m_dids[identifier.id()]      = defaultValue(identifier.id());
+        // The motor assignment is seeded from the catalogue rather than made up here, and the catalogue is
+        // the narrowed one: on a two motor controller "not used" is 2, and a plausible looking 3 written
+        // here would be an assignment the firmware refuses to hold. Everything else is a value this file
+        // decides, because being answerable and self consistent is all a simulator owes.
+        const bool isAssignment = (identifier.id() >= 0x0400) && (identifier.id() <= 0x0442);
+
+        m_dids[identifier.id()]      = isAssignment ? identifier.descriptor().fallback : defaultValue(identifier.id());
         m_didLength[identifier.id()] = identifier.length();
     }
 
-    // value(), not m_dids[], so that asking about the flap on a generation that has none does not create
-    // the identifier and start answering for it.
-    m_focuser.position = m_focuser.target = value(0x000e);
-    m_flap.position = m_flap.target = value(0x010e);
-    m_lastTick                      = now();
+    // As many motors as this controller drives, each starting where its own learnt position identifier
+    // says. value(), not m_dids[], so that asking about a motor this generation does not have does not
+    // create the identifier and start answering for it.
+    m_motors.resize(static_cast<size_t>(capabilities.motorCount));
+    m_motorStatus.assign(static_cast<size_t>(capabilities.motorCount), 2);
+
+    for (int index = 0; index < capabilities.motorCount; index++)
+    {
+        Motor &motor = m_motors[static_cast<size_t>(index)];
+
+        motor.position = motor.target = value(motor::lastPositionDid(index));
+    }
+
+    // The number this generation sends for that fault, rather than the number written here. Generation 4
+    // inserted the third motor's failures and four more USB ports into the middle of the list, so a
+    // simulator that served a literal would be serving a different fault on that controller.
+    for (StoredFault &fault : m_faults)
+    {
+        const int wire = Fault::wireCodeOf(static_cast<FaultCode>(fault.code), hardwareMajor);
+
+        fault.code = static_cast<uint16_t>((wire < 0) ? 0 : wire);
+    }
+
+    // Last, because it is taken from the identifiers seeded above: a controller starts by reading its
+    // configuration, and what it reads is what it drives from until it is restarted.
+    m_running = storedRoles();
+
+    m_lastTick = now();
 }
 
 Frame SimulatedController::handle(const Frame &request)
@@ -104,7 +139,8 @@ Frame SimulatedController::handle(const Frame &request)
             return frame(commandId, statusPayload());
 
         case command::InterfaceVersion:
-            return frame(commandId, Frame{ static_cast<uint8_t>(m_hardwareMajor), 0, 1, 0 });
+            return frame(commandId,
+                         Frame{ static_cast<uint8_t>(m_hardwareMajor), 0, 1, static_cast<uint8_t>(m_interfaceMinor) });
 
         case command::HardwareIdentification:
             return frame(commandId, Frame{ 0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x41, 0x42 });
@@ -121,6 +157,14 @@ Frame SimulatedController::handle(const Frame &request)
         case command::Motor:
             return motorCommand(payload);
 
+        // Interface 1.1 onwards, and refused before it by falling through to the default below - which is
+        // what a controller that does not know the command does, and what the driver's choice between the
+        // two command sets is held to.
+        case command::Function:
+            if (m_capabilities.hasConfigurableMotorRoles)
+                return functionCommand(payload);
+            break;
+
         case command::Fan:
             return fanCommand(payload);
 
@@ -134,6 +178,11 @@ Frame SimulatedController::handle(const Frame &request)
             return frame(commandId, Frame{ 1 });
 
         case command::Reset:
+            // The one thing a restart does that is worth modelling: the configuration is read again, so
+            // an assignment written since this controller started is finally the one it drives from.
+            // Nothing else is reset - the motors keep their positions, which is close enough to a real
+            // controller that reads its learnt positions back out of the same memory.
+            m_running = storedRoles();
             return frame(commandId, Frame{ 1 });
 
         case command::EepromStatistics:
@@ -147,10 +196,12 @@ Frame SimulatedController::handle(const Frame &request)
             return frame(commandId, Frame{ 1, 0, 0 });
 
         default:
-            // An unknown command is answered with a frame for a different command, which is what a real
-            // desynchronised link looks like and exercises the driver's validation.
-            return frame(0xff, Frame{ 0 });
+            break;
     }
+
+    // An unknown command is answered with a frame for a different command, which is what a real
+    // desynchronised link looks like and exercises the driver's validation.
+    return frame(0xff, Frame{ 0 });
 }
 
 long SimulatedController::now()
@@ -167,8 +218,8 @@ void SimulatedController::tick()
 
     m_lastTick = moment;
 
-    m_focuserStatus = m_focuser.advance(elapsed);
-    m_flapStatus    = m_flap.advance(elapsed);
+    for (size_t index = 0; index < m_motors.size(); index++)
+        m_motorStatus[index] = m_motors[index].advance(elapsed);
 }
 
 Frame SimulatedController::frame(uint8_t command, const Frame &payload)
@@ -233,36 +284,114 @@ Frame SimulatedController::statusPayload() const
     put16(payload, 14650);                                // 26 ambient, 20.0 C in 1/50 K
     put16(payload, 14400);                                // 28 mirror, 15.0 C in 1/50 K
 
-    payload.push_back(m_focuserStatus);                        // 30
-    payload.push_back(static_cast<uint8_t>(m_focuser.load));   // 31
-    put32(payload, static_cast<unsigned>(m_focuser.position)); // 32
-
-    payload.push_back(m_flapStatus);                        // 36
-    payload.push_back(static_cast<uint8_t>(m_flap.load));   // 37
-    put32(payload, static_cast<unsigned>(m_flap.position)); // 38
-
-    payload.push_back(m_power[0] ? 1 : 0); // 42
-    payload.push_back(m_power[1] ? 1 : 0); // 43
-
-    put32(payload, 0); // 44 reserved
-
-    payload.push_back(static_cast<uint8_t>(m_flatboxDuty));   // 48
-    payload.push_back(11);                                    // 49
-    payload.push_back(23);                                    // 50
-    payload.push_back(31);                                    // 51
-    payload.push_back(static_cast<uint8_t>(m_faults.size())); // 52
-    payload.push_back(activeFaultCount());                    // 53
-    put16(payload, 0);                                        // 54
-
-    if (m_hardwareMajor > 2)
+    // Six bytes each from offset 30, as many as this controller drives. A third motor pushes everything
+    // below six bytes further along, which is the whole of generation 4's difference here.
+    for (size_t index = 0; index < m_motors.size(); index++)
     {
-        payload.push_back(1); // 56 USB DS1 powered
-        payload.push_back(1); // 57 USB DS2 powered
-        payload.push_back(0); // 58 DS1 fault
-        payload.push_back(0); // 59 DS2 fault
+        payload.push_back(m_motorStatus[index]);                         // 30, 36, 42
+        payload.push_back(static_cast<uint8_t>(m_motors[index].load));   // 31, 37, 43
+        put32(payload, static_cast<unsigned>(m_motors[index].position)); // 32, 38, 44
     }
 
+    payload.push_back(m_power[0] ? 1 : 0);
+    payload.push_back(m_power[1] ? 1 : 0);
+
+    // The four digital inputs, which interface 1.1 dropped. Everything below moves four bytes forward on
+    // a controller that does not send them, which is the whole of the layout difference between the two
+    // interface versions apart from the flap state at the end.
+    if (m_capabilities.hasDigitalInputs)
+        put32(payload, 0); // reserved
+
+    payload.push_back(static_cast<uint8_t>(m_flatboxDuty));
+    payload.push_back(11);
+    payload.push_back(23);
+    payload.push_back(31);
+    payload.push_back(static_cast<uint8_t>(m_faults.size()));
+    payload.push_back(activeFaultCount());
+    put16(payload, 0); // I2C errors
+
+    for (int port = 0; port < m_capabilities.usbDownstreamPortCount; port++)
+        payload.push_back(1); // powered
+
+    if (m_capabilities.hasUsbPowerFailureReporting)
+    {
+        payload.push_back(0); // DS1 fault
+        payload.push_back(0); // DS2 fault
+    }
+
+    if (m_capabilities.hasConfigurableMotorRoles)
+        payload.push_back(flapState());
+
     return payload;
+}
+
+/**
+ * @brief What the front flap is doing as a whole, for a controller whose interface reports it.
+ *
+ * Worked out from whichever motors the assignment names, so a flap made of two parts is neither open nor
+ * shut until both of them have arrived. What is not modelled is the delay between the parts - a real
+ * controller starts them in order and reports Opening while a part waits out its delay, and here they
+ * all start at once. That makes this the honest floor rather than the full behaviour: enough for the
+ * driver to have a state to follow and to be held to.
+ */
+uint8_t SimulatedController::flapState() const
+{
+    const std::vector<int> parts = m_running.flapMotors();
+
+    if (parts.empty())
+        return 5; // NotConfigured
+
+    bool open   = true;
+    bool closed = true;
+
+    for (int part : parts)
+    {
+        // The part's calibrated travel, which is what "fully open" means for it. Seeded from the
+        // catalogue like every other identifier, so a simulator starts out calibrated - and a client that
+        // writes a zero travel into it gets the state a real uncalibrated flap reports, which is worth
+        // being able to reach.
+        const int travel = travelOf(part);
+
+        if (travel <= 0)
+            return 6; // NotCalibrated
+
+        const Motor &motor = m_motors[static_cast<size_t>(part)];
+
+        if (m_motorStatus[static_cast<size_t>(part)] < 2)
+            return (motor.target > motor.position) ? 1u : 3u; // Opening / Closing
+
+        open   = open && (motor.position >= travel);
+        closed = closed && (motor.position <= 0);
+    }
+
+    if (closed)
+        return 0; // Closed
+
+    return open ? 2u : 4u; // Open / Partial
+}
+
+MotorRoles SimulatedController::storedRoles() const
+{
+    if (!m_capabilities.hasConfigurableMotorRoles)
+        return MotorRoles::legacy(m_capabilities);
+
+    std::vector<int> flapParts;
+
+    for (int part = 0; part < MotorRoles::flapPartsOn(m_capabilities); part++)
+        flapParts.push_back(value(MotorRoles::FlapPartMotorDids[part]));
+
+    return MotorRoles::build(m_capabilities, value(MotorRoles::FocuserMotorDid), value(MotorRoles::RotatorMotorDid),
+                             flapParts, value(MotorRoles::FocuserStepMultiplierDid),
+                             value(MotorRoles::RotatorStepsPerRevolutionDid));
+}
+
+int SimulatedController::travelOf(int index) const
+{
+    const int travel = value(motor::maximumPositionDid(index));
+
+    // The sentinel the calibrator writes to mean "no end of travel is known" is not a distance, so it is
+    // reported as no travel at all rather than as a flap that opens two billion steps from here.
+    return (travel == motor::UncalibratedTravel) ? 0 : travel;
 }
 
 int SimulatedController::value(uint32_t did) const
@@ -289,16 +418,23 @@ size_t SimulatedController::didLength(uint32_t did) const
  * @brief What one identifier holds on a freshly configured controller.
  *
  * Plausible rather than measured - the simulator's job is to be answerable and self consistent, not to
- * reproduce a particular unit's tuning. The motor pages share a layout, so the low byte decides the value
- * for both the focuser at 0x00xx and the flap at 0x01xx.
+ * reproduce a particular unit's tuning. The three motor pages share a layout, so the low byte decides the
+ * value for all of them.
+ *
+ * The motor assignment is not among them: it is seeded from the catalogue in the constructor, because
+ * plausible is not good enough there. Zero for every one of them puts the rotator on the focuser's motor,
+ * which the firmware refuses to hold, so a simulator that made one up would be modelling a controller
+ * sitting on MotorConfigurationInvalid rather than a working one.
  */
 int SimulatedController::defaultValue(uint32_t did)
 {
-    const bool isMotorPage = (did < 0x0200);
+    // The three motor pages: 0x00xx, 0x01xx and, from generation 4, 0x08xx. They share a layout, so the
+    // low byte decides the value and only the learnt position differs between them.
+    const bool isMotorPage = (did < 0x0200) || ((did >= 0x0800) && (did < 0x0900));
 
     if (isMotorPage)
     {
-        const bool isFlap = (did >= 0x0100);
+        const bool isFlap = (did >= 0x0100) && (did < 0x0200);
 
         switch (did & 0xff)
         {
@@ -424,17 +560,29 @@ Frame SimulatedController::dataIdentifier(const Frame &payload)
 
     m_dids[did] = static_cast<int>(stored);
 
-    if (did == 0x000e)
-        m_focuser.position = m_focuser.target = m_dids[did];
+    // A learnt position written into a motor's page moves that motor, which is what a sync does. Asked by
+    // page rather than by a single identifier, so that the second and third motors behave as the first.
+    for (size_t index = 0; index < m_motors.size(); index++)
+    {
+        if (did != motor::lastPositionDid(static_cast<int>(index)))
+            continue;
+
+        m_motors[index].position = m_motors[index].target = m_dids[did];
+    }
 
     return frame(command::DataIdentifier, Frame{ 1, payload[1], payload[2] });
 }
 
 Frame SimulatedController::motorCommand(const Frame &payload)
 {
-    if (payload.size() >= 2)
+    // Addressed by the index the protocol numbers them with. A command for a motor this controller does
+    // not have is refused rather than applied to a neighbouring one, which is what a driver that has
+    // resolved a function to the wrong motor deserves to be told.
+    if ((payload.size() < 2) || (static_cast<size_t>(payload[0]) >= m_motors.size()))
+        return frame(command::Motor, Frame{ 0 });
+
     {
-        Motor &affected = (payload[0] == 1) ? m_flap : m_focuser;
+        Motor &affected = m_motors[payload[0]];
 
         if ((payload[1] == motor::Halt))
         {
@@ -453,6 +601,119 @@ Frame SimulatedController::motorCommand(const Frame &payload)
     }
 
     return frame(command::Motor, Frame{ 1 });
+}
+
+FunctionResponse SimulatedController::driveMotor(int index, uint8_t subFunction, int position)
+{
+    Motor &affected = m_motors[static_cast<size_t>(index)];
+
+    if (subFunction == function::Halt)
+    {
+        affected.target = affected.position;
+        return FunctionResponse::Ok;
+    }
+
+    if (subFunction == function::Sync)
+    {
+        affected.position = affected.target = position;
+        return FunctionResponse::Ok;
+    }
+
+    const int travel = travelOf(index);
+
+    if (travel <= 0)
+        return FunctionResponse::NotCalibrated;
+
+    if ((position < 0) || (position > travel))
+        return FunctionResponse::InvalidParameter;
+
+    // A motor that is running will not take a new target. It is the refusal a driver is most likely to
+    // meet in normal use, which is exactly why it is worth being able to meet it here.
+    if (m_motorStatus[static_cast<size_t>(index)] < 2)
+        return FunctionResponse::Busy;
+
+    affected.target = position;
+
+    return FunctionResponse::Ok;
+}
+
+/**
+ * @brief Commands what a motor drives rather than a motor, resolving the assignment the way the firmware
+ *        does.
+ *
+ * The whole point of the command is that the caller does not say which motor, so everything here goes
+ * through the assignment: a request for a function nothing is assigned to is refused rather than applied
+ * to whichever motor a fixed mapping would have named.
+ *
+ * The running assignment, not the stored one. They are the same on a controller nobody has reconfigured
+ * since it started, and on one that has been they are how the firmware behaves: the new assignment reads
+ * back, and every command still goes where the old one sent it.
+ */
+Frame SimulatedController::functionCommand(const Frame &payload)
+{
+    const auto answer = [](FunctionResponse response)
+    { return frame(command::Function, Frame{ static_cast<uint8_t>(response) }); };
+
+    if (payload.size() < 2)
+        return answer(FunctionResponse::InvalidParameter);
+
+    const MotorRoles assignment = m_running;
+
+    if (!assignment.isValid())
+        return answer(FunctionResponse::NotConfigured);
+
+    const uint8_t subFunction = payload[1];
+    int position              = 0;
+
+    if (payload.size() >= 6)
+        position = static_cast<int>((payload[2] << 24) | (payload[3] << 16) | (payload[4] << 8) | payload[5]);
+
+    if (payload[0] == function::Focuser)
+    {
+        if (!assignment.hasFocuser())
+            return answer(FunctionResponse::NotConfigured);
+
+        return answer(driveMotor(assignment.focuserMotor().value(), subFunction, position));
+    }
+
+    if (payload[0] == function::Rotator)
+    {
+        if (!assignment.hasRotator())
+            return answer(FunctionResponse::NotConfigured);
+
+        return answer(driveMotor(assignment.rotatorMotor().value(), subFunction, position));
+    }
+
+    if (payload[0] != function::Flap)
+        return answer(FunctionResponse::InvalidParameter);
+
+    if (!assignment.hasFlap())
+        return answer(FunctionResponse::NotConfigured);
+
+    // Every part is commanded, and the first refusal is the answer: a sequence that cannot be run in full
+    // is not one to start half of. A real controller runs the parts in order with the configured delays
+    // between them, which is the one thing this does not model.
+    FunctionResponse result = FunctionResponse::Ok;
+
+    for (int part : assignment.flapMotors())
+    {
+        const int travel = travelOf(part);
+        FunctionResponse answered;
+
+        if (subFunction == function::Open)
+            answered = driveMotor(part, function::Move, travel);
+        else if (subFunction == function::Close)
+            answered = driveMotor(part, function::Move, 0);
+        else if (subFunction == function::Halt)
+            answered = driveMotor(part, function::Halt, 0);
+        else
+            answered = FunctionResponse::InvalidParameter;
+
+        if ((result == FunctionResponse::Ok) && (answered != FunctionResponse::Ok))
+            result = answered;
+    }
+
+    return answer(result);
 }
 
 Frame SimulatedController::fanCommand(const Frame &payload)
@@ -474,7 +735,13 @@ Frame SimulatedController::fanCommand(const Frame &payload)
 
 Frame SimulatedController::faultPayload() const
 {
-    const size_t snapshotLength = (m_hardwareMajor > 2) ? 48 : 34;
+    // Taken from the capability set rather than written out per generation, so that a freeze frame served
+    // here is the length the driver's field list consumes by construction and not by agreement.
+    const size_t snapshotLength = m_capabilities.dtcSnapshotLength;
+
+    // Uptime, the two supplies, the two fans, then the auxiliary pair where there is one, then the
+    // controller's own temperature and supply - and the clock sits behind all of it.
+    const size_t yearOffset = 12 + (m_capabilities.hasAuxVoltageMonitoring ? 4u : 0u) + 4;
 
     Frame payload{ 0x07, static_cast<uint8_t>(m_faults.size()) };
 
@@ -489,13 +756,13 @@ Frame SimulatedController::faultPayload() const
 
         // Uptime and a plausible timestamp, so that the driver's freeze frame decoding has something
         // recognisable to show rather than a block of zeros.
-        snapshot[3]                               = 0x64;
-        snapshot[4]                               = 0x2f;
-        snapshot[5]                               = 0x44;
-        snapshot[(m_hardwareMajor > 2) ? 20 : 16] = 0x07;
-        snapshot[(m_hardwareMajor > 2) ? 21 : 17] = 0xea;
-        snapshot[(m_hardwareMajor > 2) ? 22 : 18] = 8;
-        snapshot[(m_hardwareMajor > 2) ? 23 : 19] = 11;
+        snapshot[3]              = 0x64;
+        snapshot[4]              = 0x2f;
+        snapshot[5]              = 0x44;
+        snapshot[yearOffset]     = 0x07;
+        snapshot[yearOffset + 1] = 0xea;
+        snapshot[yearOffset + 2] = 8;
+        snapshot[yearOffset + 3] = 11;
 
         payload.insert(payload.end(), snapshot.begin(), snapshot.end());
     }
@@ -517,7 +784,10 @@ uint8_t SimulatedController::activeFaultCount() const
 // SimulatedTransport
 // ---------------------------------------------------------------------------------------------------
 
-SimulatedTransport::SimulatedTransport(int hardwareMajor) : m_controller(hardwareMajor) {}
+SimulatedTransport::SimulatedTransport(int hardwareMajor, int interfaceMinor)
+    : m_controller(hardwareMajor, interfaceMinor)
+{
+}
 
 bool SimulatedTransport::isOpen() const
 {

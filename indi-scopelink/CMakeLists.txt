@@ -18,7 +18,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules/")
 
 set(SCOPELINK_VERSION_MAJOR 1)
-set(SCOPELINK_VERSION_MINOR 0)
+set(SCOPELINK_VERSION_MINOR 1)
 
 find_package(INDI 2.0.0 REQUIRED)
 
@@ -50,8 +50,11 @@ set(SCOPELINK_CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/transport.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/protocol.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/device.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/roles.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/parameters.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/parameters_generated.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/faults.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/firmware.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/simulator.cpp
 )
 
@@ -64,6 +67,7 @@ add_library(scopelinkcore STATIC ${SCOPELINK_CORE_SOURCES})
 add_executable(indi_scopelink
     ${CMAKE_CURRENT_SOURCE_DIR}/indi/scopelink_driver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/indi/scopelink_diagnostics.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/indi/scopelink_firmware.cpp
 )
 
 target_link_libraries(indi_scopelink scopelinkcore ${INDI_LIBRARIES})

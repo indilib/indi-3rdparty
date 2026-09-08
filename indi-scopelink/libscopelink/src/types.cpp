@@ -18,6 +18,29 @@
 
 namespace scopelink
 {
+namespace motor
+{
+
+uint32_t pageBase(int index)
+{
+    if (index == 1)
+        return 0x0100u;
+
+    return (index == 2) ? 0x0800u : 0x0000u;
+}
+
+uint32_t maximumPositionDid(int index)
+{
+    return pageBase(index) + 0x0fu;
+}
+
+uint32_t lastPositionDid(int index)
+{
+    return pageBase(index) + 0x0eu;
+}
+
+} // namespace motor
+
 namespace byte_order
 {
 

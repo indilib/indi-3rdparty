@@ -39,16 +39,49 @@ int main(int argc, char *argv[])
 {
     int hardwareMajor = 3;
 
+    // The interface version is asked for separately from the generation because it is a separate thing:
+    // the same generation 3 board runs 1.0 and 1.1, and 1.1 is the one whose frames are laid out
+    // differently. Serving only 1.0 is what left the 1.1 layout untested against anything.
+    //
+    // Generation 4 is the exception, and only because no such board was ever built with the older
+    // firmware: it comes up on 1.1 unless the caller says otherwise, and asking for 1.0 on it is refused
+    // below rather than served.
+    int interfaceMinor = -1;
+
     for (int index = 1; index < argc; index++)
     {
         if ((std::strcmp(argv[index], "--generation") == 0) && ((index + 1) < argc))
             hardwareMajor = std::atoi(argv[++index]);
+        else if ((std::strcmp(argv[index], "--interface-minor") == 0) && ((index + 1) < argc))
+            interfaceMinor = std::atoi(argv[++index]);
         else if (std::strcmp(argv[index], "--help") == 0)
         {
-            printf("Usage: scopelink-simulator [--generation 2|3]\n"
-                   "Serves the ScopeLink protocol on a pseudo terminal and prints its device path.\n");
+            printf("Usage: scopelink-simulator [--generation 2|3|4] [--interface-minor 0|1]\n"
+                   "Serves the ScopeLink protocol on a pseudo terminal and prints its device path.\n"
+                   "\n"
+                   "The interface version defaults to 1.0, except on generation 4, which only exists on\n"
+                   "1.1 - that is the board the motor assignment was built for.\n");
             return 0;
         }
+    }
+
+    // Still at the sentinel means the caller did not name one.
+    if (interfaceMinor < 0)
+        interfaceMinor = (hardwareMajor > 3) ? 1 : 0;
+
+    if (interfaceMinor > 1)
+    {
+        fprintf(stderr, "Interface version 1.%d is not one this simulator serves; use 0 or 1.\n", interfaceMinor);
+        return 1;
+    }
+
+    // Refused rather than served, because the pair describes no controller anybody can buy: a generation 4
+    // board has three motors and the assignment that says what they drive, and 1.0 is the firmware that
+    // has neither. Serving it would produce a 65 byte frame nothing sends and prove nothing about either.
+    if ((hardwareMajor > 3) && (interfaceMinor < 1))
+    {
+        fprintf(stderr, "Generation 4 only exists on interface 1.1; there is no 1.0 firmware for it.\n");
+        return 1;
     }
 
     if (!scopelink::Capabilities::isSupported(hardwareMajor))
@@ -75,11 +108,11 @@ int main(int argc, char *argv[])
         tcsetattr(master, TCSANOW, &settings);
     }
 
-    printf("ScopeLink simulator, hardware generation %d\n", hardwareMajor);
+    printf("ScopeLink simulator, hardware generation %d on interface 1.%d\n", hardwareMajor, interfaceMinor);
     printf("Port: %s\n", ptsname(master));
     fflush(stdout);
 
-    scopelink::SimulatedController controller(hardwareMajor);
+    scopelink::SimulatedController controller(hardwareMajor, interfaceMinor);
     Frame pending;
 
     while (true)

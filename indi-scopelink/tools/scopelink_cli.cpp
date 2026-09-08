@@ -18,14 +18,17 @@
 
 #include "scopelink/device.h"
 #include "scopelink/faults.h"
+#include "scopelink/firmware.h"
 #include "scopelink/parameters.h"
 #include "scopelink/protocol.h"
 #include "scopelink/transport.h"
 
+#include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
 #include <string>
+#include <thread>
 
 namespace
 {
@@ -42,7 +45,14 @@ void usage()
            "  import FILE   Write the configuration in FILE to the controller\n"
            "  faults        The fault store with freeze frames\n"
            "  clear-faults  Clear every stored fault\n"
-           "  eeprom        EEPROM wear counters\n");
+           "  eeprom        EEPROM wear counters\n"
+           "  flash FILE    Write the firmware in FILE to the controller\n"
+           "\n"
+           "'flash' takes the encrypted firmware file the vendor supplies for this particular unit, which\n"
+           "is named after it. The controller restarts into its boot loader, is written and restarts\n"
+           "again, all on this one port; nothing else has to be installed. Leave it plugged in until the\n"
+           "command returns. An interrupted write leaves the unit in its boot loader with no firmware,\n"
+           "which this same command recovers from - run it again.\n");
 }
 
 const char *yesNo(bool value)
@@ -64,7 +74,11 @@ void printIdentification(scopelink::Device &device)
     printf("Capabilities\n");
     printf("  Status frame        %zu bytes\n", capabilities.statusFrameLength);
     printf("  Freeze frame        %zu bytes\n", capabilities.dtcSnapshotLength);
-    printf("  USB hub             %s\n", yesNo(capabilities.hasUsbHub));
+    printf("  Motors              %d\n", capabilities.motorCount);
+    printf("  Motor assignment    %s\n", yesNo(capabilities.hasConfigurableMotorRoles));
+    printf("  USB hub             %s\n",
+           capabilities.hasUsbHub ? ((capabilities.usbDownstreamPortCount == 2) ? "yes, 2 ports" : "yes, 6 ports") :
+                                    "no");
     printf("  Smart switches      %s\n", yesNo(capabilities.hasSmartSwitchDiagnostics));
     printf("  Temperature sensor  %s\n", yesNo(capabilities.hasTemperatureSensor));
     printf("\n");
@@ -92,19 +106,44 @@ void printStatus(scopelink::Device &device)
     else
         printf("  Mirror              not available\n");
 
-    printf("  Focuser             %d steps, %s, load %u%%\n", status.motor1Position,
-           status.motor1Moving ? "moving" : "stopped", status.motor1Load);
+    // Numbered rather than named after a job. What each motor drives is the assignment, which a
+    // controller on interface 1.1 holds and which this tool does not read yet, so naming the first two
+    // "focuser" and "flap" here would be printing a guess as a fact.
+    for (int index = 0; index < status.motorCount(); index++)
+    {
+        const scopelink::MotorReading reading = status.motor(index);
+        char label[24];
 
-    printf("  Front flap          %d steps, %s, load %u%%\n", status.motor2Position,
-           status.motor2Moving ? "moving" : "stopped", status.motor2Load);
+        snprintf(label, sizeof(label), "Motor %d", index + 1);
+
+        printf("  %-18s  %d steps, %s, load %u%%\n", label, reading.position, reading.moving ? "moving" : "stopped",
+               reading.load);
+    }
+
     printf("  Flat panel          %d %%\n", status.flatboxDuty);
     printf("  Aux outputs         %s / %s\n", yesNo(status.powerSwitch1State), yesNo(status.powerSwitch2State));
 
     if (device.capabilities().hasUsbHub)
     {
-        printf("  USB hub             port 1 %s%s, port 2 %s%s\n", yesNo(status.usb1PowerActive),
-               status.usb1PowerFailure ? " FAULT" : "", yesNo(status.usb2PowerActive),
-               status.usb2PowerFailure ? " FAULT" : "");
+        // Two ports on generation 3 and six on generation 4, so the row is built rather than written out.
+        // Only generation 3 reports a fault per port; generation 4 spent those two bytes on four more
+        // ports, and its firmware derived each fault flag from the active flag beside it anyway.
+        std::string ports;
+
+        for (int port = 0; port < status.usbDownstreamPortCount(); port++)
+        {
+            const bool faulted = (port == 0) ? status.usb1PowerFailure : ((port == 1) && status.usb2PowerFailure);
+
+            if (!ports.empty())
+                ports += ", ";
+
+            ports += "port " + std::to_string(port + 1) + " " + yesNo(status.usbPowerActive(port));
+
+            if (faulted && device.capabilities().hasUsbPowerFailureReporting)
+                ports += " FAULT";
+        }
+
+        printf("  USB hub             %s\n", ports.c_str());
     }
 
     printf("  Faults              %d stored, %d active\n", status.storedFaultCount, status.activeFaultCount);
@@ -121,8 +160,13 @@ int readParameters(scopelink::Device &device, std::vector<scopelink::Did> &catal
     {
         if (identifier.read(device))
         {
+            // Shown the way the firmware describes it - in its own units, and by name where it is one of a
+            // set of settings - because this is the output that gets pasted into a support mail.
             if (!quiet)
-                printf("  0x%04X  %-46s %d\n", identifier.id(), identifier.description().c_str(), identifier.value());
+            {
+                printf("  0x%04X  %-46s %s\n", identifier.id(), identifier.description().c_str(),
+                       identifier.descriptor().formatValue(identifier.value()).c_str());
+            }
         }
         else
         {
@@ -151,6 +195,92 @@ void printFaults(scopelink::Device &device)
         printf("Fault %zu: %s\n", index + 1, faults[index].summary().c_str());
         printf("  %s\n\n", faults[index].snapshotText().c_str());
     }
+}
+
+/**
+ * @brief Writes a firmware file to the controller and reports what happens.
+ * @return Process exit status
+ *
+ * The device has already been identified by the time this runs, which is what supplies the unit
+ * identifier the file is checked against. The controller is then asked to restart into its boot loader
+ * and the port is handed to the update, which owns it until the new firmware is answering: the device
+ * leaves the USB bus twice on the way and the descriptor opened before it went is dead each time.
+ */
+int flash(scopelink::PosixSerialTransport &transport, scopelink::Protocol &protocol, scopelink::Device &device,
+          const std::string &fileName, bool firmwareRunning, bool verbose)
+{
+    std::string identifier;
+    std::string running;
+
+    if (firmwareRunning)
+    {
+        identifier = device.identification().hardwareIdentifier;
+        running    = device.identification().softwareIdentifier;
+    }
+    else
+    {
+        // The boot loader answers the unit identifier and its own name and nothing else, which is all
+        // that is needed here: the identifier names the file, and the file is what gets it running again.
+        const scopelink::Identification identification = scopelink::Identification::readCommon(protocol);
+
+        identifier = identification.hardwareIdentifier;
+        running    = identification.softwareIdentifier + " (boot loader, no firmware to run)";
+    }
+
+    scopelink::FirmwareFile file = scopelink::FirmwareFile::open(fileName, identifier);
+
+    printf("Unit          %s\n", identifier.c_str());
+    printf("Running now   %s\n", running.c_str());
+    printf("File          %s, %zu bytes\n\n", file.name().c_str(), file.container().size());
+
+    if (firmwareRunning && !device.requestJumpToBootloader())
+    {
+        // Not fatal on its own: a controller that restarted before its answer got out looks exactly like
+        // one that never heard the request, and only the wait that follows can tell them apart.
+        printf("The controller did not acknowledge the restart request; waiting to see whether it "
+               "restarts anyway.\n");
+    }
+
+    transport.close();
+
+    scopelink::FirmwareUpdate update(transport, file);
+
+    if (verbose)
+    {
+        update.setLogger([](const char *scope, const std::string &message)
+                         { fprintf(stderr, "[%s] %s\n", scope, message.c_str()); });
+    }
+
+    std::string shown;
+
+    while (update.step())
+    {
+        if (update.message() != shown)
+        {
+            shown = update.message();
+            printf("%3d%%  %s\n", update.percent(), shown.c_str());
+            fflush(stdout);
+        }
+
+        // The update advances by one bounded piece of work per call and leaves the pacing to its caller,
+        // which in a driver is the event loop's timer and here is simply this.
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    }
+
+    if (update.stage() != scopelink::FirmwareUpdate::Stage::Complete)
+    {
+        fprintf(stderr, "\n%s\n", update.failure().c_str());
+        return 1;
+    }
+
+    printf("100%%  %s\n\nThe firmware has been replaced.\n", update.message().c_str());
+
+    // The configuration lives outside the firmware slot, so it is expected to have come through, but it
+    // is worth saying so rather than leaving the user to wonder.
+    printf("The controller's stored configuration is outside the area that was erased. Check it with "
+           "'scopelink-cli parameters'.\n");
+
+    return 0;
 }
 
 } // namespace
@@ -204,7 +334,30 @@ int main(int argc, char *argv[])
     try
     {
         transport.open();
-        device.open();
+
+        // 'flash' is the one command that has to work on a controller which answers almost nothing. A
+        // unit whose previous update was interrupted is sitting in its boot loader with no firmware to
+        // identify itself with, and putting firmware back into it is precisely what this command is for.
+        bool firmwareRunning = true;
+
+        if (action == "flash")
+        {
+            try
+            {
+                device.open();
+            }
+            catch (const std::exception &error)
+            {
+                firmwareRunning = false;
+
+                fprintf(stderr, "No firmware answered on %s; checking for a boot loader. (%s)\n", port.c_str(),
+                        error.what());
+            }
+        }
+        else
+        {
+            device.open();
+        }
 
         if ((action == "info") || (action == "status"))
         {
@@ -258,7 +411,8 @@ int main(int argc, char *argv[])
                     if (catalogue[index].write(device))
                     {
                         written++;
-                        printf("  %-46s %d\n", catalogue[index].description().c_str(), catalogue[index].value());
+                        printf("  %-46s %s\n", catalogue[index].description().c_str(),
+                               catalogue[index].descriptor().formatValue(catalogue[index].value()).c_str());
                     }
                     else
                     {
@@ -298,6 +452,16 @@ int main(int argc, char *argv[])
             printf("  Fault block 2       %d\n", statistics.faultStoreBlock2Counter);
             printf("  Fault block 3       %d\n", statistics.faultStoreBlock3Counter);
             printf("  Fault block 4       %d\n", statistics.faultStoreBlock4Counter);
+        }
+        else if (action == "flash")
+        {
+            if (arguments.size() < 2)
+            {
+                fprintf(stderr, "'flash' needs a file name.\n");
+                return 1;
+            }
+
+            return flash(transport, protocol, device, arguments[1], firmwareRunning, verbose);
         }
         else
         {

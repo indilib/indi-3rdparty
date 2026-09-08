@@ -47,6 +47,11 @@ void FdSerialTransport::setDescriptor(int fd)
     m_fd = fd;
 }
 
+void FdSerialTransport::setReceiveTimeout(int receiveTimeoutMs)
+{
+    m_receiveTimeoutMs = receiveTimeoutMs;
+}
+
 bool FdSerialTransport::isOpen() const
 {
     return m_fd >= 0;
@@ -227,10 +232,18 @@ bool PosixSerialTransport::reopen()
     try
     {
         open();
+
+        m_lastError.clear();
+
         return true;
     }
-    catch (const std::exception &)
+    catch (const std::exception &error)
     {
+        // Kept rather than discarded: the firmware update reopens this port for half a minute while the
+        // controller re-enumerates, and at the end of it the reason is the difference between telling the
+        // user to wait and telling them their account cannot open the port at all.
+        m_lastError = error.what();
+
         return false;
     }
 }
