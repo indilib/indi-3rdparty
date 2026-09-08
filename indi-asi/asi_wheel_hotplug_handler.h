@@ -70,6 +70,8 @@ class ASIWHEELHotPlugHandler : public HotPlugCapableDevice
 
         // Helper to get filter wheel info by ID (converted to string)
         static bool getEFWInfoByID(const std::string& idStr, EFW_INFO& efwInfo);
+        // Helper to get serial number from filter wheel ID (if supported)
+        static std::string getSerialNumberFromWheelID(int wheelID);
 };
 
 } // namespace INDI
