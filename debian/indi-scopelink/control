@@ -10,13 +10,21 @@ Package: indi-scopelink
 Architecture: any
 Depends: ${shlibs:Depends}, ${misc:Depends}
 Description: INDI driver for the Astrolabs ScopeLink telescope controller
- ScopeLink drives a focuser, a telescope front flap, a flat panel, two mirror
- fans and, depending on the hardware generation, two auxiliary power outputs
- and a powered USB hub, all over one USB connection.
+ ScopeLink drives a focuser, a rotator, a telescope front flap, a flat panel,
+ two mirror fans and, depending on the hardware generation, two auxiliary
+ power outputs and a powered USB hub, all over one USB connection.
  .
  The driver publishes the controller as a single INDI device carrying the
- focuser, dust cap and light box interfaces, so that any INDI client such as
- KStars can run autofocus, open and close the flap and take flat frames.
+ focuser, rotator, dust cap and light box interfaces, so that any INDI client
+ such as KStars can run autofocus, rotate the field, open and close the flap
+ and take flat frames. Which motor does which job is the controller's own
+ setting, and the driver offers a device only where a motor is assigned to it
+ and calibrated for it.
+ .
+ The controller's configuration, fault store and motor calibration are readable
+ and writable from the driver, and its firmware can be replaced over the same
+ serial port, which needs no DFU mode and no privileges beyond access to the
+ port itself.
  .
  A simulation mode and a pseudo terminal simulator are included, so the driver
  can be tried without a controller attached.

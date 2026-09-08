@@ -1,3 +1,15 @@
+indi-scopelink (1.1) jammy; urgency=medium
+
+  * Hardware generation 4 and interface version 1.1 are supported.
+  * The controller's motor assignment is read at connect: which motor focuses, which rotates and
+    which ones the front flap is made of.
+  * New rotator interface, offered on a controller with a motor assigned and calibrated for it.
+  * Configuration parameters are generated from the firmware's own description, with its limits,
+    its units and its groups. Property names changed with them.
+  * The udev rule matches the USB identifiers assigned to Astrolabs, and /dev/scopelink is back.
+
+ -- Bence Toth <bence.toth@astrolabs.hu>  Mon, 07 Sep 2026 21:00:00 +0200
+
 indi-scopelink (1.0) jammy; urgency=medium
 
   * Initial release.
