@@ -59,7 +59,7 @@ class SVBONYBase : public INDI::CCD
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-        virtual int SetTemperature(double temperature) override;
+        virtual int SetTemperature(double temperature, bool enableCooler = false) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
 
@@ -88,6 +88,9 @@ class SVBONYBase : public INDI::CCD
         virtual bool saveConfigItems(FILE *fp) override;
 
         virtual bool SetCaptureFormat(uint8_t index) override;
+
+        /** Toggle the hardware TEC.  Called by the base-class warm-up machinery. */
+        virtual bool SetCoolerEnabled(bool enable) override;
 
         /** Get the current Bayer string used */
         const char *getBayerString() const;

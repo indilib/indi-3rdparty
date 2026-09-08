@@ -887,7 +887,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             return true;
         }
-        // Cooler controler
+        // Cooler controller
         else if (!strcmp(name, CoolerSP.name))
         {
             if (IUUpdateSwitch(&CoolerSP, states, names, n) < 0)
@@ -899,10 +899,24 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
             bool enabled = (CoolerS[COOLER_ON].s == ISS_ON);
 
+            if (!enabled)
+            {
+                // Cooler OFF: initiate gradual warm-up via base class helpers.
+                // beginCoolerWarmup() will call SetCoolerEnabled(false) itself when the
+                // temperature has stabilised (or immediately if no ramp is configured).
+                CoolerSP.s = IPS_BUSY;
+                beginCoolerWarmup(TemperatureNP[0].getValue());
+                IDSetSwitch(&CoolerSP, nullptr);
+                return true;
+            }
+
+            // Cooler ON: cancel any ongoing warmup first
+            cancelCoolerWarmup();
+
             // If user turns on cooler, but the requested temperature is higher than current temperature by more
             // than five degrees, then we consider this endangers the device and we alter the temperature target.
             // The five degrees tolerance is there to adapt to cooling overshoot.
-            if (enabled && TemperatureNP[0].getValue() + 5.0f < TemperatureRequest)
+            if (TemperatureNP[0].getValue() + 5.0f < TemperatureRequest)
             {
                 LOGF_WARN("Current temperature is %.2f, refusing to set %.2f (5 degrees warming tolerance). "
                           "To control cooler, request a lower temperature or let the device warm above %.2f.",
@@ -930,7 +944,13 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 }
             }
 
-            return activateCooler(enabled);
+            bool ok = activateCooler(true);
+            if (ok)
+            {
+                SetCoolerEnabled(true);
+                resumeCoolingAfterWarmup();
+            }
+            return ok;
         }
         else if (!strcmp(name, EvenIlluminationSP.name))
         {
@@ -1027,7 +1047,7 @@ bool ATIKCCD::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
     return INDI::CCD::ISNewSwitch(dev, name, states, names, n);
 }
 
-int ATIKCCD::SetTemperature(double temperature)
+int ATIKCCD::SetTemperature(double temperature, bool enableCooler)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
     if (fabs(temperature - TemperatureNP[0].getValue()) < TEMP_THRESHOLD)
@@ -1047,7 +1067,10 @@ int ATIKCCD::SetTemperature(double temperature)
     TemperatureRequest = temperature;
     LOGF_INFO("Setting CCD temperature to %+06.2f C", temperature);
 
-    activateCooler(true);
+    // Skip the CoolerSP display update during a warm-up sequence — the switch stays BUSY with
+    // OFF selected until SetCoolerEnabled(false) finalises the ramp.
+    if (enableCooler)
+        activateCooler(true);
 
     return 0;
 }
@@ -1096,6 +1119,39 @@ bool ATIKCCD::activateCooler(bool enable)
     }
 
     IDSetSwitch(&CoolerSP, nullptr);
+    return true;
+}
+
+bool ATIKCCD::SetCoolerEnabled(bool enable)
+{
+    if (enable)
+    {
+        // Re-apply the cooling setpoint to restart the TEC.
+        // Guard against calling before a valid setpoint has been established.
+        if (TemperatureRequest > 1e5)
+            return true;
+        int setpoint = static_cast<int>(TemperatureRequest * 100);
+        int rc = ArtemisSetCooling(hCam, setpoint);
+        if (rc != ARTEMIS_OK)
+        {
+            LOGF_ERROR("Failed to enable cooling (%d).", rc);
+            return false;
+        }
+        // CoolerSP stays at IPS_BUSY as set by the caller.
+    }
+    else
+    {
+        int rc = ArtemisCoolerWarmUp(hCam);
+        if (rc != ARTEMIS_OK)
+        {
+            LOGF_ERROR("Failed to initiate camera warm-up (%d).", rc);
+            return false;
+        }
+        CoolerS[COOLER_ON].s = ISS_OFF;
+        CoolerS[COOLER_OFF].s = ISS_ON;
+        CoolerSP.s = IPS_IDLE;
+        IDSetSwitch(&CoolerSP, nullptr);
+    }
     return true;
 }
 
@@ -1271,6 +1327,7 @@ void ATIKCCD::TimerHit()
     rc = ArtemisTemperatureSensorInfo(hCam, 1, &temperature);
     pthread_mutex_unlock(&accessMutex);
     TemperatureNP[0].setValue(temperature / 100.0);
+    coolerWarmupTick(TemperatureNP[0].getValue());
 
     switch (TemperatureNP.getState())
     {
