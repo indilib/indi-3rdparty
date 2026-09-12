@@ -19,6 +19,7 @@
 */
 
 #include "asi_wheel_hotplug_handler.h"
+#include "asi_serial_helpers.h" // For Helpers::toHexString
 #include "indilogger.h"   // For LOG_INFO, LOG_DEBUG, etc.
 #include <algorithm>      // For std::remove_if, std::find_if
 #include <EFW_filter.h>   // For EFW SDK functions
@@ -151,7 +152,11 @@ std::shared_ptr<DefaultDevice> ASIWHEELHotPlugHandler::createDevice(const std::s
         }
     }
 
-    ASIWHEEL *asiWheel = new ASIWHEEL(efwInfo, uniqueName.c_str());
+    // Retrieve serial number for the ASIWHEEL constructor, used to persist a nickname
+    // across enumeration-order changes (e.g. multiple wheels connected in parallel).
+    std::string serialNumber = getSerialNumberFromWheelID(wheelID);
+
+    ASIWHEEL *asiWheel = new ASIWHEEL(efwInfo, uniqueName.c_str(), serialNumber);
     std::shared_ptr<ASIWHEEL> newDevice = std::shared_ptr<ASIWHEEL>(asiWheel);
     m_internalWheels.push_back(newDevice);
     LOGF_INFO("HotPlugManager: Created new ASIWHEEL device: %s (ID: %d)", uniqueName.c_str(), wheelID);
@@ -232,6 +237,21 @@ bool ASIWHEELHotPlugHandler::getEFWInfoByID(const std::string& idStr, EFW_INFO& 
         }
     }
     return false;
+}
+
+std::string ASIWHEELHotPlugHandler::getSerialNumberFromWheelID(int wheelID)
+{
+    EFW_SN serialNumber;
+    if (EFWOpen(wheelID) == EFW_SUCCESS)
+    {
+        if (EFWGetSerialNumber(wheelID, &serialNumber) == EFW_SUCCESS)
+        {
+            EFWClose(wheelID);
+            return Helpers::toHexString(serialNumber.id, sizeof(serialNumber.id));
+        }
+        EFWClose(wheelID); // Ensure the wheel is closed even if serial number retrieval fails
+    }
+    return "";
 }
 
 } // namespace INDI

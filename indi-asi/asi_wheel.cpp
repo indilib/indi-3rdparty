@@ -56,14 +56,21 @@ static class Loader
         }
 } loader;
 
-ASIWHEEL::ASIWHEEL(const EFW_INFO &info, const char *name)
+ASIWHEEL::ASIWHEEL(const EFW_INFO &info, const char *name, const std::string &serialNumber)
     : mEFWInfo(info)
+    , mSerialNumber(serialNumber)
 {
     fw_id              = info.ID;
     CurrentFilter      = 0;
     FilterSlotNP[0].setMin(0);
     FilterSlotNP[0].setMax(0);
-    setDeviceName(name);
+
+    // Apply saved nickname from serial number. Returns true if a nickname was found.
+    // If no nickname exists, fall back to the unique name supplied by the hotplug handler
+    // (which may include a counter suffix, e.g. "ZWO EFW 1", for multiple wheels).
+    if (mSerialNumber.empty() || !setDeviceNicknameFromId(mSerialNumber.c_str()))
+        setDeviceName(name);
+
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
 }
 
@@ -165,7 +172,11 @@ bool ASIWHEEL::initProperties()
     IUFillSwitchVector(&CalibrateSP, CalibrateS, 1, getDeviceName(), "FILTER_CALIBRATION", "Calibrate",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
+    SerialNumberTP[0].fill("SN", "SN", mSerialNumber);
+    SerialNumberTP.fill(getDeviceName(), "Serial Number", "Serial Number", INFO_TAB, IP_RO, 60, IPS_IDLE);
+
     addAuxControls();
+    addNicknameControl();
     setDefaultPollingPeriod(250);
     return true;
 }
@@ -184,11 +195,15 @@ bool ASIWHEEL::updateProperties()
         }
         defineProperty(&UniDirectionalSP);
         defineProperty(&CalibrateSP);
+        if (!mSerialNumber.empty())
+            defineProperty(SerialNumberTP);
     }
     else
     {
         deleteProperty(UniDirectionalSP.name);
         deleteProperty(CalibrateSP.name);
+        if (!mSerialNumber.empty())
+            deleteProperty(SerialNumberTP);
     }
 
     return true;
@@ -343,6 +358,14 @@ bool ASIWHEEL::saveConfigItems(FILE *fp)
     INDI::FilterWheel::saveConfigItems(fp);
     IUSaveConfigSwitch(fp, &UniDirectionalSP);
     return true;
+}
+
+void ASIWHEEL::nicknameSet(const char *nickname)
+{
+    if (!mSerialNumber.empty())
+    {
+        saveNicknameId(nickname, mSerialNumber.c_str());
+    }
 }
 
 void ASIWHEEL::TimerHelperCalibrate(void *context)
