@@ -38,3 +38,11 @@ This plan outlines the step-by-step development of the system test suite for the
 - [x] **Long-duration Tracking:** Observed background tracking loop in simulator (Issue 14).
 - [ ] **Predictive Tracking (2nd Order):** Verify period guide rate updates in response to drift.
 - [x] **Reconnection:** Verified recovery from lost connection.
+
+## Phase 6: Cord Wrap Persistence
+- [x] **Toggle Persistence:** Enable/disable cord wrap persists across save.
+- [x] **Position Persistence:** Set position (NE/E/SE/S/SW/W/NW/N) persists across save.
+- [x] **Base Mode Persistence:** Encoder vs Sky/Alignment mode persists across save.
+- [x] **Full Config Persistence:** All cord wrap properties save together correctly.
+- [x] **Position Cycling:** All 8 positions can be set and verified in config.
+- [x] **Disable Preserves Position:** Disabling cord wrap doesn't change saved position.
