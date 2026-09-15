@@ -2175,7 +2175,8 @@ void CelestronAUX::TimerHit()
                 double predRate[2] = {0, 0};
                 // Central difference, error quadratic in timestep
                 // Rates in deg/s
-                predRate[AXIS_AZ] = range180(AzimuthToDegrees(futureMountAxisCoordinates.azimuth - pastMountAxisCoordinates.azimuth)) /
+                predRate[AXIS_AZ] = range180(AzimuthToDegrees(futureMountAxisCoordinates.azimuth) -
+                                             AzimuthToDegrees(pastMountAxisCoordinates.azimuth)) /
                                     timeStep / 2;
                 predRate[AXIS_ALT] = (futureMountAxisCoordinates.altitude - pastMountAxisCoordinates.altitude) / timeStep / 2;
 
