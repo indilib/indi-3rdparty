@@ -1123,14 +1123,28 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     // Find EXACT optimal exposure index in case we need to use it. If -1, we always use blob made if available
     int optimalExposureIndex = -1;
 
+    // Sub-second exposures cannot be timed in BULB (the release can arrive before the camera starts exposing),
+    // so they always use a predefined exposure, even when force bulb is on.
+    const bool subSecond = exptime_usec < 1000000;
+
     // JM 2018-09-23: In case force bulb is off, then we search for optimal exposure index
-    if (gphoto->force_bulb == false &&
+    if ((gphoto->force_bulb == false || subSecond) &&
             // No external shutter port is specified OR
             ((!gphoto->bulb_port[0] && !gphoto->dsusb) ||
              // External shutter port is specified but exposure time < 30 secs
              ((gphoto->bulb_port[0] || gphoto->dsusb) && exptime_usec <= RELEASE_SHUTTER_THRESHOLD)))
     {
         optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
+
+        // No exact match for a sub-second exposure: use the nearest predefined exposure instead of BULB.
+        if (optimalExposureIndex == -1 && subSecond && gphoto->exposureList != nullptr)
+        {
+            optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, false);
+            if (optimalExposureIndex >= 0)
+                DEBUGFDEVICE(device, INDI::Logger::DBG_SESSION,
+                             "No predefined exposure of %g seconds, using the nearest one: %g seconds.",
+                             exptime_usec / 1e6, gphoto->exposureList[optimalExposureIndex]);
+        }
     }
 
     // Set Capture Target
