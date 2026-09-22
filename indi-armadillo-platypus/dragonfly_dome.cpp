@@ -485,8 +485,12 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
         // DOME_CW --> OPEN. If can we are ask to "open" while we are fully opened as the limit switch indicates, then we simply return false.
         if (dir == DOME_CW && isSensorOn(DomeControlSensorNP[SENSOR_UNPARKED].getValue()))
         {
-            LOG_WARN("Roof is already fully opened.");
-            return IPS_ALERT;
+            // Already in the requested state: this is success, not a failure. Returning
+            // IPS_ALERT here breaks idempotent unpark requests (e.g. Scheduler startup after
+            // the roof was opened manually) and leaves m_DomeState out of sync with reality.
+            LOG_INFO("Roof is already fully opened.");
+            SetParked(false);
+            return IPS_OK;
         }
         //         else if (dir == DOME_CW && getWeatherState() == IPS_ALERT)
         //         {
@@ -495,8 +499,9 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
         //         }
         else if (dir == DOME_CCW && isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue()))
         {
-            LOG_WARN("Roof is already fully closed.");
-            return IPS_ALERT;
+            LOG_INFO("Roof is already fully closed.");
+            SetParked(true);
+            return IPS_OK;
         }
         else if (dir == DOME_CCW && INDI::Dome::isLocked())
         {
