@@ -24,7 +24,7 @@ else(INDI_JSONLIB)
 endif(INDI_JSONLIB)
 
 set(INDI_QHY_VERSION_MAJOR 2)
-set(INDI_QHY_VERSION_MINOR 9)
+set(INDI_QHY_VERSION_MINOR 10)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_qhy.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_qhy.xml )
@@ -50,12 +50,17 @@ IF (APPLE)
         ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/qhy_fw.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_hotplug_handler.cpp)
+ELSEIF (CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    SET(indiqhy_SRCS
+        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_hotplug_handler.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/indi_qhy_v4l2.cpp)
+    # Force linking all referenced libraries because the recent libqhy versions are not linked against libpthread
+    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 ELSE ()
     SET(indiqhy_SRCS
         ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd.cpp
         ${CMAKE_CURRENT_SOURCE_DIR}/qhy_ccd_hotplug_handler.cpp)
-    # Force linking all referenced libraries because the recent libqhy versions are not linked against libpthread
-    SET(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,--no-as-needed")
 ENDIF ()
 
 add_executable(indi_qhy_ccd ${indiqhy_SRCS})
