@@ -50,7 +50,8 @@ class ApogeeCCD : public INDI::CCD, public INDI::FilterInterface
         bool Connect() override;
         bool Disconnect() override;
 
-        int SetTemperature(double temperature) override;
+        int SetTemperature(double temperature, bool enableCooler = false) override;
+        bool SetCoolerEnabled(bool enable) override;
         bool StartExposure(float duration) override;
         bool AbortExposure() override;
 

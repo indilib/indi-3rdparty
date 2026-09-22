@@ -54,11 +54,12 @@ class ToupBase : public INDI::CCD
         virtual bool Connect() override;
         virtual bool Disconnect() override;
 
-        virtual int SetTemperature(double temperature) override;
+        virtual int SetTemperature(double temperature, bool enableCooler = false) override;
         virtual bool StartExposure(float duration) override;
         virtual bool AbortExposure() override;
 
     protected:
+        virtual bool SetCoolerEnabled(bool enable) override;
         virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
@@ -168,8 +169,6 @@ class ToupBase : public INDI::CCD
         } BINNING_MODE;
 
         INDI::PropertySwitch m_HighFullwellSP {2};
-
-        bool activateCooler(bool enable);
 
         INDI::PropertySwitch m_CoolerSP {2};
 

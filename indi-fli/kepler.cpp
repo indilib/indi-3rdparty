@@ -968,8 +968,9 @@ void Kepler::prepareUnpacked()
 /********************************************************************************
 *
 ********************************************************************************/
-int Kepler::SetTemperature(double temperature)
+int Kepler::SetTemperature(double temperature, bool enableCooler)
 {
+    INDI_UNUSED(enableCooler);
     // Return OK for
     if (std::abs(temperature - TemperatureNP[0].getValue()) < TEMPERATURE_THRESHOLD)
         return 1;
