@@ -1098,9 +1098,43 @@ int gphoto_mirrorlock(gphoto_driver *gphoto, int msec)
     return -1;
 }
 
+// Discard events left over from previous captures. A late GP_EVENT_CAPTURE_COMPLETE after a predefined exposure
+// would otherwise be taken by the next BULB exposure as its own, which then returns without an image and leaves
+// that image in the camera buffer, making the following captures fail as well.
+static void drain_pending_events(gphoto_driver *gphoto)
+{
+    for (int i = 0; i < 20; i++)
+    {
+        CameraEventType event = GP_EVENT_UNKNOWN;
+        void *data = nullptr;
+        if (gp_camera_wait_for_event(gphoto->camera, 10, &event, &data, gphoto->context) != GP_OK || event == GP_EVENT_TIMEOUT)
+        {
+            free(data);
+            return;
+        }
+
+        if (event == GP_EVENT_FILE_ADDED)
+        {
+            CameraFilePath *fn = static_cast<CameraFilePath *>(data);
+            int captureTarget = -1;
+            gphoto_get_capture_target(gphoto, &captureTarget);
+            // Only images in the camera RAM are removed; never touch the SD card.
+            if (captureTarget == 0)
+                gp_camera_file_delete(gphoto->camera, fn->folder, fn->name, gphoto->context);
+            DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING, "Discarded stale image %s/%s from a previous capture.",
+                         fn->folder, fn->name);
+        }
+        else
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Discarded stale camera event %d.", event);
+
+        free(data);
+    }
+}
+
 int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirror_lock)
 {
     gphoto->is_aborted = false;
+    drain_pending_events(gphoto);
     if (gphoto->exposure_widget == nullptr)
     {
         DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "No exposure widget found. Can not expose!");
