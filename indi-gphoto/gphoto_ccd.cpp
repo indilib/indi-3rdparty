@@ -1021,6 +1021,9 @@ bool GPhotoCCD::Disconnect()
 {
     if (isSimulation())
         return true;
+    // Release the extended options while their widgets are still valid: gphoto_close() frees them,
+    // and updateProperties() would otherwise read the freed widgets in HideExtendedOptions().
+    HideExtendedOptions();
     gphoto_close(gphotodrv);
     gphotodrv        = nullptr;
     frameInitialized = false;
