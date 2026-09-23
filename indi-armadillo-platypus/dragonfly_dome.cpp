@@ -392,38 +392,28 @@ bool DragonFlyDome::setRoofOpen(bool enabled)
     if (enabled && DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
     {
         LOG_DEBUG("Turning off Close Roof Relay in order to turn on Open Roof relay...");
-        // DigitalOutputsSP uses ISR_ATMOST1, so IUUpdateSwitch() (called by ISNewProperty()
-        // below) does not clear the other element on its own. Without this reset, a stale
-        // cached On/Off pair can make processSwitch() see no state change and silently skip
-        // CommandOutput(), so the relay command never reaches the hardware.
-        DigitalOutputsSP[close_relay_idx].reset();
-        if (!ISNewProperty(DigitalOutputsSP[close_relay_idx], DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::Off].getName(), ISS_ON))
+        // CommandOutput() talks to the hardware and updates DigitalOutputsSP directly, without
+        // going through ISNewProperty()/ISNewSwitch()/processSwitch(). That matters here because
+        // setRoofOpen()/setRoofClose() can be invoked from TimerHit() itself once a motion
+        // completes (see TimerHit() below): re-entering the property dispatch pipeline from
+        // inside TimerHit() corrupts driver state and crashes the process (SIGABRT).
+        if (!CommandOutput(close_relay_idx, INDI::OutputInterface::Off))
         {
             LOG_ERROR("Failed to send command to turn off close relay before opening.");
-            // ISNewProperty updates property states, so we check the actual state
             if (DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
             {
                 LOG_ERROR("Close relay is still ON after attempting to turn it off.");
                 return false; // Safety: don't proceed if we can't turn off the opposing relay
             }
         }
-        // Give a small delay for the command to be processed if needed, or check state
-        // For now, assume ISNewProperty is synchronous enough for the next check or command.
     }
 
-    const char *elementToActivate = enabled ? DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].getName()
-                                    : DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::Off].getName();
-    // See the reset() comment above: same ISR_ATMOST1 issue applies here.
-    DigitalOutputsSP[open_relay_idx].reset();
-    if (!ISNewProperty(DigitalOutputsSP[open_relay_idx], elementToActivate, ISS_ON))
+    // See the comment above: CommandOutput() is the safe, non-reentrant way to drive a relay.
+    if (!CommandOutput(open_relay_idx, enabled ? INDI::OutputInterface::On : INDI::OutputInterface::Off))
     {
         LOGF_ERROR("Failed to send command to %s open relay.", enabled ? "turn on" : "turn off");
         return false;
     }
-    // ISNewProperty returns true if the property is found and processed, not necessarily if the hardware command succeeded.
-    // The property state (IPS_OK, IPS_ALERT) should reflect success.
-    // We rely on OutputInterface::processSwitch to set the correct state.
-    // For the purpose of this function, returning true means the command was dispatched.
     return true;
 }
 
@@ -450,10 +440,8 @@ bool DragonFlyDome::setRoofClose(bool enabled)
     if (enabled && DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
     {
         LOG_DEBUG("Turning off Open Roof relay in order to turn on Close Roof relay...");
-        // See setRoofOpen(): DigitalOutputsSP uses ISR_ATMOST1, reset locally first so the
-        // single-element update below is unambiguous and CommandOutput() actually fires.
-        DigitalOutputsSP[open_relay_idx].reset();
-        if (!ISNewProperty(DigitalOutputsSP[open_relay_idx], DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::Off].getName(), ISS_ON))
+        // See setRoofOpen(): CommandOutput() is the safe, non-reentrant way to drive a relay.
+        if (!CommandOutput(open_relay_idx, INDI::OutputInterface::Off))
         {
             LOG_ERROR("Failed to send command to turn off open relay before closing.");
             if (DigitalOutputsSP[open_relay_idx][INDI::OutputInterface::On].s == ISS_ON)
@@ -464,10 +452,7 @@ bool DragonFlyDome::setRoofClose(bool enabled)
         }
     }
 
-    const char *elementToActivate = enabled ? DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::On].getName()
-                                    : DigitalOutputsSP[close_relay_idx][INDI::OutputInterface::Off].getName();
-    DigitalOutputsSP[close_relay_idx].reset();
-    if (!ISNewProperty(DigitalOutputsSP[close_relay_idx], elementToActivate, ISS_ON))
+    if (!CommandOutput(close_relay_idx, enabled ? INDI::OutputInterface::On : INDI::OutputInterface::Off))
     {
         LOGF_ERROR("Failed to send command to %s close relay.", enabled ? "turn on" : "turn off");
         return false;
