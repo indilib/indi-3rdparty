@@ -2463,24 +2463,11 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
 
         if (strcmp(name, "SLEWSPEEDS") == 0)
         {
-            /* TODO: don't change speed in gotos gotoparams.inprogress... */
-            if (TrackState != SCOPE_TRACKING)
-            {
-                try
-                {
-                    for (int i = 0; i < n; i++)
-                    {
-                        if (strcmp(names[i], "RASLEW") == 0)
-                            mount->SetRARate(values[i]);
-                        else if (strcmp(names[i], "DESLEW") == 0)
-                            mount->SetDERate(values[i]);
-                    }
-                }
-                catch (EQModError e)
-                {
-                    return (e.DefaultHandleException(this));
-                }
-            }
+            // Just store the requested custom slew speeds. The actual speeds are
+            // read from SlewSpeedsNP at slew time (GetRASlew/GetDESlew), so there
+            // is no need to command the motors here. Sending SetRARate/SetDERate
+            // would issue a "Set Motion Mode" command that starts the motors,
+            // which is dangerous when this handler runs during configuration load.
             SlewSpeedsNP.update(values, names, n);
             SlewSpeedsNP.setState(IPS_OK);
             SlewSpeedsNP.apply();
