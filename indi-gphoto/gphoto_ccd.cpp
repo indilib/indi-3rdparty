@@ -877,6 +877,14 @@ bool GPhotoCCD::Connect()
                       "storage, please unmount it and disable auto-mount.");
             return false;
         }
+
+        // gphoto_open() starts from the library defaults (force BULB on, 60 seconds download timeout, save SD card image).
+        // Apply the current property values so they survive a disconnect/connect and match what the client sees.
+        gphoto_force_bulb(gphotodrv, ForceBULBSP[INDI_ENABLED].getState() == ISS_ON);
+        gphoto_set_download_timeout(gphotodrv, DownloadTimeoutNP[0].getValue());
+        const auto sdCardImageIndex = SDCardImageSP.findOnSwitchIndex();
+        if (sdCardImageIndex >= 0)
+            gphoto_handle_sdcard_image(gphotodrv, static_cast<CameraImageHandling>(sdCardImageIndex));
     }
 
     if (isSimulation())
@@ -1013,6 +1021,9 @@ bool GPhotoCCD::Disconnect()
 {
     if (isSimulation())
         return true;
+    // Release the extended options while their widgets are still valid: gphoto_close() frees them,
+    // and updateProperties() would otherwise read the freed widgets in HideExtendedOptions().
+    HideExtendedOptions();
     gphoto_close(gphotodrv);
     gphotodrv        = nullptr;
     frameInitialized = false;

@@ -1098,9 +1098,43 @@ int gphoto_mirrorlock(gphoto_driver *gphoto, int msec)
     return -1;
 }
 
+// Discard events left over from previous captures. A late GP_EVENT_CAPTURE_COMPLETE after a predefined exposure
+// would otherwise be taken by the next BULB exposure as its own, which then returns without an image and leaves
+// that image in the camera buffer, making the following captures fail as well.
+static void drain_pending_events(gphoto_driver *gphoto)
+{
+    for (int i = 0; i < 20; i++)
+    {
+        CameraEventType event = GP_EVENT_UNKNOWN;
+        void *data = nullptr;
+        if (gp_camera_wait_for_event(gphoto->camera, 10, &event, &data, gphoto->context) != GP_OK || event == GP_EVENT_TIMEOUT)
+        {
+            free(data);
+            return;
+        }
+
+        if (event == GP_EVENT_FILE_ADDED)
+        {
+            CameraFilePath *fn = static_cast<CameraFilePath *>(data);
+            int captureTarget = -1;
+            gphoto_get_capture_target(gphoto, &captureTarget);
+            // Only images in the camera RAM are removed; never touch the SD card.
+            if (captureTarget == 0)
+                gp_camera_file_delete(gphoto->camera, fn->folder, fn->name, gphoto->context);
+            DEBUGFDEVICE(device, INDI::Logger::DBG_WARNING, "Discarded stale image %s/%s from a previous capture.",
+                         fn->folder, fn->name);
+        }
+        else
+            DEBUGFDEVICE(device, INDI::Logger::DBG_DEBUG, "Discarded stale camera event %d.", event);
+
+        free(data);
+    }
+}
+
 int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirror_lock)
 {
     gphoto->is_aborted = false;
+    drain_pending_events(gphoto);
     if (gphoto->exposure_widget == nullptr)
     {
         DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "No exposure widget found. Can not expose!");
@@ -1123,14 +1157,28 @@ int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirr
     // Find EXACT optimal exposure index in case we need to use it. If -1, we always use blob made if available
     int optimalExposureIndex = -1;
 
+    // Sub-second exposures cannot be timed in BULB (the release can arrive before the camera starts exposing),
+    // so they always use a predefined exposure, even when force bulb is on.
+    const bool subSecond = exptime_usec < 1000000;
+
     // JM 2018-09-23: In case force bulb is off, then we search for optimal exposure index
-    if (gphoto->force_bulb == false &&
+    if ((gphoto->force_bulb == false || subSecond) &&
             // No external shutter port is specified OR
             ((!gphoto->bulb_port[0] && !gphoto->dsusb) ||
              // External shutter port is specified but exposure time < 30 secs
              ((gphoto->bulb_port[0] || gphoto->dsusb) && exptime_usec <= RELEASE_SHUTTER_THRESHOLD)))
     {
         optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, true);
+
+        // No exact match for a sub-second exposure: use the nearest predefined exposure instead of BULB.
+        if (optimalExposureIndex == -1 && subSecond && gphoto->exposureList != nullptr)
+        {
+            optimalExposureIndex = find_exposure_setting(gphoto, gphoto->exposure_widget, exptime_usec, false);
+            if (optimalExposureIndex >= 0)
+                DEBUGFDEVICE(device, INDI::Logger::DBG_SESSION,
+                             "No predefined exposure of %g seconds, using the nearest one: %g seconds.",
+                             exptime_usec / 1e6, gphoto->exposureList[optimalExposureIndex]);
+        }
     }
 
     // Set Capture Target
