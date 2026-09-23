@@ -143,7 +143,23 @@ bool DragonFlyDome::updateProperties()
                 LOG_WARN("Parking status is not known.");
             }
             else if (isSensorOn(parkedSensor) != isParked())
-                SetParked(isSensorOn(parkedSensor));
+            {
+                // InitPark() just set the park status from the persisted config (the last
+                // confirmed physical state). A single sensor read right after Connect() can
+                // be a transient glitch (the relio board's I/O lines are not guaranteed to be
+                // settled yet), so before overriding that persisted state, confirm with a
+                // second independent read taken a moment later. Only trust the change if both
+                // reads agree; otherwise keep the persisted state and warn instead of silently
+                // reporting a wrong park status.
+                bool firstReading = isSensorOn(parkedSensor);
+                usleep(200000);
+                updateSensors();
+                bool secondReading = isSensorOn(parkedSensor);
+                if (firstReading == secondReading)
+                    SetParked(secondReading);
+                else
+                    LOG_WARN("Parked sensor reading is unstable right after connection, keeping last known park status.");
+            }
         }
 
         defineProperty(FirmwareVersionTP);
