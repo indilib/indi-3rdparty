@@ -1358,6 +1358,52 @@ bool GPhotoCCD::grabImage()
         else
             PrimaryCCD.setImageExtension("xisf");
 
+        // The raw decoder returns the full sensor buffer, which can be larger
+        // than the effective (visible) image: e.g. the Nikon D7200 decodes to
+        // 6016x4016 while its effective image is 6000x4000 (the extra rows and
+        // columns are masked/optical-black border pixels). gphoto2 reports the
+        // effective size via gp_camera_file_get_info, so crop the decoded buffer
+        // to that size before setting resolution/frame. This keeps the FITS
+        // dimensions and the CCD_FRAME/CCD_INFO limits consistent with Native
+        // transport mode.
+        if (!isSimulation())
+        {
+            int effectiveW = 0, effectiveH = 0;
+            gphoto_get_dimensions(gphotodrv, &effectiveW, &effectiveH);
+
+            if (effectiveW > 0 && effectiveH > 0 &&
+                    effectiveW <= w && effectiveH <= h &&
+                    (effectiveW != w || effectiveH != h))
+            {
+                const int srcLineBytes = w * bpp / 8;
+                const int dstLineBytes = effectiveW * bpp / 8;
+
+                if (naxis == 2)
+                {
+                    for (int row = 0; row < effectiveH; row++)
+                        memmove(memptr + row * dstLineBytes,
+                                memptr + row * srcLineBytes, dstLineBytes);
+                }
+                else if (naxis == 3)
+                {
+                    const int srcPlaneBytes = w * h * bpp / 8;
+                    const int dstPlaneBytes = effectiveW * effectiveH * bpp / 8;
+                    for (int plane = 0; plane < 3; plane++)
+                    {
+                        uint8_t *srcPlane = memptr + plane * srcPlaneBytes;
+                        uint8_t *dstPlane = memptr + plane * dstPlaneBytes;
+                        for (int row = 0; row < effectiveH; row++)
+                            memmove(dstPlane + row * dstLineBytes,
+                                    srcPlane + row * srcLineBytes, dstLineBytes);
+                    }
+                }
+
+                w = effectiveW;
+                h = effectiveH;
+                memsize = effectiveW * effectiveH * bpp / 8 * ((naxis == 3) ? 3 : 1);
+            }
+        }
+
         uint16_t subW = PrimaryCCD.getSubW();
         uint16_t subH = PrimaryCCD.getSubH();
 
