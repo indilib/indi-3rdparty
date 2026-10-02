@@ -1,3 +1,14 @@
+indi-celestronaux (1.8) trixie; urgency=medium
+
+  * Fix non-persistent cord wrap settings across driver restarts
+  * Persist cord wrap toggle, position, and base mode to INDI config
+  * Fix hardcoded 270° in startupWithoutHC() with priority lookup
+    Mount -> Config -> North default
+  * Add error handling for cord wrap mount queries with config fallback
+  * Add 7 comprehensive cord wrap persistence tests
+
+ -- Paweł T. Jochym <jochym@gmail.com>  Wed, 22 Jul 2026 22:00:00 +0200
+
 indi-celestronaux (1.6) jammy; urgency=medium
 
   * Add comprehensive battery telemetry support for Evolution mounts

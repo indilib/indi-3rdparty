@@ -257,4 +257,7 @@ def main(stdscr):
     #loop.run_until_complete(asyncio.wait([broadcast(), timer(0.2), scope]))
     loop.close()
 
-curses.wrapper(main)
+if len(sys.argv) > 1 and sys.argv[1] in ('t', '-t'):
+    main(None)
+else:
+    curses.wrapper(main)
