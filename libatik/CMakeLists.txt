@@ -4,6 +4,7 @@ project (libatik)
 option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 # Built with SDK API 2024.11.26_2038
+# macOS arm64 library from SDK API 2025.11.11_2111 (same headers, the Intel macOS library is x86_64 only)
 set (ATIK_VERSION "2.2.22")
 set (ATIK_SOVERSION "2")
 
@@ -21,9 +22,14 @@ set_target_properties (atikcameras PROPERTIES VERSION ${ATIK_VERSION} SOVERSION 
 
 if (APPLE)
 
-  set_property (TARGET atikcameras  PROPERTY IMPORTED_LOCATION "mac/libatikcameras.bin")
+  set(source_mac_dir "mac")
+  if (CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
+    set(source_mac_dir "mac_arm64")
+  endif()
 
-  FIX_MACOS_LIBRARIES("libatikcameras" "mac/libatikcameras.bin" "ATIK")
+  set_property (TARGET atikcameras  PROPERTY IMPORTED_LOCATION "${source_mac_dir}/libatikcameras.bin")
+
+  FIX_MACOS_LIBRARIES("libatikcameras" "${source_mac_dir}/libatikcameras.bin" "ATIK")
   
   # Install library
   install_imported (TARGETS atikcameras DESTINATION ${CMAKE_INSTALL_LIBDIR})

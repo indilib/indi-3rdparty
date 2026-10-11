@@ -322,8 +322,6 @@ if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # The drivers below are not yet compatible with Apple Silicon since their libraries are not universal binaries
   if(CMAKE_OSX_ARCHITECTURES STREQUAL "arm64")
     set(WITH_SBIG Off)
-    set(WITH_ATIK Off)
-    set(WITH_SVBONY Off)
     set(WITH_SVBONYCAM Off)
     set(WITH_ASTROASIS Off)    
   endif()

@@ -22,6 +22,7 @@ if(WIN32)
 
 elseif (APPLE)
 
+    # Universal (x86_64 + arm64) library from lib/all of the macOS SDK
     set_property (TARGET SVBCameraSDK PROPERTY IMPORTED_LOCATION "libSVBCameraSDK_mac64.bin")
 
     FIX_MACOS_LIBRARIES("libSVBCameraSDK" "libSVBCameraSDK_mac64.bin" "SVBONY")

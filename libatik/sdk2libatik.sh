@@ -40,7 +40,15 @@ fi
 if [ -z $(find $archive -name '*dylib') ] ; then
   echo "WARNING: archive '$archive' does not seem to contain any MacOS library!" >&2
 else
-  cp "$1/lib/macos/libatikcameras.dylib" "./mac/libatikcameras.bin"
+  # Recent SDKs ship an arm64-only MacOS library, older ones an x86_64-only one
+  if file "$1/lib/macos/libatikcameras.dylib" | grep -q arm64 ; then
+    mac_dir="mac_arm64"
+  else
+    mac_dir="mac"
+  fi
+  echo "Copying '$1/lib/macos/libatikcameras.dylib' to './$mac_dir/libatikcameras.bin'..."
+  cp "$1/lib/macos/libatikcameras.dylib" "./$mac_dir/libatikcameras.bin"
+  echo "Run scripts/fix_macos_libs.py --fix on ./$mac_dir before committing." >&2
 fi
 
 cp "$1/include/AtikCameras.h" .
