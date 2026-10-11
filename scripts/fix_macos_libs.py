@@ -26,6 +26,7 @@ Common Issues Fixed:
     - Versioned install IDs (e.g., @rpath/lib.20.dylib → @rpath/lib.dylib)
     - Absolute paths in dependencies (e.g., /usr/local/lib/... → @rpath/...)
     - Non-portable loader paths (@loader_path/... → @rpath/...)
+    - Stale ad-hoc code signatures left behind by the above edits (required on arm64)
 
 Technical Details:
     - Uses macholib's rewriteDataForCommand() for safe Mach-O modifications
@@ -36,6 +37,7 @@ Technical Details:
 import sys
 import os
 import glob
+import hashlib
 import struct
 import subprocess
 from pathlib import Path
@@ -319,6 +321,18 @@ def check_dylib(dylib_path, dylib_name):
     except Exception as e:
         problems.append(("ERROR", f"Error reading links: {e}"))
 
+    # Check that the embedded code signature still matches the file contents
+    try:
+        stale, adhoc = get_stale_code_pages(dylib_path)
+        if stale:
+            if adhoc:
+                problems.append(("SIGNATURE", f"Ad-hoc code signature has {stale} stale page hash(es)"))
+            else:
+                problems.append(("ERROR", f"Code signature has {stale} stale page hash(es) and is not ad-hoc; "
+                                          "re-sign it on macOS with 'codesign -f -s -'"))
+    except Exception as e:
+        problems.append(("ERROR", f"Error reading code signature: {e}"))
+
     return problems
 
 def fix_dylib_id(dylib_path, expected_name):
@@ -343,6 +357,94 @@ def fix_dylib_id(dylib_path, expected_name):
         return False
     except Exception as e:
         print(f"    {Colors.YELLOW}Warning: Could not fix install ID: {e}{Colors.RESET}")
+        return False
+
+CSMAGIC_EMBEDDED_SIGNATURE = 0xfade0cc0
+CSMAGIC_CODEDIRECTORY = 0xfade0c02
+CS_ADHOC = 0x2
+CS_HASH_FUNCTIONS = {1: hashlib.sha1, 2: hashlib.sha256}
+
+def get_code_directories(data):
+    """
+    Yield (slice_offset, cd_offset, flags, hash_offset, n_code_slots, code_limit,
+    hash_size, hash_function, page_size) for every CodeDirectory in a thin or fat Mach-O.
+    """
+    slices = [0]
+    if data[:4] in (b'\xca\xfe\xba\xbe', b'\xbe\xba\xfe\xca'):
+        nfat_arch = struct.unpack_from('>I', data, 4)[0]
+        slices = [struct.unpack_from('>iiIII', data, 8 + i * 20)[2] for i in range(nfat_arch)]
+
+    for base in slices:
+        magic = struct.unpack_from('<I', data, base)[0]
+        if magic not in (0xfeedfacf, 0xfeedface):
+            continue
+        ncmds = struct.unpack_from('<I', data, base + 16)[0]
+        offset = base + (32 if magic == 0xfeedfacf else 28)
+        for _ in range(ncmds):
+            cmd, cmdsize = struct.unpack_from('<II', data, offset)
+            if cmd == mach_o.LC_CODE_SIGNATURE:
+                superblob = base + struct.unpack_from('<I', data, offset + 8)[0]
+                sb_magic, _, count = struct.unpack_from('>III', data, superblob)
+                if sb_magic != CSMAGIC_EMBEDDED_SIGNATURE:
+                    break
+                for i in range(count):
+                    blob = superblob + struct.unpack_from('>II', data, superblob + 12 + i * 8)[1]
+                    if struct.unpack_from('>I', data, blob)[0] != CSMAGIC_CODEDIRECTORY:
+                        continue
+                    (_, _, _, flags, hash_offset, _, _, n_code_slots, code_limit,
+                     hash_size, hash_type, _, page_shift) = struct.unpack_from('>IIIIIIIIIBBBB', data, blob)
+                    if hash_type in CS_HASH_FUNCTIONS:
+                        yield (base, blob, flags, hash_offset, n_code_slots, code_limit,
+                               hash_size, CS_HASH_FUNCTIONS[hash_type], 1 << page_shift)
+                break
+            offset += cmdsize
+
+def get_stale_code_pages(dylib_path):
+    """
+    Return (stale_page_count, is_adhoc) for the embedded code signature.
+    Editing load commands invalidates the hash of the first page, and arm64 macOS refuses to load
+    libraries whose signature does not match.
+    """
+    with open(dylib_path, 'rb') as f:
+        data = f.read()
+
+    stale = 0
+    adhoc = True
+    for base, cd, flags, hash_offset, n_code_slots, code_limit, hash_size, hash_fn, page_size in get_code_directories(data):
+        adhoc = adhoc and bool(flags & CS_ADHOC)
+        for page in range(n_code_slots):
+            start = base + page * page_size
+            end = base + min((page + 1) * page_size, code_limit)
+            slot = cd + hash_offset + page * hash_size
+            if hash_fn(data[start:end]).digest()[:hash_size] != data[slot:slot + hash_size]:
+                stale += 1
+    return stale, adhoc
+
+def fix_adhoc_signature(dylib_path):
+    """Recompute the code page hashes of an ad-hoc signature after its load commands were edited"""
+    try:
+        with open(dylib_path, 'rb') as f:
+            data = bytearray(f.read())
+
+        changed = False
+        for base, cd, flags, hash_offset, n_code_slots, code_limit, hash_size, hash_fn, page_size in get_code_directories(data):
+            if not flags & CS_ADHOC:
+                continue
+            for page in range(n_code_slots):
+                start = base + page * page_size
+                end = base + min((page + 1) * page_size, code_limit)
+                slot = cd + hash_offset + page * hash_size
+                digest = hash_fn(data[start:end]).digest()[:hash_size]
+                if data[slot:slot + hash_size] != digest:
+                    data[slot:slot + hash_size] = digest
+                    changed = True
+
+        if changed:
+            with open(dylib_path, 'wb') as f:
+                f.write(data)
+        return changed
+    except Exception as e:
+        print(f"    {Colors.YELLOW}Warning: Could not refresh code signature: {e}{Colors.RESET}")
         return False
 
 def fix_install_id_raw(dylib_path, expected_name):
@@ -739,6 +841,10 @@ def process_dylib(dylib_path, dylib_name, fix=False):
         elif problem_type == "LINK":
             if fix_dylib_links(dylib_path):
                 fixed.append(("LINK", description))
+
+    # Editing load commands invalidates the code signature, so always refresh it last
+    if fix_adhoc_signature(dylib_path):
+        fixed.append(("SIGNATURE", "Refreshed ad-hoc code signature page hashes"))
 
     # Re-check after fixes
     remaining_problems = check_dylib(dylib_path, dylib_name)
