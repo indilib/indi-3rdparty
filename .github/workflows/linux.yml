@@ -44,5 +44,8 @@ jobs:
       - name: Build INDI 3rd Party Drivers
         run: indi-3rdparty/scripts/indi-3rdparty-build.sh
 
+      - name: Test Tyr driver with simulated USB and TCP controllers
+        run: ctest --test-dir build/indi-3rdparty/indi-tyr --output-on-failure
+
       - name: Install INDI 3rd Party Drivers
         run: indi-3rdparty/scripts/indi-3rdparty-install.sh

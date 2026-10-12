@@ -1,0 +1,49 @@
+.\" SPDX-License-Identifier: GPL-2.0-or-later
+.\" Copyright (C) 2026 Prometheus Astro
+.TH INDI_TYR_TELESCOPE 1 "October 2026" "Tyr INDI 0.3.0" "INDI telescope drivers"
+.SH NAME
+indi_tyr_telescope \- INDI driver for the Prometheus Astro Tyr telescope mount
+.SH SYNOPSIS
+.B indiserver
+.RI [ server-options ]
+.B indi_tyr_telescope
+.SH DESCRIPTION
+The driver controls Tyr harmonic-drive telescope mounts through USB serial or
+TCP/IP. It is normally launched by an INDI server or an Ekos equipment profile.
+Choose Prometheus Astro Tyr as the telescope driver.
+.PP
+Supported operations include GoTo, Sync, manual motion, tracking, pulse guiding,
+Home, Park, precise shared slew speed and mount configuration. Bluetooth and
+Wi-Fi configuration are displayed according to firmware capabilities.
+.SH CONFIGURATION
+Use the INDI client's Connection tab. For USB choose Serial, the CP2102 device
+and 9600 baud. For IP choose Network, TCP, the mount address and command port
+(normally 9999). TCP requires Tyr firmware v1.2.10 or later. UDP is unsupported.
+.PP
+Keep the polling interval below the firmware's ten-second TCP idle timeout.
+The default driver interval is one second.
+.PP
+Tyr stores UTC minus local standard time, excluding daylight saving. This is
+separate from the INDI client offset. For Athens, the mount setting is -2
+year-round while the client can report +3 during summer.
+.SH OPERATION
+Settings are read on connection and after saves. Read buttons refresh settings
+changed through another interface. Stop movement and guiding before changing
+limits or backlash. Motor, Home and network edits also require tracking off.
+Motor, geometry and network changes require restart. Network edits remain pending
+until Apply; blank password fields retain saved passwords.
+.PP
+Home and alignment can move the mount. Verify rig and cable clearance. Firmware
+installation uses Tyr's supported USB tools or web updater, outside this driver.
+.SH FILES
+.I /usr/share/indi/indi_tyr.xml
+registers the driver with INDI clients.
+.PP
+.I /usr/share/doc/indi-tyr/index.md
+contains the full user guide.
+.SH SEE ALSO
+.BR indiserver (1)
+.PP
+https://prometheusastro.com/
+.SH AUTHOR
+Prometheus Astro, support@prometheusastro.com.
