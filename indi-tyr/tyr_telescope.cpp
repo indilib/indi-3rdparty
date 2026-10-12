@@ -313,7 +313,9 @@ bool TyrTelescope::ReadScopeStatus()
                 value += std::clamp(delta, -step, step);
                 return std::abs(delta) <= step;
             };
-            bool done = approach(simRA, simTargetRA) & approach(simDec, simTargetDec);
+            const bool raDone = approach(simRA, simTargetRA);
+            const bool decDone = approach(simDec, simTargetDec);
+            const bool done = raDone && decDone;
             if (done)
             {
                 if (TrackState == SCOPE_PARKING)
