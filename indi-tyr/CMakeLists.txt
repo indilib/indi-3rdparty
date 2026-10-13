@@ -44,9 +44,8 @@ configure_file(indi_tyr.xml.in indi_tyr.xml @ONLY)
 
 install(TARGETS indi_tyr_telescope RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_tyr.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/indi)
-install(FILES COPYING README.md THIRD_PARTY.md doc/index.md
+install(FILES COPYING THIRD_PARTY.md
     DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/indi-tyr)
-install(FILES doc/indi_tyr_telescope.1 DESTINATION ${CMAKE_INSTALL_MANDIR}/man1)
 
 if(BUILD_TESTING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
