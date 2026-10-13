@@ -22,6 +22,7 @@
 #pragma once
 
 #include <memory>
+#include <chrono>
 #include <indidome.h>
 #include <indioutputinterface.h>
 
@@ -84,6 +85,14 @@ class DragonFlyDome : public INDI::Dome, public INDI::OutputInterface
         // bool updateRelays(); // To be removed
 
         ///////////////////////////////////////////////////////////////////////////////
+        /// Roof state supervision (called on every fresh sensor read)
+        ///////////////////////////////////////////////////////////////////////////////
+        void checkRoofState();
+        void handleCloseFailure(const char *reason);
+        void retryClose();
+        bool travelTimedOut(std::chrono::steady_clock::time_point now) const;
+
+        ///////////////////////////////////////////////////////////////////////////////
         /// Sensors
         ///////////////////////////////////////////////////////////////////////////////
         bool isSensorOn(uint8_t id);
@@ -126,11 +135,36 @@ class DragonFlyDome : public INDI::Dome, public INDI::OutputInterface
         // Firmware Version
         INDI::PropertyText FirmwareVersionTP {1};
 
+        // Automatic close retries after the roof reopened on its own
+        INDI::PropertyNumber CloseRetryNP {1};
+
+        // Maximum roof travel time before it is considered stopped mid-way
+        INDI::PropertyNumber TravelTimeoutNP {1};
+
         ///////////////////////////////////////////////////////////////////////
         /// Private Variables
         ///////////////////////////////////////////////////////////////////////
         uint32_t m_UpdateRelayCounter {0};
         uint32_t m_UpdateSensorCounter {0};
+
+        // Consecutive reads with the parked sensor ON while closing
+        uint8_t m_ParkedConfirmCount {0};
+        // Consecutive reads with the parked sensor OFF while parked
+        uint8_t m_ParkLostCount {0};
+        // Consecutive reads with the unparked sensor ON while waiting to retry a close
+        uint8_t m_OpenConfirmCount {0};
+        // The roof left the open limit since the current close started
+        bool m_LeftOpenLimit {false};
+        // A close failed, waiting for the roof to come back to rest at the open limit
+        bool m_RecloseWaiting {false};
+        uint8_t m_CloseRetriesLeft {0};
+        // A motion timed out and the relay was released, pulse it again on the next read
+        bool m_NudgePending {false};
+        // A new pulse was already sent during the current opening
+        bool m_OpenNudgeDone {false};
+        std::chrono::steady_clock::time_point m_MotionStart;
+        std::chrono::steady_clock::time_point m_ParkedTime;
+        std::chrono::steady_clock::time_point m_RecloseDeadline;
 
         /////////////////////////////////////////////////////////////////////////////
         /// Static Helper Values
@@ -153,5 +187,12 @@ class DragonFlyDome : public INDI::Dome, public INDI::OutputInterface
         static constexpr const uint8_t SENSOR_UPDATE_THRESHOLD {2};
         // Relay Update Threshold
         static constexpr const uint8_t RELAY_UPDATE_THRESHOLD {5};
+        // Consecutive sensor reads required to trust a limit switch change
+        static constexpr const uint8_t SENSOR_CONFIRM_READS {2};
+        // After a park, a roof leaving the closed limit within this delay is treated as a
+        // failed close (e.g. controller obstacle reversal), not as a manual opening.
+        static constexpr const int RECLOSE_WINDOW_S {120};
+        // Maximum time to wait for the roof to come back to the open limit before retrying
+        static constexpr const int RECLOSE_WAIT_S {120};
 
 };
