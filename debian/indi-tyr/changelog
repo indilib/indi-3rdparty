@@ -1,0 +1,7 @@
+indi-tyr (0.3.0-1) unstable; urgency=medium
+
+  * Initial third-party driver submission for Prometheus Astro Tyr.
+  * Support USB serial and TCP/IP, telescope operations and mount configuration.
+  * Include simulation, pseudo-serial and TCP protocol tests and user guide.
+
+ -- Prometheus Astro <support@prometheusastro.com>  Mon, 12 Oct 2026 21:00:00 +0300

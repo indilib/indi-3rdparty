@@ -13,7 +13,7 @@ case "$OS" in
             BREW="/opt/homebrew/bin/brew"
         fi
         $BREW install --overwrite \
-            git \
+            git nlohmann-json \
             cfitsio libnova libusb curl \
             gsl jpeg fftw \
             ffmpeg libftdi libraw libdc1394 libgphoto2 opencv \
@@ -30,7 +30,7 @@ case "$OS" in
                 $(command -v sudo) apt-get upgrade -y
                 $(command -v sudo) apt-get install -y \
                     git \
-                    cmake build-essential zlib1g-dev \
+                    cmake build-essential zlib1g-dev nlohmann-json3-dev python3 \
                     libcfitsio-dev libnova-dev libahp-gt-dev libahp-xc-dev libusb-1.0-0-dev libcurl4-gnutls-dev \
                     libgsl-dev libjpeg-dev libfftw3-dev libczmq-dev \
                     libssl-dev libtiff-dev \
@@ -45,7 +45,7 @@ case "$OS" in
                 $(command -v sudo) dnf upgrade -y
                 $(command -v sudo) dnf install -y \
                     git \
-                    cmake gcc-c++ zlib-devel \
+                    cmake gcc-c++ zlib-devel json-devel python3 \
                     cfitsio-devel libnova-devel libusb1-devel libcurl-devel \
                     gsl-devel libjpeg-devel fftw-devel opencv-devel zeromq-devel \
                     openssl-devel libtiff-devel \
@@ -63,7 +63,7 @@ case "$OS" in
                 $(command -v sudo) pacman -Syu --noconfirm
                 $(command -v sudo) pacman -S --noconfirm \
                     git \
-                    cmake base-devel \
+                    cmake base-devel nlohmann-json python \
                     cfitsio libnova libusb curl \
                     gsl libjpeg-turbo fftw rtl-sdr libev \
                     openssl libtiff \

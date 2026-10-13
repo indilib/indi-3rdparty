@@ -1,0 +1,21 @@
+Source: indi-tyr
+Section: science
+Priority: optional
+Maintainer: Prometheus Astro <support@prometheusastro.com>
+Build-Depends: debhelper-compat (= 13), cmake (>= 3.16), pkg-config,
+ libindi-dev (>= 2.2.5), indi-bin (>= 2.2.5), libnova-dev,
+ nlohmann-json3-dev (>= 3.2), python3
+Standards-Version: 4.6.2
+Rules-Requires-Root: no
+Homepage: https://prometheusastro.com/
+Vcs-Browser: https://github.com/indilib/indi-3rdparty
+Vcs-Git: https://github.com/indilib/indi-3rdparty.git
+
+Package: indi-tyr
+Architecture: any
+Depends: ${shlibs:Depends}, ${misc:Depends}, indi-bin (>= 2.2.5)
+Description: INDI telescope driver for the Prometheus Astro Tyr mount
+ Controls Tyr harmonic-drive telescope mounts through USB serial or TCP/IP.
+ Supports GoTo, Sync, tracking, guiding, Home, Park, shared precise slew speed,
+ mount configuration, Bluetooth controller management and Wi-Fi settings.
+ TCP management requires Tyr firmware v1.2.10 or later.
