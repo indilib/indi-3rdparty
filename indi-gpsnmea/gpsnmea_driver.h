@@ -25,6 +25,7 @@
 #pragma once
 
 #include <indigps.h>
+#include <pthread.h>
 
 class GPSNMEA : public INDI::GPS
 {

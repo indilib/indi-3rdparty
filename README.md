@@ -72,6 +72,22 @@ You may also add indi if needed :
 sudo pacman -S --needed indi
 ```
 
+On macOS (Apple Silicon or Intel):
+
+```
+# Install Xcode Command Line Tools
+xcode-select --install
+
+# Install Homebrew (if not already installed)
+/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+# Install dependencies
+brew install cmake llvm libusb hidapi cfitsio libnova zlib gsl fftw curl
+
+# INDI Core must be installed first!
+# See: https://github.com/indilib/indi#build-indi-core-on-macos
+```
+
 ## Create Project Directory
 
 ```
@@ -151,6 +167,89 @@ cd ~/Projects/build/indi-3rdparty
 cmake -DCMAKE_INSTALL_PREFIX=/usr -DCMAKE_BUILD_TYPE=Debug ~/Projects/indi-3rdparty
 make -j4
 sudo make install
+```
+
+## Building on macOS
+
+On macOS (Apple Silicon `arm64` or Intel `x86_64`), the existing build scripts automatically detect the architecture and configure the build accordingly.
+
+**Prerequisites:** INDI Core must be installed first (see [INDI Core macOS build](https://github.com/indilib/indi#build-indi-core-on-macos)).
+
+```bash
+cd ~/Projects/indi-3rdparty
+
+# Step 1: Build 3rd party libraries
+./scripts/indi-3rdparty-libs-build.sh Release
+
+# Step 2: Install 3rd party libraries (requires sudo)
+sudo ./scripts/indi-3rdparty-libs-install.sh
+
+# Step 3: Build 3rd party drivers
+./scripts/indi-3rdparty-build.sh Release
+
+# Step 4: Install 3rd party drivers (requires sudo)
+sudo ./scripts/indi-3rdparty-install.sh
+```
+
+**Available scripts:**
+
+| Script | Description | Sudo |
+|--------|-------------|------|
+| `scripts/indi-3rdparty-libs-build.sh` | Build 3rd party libraries | No |
+| `scripts/indi-3rdparty-libs-install.sh` | Install 3rd party libraries | Yes |
+| `scripts/indi-3rdparty-build.sh` | Build 3rd party drivers | No |
+| `scripts/indi-3rdparty-install.sh` | Install 3rd party drivers | Yes |
+
+The scripts automatically:
+
+- Detect architecture (`arm64` on Apple Silicon, `x86_64` on Intel)
+- Use Homebrew LLVM clang (`/opt/homebrew/opt/llvm/bin/clang++` on arm64)
+- Set `CMAKE_OSX_ARCHITECTURES` to the correct value
+- Set `CMAKE_OSX_DEPLOYMENT_TARGET=14.0`
+- Disable firmware and udev rules installation
+- Use Ninja generator if available (faster builds)
+
+The install script also fixes macOS library paths and re-signs binaries.
+
+### Running ASI drivers on macOS
+
+After building and installing, test with a ZWO ASI camera:
+
+```bash
+# Start INDI server with ASI camera driver
+/usr/local/bin/indiserver -v /usr/local/bin/indi_asi_ccd
+```
+
+Then connect with CCDCiel, KStars/Ekos, or any INDI client to `localhost:7624`
+and connect the `ZWO CCD` device.
+
+Validate the SDK directly (no server needed):
+
+```bash
+/usr/local/bin/asi_camera_test
+# attached cameras:
+#   0 ZWO ASI676MM ...
+```
+
+### Complete macOS build workflow
+
+```bash
+# 1. Build and install INDI Core
+cd ~/Projects/indi
+./scripts/indi-core-build.sh Release
+sudo ./scripts/indi-core-install.sh
+
+# 2. Build and install 3rd Party Libraries
+cd ../indi-3rdparty
+./scripts/indi-3rdparty-libs-build.sh Release
+sudo ./scripts/indi-3rdparty-libs-install.sh
+
+# 3. Build and install 3rd Party Drivers
+./scripts/indi-3rdparty-build.sh Release
+sudo ./scripts/indi-3rdparty-install.sh
+
+# 4. Test with ZWO ASI camera
+/usr/local/bin/indiserver -v /usr/local/bin/indi_asi_ccd
 ```
 
 # Support
