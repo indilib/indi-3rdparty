@@ -22,6 +22,20 @@ if(APPLE)
   ## This one is needed for Craft
   include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
+  # On macOS, drivers and SDK libraries reference each other through @rpath
+  # (e.g. @rpath/libASICamera2.dylib, @rpath/libindidriver.2.dylib). A binary that has no
+  # LC_RPATH load command fails at startup with "no LC_RPATH's found" even when the library
+  # is present in the install prefix, so bake the install prefix into every target.
+  set(CMAKE_MACOSX_RPATH ON)
+  set(CMAKE_BUILD_WITH_INSTALL_RPATH ON)
+  set(CMAKE_INSTALL_RPATH "${CMAKE_INSTALL_PREFIX}/lib;@loader_path/../lib")
+  # Homebrew dependencies (cfitsio, libusb, ...) are linked from the Homebrew prefix.
+  foreach(_brew_lib "/opt/homebrew/lib" "/usr/local/lib")
+    if(EXISTS "${_brew_lib}")
+      list(APPEND CMAKE_INSTALL_RPATH "${_brew_lib}")
+    endif()
+  endforeach()
+
   # FIX_LIBRARY_LINK Macro
   # This macro will check MacOS Binary Libraries provided by third parties for external links that could cause linking and packaging problems
   # If the FIX_MACOS_LIBS option is enabled when building, it will also attempt to fix the problems, which should then allow the build to continue.
