@@ -3,6 +3,7 @@
  * See COPYING for the license text. Distributed without any warranty.
  */
 #include "tyr_telescope.h"
+#include "config.h"
 
 #include <connectionplugins/connectionserial.h>
 #include <connectionplugins/connectiontcp.h>
@@ -34,7 +35,7 @@ std::unique_ptr<TyrTelescope> tyr(new TyrTelescope());
 
 TyrTelescope::TyrTelescope() : INDI::GuiderInterface(this)
 {
-    setVersion(TYR_DRIVER_VERSION_MAJOR, TYR_DRIVER_VERSION_MINOR);
+    setVersion(TYR_VERSION_MAJOR, TYR_VERSION_MINOR);
     SetTelescopeCapability(TELESCOPE_CAN_PARK | TELESCOPE_CAN_SYNC | TELESCOPE_CAN_GOTO |
                            TELESCOPE_CAN_ABORT | TELESCOPE_HAS_TIME | TELESCOPE_HAS_LOCATION |
                            TELESCOPE_HAS_TRACK_MODE | TELESCOPE_CAN_CONTROL_TRACK |

@@ -8,7 +8,7 @@ export DEB_BUILD_MAINT_OPTIONS = hardening=+all
 	dh $@ --buildsystem=cmake --sourcedirectory=indi-tyr
 
 override_dh_auto_configure:
-	dh_auto_configure -- -DCMAKE_BUILD_TYPE=RelWithDebInfo -DBUILD_TESTING=ON
+	dh_auto_configure -- -DCMAKE_BUILD_TYPE=RelWithDebInfo -DINDI_BUILD_UNITTESTS=ON
 
 override_dh_auto_test:
 	if [ -z "$(filter nocheck,$(DEB_BUILD_OPTIONS))" ]; then dh_auto_test --no-parallel; fi

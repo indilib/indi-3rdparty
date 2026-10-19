@@ -1,53 +1,56 @@
 # SPDX-License-Identifier: GPL-2.0-or-later
 # Copyright (C) 2026 Prometheus Astro
 cmake_minimum_required(VERSION 3.16)
-project(indi_tyr VERSION 0.3.0 LANGUAGES CXX)
+PROJECT(indi-tyr C CXX)
 
-include(CTest)
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
+LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 
 include(GNUInstallDirs)
-# Use the upstream module when built inside indi-3rdparty. Keep the standalone
-# build usable with packaged INDI development headers and pkg-config.
-list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules")
-find_package(INDI 2.2.5 QUIET COMPONENTS driver)
-set(TYR_USE_PKG_CONFIG OFF)
-if(NOT INDI_FOUND)
-    set(TYR_USE_PKG_CONFIG ON)
-    find_package(PkgConfig REQUIRED)
-    pkg_check_modules(INDI REQUIRED IMPORTED_TARGET libindi>=2.2.5)
-    find_library(INDI_DRIVER_LIBRARY indidriver)
-    if(NOT INDI_DRIVER_LIBRARY)
-        message(FATAL_ERROR "Tyr requires the INDI driver library (indidriver)")
-    endif()
-endif()
-find_package(nlohmann_json 3.2 REQUIRED)
 
-add_executable(indi_tyr_telescope
-    tyr_telescope.cpp
-    tyr_configuration.cpp
+set(TYR_VERSION_MAJOR 0)
+set(TYR_VERSION_MINOR 3)
+
+find_package(INDI 2.2.5 COMPONENTS driver REQUIRED)
+find_package(Nova REQUIRED)
+
+if(INDI_JSONLIB)
+    set(JSONLIB "")
+    message(STATUS "Using indi bundled json library")
+else(INDI_JSONLIB)
+    find_package(nlohmann_json REQUIRED)
+    add_definitions(-D_USE_SYSTEM_JSONLIB)
+    set(JSONLIB nlohmann_json::nlohmann_json)
+    message(STATUS "Using system provided Niels Lohmann's json library")
+endif(INDI_JSONLIB)
+
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h)
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_tyr.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_tyr.xml)
+
+include_directories(${CMAKE_CURRENT_BINARY_DIR})
+include_directories(${CMAKE_CURRENT_SOURCE_DIR})
+include_directories(${INDI_INCLUDE_DIR})
+include_directories(${NOVA_INCLUDE_DIR})
+
+include(CMakeCommon)
+
+########### Tyr Telescope ###########
+set(indi_tyr_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/tyr_telescope.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/tyr_configuration.cpp
 )
 
-target_compile_features(indi_tyr_telescope PRIVATE cxx_std_17)
-target_compile_options(indi_tyr_telescope PRIVATE -Wall -Wextra -Wpedantic)
-if(TYR_USE_PKG_CONFIG)
-    target_link_libraries(indi_tyr_telescope PRIVATE PkgConfig::INDI ${INDI_DRIVER_LIBRARY})
-else()
-    target_include_directories(indi_tyr_telescope SYSTEM PRIVATE ${INDI_INCLUDE_DIR})
-    target_link_libraries(indi_tyr_telescope PRIVATE ${INDI_LIBRARIES})
-endif()
-target_link_libraries(indi_tyr_telescope PRIVATE nlohmann_json::nlohmann_json)
-target_compile_definitions(indi_tyr_telescope PRIVATE
-    TYR_DRIVER_VERSION_MAJOR=${PROJECT_VERSION_MAJOR}
-    TYR_DRIVER_VERSION_MINOR=${PROJECT_VERSION_MINOR})
+add_executable(indi_tyr_telescope ${indi_tyr_SRCS})
+target_link_libraries(indi_tyr_telescope ${INDI_LIBRARIES} ${NOVA_LIBRARIES} ${JSONLIB})
 
-configure_file(indi_tyr.xml.in indi_tyr.xml @ONLY)
+install(TARGETS indi_tyr_telescope RUNTIME DESTINATION bin)
+install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_tyr.xml DESTINATION ${INDI_DATA_DIR})
+install(FILES COPYING THIRD_PARTY.md DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/indi-tyr)
 
-install(TARGETS indi_tyr_telescope RUNTIME DESTINATION ${CMAKE_INSTALL_BINDIR})
-install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_tyr.xml DESTINATION ${CMAKE_INSTALL_DATADIR}/indi)
-install(FILES COPYING THIRD_PARTY.md
-    DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/doc/indi-tyr)
+########### Tests ###########
+if(INDI_BUILD_UNITTESTS AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    enable_testing()
 
-if(BUILD_TESTING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(Python3 REQUIRED COMPONENTS Interpreter)
     find_program(TYR_BASH bash)
     find_program(TYR_INDISERVER indiserver)
@@ -55,9 +58,10 @@ if(BUILD_TESTING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_program(TYR_INDI_SETPROP indi_setprop)
     foreach(tool TYR_BASH TYR_INDISERVER TYR_INDI_GETPROP TYR_INDI_SETPROP)
         if(NOT ${tool})
-            message(FATAL_ERROR "Tyr tests require ${tool}; install indi-bin/bash or disable BUILD_TESTING")
+            message(FATAL_ERROR "Tyr tests require ${tool}; install indi-bin/bash or disable INDI_BUILD_UNITTESTS")
         endif()
     endforeach()
+
     add_test(NAME tyr_indi_simulation
         COMMAND ${TYR_BASH} ${CMAKE_CURRENT_SOURCE_DIR}/tests/smoke_simulation.sh $<TARGET_FILE:indi_tyr_telescope>)
     set_tests_properties(tyr_indi_simulation PROPERTIES TIMEOUT 30)
@@ -70,17 +74,4 @@ if(BUILD_TESTING AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
     add_test(NAME tyr_indi_tcp
         COMMAND ${Python3_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/tests/configuration_protocol.py $<TARGET_FILE:indi_tyr_telescope> tcp)
     set_tests_properties(tyr_indi_tcp PROPERTIES TIMEOUT 60 RUN_SERIAL TRUE)
-endif()
-
-if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
-set(CPACK_PACKAGE_NAME "indi-tyr")
-set(CPACK_PACKAGE_VENDOR "Prometheus Astro")
-set(CPACK_PACKAGE_DESCRIPTION_SUMMARY "Native INDI telescope driver for the Prometheus Astro Tyr mount")
-set(CPACK_PACKAGE_HOMEPAGE_URL "https://prometheusastro.com")
-set(CPACK_DEBIAN_PACKAGE_MAINTAINER "Prometheus Astro")
-set(CPACK_DEBIAN_PACKAGE_DEPENDS "indi-bin, libindi1 (>= 2.2.5)")
-set(CPACK_DEBIAN_PACKAGE_SECTION "science")
-set(CPACK_DEBIAN_FILE_NAME DEB-DEFAULT)
-set(CPACK_GENERATOR DEB)
-include(CPack)
 endif()

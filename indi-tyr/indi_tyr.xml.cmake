@@ -5,7 +5,7 @@
   <devGroup group="Telescopes">
     <device label="Prometheus Astro Tyr" manufacturer="Prometheus Astro">
       <driver name="Prometheus Astro Tyr">indi_tyr_telescope</driver>
-      <version>@PROJECT_VERSION@</version>
+      <version>@TYR_VERSION_MAJOR@.@TYR_VERSION_MINOR@</version>
     </device>
   </devGroup>
 </driversList>

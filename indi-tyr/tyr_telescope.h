@@ -16,7 +16,11 @@
 #include <string>
 #include <vector>
 #include <array>
+#ifdef _USE_SYSTEM_JSONLIB
 #include <nlohmann/json.hpp>
+#else
+#include <indijson.hpp>
+#endif
 
 class TyrTelescope final : public INDI::Telescope, public INDI::GuiderInterface
 {
