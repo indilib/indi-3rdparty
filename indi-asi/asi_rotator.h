@@ -19,6 +19,8 @@
 
 #pragma once
 
+#include <CAA_API.h>
+
 #include <indirotator.h>
 #include <indipropertyswitch.h>
 #include <indipropertynumber.h>
@@ -29,8 +31,26 @@
 class ASICAA : public INDI::Rotator
 {
     public:
-        ASICAA(int ID, const std::string &rotatorName);
+        ASICAA(const CAA_INFO &info, const char *name, const std::string &serialNumber);
         virtual ~ASICAA() = default;
+
+        /**
+         * @brief Returns the CAA_INFO structure for this rotator.
+         * @return The CAA_INFO structure.
+         */
+        const CAA_INFO &getCAAInfo() const
+        {
+            return m_Info;
+        }
+
+        /**
+         * @brief Returns the serial number of the rotator (may be empty).
+         * @return The serial number as a string.
+         */
+        const std::string &getSerialNumber() const
+        {
+            return m_SerialNumber;
+        }
 
         virtual bool initProperties() override;
         virtual bool updateProperties() override;
@@ -55,6 +75,8 @@ class ASICAA : public INDI::Rotator
 
     private:
         int m_ID { -1 };
+        CAA_INFO m_Info {};
+        std::string m_SerialNumber;
         bool m_IsMoving { false };
         bool m_IsHandControl { false };
 
