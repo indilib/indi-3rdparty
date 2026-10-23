@@ -120,4 +120,7 @@ indi-sx/indi_sx_ao
 indi-sx/indi_sx_ccd
 indi-sx/indi_sx_wheel
 indi-sx/sx_ccd_test
+indi-sx/README.txt
 libinovasdk/make_inovasdk_symlink.cmake
+
+/packages/
