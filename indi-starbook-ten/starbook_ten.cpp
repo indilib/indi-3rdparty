@@ -456,7 +456,8 @@ StarbookTen::sxfmt(double x) {
     double frac = x-w;
     double mins = fabs(frac) * 60.0;
 
-    snprintf(buf, sizeof(buf)-1, "%d+%02.5lf", w, mins);
+    snprintf(buf, sizeof(buf)-1, "%s%d+%02.5lf",
+             (std::signbit(x) && w == 0) ? "-" : "", w, mins);
 
     return std::string(buf);
 }
