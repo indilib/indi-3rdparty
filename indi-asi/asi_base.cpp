@@ -41,6 +41,7 @@
 #define VERBOSE_EXPOSURE        3
 #define TEMP_TIMER_MS           1000 /* Temperature polling time (ms) */
 #define TEMP_THRESHOLD          .25  /* Differential temperature threshold (C)*/
+#define WARMUP_TARGET_TEMPERATURE 25.0 /* Ambient assumption to ramp toward on cooler-off (C) */
 
 #define CONTROL_TAB "Controls"
 
@@ -865,6 +866,10 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
             saveConfig(BlinkNP);
             return true;
         }
+
+        // An explicit temperature request supersedes any warm-up-on-cooler-off in progress.
+        if (TemperatureNP.isNameMatch(name))
+            cancelCoolerWarmup();
     }
 
     return INDI::CCD::ISNewNumber(dev, name, values, names, n);
@@ -958,7 +963,26 @@ bool ASIBase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
                 return true;
             }
 
-            activateCooler(CoolerSP[0].getState() == ISS_ON);
+            bool wasCooling = (CoolerSP.getState() == IPS_BUSY);
+
+            if (CoolerSP[0].getState() == ISS_ON)
+            {
+                if (mCoolerWarmingUp)
+                    resumeCoolingAfterWarmup();
+                activateCooler(true);
+            }
+            else if (wasCooling && TemperatureRampNP[RAMP_SLOPE].getValue() > 0)
+            {
+                // Ramping is enabled: warm up gradually toward ambient instead of an abrupt
+                // hard TEC cutoff, which can thermally shock the sensor.
+                CoolerSP.setState(IPS_BUSY);
+                CoolerSP.apply();
+                beginCoolerWarmup();
+            }
+            else
+            {
+                activateCooler(false);
+            }
 
             return true;
         }
@@ -1078,11 +1102,12 @@ bool ASIBase::setVideoFormat(uint8_t index)
 int ASIBase::SetTemperature(double temperature)
 {
     // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    // #PS: how will it warm up?
     if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
-    if (activateCooler(true) == false)
+    // While warming up on cooler-off, this is called every ~60s by the base class ramp with
+    // successively warmer steps -- don't flip CoolerSP back to ON on every single step.
+    if (!mCoolerWarmingUp && activateCooler(true) == false)
     {
         LOG_ERROR("Failed to activate cooler.");
         return -1;
@@ -1120,6 +1145,46 @@ bool ASIBase::activateCooler(bool enable)
     CoolerSP.apply();
 
     return (ret == ASI_SUCCESS);
+}
+
+void ASIBase::beginCoolerWarmup()
+{
+    mSavedCoolingTarget = m_TargetTemperature;
+    mCoolerWarmingUp = true;
+    mWarmupLastTemperature = mCurrentTemperature;
+    mWarmupStableTimer.start();
+
+    m_TargetTemperature = WARMUP_TARGET_TEMPERATURE;
+    m_InitialRampTemperature = TemperatureNP[0].getValue();
+    m_TemperatureElapsedTimer.start();
+    m_TemperatureStabilizationValue = TemperatureNP[0].getValue();
+    m_TemperatureStabilizationTimer.start();
+    m_TemperatureCheckTimer.start();
+
+    TemperatureNP.setState(IPS_BUSY);
+    TemperatureNP.apply();
+
+    LOGF_INFO("Cooler is warming up gradually to ambient temperature (%.1f C)...", WARMUP_TARGET_TEMPERATURE);
+}
+
+void ASIBase::cancelCoolerWarmup()
+{
+    mCoolerWarmingUp = false;
+}
+
+void ASIBase::resumeCoolingAfterWarmup()
+{
+    mCoolerWarmingUp = false;
+
+    m_TargetTemperature = mSavedCoolingTarget;
+    m_InitialRampTemperature = TemperatureNP[0].getValue();
+    m_TemperatureElapsedTimer.start();
+    m_TemperatureStabilizationValue = TemperatureNP[0].getValue();
+    m_TemperatureStabilizationTimer.start();
+    m_TemperatureCheckTimer.start();
+
+    TemperatureNP.setState(IPS_BUSY);
+    TemperatureNP.apply();
 }
 
 bool ASIBase::StartExposure(float duration)
@@ -1419,6 +1484,41 @@ void ASIBase::temperatureTimerTimeout()
         TemperatureNP.setState(newState);
         TemperatureNP[0].setValue(mCurrentTemperature);
         TemperatureNP.apply();
+    }
+
+    if (mCoolerWarmingUp)
+    {
+        // Don't rely on INDI::CCD's own stabilization detection in checkTemperatureTarget():
+        // its elapsed-timer gate is reset by every ramp step and so never opens, meaning
+        // TemperatureNP never reaches IPS_OK and we'd keep "warming up" forever. Detect
+        // completion ourselves from the real measured temperature instead -- either the
+        // warm-up target was essentially reached, or it has stopped changing (ambient is
+        // below WARMUP_TARGET_TEMPERATURE).
+        bool warmupDone = false;
+
+        if (mCurrentTemperature >= WARMUP_TARGET_TEMPERATURE - TEMP_THRESHOLD)
+        {
+            warmupDone = true;
+        }
+        else if (std::abs(mCurrentTemperature - mWarmupLastTemperature) > 0.5)
+        {
+            mWarmupLastTemperature = mCurrentTemperature;
+            mWarmupStableTimer.start();
+        }
+        else if (mWarmupStableTimer.elapsed() >= 60000)
+        {
+            warmupDone = true;
+        }
+
+        if (warmupDone)
+        {
+            mCoolerWarmingUp = false;
+            m_TemperatureCheckTimer.stop();
+            TemperatureNP.setState(IPS_OK);
+            TemperatureNP.apply();
+            LOGF_INFO("Cooler is now off, temperature stabilized at %.2f C.", mCurrentTemperature);
+            activateCooler(false);
+        }
     }
 
     if (HasCooler())
