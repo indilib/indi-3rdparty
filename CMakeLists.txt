@@ -262,6 +262,7 @@ option(WITH_SVBONY "Install SVBONY Camera Driver" On)
 option(WITH_BRESSEREXOS2 "Install Bresser Exos 2 GoTo Mount Driver" On)
 option(WITH_PLAYERONE "Install Player One Astronomy's Camera Driver" On)
 option(WITH_WEEWX_JSON "Install Weewx JSON Driver" On)
+option(WITH_10MICRON_NATIVE "Install native 10Micron driver" On)
 option(WITH_ROLLOFFINO "Install RollOff ino Dome Driver" On)
 option(WITH_ASTROASIS "Install Astroasis Driver" On)
 option(WITH_SCOPELINK "Install ScopeLink Driver" On)
@@ -522,6 +523,11 @@ else(BUILD_LIBS)
   if(WITH_TALON6)
     add_subdirectory(indi-talon6)
   endif(WITH_TALON6)
+
+  ## Native 10Micron
+  if(WITH_10MICRON_NATIVE)
+    add_subdirectory(indi-10micron-native)
+  endif(WITH_10MICRON_NATIVE)
 
   ## Rolloffino
   if(WITH_ROLLOFFINO)
