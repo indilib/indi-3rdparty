@@ -10,8 +10,8 @@ hardware evidence from host tests. [PROTOCOL.md](PROTOCOL.md) describes updates.
 
 Firmware is the same source commissioned on October 24, 2026. Publication tools
 now accept an explicit controller address and standard INDI telescope park check;
-these generalized tool changes have host tests but still need an end-to-end Pi
-run. Do not replace a commissioned installation merely to publish this example.
+the generalized tools passed host tests and a real Pi OTA update with standard
+INDI park verification (see COMMISSIONING.md). Do not replace a commissioned installation merely to publish this example.
 
 Supported reference hardware: Arduino UNO R4 WiFi, official Arduino 4 Relays
 Shield, active-low normally-open end switches. This is not a drop-in replacement
