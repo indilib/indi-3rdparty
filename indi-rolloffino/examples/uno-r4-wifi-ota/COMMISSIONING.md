@@ -30,7 +30,21 @@ loss, Wi-Fi automatic reconnection, hardware watchdog, power loss during apply,
 extended unattended operation and other roof/mount combinations. USB-independent
 power removal/retest should be recorded explicitly at the next commissioning.
 
-Publication changes to mount-independent Python preflight are host-tested only;
-the working firmware source is unchanged. A fresh-user clean Pi setup from these
-instructions remains pending. This package is ready for review, not a claim of
-universal unattended reliability.
+## Publication-tool validation on the Pi
+
+A fresh working directory was copied from the publication example, with existing
+private Wi-Fi settings/token imported rather than re-created. The generalized
+standard INDI park check passed against the connected 10Micron Native Motion
+device. The generalized uploader then completed maintenance entry, transfer and
+explicit commit, and verified running identity roof-wifi-20261024T154550Z-23cac0
+(previously roof-wifi-20261024T143136Z-b11f3c).
+
+After RollOff ino reconnection, reported physical inputs were OPENED=Idle,
+CLOSED=Ok, MOVING=Idle; LOCK and AUXILIARY were Idle. An initial status timeout
+cleared after disconnecting the competing RollOff ino command client.
+
+All 69 host checks/scenarios also passed from the submission copy on the Pi.
+This validates the publication uploader end to end on the reference installation.
+It is not a complete first-time-user walkthrough: dependency installation and
+initial USB setup were not repeated from a blank environment, and existing
+private settings were reused. Other mount/roof combinations remain untested.
