@@ -4,6 +4,9 @@ PROJECT(indi_atik_efw CXX C)
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
+set(RULES_INSTALL_DIR "/usr/lib/udev/rules.d/")
+
+option(INDI_INSTALL_UDEV_RULES "Install UDEV rules" On)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)
@@ -33,6 +36,10 @@ endif (CMAKE_SYSTEM_NAME MATCHES "Linux" AND CMAKE_SYSTEM_PROCESSOR MATCHES "arm
 
 install(TARGETS indi_atik_efw RUNTIME DESTINATION bin)
 install(FILES ${CMAKE_CURRENT_BINARY_DIR}/indi_atik_efw.xml DESTINATION ${INDI_DATA_DIR})
+
+if (${CMAKE_SYSTEM_NAME} MATCHES "Linux" AND INDI_INSTALL_UDEV_RULES)
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/99-atik-efw1.rules DESTINATION ${RULES_INSTALL_DIR})
+endif ()
 
 IF (INDI_BUILD_UNITTESTS)
   enable_testing()

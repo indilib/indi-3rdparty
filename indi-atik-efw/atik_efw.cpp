@@ -260,7 +260,7 @@ AtikEFW::~AtikEFW() = default;
 
 const char *AtikEFW::getDefaultName()
 {
-    return "Atik EFW";
+    return "Atik EFW1";
 }
 
 bool AtikEFW::initProperties()

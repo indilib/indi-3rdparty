@@ -35,6 +35,7 @@ make DESTDIR=%{buildroot} install
 %license LICENSE
 %{_bindir}/indi_atik_efw
 %{_datadir}/indi/indi_atik_efw.xml
+/usr/lib/udev/rules.d/99-atik-efw1.rules
 
 %changelog
 * Sun May 31 2026 Eric Dejouhanet <eric.dejouhanet@gmail.com> 1.0-1

@@ -166,7 +166,7 @@ class TestAtikEFW : public AtikEFW
 AtikEFW::DeviceDescriptor makeDescriptor(int slots = 5, int currentSlot = 1)
 {
     AtikEFW::DeviceDescriptor desc;
-    desc.name = "Atik EFW";
+    desc.name = "Atik EFW1";
     desc.slotCount = slots;
     desc.currentSlot = currentSlot;
     return desc;

@@ -1,0 +1,8 @@
+# Atik EFW1 (legacy) filter wheel
+#
+# The wheel uses an FTDI USB-serial chip programmed with the Atik-specific
+# product ID 0403:af01 (product string "Atik Filter Wheel"). The kernel ftdi_sio
+# driver does not list this ID, so register it to get a /dev/ttyUSB* port.
+# Only this exact VID:PID is matched; generic FTDI adapters (0403:6001, 6010,
+# 6011, 6014, 6015) are not affected.
+ACTION=="add", SUBSYSTEM=="usb", ENV{DEVTYPE}=="usb_device", ATTR{idVendor}=="0403", ATTR{idProduct}=="af01", RUN+="/sbin/modprobe ftdi_sio", RUN+="/bin/sh -c 'echo 0403 af01 > /sys/bus/usb-serial/drivers/ftdi_sio/new_id || true'"
