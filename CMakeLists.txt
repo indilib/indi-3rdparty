@@ -22,6 +22,14 @@ if(APPLE)
   ## This one is needed for Craft
   include_directories("${CMAKE_INSTALL_PREFIX}/include")
 
+  ## INDI and most vendor SDKs use @rpath install names (e.g. @rpath/libindidriver.2.dylib).
+  ## CMake strips the build RPATH on install, leaving installed drivers with no LC_RPATH, so
+  ## keep the directories of linked libraries outside the build tree in the install RPATH.
+  ## Respect any value passed on the command line (e.g. by Craft).
+  if(NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH)
+    set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
+  endif()
+
   # FIX_LIBRARY_LINK Macro
   # This macro will check MacOS Binary Libraries provided by third parties for external links that could cause linking and packaging problems
   # If the FIX_MACOS_LIBS option is enabled when building, it will also attempt to fix the problems, which should then allow the build to continue.
