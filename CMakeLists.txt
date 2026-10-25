@@ -29,6 +29,15 @@ if(APPLE)
   if(NOT DEFINED CMAKE_INSTALL_RPATH_USE_LINK_PATH)
     set(CMAKE_INSTALL_RPATH_USE_LINK_PATH ON)
   endif()
+  ## Vendor SDKs (ASI, QHY, Atik, ...) load @rpath/libusb-1.0.0.dylib, which CMake cannot see
+  ## since drivers link libusb by its absolute install name, so add the libusb directory too.
+  if(NOT DEFINED CMAKE_INSTALL_RPATH)
+    find_package(USB1 QUIET)
+    if(USB1_FOUND)
+      get_filename_component(_usb1_lib_dir "${USB1_LIBRARY}" DIRECTORY)
+      set(CMAKE_INSTALL_RPATH "${_usb1_lib_dir}")
+    endif()
+  endif()
 
   # FIX_LIBRARY_LINK Macro
   # This macro will check MacOS Binary Libraries provided by third parties for external links that could cause linking and packaging problems
