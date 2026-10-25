@@ -1,3 +1,9 @@
+libnncam (60.33015.20261024) jammy; urgency=medium
+
+  * Upstream release
+
+ -- nn <nn@nn.com>  Sun, 25 Oct 2026 14:15:07 +0800
+
 libnncam (60.32226.20260808) jammy; urgency=medium
 
   * Upstream release
