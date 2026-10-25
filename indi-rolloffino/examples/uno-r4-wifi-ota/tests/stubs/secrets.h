@@ -1,0 +1,5 @@
+#pragma once
+#define WIFI_SSID "HOST_TEST_ONLY"
+#define WIFI_PASSWORD "HOST_TEST_ONLY"
+
+#define OTA_PASSWORD "0123456789abcdef0123456789abcdef"

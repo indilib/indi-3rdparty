@@ -1,0 +1,9 @@
+Rolloff/secrets.h
+ota-token.txt
+build/
+build-identity.json
+__pycache__/
+tests/__pycache__/
+*.bin
+*.elf
+*.hex
