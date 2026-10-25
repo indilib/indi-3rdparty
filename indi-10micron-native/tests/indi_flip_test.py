@@ -23,7 +23,11 @@ def serve():
                     if cmd==b':U2#':pass
                     elif cmd==b':GVP#':reply=b'10micron GM1000HPS#'
                     elif cmd==b':GVN#':reply=b'3.4#'
+                    elif cmd==b':WSG#':reply=b'0#'
                     elif cmd==b':GVZ#':reply=b'Q-TYPE2016#'
+                    elif cmd==b':GG#':reply=b'+05:00:00.0#'
+                    elif cmd in (b':Ggui#',b':GRTMP#',b':GRPRS#',b':Gt#',b':Gg#',b':Gev#'):
+                        reply={b':Ggui#':b'7.5#',b':GRTMP#':b'+8.5#',b':GRPRS#':b'980.2#',b':Gt#':b'+044:54:00.0#',b':Gg#':b'+092:54:00.0#',b':Gev#':b'+300.0#'}[cmd]
                     elif cmd==b':Ginfo#':
                         if state['count']:
                             state['count']-=1
@@ -58,6 +62,9 @@ def serve():
     finally:listener.close()
 thread=threading.Thread(target=serve,daemon=True);thread.start()
 config_dir=tempfile.TemporaryDirectory(prefix='10u-indi-test-');env=os.environ.copy();env['INDICONFIG']=os.path.join(config_dir.name,'motion_config.xml')
+# INDI park data uses the child's home separately from INDICONFIG.
+env['HOME']=config_dir.name
+os.makedirs(os.path.join(config_dir.name,'.indi'),exist_ok=True)
 p=subprocess.Popen([sys.argv[1]],env=env,stdin=subprocess.PIPE,stdout=subprocess.PIPE,stderr=subprocess.PIPE,text=True,bufsize=1)
 events=[];reader_errors=[];stderr=[]
 def read():
@@ -97,11 +104,21 @@ def configure_roof():
 try:
     p.stdin.write('<getProperties version="1.7"/>\n');p.stdin.flush();time.sleep(.1)
     send('newTextVector','NATIVE_ENDPOINT',{'HOST':'127.0.0.1','PORT':port})
+    if '--serial' in sys.argv:
+        import serial_bridge
+        serial_slave=serial_bridge.configure(send,port)
     send('newNumberVector','POLLING_PERIOD',{'PERIOD_MS':100})
     if '--portable' not in sys.argv:
         send('newTextVector','ACTIVE_DEVICES',{'ACTIVE_DOME':ENCLOSURE})
         send('newSwitchVector','DOME_POLICY',{'DOME_LOCKS':'On','DOME_IGNORED':'Off'})
     send('newSwitchVector','CONNECTION',{'CONNECT':'On','DISCONNECT':'Off'});wait('CONNECTION','Ok',{'CONNECT':'On'})
+    if '--serial' in sys.argv:
+        serial_bridge.check(serial_slave)
+        start=len(events);send('newSwitchVector','NATIVE_TRANSPORT',{'TCP':'On','SERIAL':'Off'})
+        wait('NATIVE_TRANSPORT','Alert',start=start)
+        start=len(events);send('newTextVector','NATIVE_SERIAL',{'DEVICE':'/invalid','BAUD':'115200'})
+        wait('NATIVE_SERIAL','Alert',start=start)
+
     wait('NATIVE_SCHEDULING_DATA','Ok',{'VALID':'1'},timeout=8)
     schedule=[e for e in events if e[1].get('name')=='NATIVE_SCHEDULING_DATA' and e[1].get('state')=='Ok'][-1]
     assert float(schedule[2]['TRACK_END_ESTIMATE_SEC'])==711*60

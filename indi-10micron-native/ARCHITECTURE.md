@@ -1,52 +1,65 @@
-# State ownership and protocol boundary
+# State ownership, protocol boundary and public properties
 
-The mount owns physical state; the driver translates observations; clients make
-requests. A command ACK is acceptance, not completion. No module may manufacture
-physical park/tracking state merely from a request. Driver polling reconciles
-native changes made through other clients.
+The controller owns physical state. Driver requests are not evidence of physical
+completion; clients coordinate observing workflow. Polling reconciles native
+changes made through separate connections without replaying commands. During
+reference commissioning the operator used MW4 as the independent position
+reference; MW4 is not required at observing runtime.
 
-Files: tenmicron_protocol.cpp/.h serialize a persistent TCP connection and parse
-command-specific response shapes; motion_state.h defines observed completion;
-enclosure_state.h defines standard enclosure permission; native_schedule.h is a
-pure scheduling-budget helper; tenmicron_motion_driver.cpp is the INDI adapter.
-tenmicron_driver.cpp is the optional-in-use diagnostic read-only telescope
-executable; tenmicron-probe is a console diagnostic. The latter sets precision
-but sends no requested slew/park command; do not mistake it for a safety monitor.
+- tenmicron_protocol.cpp/.h: serialized persistent TCP or POSIX raw serial I/O,
+  command-specific byte/hash/no-reply shapes, exact parsers, native settings.
+- motion_state.h: observed completion and bounded transition rules.
+- enclosure_state.h: standard connected/open permission (no vendor light name).
+- native_schedule.h: pure budget helper; not automatic stock-Ekos integration.
+- tenmicron_motion_driver.cpp: INDI motion/guider adapter, timers, permissions,
+  readback, operation lifecycle and recovery.
+- tenmicron_driver.cpp / probe.cpp: diagnostic telescope/probe front ends;
+  not a general safety supervisor or a second independent motion owner.
 
-Native Ginfo supplies RA/Dec, pier side, azimuth, altitude, UTC JD/leap indication,
-native status and independent slew/settling. Unknown/invalid data is not coerced
-to safely parked. Commands have command-specific one-byte/hash/no-reply framing;
-protocol timeout or framing uncertainty closes the socket rather than replaying
-motion. TCP connect/DNS setup are not claimed as universal hard real-time bounds.
+Ginfo supplies RA/Dec, pier, az/alt, UTC JD, status and independent settling.
+Clock uses native JD via libnova; offset readback converts native GG sign to INDI.
+Unknown state is not coerced safely parked. Unsupported preset readbacks remain
+neutral. Complete settings rejection does not disconnect or invent unparked state;
+framing/transport uncertainty closes the link, invalidates state and prohibits
+blind motion replay. TCP DNS setup is not a universal hard real-time claim.
 
-Goto uses native target setters and MS (or one-shot forced side). Sync explicitly
-selects CMCFG0 before CM. Park/unpark use hP/PO and poll completion. Q halts slew;
-STOP also disables tracking. Flip uses FLIP and requires opposite native pier
-side, settled target and tracking for completion; a confirmed native refusal is
-distinct from ambiguous failure. Accepted flip has a 180-second safety deadline.
+Goto uses target setters and MS/one-shot forced side. Park/unpark use hP/PO and
+poll completion. Q halts slew; STOP includes tracking stop. FLIP acceptance is
+not completion: opposite pier, settled target and tracking are required, with an
+accepted-operation deadline. Tracking-only requests have a shorter bounded
+confirmation policy and safe cancellation rules; they cannot weaken guards for
+slew, manual movement, pulses or unknown roof state.
 
-| Property | Purpose |
+| Properties | Responsibility |
 |---|---|
-| NATIVE_ENDPOINT | Editable disconnected host and TCP port |
-| NATIVE_IDENTITY / NATIVE_STATUS_TEXT | Identification, state description, communication validity |
-| NATIVE_STATE | Native status, settling, parked/tracking, azimuth/altitude/JD |
-| NATIVE_MERIDIAN | Mount-reported slew/track limits, time to tracking end, allowed side and stored target side |
-| NATIVE_SCHEDULING_DATA | Estimate valid/age/seconds and rounding reserve; not a flip countdown |
-| NATIVE_SCHEDULING_CONTRACT | Contract version/scope; no stock client integration promised |
-| NATIVE_FLIP_RESULT | Idle/accepted/confirmed refusal/blocked-error and response sequence |
-| NATIVE_SLEW_SIDE | One-shot Auto/West/East for next slew |
-| NATIVE_STOP_ALL | Explicit stop including tracking |
-| NATIVE_PARK_SAFETY | Persisted diagnostic interrupted-park flags, read-only |
-| NATIVE_ROOF_INTERLOCK / NATIVE_MOTION_STATUS / NATIVE_COMMAND_STATUS | Permission and command diagnostics |
+| NATIVE_TRANSPORT, NATIVE_ENDPOINT, NATIVE_SERIAL | Disconnected configuration, applied transport readback |
+| NATIVE_IDENTITY, NATIVE_STATE, NATIVE_STATUS_TEXT | Identity and actual native physical/communication state |
+| TELESCOPE_PARK, TELESCOPE_TRACK_STATE, EQUATORIAL_EOD_COORD, TELESCOPE_PIER_SIDE | Standard observing state derived from native samples |
+| TELESCOPE_MOTION_NS/WE, TELESCOPE_SLEW_RATE | Manual axis requests/rate selection with normal motion guards |
+| TELESCOPE_TIMED_GUIDE_NS/WE | Independent duration timers, cancellation and no-op semantics |
+| NATIVE_GUIDE_RATE, NATIVE_REFRACTION, NATIVE_WEATHER_UPDATE, NATIVE_REFRESH_CONTROLS | Supported settings, ownership, explicit requests/readback |
+| TIME_UTC, GEOGRAPHIC_COORD | Native current readback and explicit guarded writes |
+| TELESCOPE_TRACK_MODE/RATE | Standard rate requests; no invented readback for unqueryable presets |
+| NATIVE_MERIDIAN | Read-only native limits, Gmte, allowed side and stored-target destination |
+| NATIVE_SCHEDULING_DATA/CONTRACT | Estimate freshness/scope, not a guaranteed flip countdown |
+| NATIVE_FLIP_RESULT, NATIVE_SLEW_SIDE | Explicit flip outcome/sequence and one-shot next-slew side |
+| NATIVE_STOP_ALL, NATIVE_PARK_SAFETY | Explicit full STOP and persisted interrupted-park diagnostics |
+| NATIVE_ROOF_INTERLOCK, NATIVE_MOTION_STATUS, NATIVE_COMMAND_STATUS | Permission versus requested-operation diagnostics |
 
-Gmte supplies horizon-or-meridian tracking end in whole minutes. The driver
-publishes freshness and rounding uncertainty but cannot infer a unique reason
-for every tracking-to-stopped transition. Status 1 does not identify its cause.
-No driver command changes unattended-flip configuration or meridian limits in
-this revision; they are read-only telemetry.
+Initial unknown enclosure evidence has the bounded discovery policy documented in
+[STARTUP-AND-ENCLOSURES.md](doc/STARTUP-AND-ENCLOSURES.md). It grants no new motion;
+confirmed unsafe evidence/later loss retain STOP and recovery holds. Standard
+roof state is not an independent sensor and cannot validate a lying roof driver.
+A failed roof-close request must not be confused with physical closure, but a
+reported Alert is not ignored by the telescope to conceal that reporting error.
 
-Protocol reference used during development: 10Micron Mount Command Protocol
-software version 2.15.1. Obtain the current manual from the manufacturer; it is
-not redistributed. No manufacturer endorsement or universal firmware/model
-coverage is claimed. The existing INDI LX200 10Micron driver remains separately
-maintained; this submission does not assert all its behavior is defective.
+Sync asserts CMCFG0 then CM; its acknowledged offset mode persists controller-
+wide and is reasserted each transaction. No model refinement command is used.
+Unattended flip/meridian-limit configuration is read-only here. Model operations,
+firmware updates and specialist tracking workflows remain with dedicated tools.
+
+The existing LX200 driver already supports TCP/Ginfo/native FLIP and shared base
+behavior. This implementation does not prove those capabilities cannot be fixed
+or extended there. Separation, repository placement, neutral property naming and
+shared maintenance are explicit review topics, not claims settled by test count.
+No manufacturer protocol PDF or endorsement is included.

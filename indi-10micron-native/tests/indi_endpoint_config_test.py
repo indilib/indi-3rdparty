@@ -14,6 +14,9 @@ DEVICE = '10Micron Native Motion'
 def run_case(binary, config, save=False):
     env = os.environ.copy()
     env['INDICONFIG'] = str(config)
+    test_home = config.parent / 'test-home'
+    (test_home / '.indi').mkdir(parents=True, exist_ok=True)
+    env['HOME'] = str(test_home)
     proc = subprocess.Popen([binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, text=True, env=env)
     vectors, errors, stderr = [], [], []
@@ -49,7 +52,12 @@ def run_case(binary, config, save=False):
         if save:
             send(f'<newTextVector device="{DEVICE}" name="NATIVE_ENDPOINT"><oneText name="HOST">192.0.2.73</oneText><oneText name="PORT">43579</oneText></newTextVector>')
             until(lambda: any(a.get('name') == 'NATIVE_ENDPOINT' and v.get('HOST') == '192.0.2.73' for a, v in vectors))
+            send(f'<newTextVector device="{DEVICE}" name="NATIVE_SERIAL"><oneText name="DEVICE">/dev/serial/by-id/test-10u</oneText><oneText name="BAUD">19200</oneText></newTextVector>')
+            send(f'<newSwitchVector device="{DEVICE}" name="NATIVE_TRANSPORT"><oneSwitch name="TCP">Off</oneSwitch><oneSwitch name="SERIAL">On</oneSwitch></newSwitchVector>')
+            until(lambda: any(a.get('name') == 'NATIVE_TRANSPORT' and v.get('SERIAL') == 'On' for a,v in vectors))
+            save_marker = len(vectors)
             send(f'<newSwitchVector device="{DEVICE}" name="CONFIG_PROCESS"><oneSwitch name="CONFIG_SAVE">On</oneSwitch></newSwitchVector>')
+            until(lambda: any(a.get('name') == 'CONFIG_PROCESS' and a.get('state') == 'Ok' for a, _ in vectors[save_marker:]))
             until(lambda: config.exists() and '192.0.2.73' in config.read_text())
             root = ET.parse(config).getroot()
             saved = {e.get('name'): e.text.strip() for vector in root if vector.get('name') == 'NATIVE_ENDPOINT' for e in vector}
@@ -58,6 +66,12 @@ def run_case(binary, config, save=False):
             endpoint = next(v for a, v in vectors if a.get('name') == 'NATIVE_ENDPOINT')
             expected = {'HOST': '192.0.2.73', 'PORT': '43579'} if config.exists() else {'HOST': '192.168.0.1', 'PORT': '3490'}
             assert endpoint == expected, (endpoint, expected)
+            until(lambda: any(a.get('name')=='NATIVE_SERIAL' for a,_ in vectors))
+            serial=next(v for a,v in vectors if a.get('name')=='NATIVE_SERIAL')
+            mode=next(v for a,v in vectors if a.get('name')=='NATIVE_TRANSPORT')
+            assert serial['BAUD']==('19200' if config.exists() else '9600'),serial
+            assert mode['SERIAL']==('On' if config.exists() else 'Off'),mode
+            if config.exists(): assert serial['DEVICE']=='/dev/serial/by-id/test-10u',serial
         # No CONNECTION request: this test must never talk to hardware.
         assert not errors, errors
     finally:
@@ -75,6 +89,9 @@ def enclosure_case(binary, config, expected_dome, expected_policy, change=None, 
     """Start a real driver process without CONNECTION; inspect/save standard config."""
     env = os.environ.copy()
     env['INDICONFIG'] = str(config)
+    test_home = config.parent / 'test-home'
+    (test_home / '.indi').mkdir(parents=True, exist_ok=True)
+    env['HOME'] = str(test_home)
     proc = subprocess.Popen([binary], stdin=subprocess.PIPE, stdout=subprocess.PIPE,
                             stderr=subprocess.PIPE, text=True, env=env)
     vectors, errors, stderr = [], [], []
@@ -127,7 +144,9 @@ def enclosure_case(binary, config, expected_dome, expected_policy, change=None, 
         if manual_save:
             send(f'<newSwitchVector device="{DEVICE}" name="DOME_POLICY"><oneSwitch name="DOME_IGNORED">Off</oneSwitch><oneSwitch name="DOME_LOCKS">On</oneSwitch></newSwitchVector>')
             until(lambda: any(a.get('name') == 'DOME_POLICY' and v.get('DOME_LOCKS') == 'On' for a, v in vectors))
+            save_marker = len(vectors)
             send(f'<newSwitchVector device="{DEVICE}" name="CONFIG_PROCESS"><oneSwitch name="CONFIG_SAVE">On</oneSwitch></newSwitchVector>')
+            until(lambda: any(a.get('name') == 'CONFIG_PROCESS' and a.get('state') == 'Ok' for a, _ in vectors[save_marker:]))
             until(lambda: saved().get('DOME_POLICY', {}).get('DOME_LOCKS') == 'On')
         assert not errors, errors
         # Deliberately never send CONNECTION: all tests are hardware-free.

@@ -8,6 +8,10 @@ namespace tenmicron {
 using MotionClock=std::chrono::steady_clock;
 enum class MotionKind {None,Slew,Flip,Park,Unpark,TrackingOn,TrackingOff,StopAll,Halt};
 enum class MotionOutcome {None,Waiting,Complete,Failed};
+// Only these states establish a known, settled tracking/park condition.
+inline bool settledTrackingState(const State &s){
+ return !s.slewOrSettling && (s.nativeStatus==0 || s.nativeStatus==1 || s.nativeStatus==7 || s.nativeStatus==5);
+}
 struct MotionProgress {
  MotionKind kind=MotionKind::None;
  MotionClock::time_point started{};
@@ -22,8 +26,17 @@ struct MotionProgress {
   initialPier=initial.pierSide;expectedPier=initialPier=='E'?'W':'E';
  }
  bool active()const{return kind!=MotionKind::None;}
+ bool trackingTransition()const{return kind==MotionKind::TrackingOn || kind==MotionKind::TrackingOff;}
  MotionOutcome observe(const State &s,MotionClock::time_point now=MotionClock::now())const{
   if(!active())return MotionOutcome::None;
+  if(trackingTransition()){
+   // Reconcile actual telemetry first; tracking changes should not monopolize
+   // the 180-second mechanical-motion deadline when a command is ignored.
+   if(!s.slewOrSettling && ((kind==MotionKind::TrackingOn && s.nativeStatus==0) ||
+      (kind==MotionKind::TrackingOff && (s.nativeStatus==1 || s.nativeStatus==7 || s.nativeStatus==5))))
+    return MotionOutcome::Complete;
+   if(now-started>=std::chrono::seconds(5))return MotionOutcome::Failed;
+  }
   if(now-started>std::chrono::seconds(180))return MotionOutcome::Failed;
   // Unpark can enable tracking while still at a park position outside tracking
   // limits. The driver requests tracking OFF and must confirm a later healthy

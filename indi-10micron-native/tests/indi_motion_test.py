@@ -26,7 +26,11 @@ def serve():
                         if cmd==b':U2#':pass
                         elif cmd==b':GVP#':reply=b'10micron GM1000HPS#'
                         elif cmd==b':GVN#':reply=b'3.4#'
+                        elif cmd==b':WSG#':reply=b'0#'
                         elif cmd==b':GVZ#':reply=b'Q-TYPE2016#'
+                        elif cmd==b':GG#':reply=b'+05:00:00.0#'
+                        elif cmd in (b':Ggui#',b':GRTMP#',b':GRPRS#',b':Gt#',b':Gg#',b':Gev#'):
+                            reply={b':Ggui#':b'7.5#',b':GRTMP#':b'+8.5#',b':GRPRS#':b'980.2#',b':Gt#':b'+044:54:00.0#',b':Gg#':b'+092:54:00.0#',b':Gev#':b'+300.0#'}[cmd]
                         elif cmd==b':Ginfo#':
                             if state['count']:
                                 state['count']-=1
@@ -61,6 +65,9 @@ def serve():
     finally:listener.close()
 thread=threading.Thread(target=serve,daemon=True);thread.start()
 config_dir=tempfile.TemporaryDirectory(prefix='10u-indi-test-');env=os.environ.copy();env['INDICONFIG']=os.path.join(config_dir.name,'motion_config.xml')
+# INDI park data uses the child's home separately from INDICONFIG.
+env['HOME']=config_dir.name
+os.makedirs(os.path.join(config_dir.name,'.indi'),exist_ok=True)
 if '--reconcile' in sys.argv:
     with open(env['INDICONFIG'],'w') as f:
         f.write('<INDIDriver><newTextVector device="'+DEVICE+'" name="NATIVE_PARK_SAFETY"><oneText name="INTERRUPTED">1</oneText></newTextVector></INDIDriver>')
@@ -204,7 +211,7 @@ try:
         start=len(events);send('newSwitchVector','CONNECTION',{'CONNECT':'On','DISCONNECT':'Off'})
         wait('CONNECTION','Ok',{'CONNECT':'On'},start)
         wait('TELESCOPE_PARK','Ok',{'UNPARK':'On'},start)
-        wait('NATIVE_COMMAND_STATUS','Ok',{'COMMAND':'Connection reconciled with native telemetry; standard motion requests enabled by enclosure policy'},start)
+        wait('NATIVE_COMMAND_STATUS','Ok',{'COMMAND':'Native connection polled; motion admission awaits enclosure policy'},start)
         # External park/unpark are observations, with no driver motion writes.
         before=len(commands);start=len(events);state.update(status=5)
         wait('TELESCOPE_PARK','Ok',{'PARK':'On'},start)
@@ -236,7 +243,7 @@ try:
         start=len(events);send('newSwitchVector','CONNECTION',{'CONNECT':'On','DISCONNECT':'Off'})
         wait('CONNECTION','Ok',{'CONNECT':'On'},start)
         wait('TELESCOPE_PARK','Ok',{'UNPARK':'On'},start)
-        wait('NATIVE_COMMAND_STATUS','Ok',{'COMMAND':'Connection reconciled with native telemetry; standard motion requests enabled by enclosure policy'},start)
+        wait('NATIVE_COMMAND_STATUS','Ok',{'COMMAND':'Native connection polled; motion admission awaits enclosure policy'},start)
         print('Legacy latch migration, reconnect cleanup, external state/operation reconciliation, poll timeout and recovery: passed')
         raise SystemExit(0)
     start=len(events);send('newSwitchVector','TELESCOPE_PARK',{'UNPARK':'On','PARK':'Off'})

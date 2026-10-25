@@ -25,6 +25,21 @@ int main(){
  for(auto kind:{MotionKind::Slew,MotionKind::Park,MotionKind::TrackingOn,MotionKind::TrackingOff,MotionKind::StopAll,MotionKind::Halt}){
   m.begin(kind);s.nativeStatus=9;check(m.observe(s)==MotionOutcome::Failed);
  }
+ // Tracking has its own five-second observation window; no wall-clock sleep.
+ for(auto kind:{MotionKind::TrackingOn,MotionKind::TrackingOff}){
+  m.begin(kind);s.nativeStatus=kind==MotionKind::TrackingOn?1:0;s.slewOrSettling=false;
+  check(m.trackingTransition());check(m.observe(s,m.started+std::chrono::milliseconds(4999))==MotionOutcome::Waiting);
+  check(m.observe(s,m.started+std::chrono::seconds(5))==MotionOutcome::Failed);
+  s.nativeStatus=kind==MotionKind::TrackingOn?0:7;
+  check(m.observe(s,m.started+std::chrono::seconds(5))==MotionOutcome::Complete);
+  s.slewOrSettling=true;check(m.observe(s,m.started+std::chrono::seconds(5))==MotionOutcome::Failed);
+ }
+ s.slewOrSettling=false;
+ for(int code:{0,1,5,7}){s.nativeStatus=code;check(settledTrackingState(s));s.slewOrSettling=true;check(!settledTrackingState(s));s.slewOrSettling=false;}
+ for(int code:{2,3,4,6,8,9,10,11,98,99}){s.nativeStatus=code;check(!settledTrackingState(s));}
+ for(auto kind:{MotionKind::Slew,MotionKind::Flip,MotionKind::Park,MotionKind::Unpark,MotionKind::Halt,MotionKind::StopAll}){
+  m.begin(kind);check(!m.trackingTransition());
+ }
  s.nativeStatus=7;
  m.begin(MotionKind::TrackingOn);check(m.observe(s)==MotionOutcome::Waiting);s.nativeStatus=0;check(m.observe(s)==MotionOutcome::Complete);
  m.begin(MotionKind::TrackingOff);check(m.observe(s)==MotionOutcome::Waiting);s.nativeStatus=7;check(m.observe(s)==MotionOutcome::Complete);

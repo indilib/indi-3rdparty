@@ -1,64 +1,74 @@
-# Validation and review limits — October 24, 2026
+# Validation and review limits — October 25, 2026
 
-## Source provenance
+## Current publication update
 
-Input: 10micron-v019-upstream-source.tar.gz uploaded from the Pi. Only current
-driver sources/tests were selected. config-restore-backup and earlier candidate
-manifests/patches/historical docs were not republished. SOURCE-HASHES.json at the
-package root records input/archive hashes and retained code identity.
+v0.28 driver runtime sources match the current staged/tested candidate; upstream
+build defaults (drivers ON, tests OFF) and GNUInstallDirs are retained. libnova
+is added for native-JD display, with all 40 tests registered when testing/Python
+are enabled. Test home/configuration isolation is explicit. No private site
+configuration, backup tree, manufacturer PDF or binary is submitted.
 
-The configuration restore correction is present: a saved Active Dome member is
-retained, while only the simulator default is cleared if no saved member exists.
-tests/indi_endpoint_config_test.py covers endpoint and enclosure restore/save.
-No physical motion implementation was changed during packaging.
+Fresh publication checkout: **40/40 tests passed in 220.52 seconds** against
+installed INDI 2.2.1 on the Pi, Release C++17 with warnings as errors. The retained
+accepted-flip timeout passed in 182.37 s; TCP/serial startup regressions in
+26.50/29.50 s. Both executables and registry XML installed into a private stage.
+A default configure independently confirmed driver builds ON and tests OFF.
+Real operator park metadata contents and modification time were unchanged.
 
-## Prior reported validation
+The earlier local v0.28 candidate passed 40/40 in 219.66 s (182.39-s timeout);
+the results above are a separate fresh publication-source build/run, not reused
+candidate numbers. Runtime .cpp/.h/XML inputs match the hardware-tested v0.28
+candidate; publication differences are build defaults/install conventions,
+documentation and additional explicit test home isolation.
 
-| Environment | Evidence |
+## Versioned hardware evidence
+
+| Reference path | Evidence and scope |
 |---|---|
-| INDI 2.2.1, Linux x86_64 | Archived development report: 18 short tests plus accepted-flip timeout passed |
-| INDI 2.2.5, Linux x86_64 | Archived development report: 18 short tests plus accepted-flip timeout passed |
-| Reference Pi, installed INDI 2.2.1 | User supplied 19/19 CTest pass, including timeout ~182.43 seconds; isolated staging completed |
-| Real GM1000HPS / v0.19 | User telemetry confirmed ordinary Unpark, repeat settled Unpark, native Park; closed-enclosure refusal and successful reopening/unpark recovery |
-| Saved Active Dome/policy | User reported restoration after restart; supplied code includes dedicated regression |
+| GM1000HPS firmware 3.4 / serial 9600 | Prolific adapter connection, parked guide-rate write/readback/restore, manual refraction behavior; user confirmed weather-mode agreement with independent MW4 connection during v0.22–0.24 work |
+| TCP v0.24 | Eight 100/250-ms directional pulse Busy→Idle lifecycles; tracking retained; ordinary On/Off/Goto/Park observed. Optical displacement is not proven |
+| v0.25 | Ignored pre-first-slew Tracking On bounded failure released; subsequent safe slew worked without reconnect |
+| v0.28 + separate roof local correction | Stationary startup; already-tracking mount-only reconnect; full profile restart with both drivers initializing together. All 59 valid samples in full restart stayed status 0/tracking 1/unparked/not settling; no STOP |
+| Paired roof behavior | Naturally occurring thirty-second weather-close request refused by mount lock while verified open state/permission remained valid; no deliberate dangerous closure |
+| v0.28 Park/closure | Normal native Park completed; user confirmed safe parked position; explicit roof closure reached closed-only limit and standard closed/Ok |
+| Parked/closed restart | All 57 valid samples stayed status 5/parked 1/tracking 0/not settling; closed permission correctly blocked; no unsolicited movement |
 
-These are development records/user reports, not fresh re-execution of every
-historical hardware condition by the publication environment. The read-only
-diagnostic executable is not a substitute for motion-driver commissioning.
+These are attended development/operator records. Reference environment is Linux
+Pi/aarch64, installed INDI 2.2.1 and a separate patched development KStars 3.8.5.
+The native/roof companion changes and KStars patches must not be presented as
+stock-Ekos guarantees or as part of this telescope-only PR. The independent roof
+reporting correction is documented in doc/STARTUP-AND-ENCLOSURES.md. No direct
+controller-wire/relay trace is claimed by an INDI-level capture.
 
-## Publication checks
+Earlier v0.19 was tested against INDI 2.2.1 and 2.2.5 in development and had a Pi
+19/19 publication run. Those historical results do not certify v0.28 against every
+later INDI version. Earlier serial hardware evidence is not a claim that every
+v0.28 serial motion/optical path was newly commissioned.
 
-Current environment has g++ and Python but no CMake/pkg-config/INDI development
-libraries. Protocol/state binaries and loopback TCP suites can be compiled here;
-the actual INDI executable cannot be freshly built here. See package HOST-TESTS.txt
-for the results of this packaging run. Full publication CMake build, all 19 CTest
-cases and isolated install staging must be repeated on the Pi before marking ready.
+## What the tests exercise
 
-Changes from the uploaded build file: driver build defaults ON; test default OFF;
-project name/version; GNUInstallDirs for registry and binary installation. The
-root upstream hooks are guarded against changed anchors and destination overlays.
-These build-only changes do not alter motion callbacks or protocol source.
+Protocol parsing, exact response framing, TCP/serial fragmentation, termios,
+native state transitions, rejection/uncertainty, command deadlines, guide timers,
+manual/guide cancellation, settings guards/rejections/readback, direct-weather
+ownership, fractional clock offsets, configuration persistence, native flips,
+recovery, enclosure connection/park/shutter ordering and initial empty definitions.
+The hardware-captured startup fixture reproduces STOP on unchanged v0.27 and
+passes on v0.28; placeholder definitions, missing evidence expiry and actual
+closed/fault/later-loss cases remain negative tests.
 
-## Publication Pi build completed
+## Open commissioning/review items
 
-User supplied the publication run from
-/home/astroberry/10micron-publication-validation-20261024-110729:
-19/19 CTest tests passed in 210.43 seconds, including indi-flip-timeout at
-182.42 seconds, then both executables and XML registries installed successfully
-into the private stage directory. No production binary/settings were replaced.
-This supersedes the earlier pending-publication-build requirement above.
-The subsequent legacy flip guide is documentation only; no source changed.
+- Image-based guide displacement/calibration, non-guided dither/settle and a full
+  native flip with post-flip alignment/guiding/capture resumption.
+- Broader models, firmware, USB adapters/baud rates and roof implementations.
+- Complete current-candidate physical manual-axis/serial motion checks.
+- Independent pressure-only physical change/restore, not conflated with earlier
+  successful manual-temperature editing or valid pressure rejection.
+- Full autonomous-flip recovery and normal later motion/park coherence.
+- Actual stock Ekos forced/native flip settings and separate KStars orchestration.
+- Repository placement/shared LX200 maintenance, neutral property interface,
+  licensing/attribution and public naming.
 
-## Unresolved acceptance/commissioning scope
-
-- Other real 10Micron models, operating systems and enclosure drivers.
-- Live enclosure-loss/reconnect safety hold under controlled conditions.
-- Broader stock Ekos flip interaction; native budget/orchestration patches are separate.
-- Serial transport, pulse guiding/manual axes and other unsupported capabilities.
-- Manufacturer protocol licensing: no PDF redistribution or endorsement claimed.
-- Source contribution license/attribution and whether maintainers prefer placement
-  in INDI core alongside the existing LX200 driver, rather than indi-3rdparty.
-
-The new driver's standard properties deliberately differ from a private physical
-roof sensor contract. Tests and history do not prove that all interlocks or
-hardware conditions are safe. Public review is intended to broaden that evidence.
+No destructive real roof-fault injection, every-mode completeness or generic
+unattended readiness is asserted. See doc/LEGACY-FLIP-INCIDENT.md for the actual
+historical failure/configuration evidence and explicitly missing settings/trace.

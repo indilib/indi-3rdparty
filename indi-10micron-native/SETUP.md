@@ -1,120 +1,104 @@
-# Setup and commissioning
+# Setup and commissioning — v0.28
 
-These commands target Linux/Pi. Build in a new checkout; preserve existing driver
-executables/settings for rollback. Do not install or launch against an active
-observing session. Host tests below use local emulators, not real mount hardware.
+## Build privately first
 
-## Dependencies and isolated build
-
-On Debian/Pi install build tools and INDI development packages, then verify the
-actual INDI version. Distribution repositories may provide an older version;
-stop rather than assuming the package name guarantees >=2.2.1.
+Linux/Pi dependencies: C++17 compiler, CMake >=3.18, pkg-config, INDI development
+libraries >=2.2.1, libnova development files, and Python 3 for tests. Verify the
+actual installed INDI version; package names alone are not a version guarantee.
 
 ```bash
-sudo apt install build-essential cmake pkg-config python3 libindi-dev
 pkg-config --modversion libindi
 cmake -S indi-10micron-native -B build-10micron-native \
-  -DCMAKE_BUILD_TYPE=Debug -DBUILD_INDI_DRIVER=ON -DBUILD_TESTING=ON \
+  -DCMAKE_BUILD_TYPE=Release -DBUILD_INDI_DRIVER=ON -DBUILD_TESTING=ON \
+  -DCMAKE_CXX_FLAGS=-Werror \
   -DCMAKE_INSTALL_PREFIX="$PWD/stage-10micron-native"
 cmake --build build-10micron-native -j2
-ctest --test-dir build-10micron-native --output-on-failure
+ctest --test-dir build-10micron-native -N
+ctest --test-dir build-10micron-native --output-on-failure -j2
 cmake --install build-10micron-native
 ```
 
-Execute from the parent of indi-10micron-native. Expected: all 19 tests pass,
-including indi-flip-timeout (~182 seconds), and staging contains both executables
-and registry XML. No SKIP is equivalent to validation. Python must be found to
-register loopback/INDI integration tests; verify `ctest -N` lists 19. Source-only
-test builds without INDI register fewer tests and do not validate driver callbacks.
+Run from the parent of indi-10micron-native. With driver/testing/Python enabled,
+expect **40 tests**, including the accepted-flip timeout (~182 seconds).
+Production defaults build drivers ON and tests OFF; no Python is required for
+that ordinary build. Tests use loopback controllers/serial PTYs and isolated
+configuration/home directories. No skipped or missing suite counts as a pass.
 
-The stage directory is private installation output, not a system install. CMake
-defaults now enable drivers and disable tests; explicit flags above enable all
-tests. Do not run sudo cmake --install against the staging build by mistake.
+GNUInstallDirs controls binary/registry install paths. This prefix is private
+staging, not a system install. Do not overwrite package-managed binaries or
+switch a running profile. Keep executable and registry XML routing consistent;
+avoid an older duplicate earlier on PATH. Preserve existing executables/settings
+for rollback. Installing this driver does not install companion KStars patches.
 
-For full production installation, after attended commissioning and backups,
-configure a separate install prefix consistent with your INDI installation
-(commonly /usr/local), rebuild and install deliberately. Registry XML and binary
-must both be visible to the actual indiserver/Ekos profile. Avoid duplicate
-copies with the same executable name earlier on PATH. Linux package-manager
-owned /usr/bin files should not be overwritten as a first commissioning step.
+## Transport
 
-## First attended connection using only the staged motion driver
+NATIVE_TRANSPORT selects TCP or Serial while disconnected. For TCP set the actual
+controller NATIVE_ENDPOINT; the generic default is 192.168.0.1:3490. Controller
+TCP 3490 is not the INDI server's usual client port 7624.
 
-Stop the existing INDI profile before this isolated test. Keep the real mount
-parked and roof clearance independently confirmed. Never run two motion drivers
-against the same controller for commissioning. This standalone command starts
-only the mount, no roof controller:
+For Serial set NATIVE_SERIAL device and baud, normally a stable by-id device
+and the controller's configured rate. Defaults are /dev/ttyUSB0 and 9600. It is
+raw 8N1 without flow control. See [serial/settings](doc/SERIAL-AND-SETTINGS.md).
+Do not change controller baud or transport while connected. Save configuration
+explicitly, restart and verify applied selection/readback. No automatic fallback.
 
-```bash
-indiserver -v "$PWD/stage-10micron-native/bin/indi_10micron_native_motion"
-```
+## Initial state and enclosure
 
-Connect an INDI client to this server (default localhost:7624). Mount network
-endpoint is a separate address: typically mount TCP port 3490, not indiserver
-7624. Set NATIVE_ENDPOINT HOST and PORT while disconnected; use the controller's
-actual LAN settings, not the generic default. Save configuration explicitly.
+Keep the reference mount parked for the first connection and independently check
+clearance. Stop old INDI profiles before selecting staged executables. In an
+observatory, start the actual roof driver in the intended server/profile, set its
+exact Active Dome name and Dome locks while mount disconnected, and configure
+reciprocal mount locking in the roof. Open-air use leaves Dome ignored selected.
+Do not bypass the interlock to make an error indicator disappear.
 
-Portable/open-air setup: Dome ignored, no Active Dome. Observatory setup: load
-the actual enclosure driver into your intended profile/server, set its exact
-Active Dome name and Dome locks while mount disconnected, configure reciprocal
-mount locking in the enclosure, then save. A standalone mount-only server cannot
-receive a configured enclosure's reports unless a client forwards those snoops.
+Verify DRIVER_INFO=0.28, correct active transport/endpoint, native status/settling,
+standard park/tracking selection, UTC/offset/site and supported settings. These
+populate from native readback, not a host time/site push. A parked mount behind a
+closed roof should show native parked status 5 and blocked roof permission; this
+is correct. An initial wait may last at most five seconds. Never move solely to
+make a preset light green when the protocol has no unambiguous mode getter.
 
-Connect and read:
+## Attended gates
 
-```bash
-indi_getprop -t 5 '10Micron Native Motion.DRIVER_INFO.*' \
-  '10Micron Native Motion.NATIVE_STATUS_TEXT.*' \
-  '10Micron Native Motion.NATIVE_STATE.*' \
-  '10Micron Native Motion.TELESCOPE_PARK.*' \
-  '10Micron Native Motion.NATIVE_ROOF_INTERLOCK.*'
-```
+1. Parked/closed profile restart: correct park/tracking adoption, closed permission
+   blocked, no unsolicited tracking or motion.
+2. Physically open roof and safe clearance before Unpark. Reference controller
+   may stay stopped until a first slew; ignored Tracking On must fail within its
+   bounded window and not leave all future safe motion locked indefinitely.
+3. Safe attended Goto/Abort/recovery; compare actual coordinates/park with the
+   controller/MW4 rather than trusting a UI flag. Coordinate separate clients;
+   shared target registers/settings require one intended writer.
+4. Already-tracking restart with physically open roof: adopt tracking without
+   STOP. To stop a profile while preserving tracking, disconnect mount first;
+   roof-first disconnection correctly removes permission from an active driver.
+5. Native Park must complete from telemetry. Obtain independent physical safe-
+   parked confirmation before approving roof closure. STOP alone is not Park.
+6. Image-based guide displacement, non-guided dither/settle and full flip/capture
+   recovery require usable sky. Do not label a timer-only guide test optical proof.
 
-Expected version 0.19, healthy connected telemetry, and observed native parked
-status 5 if physically parked. Roof interlock should be blocked if a configured
-roof is closed; that is correct. Connection reconciles controller state, it does
-not unpark or slew. Disconnect/restart and confirm endpoint, Active Dome and
-policy are restored before proceeding. Wrong firmware/endpoint means stop and
-correct it; never move the telescope simply to make a status light green.
+No deliberate real roof closure against an unparked mount is a valid negative
+test. Emulators cover closed/fault/missing/later-loss reports, transport ambiguity
+and deadlines. Current paired RollOff ino reporting correction is separate; see
+[startup compatibility](doc/STARTUP-AND-ENCLOSURES.md).
 
-## Physical commissioning
+## Settings and recovery
 
-1. For an observatory, confirm roof OPEN with physical sensors before Unpark.
-   Standard dome unpark status may disagree with the physical roof.
-2. Use normal INDI Unpark; await settled native unparked status. Repeat Unpark
-   should report already settled rather than send another motion command.
-3. Supervise a clear-sky Goto and verify native slew/settle completion. Compare
-   reported coordinates/pier side with the controller. Avoid daylight targets
-   near the Sun. Do not send arbitrary example RA/Dec without checking geometry.
-4. Test standard Abort separately from native Stop Including Tracking; confirm
-   controller state. Stop is not necessarily a safe park for roof closure.
-5. Request Park and await native parked plus settled confirmation. Close roof
-   only after independent clearance checks. Do not accept a stale logical flag.
-6. Restart and verify saved configuration. Preserve failed/interrupted park
-   warnings and use documented recovery; never edit persisted flags to clear them.
+Guide rate/refraction/weather ownership are described in the serial/settings
+page. Native automatic weather mode must not be silently disabled for a manual
+edit. Settings rejection and communication uncertainty are different outcomes.
+Explicit time/location writes are guarded. Model building and model loading
+remain with dedicated controller/MW4 workflows. Offset Sync selects persistent
+controller-wide CMCFG0 each time; it is not model-point creation.
 
-Configured-enclosure disconnect/reconnect and retained recovery hold are covered
-by emulators; real fault injection remains attended commissioning work. Do not
-close a real roof onto an unparked telescope to test interlocks.
+Gmte is a tracking-end estimate (horizon or meridian), not a guaranteed flip-ready
+time. [Legacy Ekos flips](LEGACY-EKOS-FLIPS.md) covers ordinary HA planning and
+forced/native-flip distinctions; the existing LX200 driver also supports native
+FLIP. Native-aware KStars planning/capture changes are separate from this PR.
 
-Sync changes the controller-wide CMCFG mode to offset-only CMCFG0. Coordinate
-with MW4/model-building tools; the driver does not restore another client's model
-refinement mode. Time, site, clock, refraction and mount limits remain configured
-on the controller. No weather shutdown is implemented in this driver.
+Communication uncertainty invalidates telemetry and holds new motion. No command
+is blindly replayed and no capture automatically resumes. An interrupted-park
+warning must not be edited away. A complete observed recovery park with valid
+roof proof differs from a static parked flag. Preserve logs before reconnecting.
 
-## Troubleshooting / rollback
-
-| Symptom | Action |
-|---|---|
-| No connection | Actual mount address/port, LAN routing, firmware >=2.14.9, competing clients |
-| Blocked configured enclosure | Exact saved name, connected/Ok, unparked/Ok, optional shutter open/Ok |
-| Settings lost at restart | Explicit Save, config directory permissions, duplicate executable versions; endpoint regression covers restore |
-| Communication failure | Outcome uncertain; telemetry becomes Alert/unknown; reconnect deliberately and inspect native state |
-| Park warning after STOP | Treat as interrupted operation; do not close roof merely because status says parked |
-| Flip rejected | Native controller decides eligibility; tracking-end estimate is not flip-ready time |
-| Flip accepted but times out | Safety STOP/retained Alert; no blind flip retry; inspect physical/native state |
-
-To roll back, stop this server/client session and restore the previous profile
-and executable routing. Stage-only installation has not overwritten system
-files. Save diagnostic logs before restarting; do not rely on disappearing GUI
-module history. Do not copy site credentials/configuration into an upstream PR.
+To roll back, stop the intended profile and restore the old executable/registry
+routing. Private staging has not changed system binaries or controller settings.

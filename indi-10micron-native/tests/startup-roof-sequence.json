@@ -1,0 +1,138 @@
+[
+  {
+    "utc_received": "2026-10-25T21:25:20.718+00:00",
+    "elapsed_s": 24.582327,
+    "device": "RollOff ino",
+    "name": "CONNECTION",
+    "label": "Connection",
+    "group": "Main Control",
+    "state": "Idle",
+    "perm": "rw",
+    "rule": "OneOfMany",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:20",
+    "type": "defSwitchVector",
+    "members": {
+      "CONNECT": "Off",
+      "DISCONNECT": "On"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:20.727+00:00",
+    "elapsed_s": 24.591108,
+    "device": "RollOff ino",
+    "name": "CONNECTION",
+    "label": "Connection",
+    "group": "Main Control",
+    "state": "Idle",
+    "perm": "rw",
+    "rule": "OneOfMany",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:20",
+    "type": "defSwitchVector",
+    "members": {
+      "CONNECT": "Off",
+      "DISCONNECT": "On"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:20.900+00:00",
+    "elapsed_s": 24.764293,
+    "device": "RollOff ino",
+    "name": "CONNECTION",
+    "label": "Connection",
+    "group": "Main Control",
+    "state": "Idle",
+    "perm": "rw",
+    "rule": "OneOfMany",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:20",
+    "type": "defSwitchVector",
+    "members": {
+      "CONNECT": "Off",
+      "DISCONNECT": "On"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:21.220+00:00",
+    "elapsed_s": 25.084127,
+    "device": "RollOff ino",
+    "name": "CONNECTION",
+    "state": "Ok",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:21",
+    "type": "setSwitchVector",
+    "members": {
+      "CONNECT": "On",
+      "DISCONNECT": "Off"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:21.220+00:00",
+    "elapsed_s": 25.084194,
+    "device": "RollOff ino",
+    "name": "DOME_PARK",
+    "label": "Parking",
+    "group": "Main Control",
+    "state": "Ok",
+    "perm": "rw",
+    "rule": "OneOfMany",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:21",
+    "type": "defSwitchVector",
+    "members": {
+      "PARK": "Off",
+      "UNPARK": "Off"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:21.220+00:00",
+    "elapsed_s": 25.084241,
+    "device": "RollOff ino",
+    "name": "DOME_PARK",
+    "state": "Ok",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:21",
+    "type": "setSwitchVector",
+    "members": {
+      "PARK": "Off",
+      "UNPARK": "On"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:21.701+00:00",
+    "elapsed_s": 25.565289,
+    "device": "RollOff ino",
+    "name": "CONNECTION",
+    "label": "Connection",
+    "group": "Main Control",
+    "state": "Ok",
+    "perm": "rw",
+    "rule": "OneOfMany",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:21",
+    "type": "defSwitchVector",
+    "members": {
+      "CONNECT": "On",
+      "DISCONNECT": "Off"
+    }
+  },
+  {
+    "utc_received": "2026-10-25T21:25:21.701+00:00",
+    "elapsed_s": 25.56532,
+    "device": "RollOff ino",
+    "name": "DOME_PARK",
+    "label": "Parking",
+    "group": "Main Control",
+    "state": "Ok",
+    "perm": "rw",
+    "rule": "OneOfMany",
+    "timeout": "60",
+    "timestamp": "2026-10-25T21:25:21",
+    "type": "defSwitchVector",
+    "members": {
+      "PARK": "Off",
+      "UNPARK": "On"
+    }
+  }
+]
