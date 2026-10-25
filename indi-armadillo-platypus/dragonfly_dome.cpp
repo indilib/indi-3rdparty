@@ -98,8 +98,21 @@ bool DragonFlyDome::initProperties()
     FirmwareVersionTP.fill(getDeviceName(), "DOME_FIRMWARE", "Firmware", MAIN_CONTROL_TAB,
                            IP_RO, 0, IPS_IDLE);
 
+    // Close retries: when the roof leaves the closed limit right after a park (or comes back
+    // to the open limit while closing), e.g. because the roof controller reversed on an
+    // obstruction, send a new close command once the roof is resting at the open limit.
+    CloseRetryNP[0].fill("RETRIES", "Retries", "%.f", 0., 3., 1., 0.);
+    CloseRetryNP.fill(getDeviceName(), "DOME_CLOSE_RETRY", "Close Retry", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
+    // Travel timeout: a roof that reaches no limit within this time stopped mid-way.
+    // Must be well above the slowest full travel. 0 disables it.
+    TravelTimeoutNP[0].fill("TIMEOUT", "Seconds", "%.f", 0., 600., 10., 0.);
+    TravelTimeoutNP.fill(getDeviceName(), "DOME_TRAVEL_TIMEOUT", "Travel Timeout", OPTIONS_TAB, IP_RW, 0, IPS_IDLE);
+
     // Load Configuration
     PerPortSP.load();
+    CloseRetryNP.load();
+    TravelTimeoutNP.load();
 
     ///////////////////////////////////////////////////////////////////////////////////////////////
     // #5 Misc.
@@ -171,6 +184,8 @@ bool DragonFlyDome::updateProperties()
         defineProperty(DomeControlSensorNP);
         defineProperty(&SensorNP);
 
+        defineProperty(CloseRetryNP);
+        defineProperty(TravelTimeoutNP);
     }
     else
     {
@@ -180,6 +195,9 @@ bool DragonFlyDome::updateProperties()
 
         deleteProperty(DomeControlSensorNP);
         deleteProperty(SensorNP.name);
+
+        deleteProperty(CloseRetryNP);
+        deleteProperty(TravelTimeoutNP);
     }
 
     return true;
@@ -295,6 +313,30 @@ bool DragonFlyDome::ISNewNumber(const char *dev, const char *name, double values
             saveConfig(DomeControlSensorNP);
             return true;
         }
+
+        /////////////////////////////////////////////
+        /// Close Retry
+        /////////////////////////////////////////////
+        if (CloseRetryNP.isNameMatch(name))
+        {
+            CloseRetryNP.update(values, names, n);
+            CloseRetryNP.setState(IPS_OK);
+            CloseRetryNP.apply();
+            saveConfig(CloseRetryNP);
+            return true;
+        }
+
+        /////////////////////////////////////////////
+        /// Travel Timeout
+        /////////////////////////////////////////////
+        if (TravelTimeoutNP.isNameMatch(name))
+        {
+            TravelTimeoutNP.update(values, names, n);
+            TravelTimeoutNP.setState(IPS_OK);
+            TravelTimeoutNP.apply();
+            saveConfig(TravelTimeoutNP);
+            return true;
+        }
     }
 
     return INDI::Dome::ISNewNumber(dev, name, values, names, n);
@@ -329,12 +371,16 @@ void DragonFlyDome::TimerHit()
         return;
 
     // Update all sensors
+    bool sensorsUpdated = false;
     m_UpdateSensorCounter++;
     if (m_UpdateSensorCounter >= SENSOR_UPDATE_THRESHOLD)
     {
         m_UpdateSensorCounter = 0;
         if (updateSensors())
+        {
             IDSetNumber(&SensorNP, nullptr);
+            sensorsUpdated = true;
+        }
     }
 
     // Update all relays every RELAY_UPDATE_THRESHOLD timer hit
@@ -346,30 +392,242 @@ void DragonFlyDome::TimerHit()
         UpdateDigitalOutputs();
     }
 
-    // If we are in motion
-    if (getDomeState() == DOME_MOVING || getDomeState() == DOME_PARKING || getDomeState() == DOME_UNPARKING)
-    {
-        // Roll off is opening
-        if (DomeMotionSP[DOME_CW].getState() == ISS_ON)
-        {
-            if (isSensorOn(DomeControlSensorNP[SENSOR_UNPARKED].getValue()))
-            {
-                setRoofOpen(false);
-                SetParked(false);
-            }
-        }
-        // Roll Off is closing
-        else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)
-        {
-            if (isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue()))
-            {
-                setRoofClose(false);
-                SetParked(true);
-            }
-        }
-    }
+    // Sensor values only change on a fresh read, so the roof state is only evaluated then.
+    // This also makes the confirmation counters below count real, independent reads.
+    if (sensorsUpdated)
+        checkRoofState();
 
     SetTimer(getCurrentPollingPeriod());
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// Supervise roof motion and park state from the limit switches.
+///
+/// Roof controllers with obstacle detection (typically a single toggle relay driving a
+/// garage-door style controller) can touch the closed limit for an instant and then reverse
+/// back to fully open. Trusting a single parked sensor read reported the roof as parked while
+/// it was reopening, and nothing re-checked the sensor afterwards, so a weather emergency
+/// park could be reported successful with the roof open.
+//////////////////////////////////////////////////////////////////////////////
+void DragonFlyDome::checkRoofState()
+{
+    const bool openOn = isSensorOn(DomeControlSensorNP[SENSOR_UNPARKED].getValue());
+    const bool closedOn = isSensorOn(DomeControlSensorNP[SENSOR_PARKED].getValue());
+    const auto now = std::chrono::steady_clock::now();
+
+    // A close failed: wait for the roof to rest at the open limit, then close again. With a
+    // toggle relay, a new pulse while the roof is still moving would stop it mid-way instead.
+    if (m_RecloseWaiting)
+    {
+        m_OpenConfirmCount = (openOn && !closedOn) ? m_OpenConfirmCount + 1 : 0;
+        if (m_OpenConfirmCount >= SENSOR_CONFIRM_READS)
+            retryClose();
+        else if (now > m_RecloseDeadline)
+        {
+            m_RecloseWaiting = false;
+            LOG_ERROR("Roof did not come back to the open limit after a failed close, its position is unknown. Check the roof!");
+            SetParked(false);
+            setDomeState(DOME_ERROR);
+        }
+        return;
+    }
+
+    switch (getDomeState())
+    {
+        case DOME_MOVING:
+        case DOME_PARKING:
+        case DOME_UNPARKING:
+            // Roll off is opening
+            if (DomeMotionSP[DOME_CW].getState() == ISS_ON)
+            {
+                // The relay was released on the previous read: close it again so the
+                // controller sees a new pulse.
+                if (m_NudgePending)
+                {
+                    m_NudgePending = false;
+                    setRoofOpen(true);
+                    m_MotionStart = now;
+                    break;
+                }
+
+                if (openOn)
+                {
+                    setRoofOpen(false);
+                    SetParked(false);
+                }
+                // After a new pulse, the roof went back to the closed limit: it is safe, but the
+                // unpark failed.
+                else if (m_OpenNudgeDone && closedOn)
+                {
+                    if (++m_ParkedConfirmCount >= SENSOR_CONFIRM_READS)
+                    {
+                        setRoofOpen(false);
+                        LOG_ERROR("Roof went back to the closed limit, unpark failed.");
+                        SetParked(true);
+                        setDomeState(DOME_ERROR);
+                    }
+                }
+                else if (travelTimedOut(now))
+                {
+                    // No limit reached in time: the roof stopped mid-way, which leaves it open to
+                    // the weather. A new pulse sends it to one of the limits, once per opening.
+                    setRoofOpen(false);
+                    if (!m_OpenNudgeDone)
+                    {
+                        m_OpenNudgeDone = true;
+                        m_NudgePending = true;
+                        m_ParkedConfirmCount = 0;
+                        LOGF_WARN("Roof did not reach the open limit within %.f seconds, it probably stopped mid-way. Sending a new pulse.",
+                                  TravelTimeoutNP[0].getValue());
+                    }
+                    else
+                    {
+                        LOGF_ERROR("Roof did not reach a limit within %.f seconds, it probably stopped mid-way. Check the roof!",
+                                   TravelTimeoutNP[0].getValue());
+                        setDomeState(DOME_IDLE);
+                        setDomeState(DOME_ERROR);
+                    }
+                }
+                else
+                    m_ParkedConfirmCount = 0;
+            }
+            // Roll Off is closing
+            else if (DomeMotionSP[DOME_CCW].getState() == ISS_ON)
+            {
+                if (!openOn)
+                    m_LeftOpenLimit = true;
+
+                // The relay was released on the previous read: close it again so the
+                // controller sees a new pulse.
+                if (m_NudgePending)
+                {
+                    m_NudgePending = false;
+                    setRoofClose(true);
+                    m_MotionStart = now;
+                    break;
+                }
+
+                if (closedOn)
+                {
+                    // Only trust the closed limit once it is stable over consecutive reads.
+                    if (++m_ParkedConfirmCount >= SENSOR_CONFIRM_READS)
+                    {
+                        setRoofClose(false);
+                        SetParked(true);
+                        m_ParkedTime = now;
+                        m_ParkLostCount = 0;
+                    }
+                    else
+                        LOG_DEBUG("Parked sensor is on, waiting for confirmation...");
+                }
+                else
+                {
+                    if (m_ParkedConfirmCount > 0)
+                        LOG_WARN("Parked sensor dropped right after reaching the closed limit, the roof may have reversed.");
+                    m_ParkedConfirmCount = 0;
+
+                    if (openOn && m_LeftOpenLimit)
+                        handleCloseFailure("Roof came back to the open limit while closing (obstruction?)");
+                    else if (travelTimedOut(now))
+                    {
+                        // No limit reached in time: the roof stopped mid-way. A new pulse sends it
+                        // to one of the limits; the closed limit completes the park and the open
+                        // limit is handled as a failed close above. Uses the close retry budget.
+                        setRoofClose(false);
+                        if (m_CloseRetriesLeft > 0)
+                        {
+                            m_CloseRetriesLeft--;
+                            m_NudgePending = true;
+                            LOGF_WARN("Roof did not reach a limit within %.f seconds, it probably stopped mid-way. Sending a new pulse (%d retry left).",
+                                      TravelTimeoutNP[0].getValue(), m_CloseRetriesLeft);
+                        }
+                        else
+                        {
+                            LOGF_ERROR("Roof did not reach a limit within %.f seconds, it probably stopped mid-way. Roof is NOT closed!",
+                                       TravelTimeoutNP[0].getValue());
+                            SetParked(false);
+                            setDomeState(DOME_ERROR);
+                        }
+                    }
+                }
+            }
+            break;
+
+        case DOME_PARKED:
+            // The parked sensor must stay on for as long as the dome is reported parked.
+            m_ParkLostCount = closedOn ? 0 : m_ParkLostCount + 1;
+            if (m_ParkLostCount >= SENSOR_CONFIRM_READS)
+            {
+                m_ParkLostCount = 0;
+                if (now - m_ParkedTime < std::chrono::seconds(RECLOSE_WINDOW_S))
+                    handleCloseFailure("Roof left the closed limit right after parking (obstruction?)");
+                else
+                {
+                    LOG_WARN("Roof left the closed limit while parked, dome is no longer parked.");
+                    SetParked(false);
+                }
+            }
+            break;
+
+        default:
+            break;
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// Without a motion sensor, a roof stopped mid-way looks like a moving roof: only the
+/// travel time tells them apart.
+//////////////////////////////////////////////////////////////////////////////
+bool DragonFlyDome::travelTimedOut(std::chrono::steady_clock::time_point now) const
+{
+    const double timeout = TravelTimeoutNP[0].getValue();
+    return timeout > 0 && now - m_MotionStart > std::chrono::duration<double>(timeout);
+}
+
+//////////////////////////////////////////////////////////////////////////////
+/// The roof did not stay closed: release the relay, then either wait for the roof to come
+/// back to the open limit and close it again, or report the park as failed.
+//////////////////////////////////////////////////////////////////////////////
+void DragonFlyDome::handleCloseFailure(const char *reason)
+{
+    setRoofClose(false);
+    m_ParkedConfirmCount = 0;
+
+    if (m_CloseRetriesLeft > 0)
+    {
+        m_CloseRetriesLeft--;
+        m_RecloseWaiting = true;
+        m_OpenConfirmCount = 0;
+        m_RecloseDeadline = std::chrono::steady_clock::now() + std::chrono::seconds(RECLOSE_WAIT_S);
+        LOGF_WARN("%s. Will close again once the roof is back at the open limit.", reason);
+        // Stop the motion and record the roof as open, but keep reporting a park in progress
+        // to clients.
+        SetParked(false);
+        setDomeState(DOME_PARKING);
+    }
+    else
+    {
+        LOGF_ERROR("%s. Roof is NOT closed!", reason);
+        SetParked(false);
+        setDomeState(DOME_ERROR);
+    }
+}
+
+//////////////////////////////////////////////////////////////////////////////
+///
+//////////////////////////////////////////////////////////////////////////////
+void DragonFlyDome::retryClose()
+{
+    LOGF_WARN("Roof is back at the open limit, closing again (%d retry left).", m_CloseRetriesLeft);
+    // INDI::Dome::Move() refuses new motion while parking.
+    setDomeState(DOME_IDLE);
+    // m_RecloseWaiting is still set here so that Move() keeps the remaining retry count.
+    if (INDI::Dome::Park() == IPS_ALERT)
+    {
+        LOG_ERROR("Failed to start closing the roof again. Roof is NOT closed!");
+        setDomeState(DOME_ERROR);
+    }
+    m_RecloseWaiting = false;
 }
 
 //////////////////////////////////////////////////////////////////////////////
@@ -377,6 +635,9 @@ void DragonFlyDome::TimerHit()
 //////////////////////////////////////////////////////////////////////////////
 bool DragonFlyDome::Abort()
 {
+    m_RecloseWaiting = false;
+    m_NudgePending = false;
+
     if (getDomeState() == DOME_MOVING)
     {
         return (setRoofOpen(false) && setRoofClose(false));
@@ -510,10 +771,28 @@ IPState DragonFlyDome::Move(DomeDirection dir, DomeMotionCommand operation)
             return IPS_ALERT;
         }
 
+        m_MotionStart = std::chrono::steady_clock::now();
+        m_NudgePending = false;
+
         if (dir == DOME_CW)
+        {
+            // An explicit open cancels any pending automatic close retry.
+            m_RecloseWaiting = false;
+            m_OpenNudgeDone = false;
+            m_ParkedConfirmCount = 0;
             setRoofOpen(true);
+        }
         else
+        {
+            // Clients may close the roof through DOME_MOTION as well as DOME_PARK, so the
+            // retry budget is set here. A new close gets the full budget, an automatic retry
+            // keeps what is left.
+            if (!m_RecloseWaiting)
+                m_CloseRetriesLeft = static_cast<uint8_t>(CloseRetryNP[0].getValue());
+            m_ParkedConfirmCount = 0;
+            m_LeftOpenLimit = false;
             setRoofClose(true);
+        }
 
         return IPS_BUSY;
     }
@@ -562,6 +841,8 @@ bool DragonFlyDome::saveConfigItems(FILE *fp)
     PerPortSP.save(fp);
     DomeControlRelayNP.save(fp);
     DomeControlSensorNP.save(fp);
+    CloseRetryNP.save(fp);
+    TravelTimeoutNP.save(fp);
 
     return true;
 }
