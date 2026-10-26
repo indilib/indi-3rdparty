@@ -57,45 +57,87 @@ const char *POABase::getBayerString() const
 
 void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
 {
-    POAErrors ret;
     double lastExposure = mStreamExposureS.load(std::memory_order_relaxed);
-    double expoS = static_cast<double>(lastExposure * 0.95);
- 
-    ret = Helpers::SetConfig(mCameraInfo.cameraID, POA_EXP, expoS, POA_FALSE);
-    if (ret != POA_OK)
-    {
-        LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
-        return;
-    }
-
-    ret = POAStartExposure(mCameraInfo.cameraID, POA_FALSE);    // start video exposure
+    POAErrors ret = POAStartExposure(mCameraInfo.cameraID, POA_FALSE); // start video exposure
     if (ret != POA_OK)
     {
         LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
+        Streamer->setStream(false);
         return;
     }
 
     uint8_t *targetFrame = PrimaryCCD.getFrameBuffer();
     uint32_t totalBytes  = PrimaryCCD.getFrameBufferSize();
-    int waitMS           = static_cast<int>((lastExposure * 1000.0) + 500);
+    constexpr int minimumReadWaitMs = 5000;
+    constexpr uint32_t maxConsecutiveReadFailures = 3;
+    auto getReadWaitMs = [minimumReadWaitMs](double exposure)
+    {
+        return std::max(minimumReadWaitMs, static_cast<int>((exposure * 1000.0) + 500));
+    };
+    int waitMS = getReadWaitMs(lastExposure);
     double currentExposure;
 
     if (targetFrame == nullptr || totalBytes == 0)
     {
         LOGF_ERROR("Invalid video frame buffer: address=%p, size=%u.", targetFrame, totalBytes);
         POAStopExposure(mCameraInfo.cameraID);
+        Streamer->setStream(false);
         return;
     }
 
+    const auto streamStartTime = std::chrono::steady_clock::now();
+    auto lastFrameTime = streamStartTime;
+    uint64_t frameAttempts = 0;
+    uint64_t framesReceived = 0;
+    uint32_t consecutiveReadFailures = 0;
     while (!isAbortToQuit)
     {
+        ++frameAttempts;
+        const auto readStartTime = std::chrono::steady_clock::now();
         ret = POAGetImageData(mCameraInfo.cameraID, targetFrame, totalBytes, waitMS);
+        const auto readEndTime = std::chrono::steady_clock::now();
+        const double readDuration = std::chrono::duration<double>(readEndTime - readStartTime).count();
         if (ret != POA_OK)
         {
-            if (ret != POA_ERROR_TIMEOUT)
+            if (isAbortToQuit)
+                break;
+
+            const bool mayBeTransient = ret == POA_ERROR_TIMEOUT || ret == POA_ERROR_OPERATION_FAILED;
+            const bool waitedForTimeout = readDuration >= (waitMS * 0.9 / 1000.0);
+            POACameraState cameraState = STATE_CLOSED;
+            const POAErrors stateRet = POAGetCameraState(mCameraInfo.cameraID, &cameraState);
+
+            if (!mayBeTransient || !waitedForTimeout || stateRet != POA_OK ||
+                cameraState != STATE_EXPOSING)
             {
+                const double elapsed = std::chrono::duration<double>(readEndTime - streamStartTime).count();
+                int droppedImages = -1;
+                const POAErrors droppedRet = POAGetDroppedImagesCount(mCameraInfo.cameraID, &droppedImages);
+                LOGF_ERROR("Failed to read video data (%s): attempt=%llu, elapsed=%.3fs, "
+                           "read=%.3fs, format=%s, exposure=%.6fs, wait=%dms, buffer=%u bytes, "
+                           "camera_state=%d (query=%s), dropped_images=%d (query=%s).",
+                           Helpers::toString(ret), static_cast<unsigned long long>(frameAttempts),
+                           elapsed, readDuration, Helpers::toString(mCurrentVideoFormat), lastExposure, waitMS,
+                           totalBytes, static_cast<int>(cameraState), Helpers::toString(stateRet),
+                           droppedImages, Helpers::toString(droppedRet));
                 Streamer->setStream(false);
-                LOGF_ERROR("Failed to read video data (%s).", Helpers::toString(ret));
+                break;
+            }
+
+            ++consecutiveReadFailures;
+            int droppedImages = -1;
+            const POAErrors droppedRet = POAGetDroppedImagesCount(mCameraInfo.cameraID, &droppedImages);
+            LOGF_WARN("Video frame read delayed (%s): attempt=%llu, read=%.3fs, consecutive=%u/%u, "
+                      "format=%s, exposure=%.6fs, wait=%dms, dropped_images=%d (query=%s).",
+                      Helpers::toString(ret), static_cast<unsigned long long>(frameAttempts),
+                      readDuration, consecutiveReadFailures, maxConsecutiveReadFailures,
+                      Helpers::toString(mCurrentVideoFormat), lastExposure, waitMS,
+                      droppedImages, Helpers::toString(droppedRet));
+            if (consecutiveReadFailures >= maxConsecutiveReadFailures)
+            {
+                LOGF_ERROR("Stopping video stream after %u consecutive frame read failures.",
+                           consecutiveReadFailures);
+                Streamer->setStream(false);
                 break;
             }
 
@@ -104,10 +146,24 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
             continue;
         }
 
+        consecutiveReadFailures = 0;
+        const auto now = std::chrono::steady_clock::now();
+        ++framesReceived;
+        if (framesReceived == 1)
+            LOGF_DEBUG("First video frame received after %.3fs (read=%.3fs, exposure=%.6fs, wait=%dms, buffer=%u bytes).",
+                       std::chrono::duration<double>(now - streamStartTime).count(), readDuration,
+                       lastExposure, waitMS, totalBytes);
+        else if (framesReceived <= 10 || framesReceived % 100 == 0)
+            LOGF_DEBUG("Video frame #%llu received, interval %.3fs, read=%.3fs (exposure=%.6fs).",
+                       static_cast<unsigned long long>(framesReceived),
+                       std::chrono::duration<double>(now - lastFrameTime).count(),
+                       readDuration, lastExposure);
+        lastFrameTime = now;
+
         currentExposure = mStreamExposureS.load(std::memory_order_relaxed);
         if (currentExposure != lastExposure)
         {
-            expoS = static_cast<double>(currentExposure * 0.95);
+            const double expoS = static_cast<double>(currentExposure * 0.95);
             ret = Helpers::SetConfig(mCameraInfo.cameraID, POA_EXP, expoS, POA_FALSE);
             if (ret != POA_OK)
             {
@@ -116,7 +172,7 @@ void POABase::workerStreamVideo(const std::atomic_bool &isAbortToQuit)
             else
             {
                 LOGF_INFO("Streaming exposure updated: %.5f", currentExposure);
-                waitMS = static_cast<int>((currentExposure * 1000.0) + 500);
+                waitMS = getReadWaitMs(currentExposure);
                 lastExposure = currentExposure;
             }
         }
@@ -750,8 +806,7 @@ bool POABase::ISNewNumber(const char *dev, const char *name, double values[], ch
 
                 LOGF_DEBUG("Setting %s=%.2f...", ControlNP[i].getLabel(), ControlNP[i].getValue());
 
-                long value = static_cast<long>(ControlNP[i].getValue());
-                ret = Helpers::SetConfig(mCameraInfo.cameraID, numCtrlCap->configID, value, POA_FALSE);
+                ret = Helpers::SetConfigAsDouble(mCameraInfo.cameraID, numCtrlCap->configID, ControlNP[i].getValue(), POA_FALSE);
 
                 if (ret != POA_OK)
                 {
@@ -831,8 +886,7 @@ bool POABase::ISNewSwitch(const char *dev, const char *name, ISState *states, ch
 
                     LOGF_DEBUG("Setting %s=%.2f...", num.label, num.value);
 
-                    long value = num.value;
-                    POAErrors ret = Helpers::SetConfig(mCameraInfo.cameraID, numCtrlCap->configID, value, swAuto);
+                    POAErrors ret = Helpers::SetConfigAsDouble(mCameraInfo.cameraID, numCtrlCap->configID, num.value, swAuto);
                     if (ret != POA_OK)
                     {
                         LOGF_ERROR("Failed to set %s=%g (%s).", num.name, num.value, Helpers::toString(ret));
@@ -1085,8 +1139,169 @@ bool POABase::StartStreaming()
         }
     }
 #endif
+
+    const int cameraID = mCameraInfo.cameraID;
+    POAErrors ret;
+    POACameraState cameraState;
+
+    ret = POAGetCameraState(cameraID, &cameraState);
+    if (ret != POA_OK)
+    {
+        LOGF_ERROR("Failed to get camera state before streaming (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    if (cameraState == STATE_EXPOSING)
+    {
+        ret = POAStopExposure(cameraID);
+        if (ret != POA_OK)
+        {
+            LOGF_ERROR("Failed to stop previous exposure before streaming (%s).", Helpers::toString(ret));
+            return false;
+        }
+
+        constexpr int stateCheckIntervalMs = 10;
+        constexpr int stateCheckAttempts = 100;
+        for (int attempt = 0; attempt < stateCheckAttempts; ++attempt)
+        {
+            ret = POAGetCameraState(cameraID, &cameraState);
+            if (ret != POA_OK)
+            {
+                LOGF_ERROR("Failed to check camera state after stopping exposure (%s).", Helpers::toString(ret));
+                return false;
+            }
+
+            if (cameraState != STATE_EXPOSING)
+                break;
+
+            std::this_thread::sleep_for(std::chrono::milliseconds(stateCheckIntervalMs));
+        }
+
+        if (cameraState == STATE_EXPOSING)
+        {
+            LOG_ERROR("Camera is still exposing after stopping the previous exposure; cannot start streaming.");
+            return false;
+        }
+    }
+
+    if (cameraState != STATE_OPENED)
+    {
+        LOGF_ERROR("Camera is not ready for streaming (state %d).", static_cast<int>(cameraState));
+        return false;
+    }
+
+    const uint32_t binX = PrimaryCCD.getBinX();
+    const uint32_t binY = PrimaryCCD.getBinY();
+    if (binX == 0 || binX != binY)
+    {
+        LOGF_ERROR("Unsupported binning for streaming: %ux%u.", binX, binY);
+        return false;
+    }
+
+    const POAImgFormat imageType = getImageType();
+    if (imageType == POA_END)
+    {
+        LOG_ERROR("No valid video format selected; cannot start streaming.");
+        return false;
+    }
+
+    if (!UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(),
+                        PrimaryCCD.getSubW(), PrimaryCCD.getSubH()))
+    {
+        LOG_ERROR("Failed to apply the current frame settings before streaming.");
+        return false;
+    }
+
+    updateRecorderFormat();
+
+    int roiWidth = 0;
+    int roiHeight = 0;
+    int roiBin = 0;
+    int startX = 0;
+    int startY = 0;
+    POAImgFormat roiFormat = POA_END;
+    ret = POAGetROIFormat(cameraID, &roiWidth, &roiHeight, &roiBin, &roiFormat);
+    if (ret != POA_OK)
+    {
+        LOGF_ERROR("Failed to verify streaming ROI format (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    ret = POAGetImageStartPos(cameraID, &startX, &startY);
+    if (ret != POA_OK)
+    {
+        LOGF_ERROR("Failed to verify streaming ROI start position (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    const uint32_t expectedWidth = PrimaryCCD.getSubW() / binX;
+    const uint32_t expectedHeight = PrimaryCCD.getSubH() / binY;
+    const uint32_t expectedStartX = PrimaryCCD.getSubX() / binX;
+    const uint32_t expectedStartY = PrimaryCCD.getSubY() / binY;
+    if (roiWidth != static_cast<int>(expectedWidth) ||
+        roiHeight != static_cast<int>(expectedHeight) ||
+        roiBin != static_cast<int>(binX) ||
+        roiFormat != imageType ||
+        startX != static_cast<int>(expectedStartX) ||
+        startY != static_cast<int>(expectedStartY))
+    {
+        LOGF_ERROR("Streaming ROI mismatch: SDK %dx%d bin %d format %d start %d,%d; "
+                   "requested %ux%u bin %u format %d start %u,%u.",
+                   roiWidth, roiHeight, roiBin, static_cast<int>(roiFormat), startX, startY,
+                   expectedWidth, expectedHeight, binX, static_cast<int>(imageType),
+                   expectedStartX, expectedStartY);
+        return false;
+    }
+
+    uint32_t bytesPerPixel;
+    switch (imageType)
+    {
+        case POA_RAW8:
+        case POA_MONO8:
+            bytesPerPixel = 1;
+            break;
+        case POA_RAW16:
+            bytesPerPixel = 2;
+            break;
+        case POA_RGB24:
+            bytesPerPixel = 3;
+            break;
+        default:
+            LOGF_ERROR("Unsupported video format %d.", static_cast<int>(imageType));
+            return false;
+    }
+
+    const uint64_t requiredBytes = static_cast<uint64_t>(roiWidth) * roiHeight * bytesPerPixel;
+    const uint32_t bufferBytes = PrimaryCCD.getFrameBufferSize();
+    if (PrimaryCCD.getFrameBuffer() == nullptr || bufferBytes < requiredBytes)
+    {
+        LOGF_ERROR("Insufficient streaming frame buffer: address=%p, size=%u, required=%llu.",
+                   PrimaryCCD.getFrameBuffer(), bufferBytes,
+                   static_cast<unsigned long long>(requiredBytes));
+        return false;
+    }
+
+    const double targetExposure = Streamer->getTargetExposure();
+    if (!std::isfinite(targetExposure) || targetExposure <= 0)
+    {
+        LOGF_ERROR("Invalid streaming target exposure: %.6f s.", targetExposure);
+        return false;
+    }
+
+    ret = Helpers::SetConfig(cameraID, POA_EXP, targetExposure * 0.95, POA_FALSE);
+    if (ret != POA_OK)
+    {
+        LOGF_ERROR("Failed to set exposure before streaming (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    LOGF_DEBUG("Streaming preflight passed: ROI %dx%d, bin %d, format %d, start %d,%d, "
+               "buffer %u/%llu bytes, exposure %.6f s.",
+               roiWidth, roiHeight, roiBin, static_cast<int>(roiFormat), startX, startY,
+               bufferBytes, static_cast<unsigned long long>(requiredBytes), targetExposure);
+
     // Seed the worker's exposure snapshot in case STREAMING_EXPOSURE was never set by the client.
-    mStreamExposureS.store(Streamer->getTargetExposure(), std::memory_order_relaxed);
+    mStreamExposureS.store(targetExposure, std::memory_order_relaxed);
     mWorker.start(std::bind(&POABase::workerStreamVideo, this, std::placeholders::_1));
     return true;
 }
@@ -1489,9 +1704,11 @@ void POABase::createControls(int piNumberOfControls)
         }
 
         POABool isAuto = POA_FALSE;
-        POAConfigValue confVal;
+        double curVal = 0;
 
-        POAGetConfig(mCameraInfo.cameraID, cap.configID, &confVal, &isAuto);
+        Helpers::GetConfigAsDouble(mCameraInfo.cameraID, cap.configID, curVal, &isAuto);
+        const double minVal = Helpers::ConfigValueToDouble(cap.valueType, cap.minValue);
+        const double maxVal = Helpers::ConfigValueToDouble(cap.valueType, cap.maxValue);
 
         if (cap.isWritable)
         {
@@ -1500,11 +1717,11 @@ void POABase::createControls(int piNumberOfControls)
             // JM 2018-07-04: If Max-Min == 1 then it's boolean value
             // So no need to set a custom step value.
             double step = 1;
-            if (cap.maxValue.intValue - cap.minValue.intValue > 1)
-                step = (cap.maxValue.intValue - cap.minValue.intValue) / 100.0;
+            if (maxVal - minVal > 1)
+                step = (maxVal - minVal) / 100.0;
 
             INDI::WidgetNumber node;
-            node.fill(cap.szConfName, cap.szConfName, "%g", cap.minValue.intValue, cap.maxValue.intValue, step, confVal.intValue);
+            node.fill(cap.szConfName, cap.szConfName, "%g", minVal, maxVal, step, curVal);
             node.setAux(&cap);
             ControlNP.push(std::move(node));
         }
@@ -1539,12 +1756,11 @@ void POABase::updateControls()
     for (auto &num : ControlNP)
     {
         auto numCtrlCap = static_cast<POAConfigAttributes *>(num.getAux());
-        long value      = 0;
+        double value    = 0;
         POABool isAuto = POA_FALSE;
 
-        Helpers::GetConfig(mCameraInfo.cameraID, numCtrlCap->configID, value, &isAuto);
-
-        num.setValue(value);
+        if (Helpers::GetConfigAsDouble(mCameraInfo.cameraID, numCtrlCap->configID, value, &isAuto) == POA_OK)
+            num.setValue(value);
 
         auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch & it) -> bool
         {

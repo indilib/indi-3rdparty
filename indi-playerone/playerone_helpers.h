@@ -304,4 +304,58 @@ POAErrors GetConfig(
         nullptr);
 }
 
+// ============================================================================
+// Type-aware helpers for generic (UI driven) controls.
+// The SDK type of a config (INT/FLOAT/BOOL) decides which union member is used.
+// ============================================================================
+inline double ConfigValueToDouble(POAValueType type, const POAConfigValue &v)
+{
+    switch (type)
+    {
+        case VAL_BOOL:
+            return v.boolValue == POA_TRUE ? 1.0 : 0.0;
+        case VAL_FLOAT:
+            return v.floatValue;
+        default:
+            return static_cast<double>(v.intValue);
+    }
+}
+
+inline POAErrors SetConfigAsDouble(int cameraID, POAConfig config, double value, POABool isAuto = POA_FALSE)
+{
+    POAValueType sdkType;
+    POAErrors error = POAGetConfigValueType(config, &sdkType);
+    if (error != POA_OK)
+        return error;
+
+    switch (sdkType)
+    {
+        case VAL_BOOL:
+            return SetConfig(cameraID, config, value != 0 ? POA_TRUE : POA_FALSE, isAuto);
+        case VAL_FLOAT:
+            return SetConfig(cameraID, config, value, isAuto);
+        default:
+            return SetConfig(cameraID, config, static_cast<long>(value), isAuto);
+    }
+}
+
+inline POAErrors GetConfigAsDouble(int cameraID, POAConfig config, double &value, POABool *pIsAuto = nullptr)
+{
+    POAValueType sdkType;
+    POAErrors error = POAGetConfigValueType(config, &sdkType);
+    if (error != POA_OK)
+        return error;
+
+    POAConfigValue configValue = {};
+    POABool isAuto = POA_FALSE;
+    error = POAGetConfig(cameraID, config, &configValue, &isAuto);
+    if (error != POA_OK)
+        return error;
+
+    value = ConfigValueToDouble(sdkType, configValue);
+    if (pIsAuto != nullptr)
+        *pIsAuto = isAuto;
+    return POA_OK;
+}
+
 }

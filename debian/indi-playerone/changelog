@@ -1,3 +1,10 @@
+indi-playerone (1.25) bionic; urgency=low
+
+  * BugFix: Fix type handling for camera config
+  * Improved streaming video stability
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Mon, 26 Oct 2026
+
 indi-playerone (1.24) bionic; urgency=low
 
   * Available exposure change during video streaming
