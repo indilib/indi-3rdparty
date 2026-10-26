@@ -1,3 +1,7 @@
+v1.25
+* BugFix: Fix type handling for camera config
+* Improved streaming video stability
+
 v1.24
 * Available exposure change during video streaming
 * Refactor with thin, type-safe C++ wrapper for C SDK

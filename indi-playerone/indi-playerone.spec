@@ -74,6 +74,9 @@ make DESTDIR=%{buildroot} install
 %{_datadir}/indi
 
 %changelog
+* Mon Oct 26 2026 Hiroshi Saito <hiro3110g@gmail.com>
+- BugFix: Fix type handling for camera config
+- Improved streaming video stability
 * Wed Aug 12 2026 Hiroshi Saito <hiro3110g@gmail.com>
 - Available exposure change during video streaming
 - Refactor with thin, type-safe C++ wrapper for C SDK
