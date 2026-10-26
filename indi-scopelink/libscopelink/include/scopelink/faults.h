@@ -57,7 +57,7 @@ enum class FaultCode
     MotorDriver1InitialisationFailure,
     MotorDriver2CommunicationFailure,
     MotorDriver2InitialisationFailure,
-    SupplyIrSensorOvercurrent,
+    SupplySensorModuleOvercurrent,
     TargetHwidMismatch,
     UsbHubDs1Overcurrent,
     UsbHubDs2Overcurrent,
@@ -96,7 +96,12 @@ enum class FaultCode
      * parameter block was defaulted or predates the rules. While it stands the controller reports every
      * function as unconfigured and moves nothing.
      */
-    MotorConfigurationInvalid
+    MotorConfigurationInvalid,
+
+    // Interface 1.2: the sensor module's own sensors, each with a timeout of its own
+    Hdc2080CommunicationTimeout,
+    Lis2dw12CommunicationTimeout,
+    Tmp112CommunicationTimeout
 };
 
 /** @brief One named field of a fault freeze frame. */

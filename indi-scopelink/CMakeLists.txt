@@ -18,7 +18,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules/")
 
 set(SCOPELINK_VERSION_MAJOR 1)
-set(SCOPELINK_VERSION_MINOR 1)
+set(SCOPELINK_VERSION_MINOR 2)
 
 find_package(INDI 2.0.0 REQUIRED)
 
@@ -55,6 +55,8 @@ set(SCOPELINK_CORE_SOURCES
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/parameters_generated.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/faults.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/firmware.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/filter.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/orientation.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/libscopelink/src/simulator.cpp
 )
 

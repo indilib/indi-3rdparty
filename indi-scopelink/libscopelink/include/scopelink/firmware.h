@@ -111,9 +111,15 @@ struct BootInfo
 
         /**
          * Whether the controller's flash is read protected. Reported, never changed: the boot loader arms
-         * it on its first run, and nothing an update does needs it taken off. A controller that says it is
-         * not protected is one whose option byte programming failed, which is worth knowing but is not a
-         * reason to refuse it.
+         * it on its first run, and nothing an update does needs it taken off.
+         *
+         * What counts is the boot loader's to say. One from before level 2 reports level 1 as protected;
+         * from the boot loader that arms level 2, only level 2 is, and a unit it finds at level 1 is taken
+         * on to level 2 at its next start. So a controller that says it is not protected is either one whose
+         * option byte programming failed, or one that was reset between erasing the option bytes and
+         * programming them - which reads as level 1 until the next start finishes the job. Either is worth
+         * knowing, and neither is a reason to refuse it: the update goes through the boot loader whatever
+         * the level.
          */
         bool isReadProtected{ false };
 

@@ -49,8 +49,8 @@ const char *Fault::nameOf(FaultCode code)
             return "Motor 3 driver communication failure";
         case FaultCode::MotorDriver3InitialisationFailure:
             return "Motor 3 driver initialisation failure";
-        case FaultCode::SupplyIrSensorOvercurrent:
-            return "Infrared sensor supply overcurrent";
+        case FaultCode::SupplySensorModuleOvercurrent:
+            return "Sensor module supply overcurrent";
         case FaultCode::TargetHwidMismatch:
             return "Firmware is for a different unit";
         case FaultCode::UsbHubDs1Overcurrent:
@@ -97,6 +97,12 @@ const char *Fault::nameOf(FaultCode code)
             return "Independent watchdog reset";
         case FaultCode::MotorConfigurationInvalid:
             return "Motor assignment unusable";
+        case FaultCode::Hdc2080CommunicationTimeout:
+            return "Humidity sensor not answering";
+        case FaultCode::Lis2dw12CommunicationTimeout:
+            return "Accelerometer not answering";
+        case FaultCode::Tmp112CommunicationTimeout:
+            return "Air temperature sensor not answering";
         case FaultCode::Unknown:
             break;
     }
@@ -123,7 +129,7 @@ const FaultCode LegacyCodes[] = { FaultCode::SmEepromFault,
                                   FaultCode::MotorDriver1InitialisationFailure,
                                   FaultCode::MotorDriver2CommunicationFailure,
                                   FaultCode::MotorDriver2InitialisationFailure,
-                                  FaultCode::SupplyIrSensorOvercurrent,
+                                  FaultCode::SupplySensorModuleOvercurrent,
                                   FaultCode::TargetHwidMismatch,
                                   FaultCode::UsbHubDs1Overcurrent,
                                   FaultCode::UsbHubDs2Overcurrent,
@@ -161,7 +167,7 @@ const FaultCode CurrentCodes[] = { FaultCode::SmEepromFault,
                                    FaultCode::MotorDriver2InitialisationFailure,
                                    FaultCode::MotorDriver3CommunicationFailure,
                                    FaultCode::MotorDriver3InitialisationFailure,
-                                   FaultCode::SupplyIrSensorOvercurrent,
+                                   FaultCode::SupplySensorModuleOvercurrent,
                                    FaultCode::TargetHwidMismatch,
                                    FaultCode::UsbHubDs1Overcurrent,
                                    FaultCode::UsbHubDs2Overcurrent,
@@ -184,7 +190,10 @@ const FaultCode CurrentCodes[] = { FaultCode::SmEepromFault,
                                    FaultCode::EcuOvertemperatureWarning,
                                    FaultCode::EcuOvertemperatureError,
                                    FaultCode::IndependentWatchdogReset,
-                                   FaultCode::MotorConfigurationInvalid };
+                                   FaultCode::MotorConfigurationInvalid,
+                                   FaultCode::Hdc2080CommunicationTimeout,
+                                   FaultCode::Lis2dw12CommunicationTimeout,
+                                   FaultCode::Tmp112CommunicationTimeout };
 
 /** @brief The numbering a given hardware generation uses, and how many entries it has. */
 const FaultCode *tableFor(int hardwareMajor, size_t &length)
@@ -312,7 +321,7 @@ void Fault::buildSnapshotFields(const Frame &raw, const Capabilities &capabiliti
 
     add("System uptime", 4);
     add("Supply voltage", 2);
-    add("IR sensor voltage", 2);
+    add("Sensor module voltage", 2);
     add("Fan A voltage", 2);
     add("Fan B voltage", 2);
 

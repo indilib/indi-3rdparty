@@ -20,7 +20,7 @@ capabilities.statusFrameLength     = 56
 capabilities.dtcSnapshotLength     = 34
 capabilities.hasUsbHub             = 0
 capabilities.hasSmartSwitches      = 0
-capabilities.hasTemperatureSensor  = 1
+capabilities.hasMirrorTemperature  = 1
 
 eeprom.datasetCounter              = 3
 eeprom.learntDataCounter           = 8

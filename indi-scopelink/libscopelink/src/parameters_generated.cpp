@@ -16,7 +16,7 @@
     GENERATED FILE - do not edit.
 
     Produced by tools/gen_did_catalogue.py from the ScopeLink firmware description,
-    params.json, interface version 1.1. Neither that script nor its input is part of
+    params.json, interface version 1.2. Neither that script nor its input is part of
     this tree; regenerate the file there rather than editing it here.
 
     Everything in it is the firmware's own statement about its parameters - the limits,
@@ -35,7 +35,7 @@ namespace catalogue
 
 const char * const Product = "ScopeLink";
 const int InterfaceMajor   = 1;
-const int InterfaceMinor   = 1;
+const int InterfaceMinor   = 2;
 
 static const DidOption OptionsMotorDirection[] = {
     { 0, "MOTOR_DIR_NORMAL", "Normal" },
@@ -59,6 +59,13 @@ static const DidOption OptionsFanState[] = {
     { 1, "FAN_STATE_ON", "On" },
 };
 
+static const DidOption OptionsSensorModule[] = {
+    { 0, "SENSOR_MODULE_NONE", "No module fitted" },
+    { 1, "SENSOR_MODULE_A", "Module A (MLX90614)" },
+    { 2, "SENSOR_MODULE_B", "Module B (MLX90614 + HDC2080 + LIS2DW12)" },
+    { 3, "SENSOR_MODULE_C", "Module C (LIS2DW12 + TMP112)" },
+};
+
 static const DidOption OptionsFeatureState[] = {
     { 0, "FEATURE_DISABLED", "Disabled" },
     { 1, "FEATURE_ENABLED", "Enabled" },
@@ -74,6 +81,7 @@ const DidGroupInfo Groups[] = {
     { "fan_a", "Fan A", "PARAMS_FAN_A", 40 },
     { "fan_b", "Fan B", "PARAMS_FAN_B", 50 },
     { "temperature", "Temperature processing", "PARAMS_TEMPERATURE", 60 },
+    { "sensor_module", "Sensor module", "PARAMS_SENSOR_MODULE", 65 },
     { "supply", "Sensor supply", "PARAMS_SUPPLY", 70 },
     { "smartsw", "Smart switch monitoring", "PARAMS_SMARTSW", 80 },
     { "uc_temp", "Controller temperature", "PARAMS_UC_TEMP", 90 },
@@ -439,17 +447,20 @@ const DidDescriptor Parameters[] = {
       255, 31, 1, false, false, nullptr, 0, nullptr,
       "Weight the previous mirror reading keeps against a new one. Zero passes the reading through unfiltered; a "
       "larger value settles more slowly." },
-    // 0x0302 temperature.enabled
-    { 0x0302u, "temperature.enabled", "Temperature processing enabled", "temperature", "", DidType::UInt8, false, 0, 1,
-      1, 1, true, false, OptionsFeatureState, sizeof(OptionsFeatureState) / sizeof(OptionsFeatureState[0]),
-      "PARAM_TEMPERATURE_ENABLED",
-      "Powers the infrared sensor and lets the fans follow the temperature difference. Disabled leaves the sensor "
-      "supply off, and the fans stay under manual control." },
+    // 0x0302 sensor_module.type
+    { 0x0302u, "sensor_module.type", "Fitted sensor module", "sensor_module", "", DidType::UInt8, false, 0, 3, 1, 1,
+      true, false, OptionsSensorModule, sizeof(OptionsSensorModule) / sizeof(OptionsSensorModule[0]),
+      "PARAM_SENSOR_MODULE_TYPE",
+      "Which sensor module is plugged in. It decides whether the sensor supply is switched on and which sensors are "
+      "read: module A carries the infrared sensor alone, module B adds the humidity sensor and the accelerometer to "
+      "it, and module C has the accelerometer and an ambient temperature sensor but no infrared sensor. The fans only "
+      "follow the temperature difference with an infrared sensor, so with module C or no module they stay under manual "
+      "control. A change takes effect at the next reset." },
     // 0x0500 supply.sensor.max_voltage_drop
     { 0x0500u, "supply.sensor.max_voltage_drop", "Sensor supply maximum drop", "supply", "V", DidType::UInt16, false,
-      20, 3300, 150, 1000, true, false, nullptr, 0, nullptr,
-      "How far the infrared sensor supply may fall below the controller supply before it is treated as an overcurrent. "
-      "Reaching it switches the sensor supply off until the next reset. The reference is the 3.3 V rail, so a "
+      20, 3300, 650, 1000, true, false, nullptr, 0, nullptr,
+      "How far the sensor module supply may fall below the controller supply before it is treated as an overcurrent. "
+      "Reaching it switches the sensor module supply off until the next reset. The reference is the 3.3 V rail, so a "
       "threshold at or above it never trips." },
     // 0x0600 smartsw.short_to_vcc_diff
     { 0x0600u, "smartsw.short_to_vcc_diff", "Short to supply threshold", "smartsw", "V", DidType::UInt16, false, 0,

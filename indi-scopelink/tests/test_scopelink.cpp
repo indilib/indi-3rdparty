@@ -22,15 +22,20 @@
 
 #include "scopelink/device.h"
 #include "scopelink/faults.h"
+#include "scopelink/filter.h"
 #include "scopelink/firmware.h"
+#include "scopelink/orientation.h"
 #include "scopelink/parameters.h"
 #include "scopelink/protocol.h"
 #include "scopelink/roles.h"
 #include "scopelink/simulator.h"
 #include "scopelink/transport.h"
 
+#include <array>
 #include <chrono>
+#include <cmath>
 #include <cstdio>
+#include <optional>
 #include <thread>
 #include <cstdlib>
 #include <cstring>
@@ -190,7 +195,7 @@ Frame statusPayload(int hardwareMajor, int interfaceMinor = 0)
     Frame payload;
 
     put16(payload, 12345);  //  4 supply
-    put16(payload, 4990);   //  6 IR sensor supply
+    put16(payload, 4990);   //  6 sensor module supply
     put16(payload, 11000);  //  8 fan A
     put16(payload, 10500);  // 10 fan B
     put16(payload, 0xffce); // 12 controller temperature, -50 as a signed 16 bit value
@@ -204,8 +209,8 @@ Frame statusPayload(int hardwareMajor, int interfaceMinor = 0)
 
     put16(payload, 25);    // 22 fan A target, 0.5 K
     put16(payload, 100);   // 24 fan B target, 2.0 K
-    put16(payload, 14650); // 26 ambient, 20.0 C
-    put16(payload, 14400); // 28 mirror, 15.0 C
+    put16(payload, 14658); // 26 ambient, 20.01 C
+    put16(payload, 14408); // 28 mirror, 15.01 C
 
     payload.push_back(1);  // 30 motor 1 status, counter clockwise
     payload.push_back(42); // 31 motor 1 load
@@ -263,10 +268,22 @@ Frame statusPayload(int hardwareMajor, int interfaceMinor = 0)
     if (interfaceMinor >= 1)
         payload.push_back(1); // opening
 
+    // The sensor module, from interface 1.2: module B, its ambient taken from the humidity sensor
+    if (interfaceMinor >= 2)
+    {
+        payload.push_back(2);   // module
+        payload.push_back(2);   // ambient source
+        put16(payload, 455);    // humidity, 45.5 %RH
+        put16(payload, 14058);  // dew point, 8.01 C
+        put16(payload, 0xfff4); // X, -12 mg
+        put16(payload, 34);     // Y
+        put16(payload, 1000);   // Z, lying flat
+    }
+
     return payload;
 }
 
-scopelink::Capabilities capabilitiesFor(int hardwareMajor, int temperatureSensorFitted = -1, int interfaceMajor = 1,
+scopelink::Capabilities capabilitiesFor(int hardwareMajor, int sensorModule = -1, int interfaceMajor = 1,
                                         int interfaceMinor = 0)
 {
     scopelink::Identification identification;
@@ -275,7 +292,7 @@ scopelink::Capabilities capabilitiesFor(int hardwareMajor, int temperatureSensor
     identification.interfaceMajor = interfaceMajor;
     identification.interfaceMinor = interfaceMinor;
 
-    return scopelink::Capabilities::of(identification, temperatureSensorFitted);
+    return scopelink::Capabilities::of(identification, sensorModule);
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -389,12 +406,32 @@ void testCapabilities()
     CHECK(second.hasSecondMotor);
     CHECK(second.hasPowerSwitches);
 
-    // The sensor is assumed fitted when the controller does not answer the identifier, and on any
-    // generation that does not hold it at all.
-    CHECK(capabilitiesFor(2, 0).hasTemperatureSensor);
-    CHECK(capabilitiesFor(3, -1).hasTemperatureSensor);
-    CHECK(capabilitiesFor(3, 1).hasTemperatureSensor);
-    CHECK(!capabilitiesFor(3, 0).hasTemperatureSensor);
+    // The infrared sensor is assumed fitted when the controller does not answer the identifier, and on
+    // any generation that does not hold it at all.
+    CHECK(capabilitiesFor(2, 0).hasMirrorTemperature);
+    CHECK(capabilitiesFor(3, -1).hasMirrorTemperature);
+    CHECK(capabilitiesFor(3, 1).hasMirrorTemperature);
+    CHECK(!capabilitiesFor(3, 0).hasMirrorTemperature);
+    CHECK(!capabilitiesFor(3, 0).hasAmbientTemperature);
+
+    // Interface 1.2 made the identifier the sensor module. Every module measures the air; module C has no
+    // infrared sensor and so no mirror, and a module this driver has never heard of is taken to have it.
+    CHECK(capabilitiesFor(4, 2, 1, 2).hasMirrorTemperature);
+    CHECK(capabilitiesFor(4, 3, 1, 2).hasAmbientTemperature);
+    CHECK(!capabilitiesFor(4, 3, 1, 2).hasMirrorTemperature);
+    CHECK(capabilitiesFor(4, 7, 1, 2).hasMirrorTemperature);
+
+    // Humidity on module B alone, acceleration on B and C, and neither before the frame carries them
+    CHECK(capabilitiesFor(4, 2, 1, 2).hasHumidity);
+    CHECK(capabilitiesFor(4, 2, 1, 2).hasAcceleration);
+    CHECK(!capabilitiesFor(4, 3, 1, 2).hasHumidity);
+    CHECK(capabilitiesFor(4, 3, 1, 2).hasAcceleration);
+    CHECK(!capabilitiesFor(4, 1, 1, 2).hasAcceleration);
+    CHECK(!capabilitiesFor(4, 2, 1, 1).hasHumidity);
+
+    // And twelve bytes more in the status frame for it
+    CHECK(capabilitiesFor(4, -1, 1, 1).statusFrameLength == 65);
+    CHECK(capabilitiesFor(4, -1, 1, 2).statusFrameLength == 77);
 
     // Either side of the supported range is refused rather than decoded with a neighbouring generation's
     // offsets, which would produce plausible readings from the wrong bytes.
@@ -413,8 +450,9 @@ void testStatusParsing()
     // The four controllers that exist as far as the frame layout is concerned. The interface version is
     // carried alongside the generation rather than folded into it because it is a separate axis: the
     // third of these is the same board as the second, reflashed, and the fourth is a different board on
-    // the same firmware as the third.
-    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 } };
+    // the same firmware as the third. The fifth is that board on interface 1.2, with the sensor module's
+    // twelve bytes behind the flap state.
+    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 }, { 4, 2 } };
 
     for (const auto &layout : layouts)
     {
@@ -442,8 +480,8 @@ void testStatusParsing()
 
         CHECK(status.ambientTemperatureValid);
         CHECK(status.mirrorTemperatureValid);
-        CHECK(std::abs(status.ambientTemperatureCelsius() - 20.0) < 0.001);
-        CHECK(std::abs(status.mirrorTemperatureCelsius() - 15.0) < 0.001);
+        CHECK(std::abs(status.ambientTemperatureCelsius() - 20.01) < 0.001);
+        CHECK(std::abs(status.mirrorTemperatureCelsius() - 15.01) < 0.001);
 
         CHECK(status.motorCount() == ((generation > 3) ? 3 : 2));
 
@@ -519,6 +557,27 @@ void testStatusParsing()
         // it is read off the flap motor, and saying so is not the same as saying there is no flap.
         CHECK(status.flapState
               == ((interfaceMinor >= 1) ? scopelink::FlapState::Opening : scopelink::FlapState::Unknown));
+
+        // The sensor module, which interface 1.2 appended behind the flap state
+        if (interfaceMinor >= 2)
+        {
+            CHECK(status.sensorModule == 2);
+            CHECK(status.ambientSource == 2);
+            CHECK(status.humidityValid);
+            CHECK(std::abs(status.humidityPercent() - 45.5) < 0.001);
+            CHECK(status.dewPointValid);
+            CHECK(std::abs(status.dewPointCelsius() - 8.01) < 0.001);
+            CHECK(status.accelerationValid);
+            CHECK(status.accelerationX == -12);
+            CHECK(status.accelerationY == 34);
+            CHECK(status.accelerationZ == 1000);
+        }
+        else
+        {
+            CHECK(status.sensorModule == -1);
+            CHECK(!status.humidityValid);
+            CHECK(!status.accelerationValid);
+        }
     }
 
     // A frame of the wrong length for the generation is refused rather than decoded with the offsets of
@@ -565,6 +624,201 @@ void testTemperaturePlausibility()
 
     CHECK(!status.ambientTemperatureValid);
     CHECK(status.mirrorTemperatureValid);
+}
+
+// ---------------------------------------------------------------------------------------------------
+// Sensor module smoothing and tube orientation - the same cases the Windows driver is tested against
+// ---------------------------------------------------------------------------------------------------
+
+bool near(double actual, double expected, double tolerance)
+{
+    return std::abs(actual - expected) <= tolerance;
+}
+
+double sinDegrees(double degrees)
+{
+    return std::sin(degrees * 3.14159265358979323846 / 180.0);
+}
+
+double cosDegrees(double degrees)
+{
+    return std::cos(degrees * 3.14159265358979323846 / 180.0);
+}
+
+/** @brief A moment, in seconds from the start of a filter test. */
+scopelink::ReadingFilter::Clock::time_point filterTime(double seconds)
+{
+    return scopelink::ReadingFilter::Clock::time_point()
+           + std::chrono::duration_cast<scopelink::ReadingFilter::Clock::duration>(
+               std::chrono::duration<double>(1000.0 + seconds));
+}
+
+void testReadingFilter()
+{
+    // The driver's own polling period.
+    const double poll = 0.5;
+
+    {
+        scopelink::ReadingFilter filter;
+
+        // The first reading is taken as it stands, and one that does not move does not move.
+        CHECK(filter.humidity(filterTime(0), 62.5) == 62.5);
+        CHECK(near(filter.humidity(filterTime(60), 62.5), 62.5, 1e-9));
+    }
+
+    {
+        // A change arrives at the rate the settling time promises: one time constant in, two thirds of it.
+        scopelink::ReadingFilter filter;
+
+        filter.dewPoint(filterTime(0), 5.0);
+
+        double smoothed = 0;
+
+        for (int sample = 1; sample <= 30; sample++)
+            smoothed = filter.dewPoint(filterTime(sample * poll), 6.0);
+
+        CHECK(near(smoothed, 5.0 + (1.0 - std::exp(-1.0)), 0.001));
+    }
+
+    {
+        // A lone wild reading is not reported at all, and one still there on the next sample is believed.
+        scopelink::ReadingFilter filter;
+
+        filter.humidity(filterTime(0), 60.0);
+        CHECK(filter.humidity(filterTime(poll), 90.0) == 60.0);
+        CHECK(near(filter.humidity(filterTime(2 * poll), 60.0), 60.0, 1e-9));
+        CHECK(filter.humidity(filterTime(3 * poll), 90.0) == 60.0);
+        CHECK(filter.humidity(filterTime(4 * poll), 90.0) == 90.0);
+    }
+
+    {
+        // A reading that has been away too long starts again rather than ramping in.
+        scopelink::ReadingFilter filter;
+
+        filter.dewPoint(filterTime(0), 5.0);
+        CHECK(filter.dewPoint(filterTime(scopelink::ReadingFilter::LongestGapSeconds * 2), 6.0) == 6.0);
+    }
+
+    {
+        // A tube slewed at three degrees a second is followed within about a second.
+        scopelink::ReadingFilter filter;
+        std::array<double, 3> axes{};
+
+        for (int sample = 0; sample <= 20; sample++)
+        {
+            const double z = 1000.0 * sinDegrees(sample * poll * 3.0);
+
+            axes = filter.acceleration(filterTime(sample * poll), { 0, -1000, z });
+        }
+
+        const double arrived = 1000.0 * sinDegrees(10.0 * 3.0);
+
+        CHECK((arrived - axes[2]) < 60.0);
+        CHECK((arrived - axes[2]) > 0.0);
+    }
+
+    {
+        // A knock on the tube - one sample a third of a g out on every axis - does not move anything, and
+        // the axes are smoothed together.
+        scopelink::ReadingFilter filter;
+
+        for (int sample = 0; sample <= 10; sample++)
+            filter.acceleration(filterTime(sample * poll), { 0, -1000, 0 });
+
+        const std::array<double, 3> knocked = filter.acceleration(filterTime(11 * poll), { 330, -670, 330 });
+
+        CHECK(near(knocked[0], 0, 1e-6));
+        CHECK(near(knocked[1], -1000, 1e-6));
+        CHECK(near(knocked[2], 0, 1e-6));
+    }
+
+    {
+        // Opening a link forgets what the last one was reading.
+        scopelink::ReadingFilter filter;
+
+        filter.humidity(filterTime(0), 40.0);
+        filter.reset();
+        CHECK(filter.humidity(filterTime(poll), 80.0) == 80.0);
+    }
+}
+
+void testTubeOrientation()
+{
+    using scopelink::TubeOrientation;
+
+    const std::optional<TubeOrientation::Vector> none{};
+
+    // Fitted as designed, Y points at the ground with the tube level - which reads -1 g on Y, since an
+    // accelerometer at rest reads the opposite of gravity - and Z runs along the tube towards the sky.
+    const std::optional<TubeOrientation> level = TubeOrientation::from({ 0, -1000, 0 }, none);
+
+    CHECK(level.has_value());
+    CHECK(near(level->altitude(), 0, 0.01));
+    CHECK(level->roll().has_value() && near(*level->roll(), 0, 0.01));
+    CHECK(!level->isReferenced());
+
+    CHECK(
+        near(TubeOrientation::from({ 0, -1000 * cosDegrees(30), 1000 * sinDegrees(30) }, none)->altitude(), 30, 0.05));
+    CHECK(near(TubeOrientation::from({ 0, -1000 * cosDegrees(20), -1000 * sinDegrees(20) }, none)->altitude(), -20,
+               0.05));
+
+    // How hard gravity is reading does not change the angles.
+    CHECK(near(TubeOrientation::from({ 0, -1100 * cosDegrees(40), 1100 * sinDegrees(40) }, none)->altitude(),
+               TubeOrientation::from({ 0, -900 * cosDegrees(40), 900 * sinDegrees(40) }, none)->altitude(), 1e-6));
+
+    // Rolled thirty degrees clockwise as seen looking out of the sky end, up reads on the module's minus X.
+    const std::optional<TubeOrientation> rolled =
+        TubeOrientation::from({ -1000 * sinDegrees(30), -1000 * cosDegrees(30), 0 }, none);
+
+    CHECK(near(rolled->altitude(), 0, 0.01));
+    CHECK(near(*rolled->roll(), 30, 0.05));
+
+    CHECK(near(std::abs(*TubeOrientation::from({ 0, 1000, 0 }, none)->roll()), 180, 0.05));
+
+    // At the zenith there is no roll to report, and a reading with no strength has no direction at all.
+    const std::optional<TubeOrientation> zenith = TubeOrientation::from({ 3, -2, 1000 }, none);
+
+    CHECK(zenith->altitude() > TubeOrientation::RollLostAltitude);
+    CHECK(!zenith->roll().has_value());
+    CHECK(!TubeOrientation::from({ 10, -20, 5 }, none).has_value());
+
+    // A module fitted turned twenty degrees round the tube and tipped five along it reads as a tube rolled
+    // and raised, until a reference taken level makes that reading level.
+    const TubeOrientation::Vector crooked = { -1000 * sinDegrees(20) * cosDegrees(5),
+                                              -1000 * cosDegrees(20) * cosDegrees(5), 1000 * sinDegrees(5) };
+
+    const std::optional<TubeOrientation> assumed = TubeOrientation::from(crooked, none);
+
+    CHECK(near(assumed->altitude(), 5, 0.05));
+    CHECK(near(*assumed->roll(), 20, 0.05));
+
+    const TubeOrientation::Vector reference         = TubeOrientation::reference(crooked);
+    const std::optional<TubeOrientation> referenced = TubeOrientation::from(crooked, reference);
+
+    CHECK(referenced->isReferenced());
+    CHECK(near(referenced->altitude(), 0, 0.01));
+    CHECK(near(*referenced->roll(), 0, 0.01));
+
+    // A module fitted rolled forty degrees round the tube, taken level as the reference and then raised
+    // thirty degrees, reads thirty and no roll however its axes lie.
+    const TubeOrientation::Vector turned =
+        TubeOrientation::reference({ -1000 * sinDegrees(40), -1000 * cosDegrees(40), 0 });
+    const std::optional<TubeOrientation> raised = TubeOrientation::from(
+        { -1000 * cosDegrees(30) * sinDegrees(40), -1000 * cosDegrees(30) * cosDegrees(40), 1000 * sinDegrees(30) },
+        turned);
+
+    CHECK(near(raised->altitude(), 30, 0.05));
+    CHECK(near(*raised->roll(), 0, 0.05));
+
+    // No reference off a tube being handled, nor off a module whose Z axis is not along the tube.
+    CHECK(throws<scopelink::OrientationError>([] { TubeOrientation::reference({ 0, -1400, 0 }); }));
+    CHECK(throws<scopelink::OrientationError>([] { TubeOrientation::reference({ 0, 0, 1000 }); }));
+
+    // A reference that is not a direction is not used, and the design axes are used instead.
+    CHECK(!TubeOrientation::isUsable({ 0, 0, 0 }));
+    CHECK(!TubeOrientation::isUsable({ std::nan(""), -1, 0 }));
+    CHECK(TubeOrientation::isUsable({ 0, -1, 0 }));
+    CHECK(!TubeOrientation::from({ 0, -1000, 0 }, TubeOrientation::Vector{ 0, 0, 1 })->isReferenced());
 }
 
 void testProtocolFraming()
@@ -752,7 +1006,7 @@ void testDeviceOpen()
     CHECK(device.identification().hardwareMajor == 3);
     CHECK(device.identification().hardwareIdentifier == "DEADBEEF0102030405060708");
     CHECK(device.identification().softwareIdentifier == "SCOPELINK TEST 1.0");
-    CHECK(device.capabilities().hasTemperatureSensor);
+    CHECK(device.capabilities().hasMirrorTemperature);
     CHECK(device.capabilities().hasUsbHub);
     CHECK(device.hasFreshStatus());
     CHECK(device.status().motor(0).position == 33000);
@@ -931,7 +1185,7 @@ void testFaultDecoding()
  */
 void testSimulatedControllers()
 {
-    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 } };
+    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 }, { 4, 2 } };
 
     for (const auto &layout : layouts)
     {
@@ -972,6 +1226,11 @@ void testSimulatedControllers()
         // cannot be asked for, which is the whole reason the byte exists.
         CHECK(status.flapState
               == ((interfaceMinor >= 1) ? scopelink::FlapState::Closed : scopelink::FlapState::Unknown));
+
+        // On 1.2 the simulator is module B, so every reading the sensor module can send has a value
+        CHECK(capabilities.hasHumidity == (interfaceMinor >= 2));
+        CHECK(status.humidityValid == (interfaceMinor >= 2));
+        CHECK(status.accelerationValid == (interfaceMinor >= 2));
 
         // A move on the last motor this controller has, which on generation 4 is the one that only exists
         // there. Answered rather than refused is the whole assertion: the simulator addresses its motors
@@ -1041,10 +1300,16 @@ void testFaultNumbering()
     CHECK(scopelink::Fault::wireCodeOf(scopelink::FaultCode::MotorConfigurationInvalid, 3) == -1);
     CHECK(scopelink::Fault::wireCodeOf(scopelink::FaultCode::MotorConfigurationInvalid, 4) == 34);
 
+    // The sensor module's three timeouts, which interface 1.2 appended
+    CHECK(scopelink::Fault::codeFor(35, 4) == scopelink::FaultCode::Hdc2080CommunicationTimeout);
+    CHECK(scopelink::Fault::codeFor(36, 4) == scopelink::FaultCode::Lis2dw12CommunicationTimeout);
+    CHECK(scopelink::Fault::codeFor(37, 4) == scopelink::FaultCode::Tmp112CommunicationTimeout);
+    CHECK(scopelink::Fault::codeFor(11, 4) == scopelink::FaultCode::SupplySensorModuleOvercurrent);
+
     // A number past the end of a table is named as unknown rather than cast into a fault that does not
     // exist. A controller running firmware newer than this driver is the ordinary way to meet one.
     CHECK(scopelink::Fault::codeFor(28, 3) == scopelink::FaultCode::Unknown);
-    CHECK(scopelink::Fault::codeFor(35, 4) == scopelink::FaultCode::Unknown);
+    CHECK(scopelink::Fault::codeFor(38, 4) == scopelink::FaultCode::Unknown);
     CHECK(scopelink::Fault::codeFor(-1, 3) == scopelink::FaultCode::Unknown);
     CHECK(std::string(scopelink::Fault::nameOf(scopelink::FaultCode::Unknown)) == "Unknown fault");
 }
@@ -1512,13 +1777,13 @@ void testNarrowedMotorSelections()
 void testGeneratedCatalogue()
 {
     CHECK(scopelink::catalogue::ParameterCount == 80);
-    CHECK(scopelink::catalogue::GroupCount == 13);
+    CHECK(scopelink::catalogue::GroupCount == 14);
     CHECK(std::string(scopelink::catalogue::Product) == "ScopeLink");
     CHECK(scopelink::catalogue::InterfaceMajor == 1);
 
     // The minor too. Checking only the major is how a table a whole interface version behind sat here
     // unnoticed: 1.0 and 1.1 both read as 1, and nothing else in this tree compares the two.
-    CHECK(scopelink::catalogue::InterfaceMinor == 1);
+    CHECK(scopelink::catalogue::InterfaceMinor == 2);
 
     bool identifiersAreUnique   = true;
     bool rangesHoldTheirDefault = true;
@@ -2086,7 +2351,7 @@ void replay(const char *stem, const std::function<void(scopelink::Device &, Expe
     expectations.expect("capabilities.dtcSnapshotLength", static_cast<long>(capabilities.dtcSnapshotLength));
     expectations.expect("capabilities.hasUsbHub", capabilities.hasUsbHub);
     expectations.expect("capabilities.hasSmartSwitches", capabilities.hasSmartSwitchDiagnostics);
-    expectations.expect("capabilities.hasTemperatureSensor", capabilities.hasTemperatureSensor);
+    expectations.expect("capabilities.hasMirrorTemperature", capabilities.hasMirrorTemperature);
 
     body(device, expectations);
 
@@ -2688,6 +2953,8 @@ const Test tests[] = {
     { "capabilities", testCapabilities },
     { "status parsing", testStatusParsing },
     { "temperature plausibility", testTemperaturePlausibility },
+    { "sensor module smoothing", testReadingFilter },
+    { "tube orientation", testTubeOrientation },
     { "protocol framing", testProtocolFraming },
     { "protocol resynchronisation", testProtocolResync },
     { "protocol command echo", testProtocolWrongCommandEcho },

@@ -18,7 +18,7 @@ capabilities.statusFrameLength     = 60
 capabilities.dtcSnapshotLength     = 48
 capabilities.hasUsbHub             = 1
 capabilities.hasSmartSwitches      = 1
-capabilities.hasTemperatureSensor  = 1
+capabilities.hasMirrorTemperature  = 1
 
 # 34 EF = 13551 mV
 status.supplyVoltage               = 13551

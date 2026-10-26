@@ -42,16 +42,17 @@ class SimulatedController
          * @param hardwareMajor Generation to imitate, 2 to 4. What it offers follows from that - how many
          *        motors it drives, how many downstream USB ports it reports, and which fault numbering it
          *        speaks.
-         * @param interfaceMinor Interface version to report, 0 or 1
+         * @param interfaceMinor Interface version to report, 0 to 2
          *
          * The two are separate for the same reason the capability set keeps them apart: the same
          * generation 3 board runs both interface versions, and 1.1 changes the frames it sends without
          * changing anything about the board. Simulating only 1.0 is what let a driver that could not
          * connect to a 1.1 controller at all pass its whole test suite.
          *
-         * Generation 4 exists only on interface 1.1 - it is the board the assignment was built for - so a
+         * Generation 4 exists only from interface 1.1 - it is the board the assignment was built for - so a
          * caller that asks for generation 4 on 1.0 gets a controller nobody makes. The tool that serves
-         * this refuses that pair rather than serving it.
+         * this refuses that pair rather than serving it. On 1.2 the controller reports module B, the one
+         * with every sensor, so that each reading the status frame can carry has a value to carry.
          */
         explicit SimulatedController(int hardwareMajor, int interfaceMinor = 0);
 
@@ -185,7 +186,7 @@ class SimulatedTransport : public ISerialTransport
     public:
         /**
          * @param hardwareMajor Generation the simulated controller reports, 2 or 3
-         * @param interfaceMinor Interface version it reports, 0 or 1
+         * @param interfaceMinor Interface version it reports, 0 to 2
          */
         explicit SimulatedTransport(int hardwareMajor, int interfaceMinor = 0);
 

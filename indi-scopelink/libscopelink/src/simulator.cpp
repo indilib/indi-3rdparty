@@ -93,6 +93,11 @@ SimulatedController::SimulatedController(int hardwareMajor, int interfaceMinor)
         m_didLength[identifier.id()] = identifier.length();
     }
 
+    // From interface 1.2 the identifier names the sensor module rather than saying whether the infrared
+    // sensor is fitted, and the module with every sensor on it is the one that exercises every reading.
+    if (m_capabilities.hasSensorModuleStatus)
+        m_dids[Capabilities::SensorModuleDid] = Capabilities::SensorModuleWithHumidity;
+
     // As many motors as this controller drives, each starting where its own learnt position identifier
     // says. value(), not m_dids[], so that asking about a motor this generation does not have does not
     // create the identifier and start answering for it.
@@ -267,7 +272,7 @@ Frame SimulatedController::statusPayload() const
     Frame payload;
 
     put16(payload, 12100);                    //  4 supply voltage
-    put16(payload, 4980);                     //  6 IR sensor supply
+    put16(payload, 4980);                     //  6 sensor module supply
     put16(payload, m_fanOn[0] ? 11800u : 0u); //  8 fan A
     put16(payload, m_fanOn[1] ? 11750u : 0u); // 10 fan B
     put16(payload, 42);                       // 12 controller temperature
@@ -281,8 +286,8 @@ Frame SimulatedController::statusPayload() const
 
     put16(payload, static_cast<unsigned>(value(0x0202))); // 22 fan A target dT
     put16(payload, static_cast<unsigned>(value(0x0212))); // 24 fan B target dT
-    put16(payload, 14650);                                // 26 ambient, 20.0 C in 1/50 K
-    put16(payload, 14400);                                // 28 mirror, 15.0 C in 1/50 K
+    put16(payload, 14658);                                // 26 ambient, 20.01 C in 1/50 K
+    put16(payload, 14408);                                // 28 mirror, 15.01 C in 1/50 K
 
     // Six bytes each from offset 30, as many as this controller drives. A third motor pushes everything
     // below six bytes further along, which is the whole of generation 4's difference here.
@@ -321,6 +326,25 @@ Frame SimulatedController::statusPayload() const
 
     if (m_capabilities.hasConfigurableMotorRoles)
         payload.push_back(flapState());
+
+    // The sensor module, from interface 1.2: module, ambient source, humidity, dew point, three axes. What
+    // the module does not carry goes out as not available, as the firmware sends it.
+    if (m_capabilities.hasSensorModuleStatus)
+    {
+        const int module    = value(Capabilities::SensorModuleDid);
+        const bool humidity = module == Capabilities::SensorModuleWithHumidity;
+        const bool axes     = humidity || (module == Capabilities::SensorModuleWithoutInfrared);
+
+        payload.push_back(static_cast<uint8_t>(module));
+        payload.push_back(static_cast<uint8_t>(
+            humidity ? 2 : ((module == Capabilities::SensorModuleWithoutInfrared) ? 3 : ((module == 1) ? 1 : 0))));
+
+        put16(payload, humidity ? 455u : 0xFFFFu);   // 45.5 %RH
+        put16(payload, humidity ? 14058u : 0xFFFFu); // 8.01 C in 1/50 K
+        put16(payload, axes ? 0xFFF4u : 0x7FFFu);    // -12 mg
+        put16(payload, axes ? 34u : 0x7FFFu);        // 34 mg
+        put16(payload, axes ? 1000u : 0x7FFFu);      // 1 g, lying flat
+    }
 
     return payload;
 }
@@ -499,10 +523,10 @@ int SimulatedController::defaultValue(uint32_t did)
         case 0x0301:
             return 8;
 
-        case 0x0302: // temperature sensor fitted
+        case 0x0302: // sensor module, which was "infrared sensor fitted" before interface 1.2
             return 1;
 
-        case 0x0500: // max voltage drop on the IR sensor supply
+        case 0x0500: // max voltage drop on the sensor module supply
             return 500;
 
         case 0x0600: // short to Vcc max voltage difference

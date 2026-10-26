@@ -44,12 +44,16 @@ Hardware generation to imitate. Defaults to 3. The generations differ in what th
 what they report: generation 2 has no USB hub and no smart switch diagnostics, generation 3 has a two
 port hub, and generation 4 has three motors and a six port hub.
 .TP
-.BI \-\-interface\-minor " 0|1"
-Diagnostic interface version to report, defaulting to 1.0 \- or to 1.1 on generation 4, which has no 1.0
+.BI \-\-interface\-minor " 0|1|2"
+Diagnostic interface version to report, defaulting to 1.0 \- or to 1.2 on generation 4, which has no 1.0
 firmware. This is a separate axis from the generation, and it is the one that decides the frame layout:
 1.1 drops the four digital inputs out of the middle of both frames and puts the state of the front flap
 as a whole on the end of the status frame. The same generation 3 board runs either, so a status frame is
 60 bytes on 1.0 and 57 on 1.1. Asking for generation 4 on 1.0 is refused rather than served.
+.IP
+1.2 appends the sensor module's readings to the status frame: which module is fitted, which sensor the
+ambient temperature comes from, humidity, dew point and three axes of acceleration. A simulated 1.2
+controller reports module B, the one with every sensor, so that each of them has a value.
 .IP
 1.1 is also where the motors stop being wired to their jobs. A simulated 1.1 controller holds the motor
 assignment, applies the same rules to it that the firmware does, and answers the function commands that
@@ -78,7 +82,7 @@ ScopeLink simulator, hardware generation 3 on interface 1.1
 Port: /dev/pts/8
 
 .B scopelink-simulator --generation 4
-ScopeLink simulator, hardware generation 4 on interface 1.1
+ScopeLink simulator, hardware generation 4 on interface 1.2
 Port: /dev/pts/9
 .fi
 .RE
