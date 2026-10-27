@@ -16,7 +16,9 @@
 
 #include "scopelink/device.h"
 #include "scopelink/faults.h"
+#include "scopelink/filter.h"
 #include "scopelink/firmware.h"
+#include "scopelink/orientation.h"
 #include "scopelink/parameters.h"
 #include "scopelink/protocol.h"
 #include "scopelink/roles.h"
@@ -32,6 +34,7 @@
 
 #include <chrono>
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -169,6 +172,13 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         // Poll --------------------------------------------------------------------------------------
 
         void publishTelemetry(const scopelink::Status &status);
+
+        /** @brief Humidity, dew point and the margin above it, and the accelerometer, all smoothed. */
+        void publishSensorModule(const scopelink::Status &status);
+
+        /** @brief Altitude and roll, from the acceleration publishSensorModule() has just smoothed. */
+        void publishOrientation();
+
         void publishFocuser(const scopelink::Status &status);
         void publishRotator(const scopelink::Status &status);
         void publishCap(const scopelink::Status &status);
@@ -176,6 +186,27 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         void publishFans(const scopelink::Status &status);
         void publishPower(const scopelink::Status &status);
         void publishCalibration(const scopelink::Status &status);
+
+        // Orientation reference ---------------------------------------------------------------------------
+
+        /**
+         * @brief Takes the smoothed acceleration now as the tube standing level and not rolled.
+         *
+         * Refused while the reading is not gravity alone, or is not one a module fitted with Z along the
+         * tube can read while level - see scopelink::TubeOrientation::reference().
+         */
+        void setOrientationReference();
+
+        /** @brief Forgets the reference, going back to the module's design axes. */
+        void clearOrientationReference();
+
+        /**
+         * @brief Takes the reference out of OrientationReferenceNP, where the configuration file put it.
+         *
+         * A vector of zeros is no reference. Anything else that is not usable is dropped rather than squared
+         * up into something that was never measured, and a usable one is scaled to unit length.
+         */
+        void adoptOrientationReference();
 
         // Cover ---------------------------------------------------------------------------------------
 
@@ -585,6 +616,23 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         /** Number of consecutive polls that have failed, which is what decides when to give up. */
         int m_failedPolls{ 0 };
 
+        /** Smooths the sensor module's readings. Started again on every connection. */
+        scopelink::ReadingFilter m_readingFilter;
+
+        /** The last smoothed acceleration, empty while the module is not reporting one. */
+        std::optional<scopelink::TubeOrientation::Vector> m_smoothedAcceleration;
+
+        /**
+         * What the accelerometer read with the tube level and not rolled, as a unit vector in the sensor's
+         * axes, or empty where nobody has set one.
+         *
+         * A fact about how the module is fitted to this telescope, so it is kept with the driver's
+         * configuration and not on the controller, the same as the Windows driver keeps it: the firmware
+         * has no use for it. Kept as what was measured rather than as the angles it was out by, so that the
+         * file can be checked against the accelerometer by anybody holding the tube level.
+         */
+        std::optional<scopelink::TubeOrientation::Vector> m_orientationReference;
+
         /**
          * A restart in progress: the port it is waiting on, when to give up, and when to look again.
          *
@@ -678,6 +726,29 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
 
         INDI::PropertyNumber RailsNP{ 3 };
         INDI::PropertyNumber TemperatureNP{ 3 };
+
+        /**
+         * Humidity, dew point and how far the mirror is above it, published only where the sensor module
+         * has the humidity sensor.
+         */
+        INDI::PropertyNumber ClimateNP{ 3 };
+
+        /** The three axes of the sensor module's accelerometer, published only where it has one. */
+        INDI::PropertyNumber AccelerationNP{ 3 };
+
+        /** Altitude and roll of the tube, published with the accelerometer. */
+        INDI::PropertyNumber OrientationNP{ 2 };
+
+        /** Set and clear the orientation reference. */
+        INDI::PropertySwitch OrientationReferenceSP{ 2 };
+
+        /**
+         * The orientation reference itself, all zeros where there is none. Read only once published, and
+         * defined before the device connects - writable for that moment - so that it can be restored from
+         * the configuration file: a property that only appears later is one there is nothing to restore
+         * into, and libindi refuses to restore into a read only one.
+         */
+        INDI::PropertyNumber OrientationReferenceNP{ 3 };
         /** Sized at connect time from the motor count - two up to generation 3, three from generation 4. */
         INDI::PropertyNumber MotorLoadNP{ 2 };
         INDI::PropertyNumber ControllerNP{ 7 };

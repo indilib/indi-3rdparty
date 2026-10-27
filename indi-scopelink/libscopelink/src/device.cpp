@@ -79,7 +79,7 @@ bool Capabilities::isSupported(int hardwareMajor)
     return (hardwareMajor >= MinimumSupportedHardwareMajor) && (hardwareMajor <= MaximumSupportedHardwareMajor);
 }
 
-Capabilities Capabilities::of(const Identification &identification, int temperatureSensorFitted)
+Capabilities Capabilities::of(const Identification &identification, int sensorModule)
 {
     if (!isSupported(identification.hardwareMajor))
     {
@@ -100,19 +100,35 @@ Capabilities Capabilities::of(const Identification &identification, int temperat
     capabilities.hasSmartSwitchDiagnostics         = major > 2;
     capabilities.hasAuxVoltageMonitoring           = major > 2;
     capabilities.hasConfigurableTemperatureLimits  = major > 2;
-    capabilities.hasTemperatureSensorConfiguration = major > 2;
+    capabilities.hasSensorModuleConfiguration      = major > 2;
 
     capabilities.motorCount = capabilities.hasThirdMotor ? 3 : (capabilities.hasSecondMotor ? 2 : 1);
 
     capabilities.usbDownstreamPortCount      = capabilities.hasUsbHub ? ((major > 3) ? 6 : 2) : 0;
     capabilities.hasUsbPowerFailureReporting = capabilities.hasUsbHub && (major < 4);
 
-    // Only generation 3 records whether the sensor is fitted; on earlier generations it always is, and on
-    // a generation 3 controller that does not answer the identifier the sensor is assumed to be fitted.
-    capabilities.hasTemperatureSensor =
-        (!capabilities.hasTemperatureSensorConfiguration || (temperatureSensorFitted < 0)) ?
-            true :
-            (temperatureSensorFitted != 0);
+    // Only generation 3 onwards records what is fitted; on earlier generations the infrared sensor always
+    // is, and on a controller that does not answer the identifier it is assumed to be fitted. Every module
+    // measures the air; only the one without the infrared sensor goes without the mirror.
+    capabilities.sensorModule = capabilities.hasSensorModuleConfiguration ? sensorModule : -1;
+
+    const bool moduleKnown = capabilities.sensorModule >= 0;
+
+    capabilities.hasAmbientTemperature = !moduleKnown || (capabilities.sensorModule != SensorModuleNone);
+    capabilities.hasMirrorTemperature  = !moduleKnown
+                                        || ((capabilities.sensorModule != SensorModuleNone)
+                                            && (capabilities.sensorModule != SensorModuleWithoutInfrared));
+
+    // Interface 1.2 appended the module's own readings to the status frame
+    capabilities.hasSensorModuleStatus =
+        (identification.interfaceMajor > 1)
+        || ((identification.interfaceMajor == 1) && (identification.interfaceMinor >= 2));
+
+    capabilities.hasHumidity =
+        capabilities.hasSensorModuleStatus && (capabilities.sensorModule == SensorModuleWithHumidity);
+    capabilities.hasAcceleration = capabilities.hasSensorModuleStatus
+                                   && ((capabilities.sensorModule == SensorModuleWithHumidity)
+                                       || (capabilities.sensorModule == SensorModuleWithoutInfrared));
 
     // Interface 1.1 onwards. of() is handed the whole identification rather than the generation alone
     // exactly so that a capability can be taken from the firmware's interface version, for the ones the
@@ -130,7 +146,8 @@ Capabilities Capabilities::of(const Identification &identification, int temperat
     // no longer a generation whose length can be read off its number - and there is now a length that
     // belongs to no generation at all. The four measured lengths fall out of this: 44, 56, 60 and 65 for
     // generations 1 to 4. So does the fifth, a generation 3 controller on interface 1.1, which loses four
-    // bytes of digital inputs and gains the flap state: 57.
+    // bytes of digital inputs and gains the flap state: 57. Interface 1.2 appends twelve bytes of sensor
+    // module readings, which makes generation 4 77.
     //
     // Reading these off the generation alone is what this replaced, and it was not a near miss. A 1.1
     // controller sends 57 where the old arithmetic expected 60, so Status::parse refused every frame it
@@ -146,7 +163,8 @@ Capabilities Capabilities::of(const Identification &identification, int temperat
                                      + 8 // flat box, system load, fault counts, I2C errors
                                      + static_cast<size_t>(capabilities.usbDownstreamPortCount)
                                      + (capabilities.hasUsbPowerFailureReporting ? 2u : 0u)
-                                     + (capabilities.hasConfigurableMotorRoles ? 1u : 0u);
+                                     + (capabilities.hasConfigurableMotorRoles ? 1u : 0u)
+                                     + (capabilities.hasSensorModuleStatus ? 12u : 0u); // the sensor module
 
     // The same construction for the freeze frame, in the order Fault::buildSnapshotFields names its
     // fields. Two of these lengths are measured: a controller with one stored fault answers the fault
@@ -335,7 +353,33 @@ Status Status::parse(const Frame &frame, const Capabilities &capabilities)
     // until both have arrived. Earlier interfaces have one flap motor and no sequence, so this stays
     // Unknown and the flap is read off that motor.
     if (capabilities.hasConfigurableMotorRoles)
+    {
         status.flapState = static_cast<FlapState>(byte_order::toByte(frame, at));
+
+        at += 1;
+    }
+
+    // The sensor module. Ambient and mirror temperature are not repeated here: they stay where every
+    // generation has them, filtered the way the fans see them.
+    if (capabilities.hasSensorModuleStatus)
+    {
+        status.sensorModule  = byte_order::toByte(frame, at);
+        status.ambientSource = byte_order::toByte(frame, at + 1);
+
+        status.humidityRaw = static_cast<int>(byte_order::toUInt(frame, at + 2, 2));
+        status.humidityValid =
+            (status.humidityRaw != HumidityNotAvailableRaw) && (status.humidityRaw <= MaximumHumidityRaw);
+
+        status.dewPointRaw   = static_cast<int>(byte_order::toUInt(frame, at + 4, 2));
+        status.dewPointValid = isTemperaturePlausible(status.dewPointRaw);
+
+        status.accelerationX     = byte_order::toInt(frame, at + 6, 2);
+        status.accelerationY     = byte_order::toInt(frame, at + 8, 2);
+        status.accelerationZ     = byte_order::toInt(frame, at + 10, 2);
+        status.accelerationValid = (status.accelerationX != AccelerationNotAvailableRaw)
+                                   && (status.accelerationY != AccelerationNotAvailableRaw)
+                                   && (status.accelerationZ != AccelerationNotAvailableRaw);
+    }
 
     return status;
 }
@@ -353,19 +397,21 @@ void Device::open()
 
     m_identification = Identification::read(m_protocol);
 
-    // The capability set decides how every later frame is parsed, so the sensor identifier is read before
-    // anything is derived from it. A generation that does not hold it is not asked.
-    int temperatureSensorFitted = -1;
+    // The capability set decides how every later frame is parsed, so the sensor module identifier is read
+    // before anything is derived from it. A generation that does not hold it is not asked.
+    int sensorModule = -1;
 
     if (m_identification.hardwareMajor > 2)
-        temperatureSensorFitted = tryReadConfigurationByte(Capabilities::TemperatureSensorFittedDid);
+        sensorModule = tryReadConfigurationByte(Capabilities::SensorModuleDid);
 
-    m_capabilities = Capabilities::of(m_identification, temperatureSensorFitted);
+    m_capabilities = Capabilities::of(m_identification, sensorModule);
     m_identified   = true;
 
-    if (!m_capabilities.hasTemperatureSensor)
-        log("connect",
-            "The controller reports no temperature sensor fitted, so the temperature readings are not offered");
+    if (!m_capabilities.hasAmbientTemperature)
+        log("connect", "The controller reports no sensor module fitted, so the temperature readings are not offered");
+    else if (!m_capabilities.hasMirrorTemperature)
+        log("connect", "The controller reports a sensor module without the infrared sensor, so the mirror temperature "
+                       "is not offered");
 
     sendRtcTimestamp();
 

@@ -135,7 +135,8 @@ scopelink-cli --port /dev/scopelink info
 Without hardware, using the driver's own simulation mode — turn **Simulation** on before connecting, and
 pick the controller to imitate under **Simulated hardware** on the Options tab. There are four, for three
 generations: a generation 3 board runs interface 1.0 and 1.1, and 1.1 lays its frames out differently, so
-it is an entry of its own. Generation 4 exists only on 1.1, so it needs no second entry.
+it is an entry of its own. Generation 4 is simulated on interface 1.2, the firmware it ships with, so it
+needs no second entry.
 
 ```sh
 indiserver -v indi_scopelink
@@ -164,10 +165,11 @@ rather than 60 and whose freeze frame is 44 rather than 48:
 scopelink-simulator --generation 3 --interface-minor 1
 ```
 
-`--generation 4` serves the three motor board with the six port hub. It comes up on interface 1.1 without
-being asked, because there is no 1.0 firmware for it — asking for that pair is refused rather than served.
-Its status frame is 65 bytes and its freeze frame is 48, which is the same length a generation 3 unit on
-1.0 stores and a different set of fields inside it:
+`--generation 4` serves the three motor board with the six port hub. It comes up on interface 1.2 without
+being asked, because that is what its firmware speaks now, with a sensor module that has every sensor on
+it; there is no 1.0 firmware for it, and asking for that pair is refused rather than served. Its status
+frame is 77 bytes — 65 on 1.1, and the sensor module's twelve on the end — and its freeze frame is 48,
+which is the same length a generation 3 unit on 1.0 stores and a different set of fields inside it:
 
 ```sh
 scopelink-simulator --generation 4

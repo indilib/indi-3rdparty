@@ -1,3 +1,16 @@
+indi-scopelink (1.2) jammy; urgency=medium
+
+  * Interface version 1.2 is supported: the controller names its sensor module, and the status
+    frame carries humidity, dew point and three axes of acceleration where the module has them.
+  * New Climate and Tilt telemetry, smoothed, with the margin above the dew point.
+  * New tube orientation, altitude and roll, with an optional level reference kept in the
+    driver's configuration.
+  * Temperatures are converted with 273.15 rather than 273.
+  * The rotator's sync offset is restored from the saved configuration rather than reset to zero.
+  * A firmware update reports read protection the way the newer boot loader does.
+
+ -- Bence Toth <bence.toth@astrolabs.hu>  Mon, 26 Oct 2026 12:00:00 +0100
+
 indi-scopelink (1.1) jammy; urgency=medium
 
   * Hardware generation 4 and interface version 1.1 are supported.

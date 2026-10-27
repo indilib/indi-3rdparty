@@ -80,7 +80,9 @@ void printIdentification(scopelink::Device &device)
            capabilities.hasUsbHub ? ((capabilities.usbDownstreamPortCount == 2) ? "yes, 2 ports" : "yes, 6 ports") :
                                     "no");
     printf("  Smart switches      %s\n", yesNo(capabilities.hasSmartSwitchDiagnostics));
-    printf("  Temperature sensor  %s\n", yesNo(capabilities.hasTemperatureSensor));
+    printf("  Sensor module       %d\n", capabilities.sensorModule);
+    printf("  Ambient temperature %s\n", yesNo(capabilities.hasAmbientTemperature));
+    printf("  Mirror temperature  %s\n", yesNo(capabilities.hasMirrorTemperature));
     printf("\n");
 }
 

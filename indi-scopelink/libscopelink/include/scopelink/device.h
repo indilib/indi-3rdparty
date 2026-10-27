@@ -141,8 +141,24 @@ class Capabilities
         /** Newest hardware generation this driver knows the frame layouts for. */
         static constexpr int MaximumSupportedHardwareMajor = 4;
 
-        /** Configuration identifier that records whether the temperature sensor is fitted. */
-        static constexpr uint32_t TemperatureSensorFittedDid = 0x0302;
+        /**
+         * Configuration identifier that records which sensor module is fitted.
+         *
+         * Up to interface 1.1 it said whether the infrared sensor was fitted, as 0 or 1. Interface 1.2 made
+         * it the module: 0 none, 1 the infrared sensor alone, 2 the infrared sensor with a humidity sensor and
+         * an accelerometer, 3 an accelerometer and an air temperature sensor without the infrared one. The old
+         * two values mean what they always did, so one reading of it serves both.
+         */
+        static constexpr uint32_t SensorModuleDid = 0x0302;
+
+        /** No sensor module fitted. */
+        static constexpr int SensorModuleNone = 0;
+
+        /** The module with the humidity sensor and the accelerometer beside the infrared sensor. */
+        static constexpr int SensorModuleWithHumidity = 2;
+
+        /** The module that carries an air temperature sensor and an accelerometer and no infrared one. */
+        static constexpr int SensorModuleWithoutInfrared = 3;
 
         int hardwareMajor{ 0 };
 
@@ -226,15 +242,36 @@ class Capabilities
         /** True when the temperature warning and error levels are configurable, through 0x0700 and 0x0701. */
         bool hasConfigurableTemperatureLimits{ false };
 
-        /** True when the controller records whether its temperature sensor is fitted. */
-        bool hasTemperatureSensorConfiguration{ false };
+        /** True when the controller records which sensor module is fitted. */
+        bool hasSensorModuleConfiguration{ false };
+
+        /** The sensor module the controller says is fitted, or -1 when it was not read. */
+        int sensorModule{ -1 };
 
         /**
-         * True when the unit has a temperature sensor fitted, so ambient and mirror temperature can be
-         * measured. A single infrared sensor provides both readings, so one flag covers the ambient
-         * temperature, the mirror temperature and the difference between them.
+         * True when the unit measures the air temperature around it. Every sensor module has a sensor for
+         * it, so only a unit with no module at all goes without.
          */
-        bool hasTemperatureSensor{ true };
+        bool hasAmbientTemperature{ true };
+
+        /**
+         * True when the unit has the infrared sensor, so the mirror temperature and its difference to the
+         * air can be measured, and the fans can follow it. A module this driver does not know, and a
+         * controller that does not say, are taken to have it.
+         */
+        bool hasMirrorTemperature{ true };
+
+        /**
+         * True when the status frame carries the sensor module's readings: which module it is, where the
+         * ambient temperature comes from, humidity, dew point and acceleration. Interface 1.2 onwards.
+         */
+        bool hasSensorModuleStatus{ false };
+
+        /** True when the module reports humidity and dew point. */
+        bool hasHumidity{ false };
+
+        /** True when the module reports acceleration. */
+        bool hasAcceleration{ false };
 
         /** @brief Reports whether this driver supports a given hardware generation. */
         static bool isSupported(int hardwareMajor);
@@ -242,17 +279,17 @@ class Capabilities
         /**
          * @brief Derives the capability set for an identified device.
          * @param identification Identification data read from the controller
-         * @param temperatureSensorFitted What configuration identifier 0x0302 says, or -1 when the
-         *        controller did not answer it
+         * @param sensorModule What configuration identifier 0x0302 says, or -1 when the controller did
+         *        not answer it
          * @throws UnsupportedDeviceError The hardware generation is outside the supported range.
          *
-         * Everything except the temperature sensor follows from the hardware generation alone. The sensor
-         * is a fitting option rather than a generation difference, so it is the one capability that has to
-         * be read out of the controller's configuration. Assuming it fitted is the safe default when the
-         * identifier cannot be read: a unit that has the sensor but is wrongly told it has not would
-         * silently stop offering readings the user paid for.
+         * Everything except the sensor module follows from the identification block. The module is a
+         * fitting option rather than a version difference, so it is the one capability that has to be read
+         * out of the controller's configuration. Assuming the infrared sensor fitted is the safe default
+         * when the identifier cannot be read: a unit that has the sensor but is wrongly told it has not
+         * would silently stop offering readings the user paid for.
          */
-        static Capabilities of(const Identification &identification, int temperatureSensorFitted = -1);
+        static Capabilities of(const Identification &identification, int sensorModule = -1);
 };
 
 /**
@@ -269,7 +306,7 @@ class Status
         int hardwareMajor{ 0 };
 
         int supplyVoltage{ 0 };           /**< Main supply, millivolts. */
-        int sensorSupplyVoltage{ 0 };     /**< IR sensor supply, millivolts. */
+        int sensorSupplyVoltage{ 0 };     /**< Sensor module supply, millivolts. */
         int fanAVoltage{ 0 };             /**< Rear fan, millivolts. */
         int fanBVoltage{ 0 };             /**< Side fan, millivolts. */
         int controllerTemperature{ 0 };   /**< Controller die temperature, degrees Celsius. */
@@ -332,6 +369,27 @@ class Status
         bool usb1PowerFailure{ false };
         bool usb2PowerFailure{ false };
 
+        // The sensor module, from interface 1.2. Every reading is invalid on a controller that does not send
+        // them, and on one whose module does not carry the sensor: the controller says "not available" for
+        // both, and so does this.
+
+        /** The sensor module the controller reports, or -1 when it does not report one. */
+        int sensorModule{ -1 };
+
+        /** Which sensor the ambient temperature comes from: 0 none, 1 infrared, 2 humidity, 3 temperature. */
+        int ambientSource{ 0 };
+
+        int humidityRaw{ 0 }; /**< Relative humidity, tenths of a percent as reported. */
+        bool humidityValid{ false };
+
+        int dewPointRaw{ 0 }; /**< Dew point, 1/50 Kelvin as reported. */
+        bool dewPointValid{ false };
+
+        int accelerationX{ 0 }; /**< Thousandths of g. */
+        int accelerationY{ 0 }; /**< Thousandths of g. */
+        int accelerationZ{ 0 }; /**< Thousandths of g. */
+        bool accelerationValid{ false };
+
         /** @brief How many motors this controller reports. */
         int motorCount() const { return static_cast<int>(motors.size()); }
 
@@ -358,8 +416,17 @@ class Status
         /** @brief Mirror temperature in degrees Celsius. Only meaningful when it is valid. */
         double mirrorTemperatureCelsius() const { return toCelsius(mirrorTemperatureRaw); }
 
+        /** @brief Relative humidity in percent. Only meaningful when it is valid. */
+        double humidityPercent() const { return humidityRaw / 10.0; }
+
+        /** @brief Dew point in degrees Celsius. Only meaningful when it is valid. */
+        double dewPointCelsius() const { return toCelsius(dewPointRaw); }
+
+        /** 0 degrees Celsius in Kelvin, the offset between the raw readings and degrees. */
+        static constexpr double ZeroCelsiusKelvin = 273.15;
+
         /** @brief Converts a raw 1/50 Kelvin reading to degrees Celsius. */
-        static double toCelsius(int raw) { return (raw / 50.0) - 273.0; }
+        static double toCelsius(int raw) { return (raw / 50.0) - ZeroCelsiusKelvin; }
 
         /** @brief How long ago this sample was taken, in milliseconds. */
         long ageMs() const;
@@ -377,11 +444,23 @@ class Status
         /** Value the controller reports for a temperature sensor that is not answering. */
         static constexpr int SensorNotRespondingRaw = 0xFFFF;
 
+        /** Value the controller reports for a humidity it does not have. */
+        static constexpr int HumidityNotAvailableRaw = 0xFFFF;
+
+        /** Highest relative humidity the controller reports, in tenths of a percent. */
+        static constexpr int MaximumHumidityRaw = 1000;
+
+        /** Value the controller reports for an acceleration it does not have, as a signed reading. */
+        static constexpr int AccelerationNotAvailableRaw = 0x7FFF;
+
+        /** 0 degrees Celsius in 1/50 Kelvin, rounded the way the firmware rounds it. */
+        static constexpr int ZeroCelsiusRaw = 13658;
+
         /** Coldest reading treated as believable, -100 degrees Celsius in 1/50 Kelvin. */
-        static constexpr int MinimumPlausibleTemperatureRaw = (273 - 100) * 50;
+        static constexpr int MinimumPlausibleTemperatureRaw = ZeroCelsiusRaw - (100 * 50);
 
         /** Warmest reading treated as believable, +100 degrees Celsius in 1/50 Kelvin. */
-        static constexpr int MaximumPlausibleTemperatureRaw = (273 + 100) * 50;
+        static constexpr int MaximumPlausibleTemperatureRaw = ZeroCelsiusRaw + (100 * 50);
 
         /**
          * @brief Decides whether a raw temperature reading should be believed.

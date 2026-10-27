@@ -126,9 +126,20 @@ bool ScopeLink::initProperties()
     // Where a sync left the sky relative to the mechanism. It belongs with the settings that have to exist
     // before the device connects, rather than with the hardware properties: it is restored from the
     // configuration file and then used while the rotator is being set up, and a property that only appears
-    // after that is one there is nothing to restore into.
+    // after that is one there is nothing to restore into. Writable only while that happens: libindi refuses
+    // a new value for a read only property, the one in the configuration file included, so defined read
+    // only it was never restored at all - and the save on connect then wrote the zero over the saved value.
     RotatorOffsetNP[0].fill("OFFSET", "Sky - mechanism (degrees)", "%.2f", 0, 360, 0.01, 0);
-    RotatorOffsetNP.fill(getDeviceName(), "ROTATOR_SYNC_OFFSET", "Sync offset", ROTATOR_TAB, IP_RO, 60, IPS_IDLE);
+    RotatorOffsetNP.fill(getDeviceName(), "ROTATOR_SYNC_OFFSET", "Sync offset", ROTATOR_TAB, IP_RW, 60, IPS_IDLE);
+
+    // What the accelerometer read with the tube level, which belongs here for the same reason, and is
+    // writable only while it is loaded for the same reason too: once loaded it is set with the switch and
+    // never typed in.
+    OrientationReferenceNP[0].fill("X", "Up, X", "%.3f", -1, 1, 0.001, 0);
+    OrientationReferenceNP[1].fill("Y", "Up, Y", "%.3f", -1, 1, 0.001, 0);
+    OrientationReferenceNP[2].fill("Z", "Up, Z", "%.3f", -1, 1, 0.001, 0);
+    OrientationReferenceNP.fill(getDeviceName(), "ORIENTATION_REFERENCE_VECTOR", "Level reference", TELEMETRY_TAB,
+                                IP_RW, 60, IPS_IDLE);
 
     // Which controller the simulated one pretends to be. Generations differ in what they offer, not only
     // in what they report, so this is the only way to see the USB hub and the smart switch diagnostics
@@ -136,8 +147,8 @@ bool ScopeLink::initProperties()
     // Four entries for three generations, because a generation is not a frame layout. The same generation
     // 3 board runs interface 1.0 and 1.1, and 1.1 is what changes the frames - four bytes of digital
     // inputs out of the middle of both of them and the flap state onto the end of the status frame.
-    // Generation 4 exists only on 1.1 and adds a third motor and four more USB ports on top of it, so it
-    // needs no second entry of its own.
+    // Generation 4 exists only from 1.1, adds a third motor and four more USB ports on top of it, and is
+    // simulated on 1.2 - the firmware it ships with - so it needs no second entry of its own.
     SimulatedGenerationSP[0].fill("GENERATION_2", "2", ISS_OFF);
     SimulatedGenerationSP[1].fill("GENERATION_3", "3", ISS_ON);
     SimulatedGenerationSP[2].fill("GENERATION_3_IF11", "3, interface 1.1", ISS_OFF);
@@ -150,19 +161,29 @@ bool ScopeLink::initProperties()
     defineProperty(SimulatedGenerationSP);
     defineProperty(ParametersFileTP);
     defineProperty(RotatorOffsetNP);
+    defineProperty(OrientationReferenceNP);
 
     loadConfig(true, StepMultiplierNP.getName());
     loadConfig(true, DeveloperSP.getName());
     loadConfig(true, SimulatedGenerationSP.getName());
     loadConfig(true, ParametersFileTP.getName());
     loadConfig(true, RotatorOffsetNP.getName());
+    loadConfig(true, OrientationReferenceNP.getName());
+
+    adoptOrientationReference();
+
+    // Withdrawn until a controller with an accelerometer connects, the same as the sync offset below, and
+    // published read only from then on.
+    deleteProperty(OrientationReferenceNP);
+    OrientationReferenceNP.setPermission(IP_RO);
 
     // The sync offset has to be defined for its saved value to be read back into it, and read back before
     // the first connection, because identify() takes the offset from it. It is withdrawn again straight
     // away: a controller with no motor assigned to the rotator must not carry a rotator tab, and until one
     // has connected there is nothing that says whether it does. updateProperties() puts it back when the
-    // assignment turns out to name a rotator.
+    // assignment turns out to name a rotator, read only: a sync is what changes it.
     deleteProperty(RotatorOffsetNP);
+    RotatorOffsetNP.setPermission(IP_RO);
 
     // --- Identification ------------------------------------------------------------------------------
 
@@ -212,11 +233,30 @@ bool ScopeLink::initProperties()
     TemperatureNP[2].fill("DELTA_T", "Mirror - ambient (K)", "%.1f", -200, 200, 0.1, 0);
     TemperatureNP.fill(getDeviceName(), "TEMPERATURE_READINGS", "Temperatures", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
 
+    ClimateNP[0].fill("HUMIDITY", "Humidity (%)", "%.1f", 0, 100, 0.1, 0);
+    ClimateNP[1].fill("DEW_POINT", "Dew point (C)", "%.1f", -100, 100, 0.1, 0);
+    ClimateNP[2].fill("DEW_MARGIN", "Above dew point (K)", "%.1f", -200, 200, 0.1, 0);
+    ClimateNP.fill(getDeviceName(), "CLIMATE_READINGS", "Climate", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
+
+    AccelerationNP[0].fill("X", "X (mg)", "%.0f", -16000, 16000, 1, 0);
+    AccelerationNP[1].fill("Y", "Y (mg)", "%.0f", -16000, 16000, 1, 0);
+    AccelerationNP[2].fill("Z", "Z (mg)", "%.0f", -16000, 16000, 1, 0);
+    AccelerationNP.fill(getDeviceName(), "ACCELERATION", "Tilt", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
+
+    OrientationNP[0].fill("ALTITUDE", "Altitude (deg)", "%.1f", -90, 90, 0.1, 0);
+    OrientationNP[1].fill("ROLL", "Roll (deg)", "%.1f", -180, 180, 0.1, 0);
+    OrientationNP.fill(getDeviceName(), "TUBE_ORIENTATION", "Orientation", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
+
+    OrientationReferenceSP[0].fill("SET", "Tube is level now", ISS_OFF);
+    OrientationReferenceSP[1].fill("CLEAR", "Clear", ISS_OFF);
+    OrientationReferenceSP.fill(getDeviceName(), "ORIENTATION_REFERENCE", "Level reference", TELEMETRY_TAB, IP_RW,
+                                ISR_ATMOST1, 60, IPS_IDLE);
+
     // The widgets are filled in at connect time by sizeHardwareProperties, because how many there are is
     // the controller's answer rather than this driver's. Only the group itself is named here.
     MotorLoadNP.fill(getDeviceName(), "MOTOR_LOAD", "Motor load", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
 
-    ControllerNP[0].fill("SENSOR_SUPPLY", "IR sensor supply (V)", "%.1f", 0, 30, 0.1, 0);
+    ControllerNP[0].fill("SENSOR_SUPPLY", "Sensor supply (V)", "%.1f", 0, 30, 0.1, 0);
     ControllerNP[1].fill("CONTROLLER_SUPPLY", "Controller supply (V)", "%.1f", 0, 30, 0.1, 0);
     ControllerNP[2].fill("CONTROLLER_TEMPERATURE", "Die temperature (C)", "%.0f", -50, 150, 1, 0);
     ControllerNP[3].fill("CPU_LOAD", "CPU load (%)", "%.0f", 0, 100, 1, 0);
@@ -468,11 +508,26 @@ void ScopeLink::defineHardwareProperties()
 
     const scopelink::Capabilities &capabilities = m_device->capabilities();
 
-    if (capabilities.hasTemperatureSensor)
-    {
+    // Every sensor module measures the air, so the focuser has a temperature on all of them. The three
+    // readings beside each other and the fan targets need the mirror, which takes the infrared sensor.
+    if (capabilities.hasAmbientTemperature)
         defineProperty(FocusTemperatureNP);
+
+    if (capabilities.hasMirrorTemperature)
+    {
         defineProperty(TemperatureNP);
         defineProperty(FanTargetNP);
+    }
+
+    if (capabilities.hasHumidity)
+        defineProperty(ClimateNP);
+
+    if (capabilities.hasAcceleration)
+    {
+        defineProperty(AccelerationNP);
+        defineProperty(OrientationNP);
+        defineProperty(OrientationReferenceSP);
+        defineProperty(OrientationReferenceNP);
     }
 
     if (hasUsableFlap())
@@ -533,6 +588,11 @@ void ScopeLink::deleteHardwareProperties()
 
     deleteProperty(FocusTemperatureNP.getName());
     deleteProperty(TemperatureNP.getName());
+    deleteProperty(ClimateNP.getName());
+    deleteProperty(AccelerationNP.getName());
+    deleteProperty(OrientationNP.getName());
+    deleteProperty(OrientationReferenceSP.getName());
+    deleteProperty(OrientationReferenceNP.getName());
     deleteProperty(FanTargetNP.getName());
     deleteProperty(CapParkSP.getName());
     deleteProperty(CapPositionNP.getName());
@@ -632,7 +692,7 @@ bool ScopeLink::identify()
         // motion - is the one a real controller takes.
         const int selected       = SimulatedGenerationSP.findOnSwitchIndex();
         const int generation     = (selected == 0) ? 2 : ((selected == 3) ? 4 : 3);
-        const int interfaceMinor = (selected >= 2) ? 1 : 0;
+        const int interfaceMinor = (selected == 3) ? 2 : ((selected == 2) ? 1 : 0);
 
         LOGF_INFO("Simulation is on. Answering as a generation %d controller on interface 1.%d; no port is "
                   "opened.",
@@ -696,6 +756,11 @@ bool ScopeLink::identify()
     m_roles             = m_device->roles();
     m_rotatorSyncOffset = RotatorOffsetNP[0].getValue();
 
+    // A controller unplugged in a warm room and plugged in again in a cold one would otherwise spend the
+    // first minute reporting its way down from where it was last time.
+    m_readingFilter.reset();
+    m_smoothedAcceleration.reset();
+
     LOGF_INFO("Motor assignment: %s.", m_roles.toString().c_str());
 
     if (!adoptMotorRoles())
@@ -717,8 +782,10 @@ bool ScopeLink::identify()
     setDriverInterface(interfaces);
     syncDriverInfo();
 
-    if (!capabilities.hasTemperatureSensor)
-        LOG_INFO("This unit has no temperature sensor fitted, so no temperature readings are offered.");
+    if (!capabilities.hasAmbientTemperature)
+        LOG_INFO("This unit has no sensor module fitted, so no temperature readings are offered.");
+    else if (!capabilities.hasMirrorTemperature)
+        LOG_INFO("This unit's sensor module has no infrared sensor, so the mirror temperature is not offered.");
 
     m_catalogue = scopelink::buildDidCatalogue(capabilities);
 
@@ -1252,7 +1319,7 @@ void ScopeLink::publishFocuser(const scopelink::Status &status)
     {
         // No focuser, but possibly still a temperature sensor: the reading is the controller's rather than
         // the focuser's, and a client watching it has no interest in which motors are assigned to what.
-        if (m_device->capabilities().hasTemperatureSensor)
+        if (m_device->capabilities().hasAmbientTemperature)
         {
             FocusTemperatureNP[0].setValue(status.ambientTemperatureCelsius());
             FocusTemperatureNP.setState(status.ambientTemperatureValid ? IPS_OK : IPS_ALERT);
@@ -1302,9 +1369,9 @@ void ScopeLink::publishFocuser(const scopelink::Status &status)
 
     FocusAbsPosNP.apply();
 
-    if (m_device->capabilities().hasTemperatureSensor)
+    if (m_device->capabilities().hasAmbientTemperature)
     {
-        // A failed infrared sensor reports a raw value that converts to a plausible looking -273 degrees,
+        // A failed sensor reports a raw value that converts to a plausible looking -273 degrees,
         // so a reading that is not believable is published as an alert rather than as a number.
         if (status.ambientTemperatureValid)
         {
@@ -1373,7 +1440,7 @@ void ScopeLink::publishTelemetry(const scopelink::Status &status)
     MotorLoadNP.setState(IPS_OK);
     MotorLoadNP.apply();
 
-    if (m_device->capabilities().hasTemperatureSensor)
+    if (m_device->capabilities().hasMirrorTemperature)
     {
         const bool usable = status.ambientTemperatureValid && status.mirrorTemperatureValid;
 
@@ -1387,6 +1454,8 @@ void ScopeLink::publishTelemetry(const scopelink::Status &status)
         TemperatureNP.setState(usable ? IPS_OK : IPS_ALERT);
         TemperatureNP.apply();
     }
+
+    publishSensorModule(status);
 
     FaultCountNP[0].setValue(status.storedFaultCount);
     FaultCountNP[1].setValue(status.activeFaultCount);
@@ -1408,6 +1477,194 @@ void ScopeLink::publishTelemetry(const scopelink::Status &status)
     ControllerNP.apply();
 }
 
+void ScopeLink::publishSensorModule(const scopelink::Status &status)
+{
+    const scopelink::Capabilities &capabilities = m_device->capabilities();
+
+    // Not available is published as an alert rather than as a number, the same as a temperature: a module
+    // that has the sensor and is not getting a reading out of it has something wrong with it. Only readings
+    // that are there are fed to the filter, so that one coming back after a while starts afresh rather than
+    // ramping in from where it was before it stopped.
+    if (capabilities.hasHumidity)
+    {
+        bool usable = status.humidityValid && status.dewPointValid;
+
+        if (usable)
+        {
+            const double dewPoint = m_readingFilter.dewPoint(status.timestamp, status.dewPointCelsius());
+
+            ClimateNP[0].setValue(m_readingFilter.humidity(status.timestamp, status.humidityPercent()));
+            ClimateNP[1].setValue(dewPoint);
+
+            // The mirror's distance from the dew point rather than the air's, because the mirror is what
+            // fogs: one that has radiated itself a few degrees below the air is wet while the air is still
+            // clear. Where the mirror is not being measured the air is the next best thing, which is what
+            // the Windows driver falls back on too.
+            if (status.mirrorTemperatureValid)
+                ClimateNP[2].setValue(status.mirrorTemperatureCelsius() - dewPoint);
+            else if (status.ambientTemperatureValid)
+                ClimateNP[2].setValue(status.ambientTemperatureCelsius() - dewPoint);
+            else
+                usable = false;
+        }
+
+        ClimateNP.setState(usable ? IPS_OK : IPS_ALERT);
+        ClimateNP.apply();
+    }
+
+    if (!capabilities.hasAcceleration)
+        return;
+
+    if (status.accelerationValid)
+    {
+        m_smoothedAcceleration = m_readingFilter.acceleration(
+            status.timestamp, { static_cast<double>(status.accelerationX), static_cast<double>(status.accelerationY),
+                                static_cast<double>(status.accelerationZ) });
+
+        for (size_t axis = 0; axis < 3; axis++)
+            AccelerationNP[axis].setValue((*m_smoothedAcceleration)[axis]);
+    }
+    else
+    {
+        m_smoothedAcceleration.reset();
+    }
+
+    AccelerationNP.setState(status.accelerationValid ? IPS_OK : IPS_ALERT);
+    AccelerationNP.apply();
+
+    publishOrientation();
+}
+
+void ScopeLink::publishOrientation()
+{
+    std::optional<scopelink::TubeOrientation> orientation;
+
+    if (m_smoothedAcceleration)
+        orientation = scopelink::TubeOrientation::from(*m_smoothedAcceleration, m_orientationReference);
+
+    // A reading too weak to be gravity - a sensor in free fall or one returning nonsense - has no direction
+    // in it, and is an alert for the same reason a missing one is.
+    if (!orientation)
+    {
+        OrientationNP.setState(IPS_ALERT);
+        OrientationNP.apply();
+
+        return;
+    }
+
+    OrientationNP[0].setValue(orientation->altitude());
+
+    // Within five degrees of the zenith or the nadir the roll cannot be measured: rolling the tube there
+    // turns it about the very direction the sensor sees. The last roll is held, and the property goes idle
+    // to say that it is being held rather than measured.
+    if (orientation->roll())
+    {
+        OrientationNP[1].setValue(*orientation->roll());
+        OrientationNP.setState(IPS_OK);
+    }
+    else
+    {
+        OrientationNP.setState(IPS_IDLE);
+    }
+
+    OrientationNP.apply();
+}
+
+void ScopeLink::setOrientationReference()
+{
+    // From the smoothed axes, which are a second's worth of readings rather than one sample of a tube
+    // somebody's hand has just left.
+    if (!m_device->hasFreshStatus() || !m_smoothedAcceleration)
+    {
+        LOG_ERROR("The sensor module is not reporting an acceleration, so there is no reference to take.");
+        OrientationReferenceSP.setState(IPS_ALERT);
+
+        return;
+    }
+
+    scopelink::TubeOrientation::Vector reference;
+
+    try
+    {
+        reference = scopelink::TubeOrientation::reference(*m_smoothedAcceleration);
+    }
+    catch (const scopelink::OrientationError &error)
+    {
+        LOGF_ERROR("%s", error.what());
+        OrientationReferenceSP.setState(IPS_ALERT);
+
+        return;
+    }
+
+    m_orientationReference = reference;
+
+    for (size_t axis = 0; axis < 3; axis++)
+        OrientationReferenceNP[axis].setValue(reference[axis]);
+
+    OrientationReferenceNP.setState(IPS_OK);
+    OrientationReferenceNP.apply();
+    saveConfig(true, OrientationReferenceNP.getName());
+
+    LOGF_INFO("The tube is now taken to be level and not rolled where the accelerometer reads up as "
+              "(%.3f, %.3f, %.3f).",
+              reference[0], reference[1], reference[2]);
+
+    OrientationReferenceSP.setState(IPS_OK);
+    publishOrientation();
+}
+
+void ScopeLink::clearOrientationReference()
+{
+    m_orientationReference.reset();
+
+    for (size_t axis = 0; axis < 3; axis++)
+        OrientationReferenceNP[axis].setValue(0);
+
+    OrientationReferenceNP.setState(IPS_IDLE);
+    OrientationReferenceNP.apply();
+    saveConfig(true, OrientationReferenceNP.getName());
+
+    LOG_INFO("The orientation reference was cleared. The sensor module is taken to be fitted as designed: Z "
+             "along the optical axis towards the sky, Y towards the ground with the tube level.");
+
+    OrientationReferenceSP.setState(IPS_OK);
+    publishOrientation();
+}
+
+void ScopeLink::adoptOrientationReference()
+{
+    scopelink::TubeOrientation::Vector stored = { OrientationReferenceNP[0].getValue(),
+                                                  OrientationReferenceNP[1].getValue(),
+                                                  OrientationReferenceNP[2].getValue() };
+
+    const bool none = (stored[0] == 0) && (stored[1] == 0) && (stored[2] == 0);
+
+    if (!none && scopelink::TubeOrientation::isUsable(stored))
+    {
+        const double length = std::sqrt((stored[0] * stored[0]) + (stored[1] * stored[1]) + (stored[2] * stored[2]));
+
+        for (double &axis : stored)
+            axis /= length;
+
+        m_orientationReference = stored;
+    }
+    else
+    {
+        // A hand edited reference that is not a direction, or is one no module fitted along the tube can
+        // read while level, is dropped rather than squared up into something that was never measured.
+        if (!none)
+            LOG_WARN("The saved orientation reference is not one a level tube can read, so it is ignored.");
+
+        m_orientationReference.reset();
+        stored = { 0, 0, 0 };
+    }
+
+    for (size_t axis = 0; axis < 3; axis++)
+        OrientationReferenceNP[axis].setValue(stored[axis]);
+
+    OrientationReferenceNP.setState(m_orientationReference ? IPS_OK : IPS_IDLE);
+}
+
 void ScopeLink::publishFans(const scopelink::Status &status)
 {
     FanOverrideSP[0].setState(status.fanAManualOverrideEnabled ? ISS_ON : ISS_OFF);
@@ -1420,7 +1677,7 @@ void ScopeLink::publishFans(const scopelink::Status &status)
     FanStateSP.setState(IPS_OK);
     FanStateSP.apply();
 
-    if (m_device->capabilities().hasTemperatureSensor)
+    if (m_device->capabilities().hasMirrorTemperature)
     {
         FanTargetNP[0].setValue(status.fanATargetDT / 50.0);
         FanTargetNP[1].setValue(status.fanBTargetDT / 50.0);
@@ -2144,6 +2401,29 @@ bool ScopeLink::ISNewNumber(const char *dev, const char *name, double values[], 
         return true;
     }
 
+    // Read only to a client, like the orientation reference below; what arrives here is the configuration
+    // file being loaded, before there is a controller to be ready. identify() takes the offset from it.
+    if (RotatorOffsetNP.isNameMatch(name))
+    {
+        RotatorOffsetNP.update(values, names, n);
+        RotatorOffsetNP.apply();
+
+        return true;
+    }
+
+    // Read only to a client; what arrives here is the configuration file being loaded, which happens before
+    // there is a controller to be ready. Checked the same way a hand edit of that file would need to be.
+    // Once it has been published read only, libindi refuses a configuration file loaded into it later, which
+    // is what is wanted: by then the reference may have been set or cleared since.
+    if (OrientationReferenceNP.isNameMatch(name))
+    {
+        OrientationReferenceNP.update(values, names, n);
+        adoptOrientationReference();
+        OrientationReferenceNP.apply();
+
+        return true;
+    }
+
     if (!isReady())
         return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 
@@ -2399,6 +2679,24 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         return true;
     }
 
+    if (OrientationReferenceSP.isNameMatch(name))
+    {
+        OrientationReferenceSP.update(states, names, n);
+
+        const int action = OrientationReferenceSP.findOnSwitchIndex();
+
+        OrientationReferenceSP.reset();
+
+        if (action == 0)
+            setOrientationReference();
+        else if (action == 1)
+            clearOrientationReference();
+
+        OrientationReferenceSP.apply();
+
+        return true;
+    }
+
     for (ParameterGroup &group : m_parameterGroups)
     {
         for (ParameterSwitch &entry : group.switches)
@@ -2582,6 +2880,7 @@ bool ScopeLink::saveConfigItems(FILE *fp)
     RI::saveConfigItems(fp);
 
     RotatorOffsetNP.save(fp);
+    OrientationReferenceNP.save(fp);
     StepMultiplierNP.save(fp);
     DeveloperSP.save(fp);
     SimulatedGenerationSP.save(fp);

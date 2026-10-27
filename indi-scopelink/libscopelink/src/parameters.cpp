@@ -415,8 +415,8 @@ static bool isHeldBy(uint32_t id, const Capabilities &capabilities)
     // Listed even on a unit that has no sensor fitted, because it is how a sensor gets declared once one
     // is. The two filter coefficients stay listed for the same reason: the controller holds and answers
     // them either way, and the editor's job is to show what the controller has, not what it is using.
-    if (id == Capabilities::TemperatureSensorFittedDid)
-        return capabilities.hasTemperatureSensorConfiguration;
+    if (id == Capabilities::SensorModuleDid)
+        return capabilities.hasSensorModuleConfiguration;
 
     return true;
 }

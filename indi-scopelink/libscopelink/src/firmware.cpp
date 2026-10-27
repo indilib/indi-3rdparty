@@ -434,10 +434,13 @@ bool FirmwareUpdate::waitForBootloader()
 
             if (info.reportsReadProtection && !info.isReadProtected)
             {
-                // Worth saying rather than acting on. The boot loader arms the protection itself on its
-                // first run and reports nothing when it does, so this is the only place a unit whose
-                // option byte programming failed becomes visible.
-                log("firmware", "This controller's flash is not read protected.");
+                // Worth saying rather than acting on. The boot loader arms the protection itself and
+                // reports nothing when it does, so this is the only place a unit whose option byte
+                // programming failed becomes visible. Since level 2 it is also what a unit reset in the
+                // middle of arming says, until its next start finishes the job - see isReadProtected.
+                log("firmware", "This controller's flash is not read protected. If it was reset while the "
+                                "protection was being armed, its next start finishes the job; otherwise arming "
+                                "it failed on this unit.");
             }
 
             if (info.hasStartableFirmware)
