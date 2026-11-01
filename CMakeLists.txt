@@ -325,6 +325,18 @@ else(NUTCLIENT_FOUND)
   option(WITH_NUT "Install INDI NUT Driver" Off)
 endif(NUTCLIENT_FOUND)
 
+find_package(Mosquitto)
+if(MOSQUITTO_FOUND)
+  message(STATUS "Since libmosquitto was found, INDI Weather MQTT Driver can be built")
+  option(WITH_WEATHER_MQTT "Install INDI Weather MQTT Driver" On)
+else(MOSQUITTO_FOUND)
+  message(
+    STATUS
+    "Since libmosquitto was not found, INDI Weather MQTT Driver will not be built"
+  )
+  option(WITH_WEATHER_MQTT "Install INDI Weather MQTT Driver" Off)
+endif(MOSQUITTO_FOUND)
+
 # Add/remove cases for OSX
 if(${CMAKE_SYSTEM_NAME} MATCHES "Darwin")
   # Celestron origin driver needs some work to make it work on MacOS due to Qt dependency
@@ -774,6 +786,11 @@ else(BUILD_LIBS)
 
   if(WITH_WEEWX_JSON)
     add_subdirectory(indi-weewx-json)
+  endif()
+
+  # Weather MQTT
+  if(WITH_WEATHER_MQTT)
+    add_subdirectory(indi-weather-mqtt)
   endif()
 
   if(WITH_NIGHTSCAPE)
