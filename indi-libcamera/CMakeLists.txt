@@ -22,6 +22,18 @@ find_library(EXIF_LIBRARY exif REQUIRED)
 set(LIBCAMERA_VERSION_MAJOR 1)
 set(LIBCAMERA_VERSION_MINOR 2)
 
+# libcamera renamed properties::PixelArraySize to PixelArrayArea. The Raspberry Pi
+# fork has it from 0.7.2+rpt20261009 while upstream 0.7.2 does not, so test for it directly.
+include(CheckCXXSourceCompiles)
+set(CMAKE_REQUIRED_INCLUDES ${LibCamera_INCLUDE_DIR})
+set(CMAKE_REQUIRED_FLAGS "-std=c++20")
+check_cxx_source_compiles("
+#include <libcamera/property_ids.h>
+int main() { return libcamera::properties::PixelArrayArea.id() ? 0 : 1; }
+" HAVE_LIBCAMERA_PIXEL_ARRAY_AREA)
+unset(CMAKE_REQUIRED_INCLUDES)
+unset(CMAKE_REQUIRED_FLAGS)
+
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_libcamera.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_libcamera.xml)
 
@@ -34,6 +46,9 @@ include_directories(SYSTEM ${LibCamera_INCLUDE_DIR})
 include_directories(SYSTEM ${LibCameraApps_INCLUDE_DIR})
 
 include(CMakeCommon)
+
+# libcamera 0.7.1 and later require C++20
+set(CMAKE_CXX_STANDARD 20)
 
 ########### indi_libcamera_ccd ###########
 set(indi_libcamera_SRCS

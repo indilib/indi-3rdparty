@@ -6,5 +6,7 @@
 /* Define Driver version */
 #define LIBCAMERA_VERSION_MAJOR @LIBCAMERA_VERSION_MAJOR@
 #define LIBCAMERA_VERSION_MINOR @LIBCAMERA_VERSION_MINOR@
+/* libcamera names the sensor size property PixelArrayArea instead of PixelArraySize */
+#cmakedefine HAVE_LIBCAMERA_PIXEL_ARRAY_AREA
 
 #endif // CONFIG_H

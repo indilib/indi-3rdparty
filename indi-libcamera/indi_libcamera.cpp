@@ -1042,7 +1042,11 @@ bool INDILibCamera::Connect()
 
     if (width == 0 || height == 0)
     {
+#ifdef HAVE_LIBCAMERA_PIXEL_ARRAY_AREA
+        auto pas = m_ControlList.get(properties::PixelArrayArea);
+#else
         auto pas = m_ControlList.get(properties::PixelArraySize);
+#endif
 
         if (pas)
         {
