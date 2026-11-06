@@ -101,6 +101,9 @@ bool OriginTelescope::initProperties()
         TELESCOPE_HAS_LOCATION,
         4
     );
+
+    // Origin is an Alt-Az telescope
+    setMountType(MOUNT_ALTAZ);
     
     // Connection address
     IUFillText(&AddressT[0], "HOST", "Host", "");

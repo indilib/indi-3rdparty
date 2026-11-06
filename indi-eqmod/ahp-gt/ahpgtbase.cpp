@@ -274,6 +274,8 @@ bool AHPGTBase::updateProperties()
         else
             GTMountConfigSP[GT_GEM].setState(ISS_ON);
         GTMountConfigSP.apply();
+        // AZ/EQ mounts are driven equatorially, so only the fork flag changes the geometry
+        setMountType(GTMountConfigSP[GT_FORK].getState() == ISS_ON ? MOUNT_EQ_FORK : MOUNT_EQ_GEM);
         GTConfigurationNP.apply();
         GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency(0) * 700 + 1500);
         GTConfigurationNP.apply();

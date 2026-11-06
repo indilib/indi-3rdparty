@@ -296,11 +296,8 @@ bool CelestronAUX::initProperties()
     else
         SetApproximateMountAlignment(m_Location.latitude >= 0 ? NORTH_CELESTIAL_POLE : SOUTH_CELESTIAL_POLE);
 
-    // Configure standard MountTypeSP from INDI::Telescope
-    MountTypeSP.setPermission(IP_RO);
-    MountTypeSP[MOUNT_ALTAZ].s   = (m_MountType == ALT_AZ) ? ISS_ON : ISS_OFF;
-    MountTypeSP[MOUNT_EQ_FORK].s = (m_MountType == EQ_FORK) ? ISS_ON : ISS_OFF;
-    MountTypeSP[MOUNT_EQ_GEM].s  = (m_MountType == EQ_GEM) ? ISS_ON : ISS_OFF;
+    // Report the mount type in the standard read-only TELESCOPE_MOUNT_TYPE property
+    setMountType(m_MountType == ALT_AZ ? MOUNT_ALTAZ : (m_MountType == EQ_FORK ? MOUNT_EQ_FORK : MOUNT_EQ_GEM));
 
     // Track Modes for Equatorial Mount
     if (m_MountType != ALT_AZ)

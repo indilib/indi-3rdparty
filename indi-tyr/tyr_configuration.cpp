@@ -294,6 +294,12 @@ void TyrTelescope::updateConfigurationProperties()
             for (auto &property : NetworkStationTP) defineProperty(property);
         }
         refreshConfiguration();
+        // GXEM holds the geometry for the next restart, so at connect it is the geometry the controller booted with.
+        for (const auto &group : configurationSwitches)
+        {
+            if (group.read == "GXEM")
+                setMountType(group.property.findOnSwitchIndex() == 2 ? MOUNT_ALTAZ : MOUNT_EQ_GEM);
+        }
     } else {
         for (auto &group : configurationNumbers) { deleteProperty(group.property); group.loaded = false; }
         for (auto &group : configurationSwitches) deleteProperty(group.property);

@@ -407,6 +407,7 @@ bool AUDTELESCOPE::Connect()
         MountModeSP.setState(IPS_OK);
         MountModeSP.setPermission(IP_RO);
         MountModeSP.apply();
+        setMountType(mounttype == MM_ALTAZ ? MOUNT_ALTAZ : MOUNT_EQ_GEM);
     }
     else
     {

@@ -39,11 +39,6 @@ class AUDTELESCOPE : public INDI::Telescope, public INDI::GuiderInterface
 {
 
     enum FLIP { FLIP_ON, FLIP_OFF };
-    enum
-    {
-        MOUNT_EQUATORIAL,
-        MOUNT_ALTAZ
-    };
 
 public:
     AUDTELESCOPE();
