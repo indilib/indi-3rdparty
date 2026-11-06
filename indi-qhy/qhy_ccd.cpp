@@ -2099,9 +2099,6 @@ bool QHYCCD::ISNewNumber(const char *dev, const char *name, double values[], cha
             }
             else
             {
-                /* re-initialize the camera parameters */
-                QHYCCD::setupParams();
-                saveConfig(true, ReadModeNP.name);
                 ReadModeNP.s = IPS_OK;
             }
 
