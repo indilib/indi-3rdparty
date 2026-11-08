@@ -167,6 +167,9 @@ class ASIBase : public INDI::CCD
 
         INDI::PropertySwitch USBResetSP {2};
 
+        /** Unbinned frame as requested, before rounding to the ZWO ROI rules */
+        int mRequestedFrameX {0}, mRequestedFrameY {0}, mRequestedFrameW {0}, mRequestedFrameH {0};
+
         std::string mCameraName, mCameraID, mSerialNumber;
         ASI_CAMERA_INFO mCameraInfo;
         uint8_t mExposureRetry {0};

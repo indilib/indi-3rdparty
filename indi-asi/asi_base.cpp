@@ -775,6 +775,11 @@ void ASIBase::setupParams()
 
     SetCCDParams(maxWidth, maxHeight, bit_depth, x_pixel_size, y_pixel_size);
 
+    mRequestedFrameX = 0;
+    mRequestedFrameY = 0;
+    mRequestedFrameW = maxWidth;
+    mRequestedFrameH = maxHeight;
+
     // Let's calculate required buffer
     int nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
     PrimaryCCD.setFrameBufferSize(nbuf);
@@ -1244,6 +1249,11 @@ bool ASIBase::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
+    mRequestedFrameX = x;
+    mRequestedFrameY = y;
+    mRequestedFrameW = w;
+    mRequestedFrameH = h;
+
     // Set UNBINNED coords
     //PrimaryCCD.setFrame(x, y, w, h);
     PrimaryCCD.setFrame(subX * binX, subY * binY, subW * binX, subH * binY);
@@ -1267,7 +1277,8 @@ bool ASIBase::UpdateCCDBin(int binx, int biny)
 
     PrimaryCCD.setBin(binx, binx);
 
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+    // The current frame may be rounded down for the previous binning
+    return UpdateCCDFrame(mRequestedFrameX, mRequestedFrameY, mRequestedFrameW, mRequestedFrameH);
 }
 
 /* Downloads the image from the CCD.
