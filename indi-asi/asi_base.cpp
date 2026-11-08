@@ -108,12 +108,12 @@ void ASIBase::workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int bli
     ASI_ERROR_CODE ret;
     long usecsDuration = duration * 1000 * 1000;
 
-    LOGF_DEBUG("Blinking %ld time(s) before exposure.", blinks);
+    LOGF_DEBUG("Blinking %d time(s) before exposure.", blinks);
 
     ret = ASISetControlValue(mCameraInfo.CameraID, ASI_EXPOSURE, usecsDuration, ASI_FALSE);
     if (ret != ASI_SUCCESS)
     {
-        LOGF_ERROR("Failed to set blink exposure to %ldus (%d).", usecsDuration, Helpers::toString(ret));
+        LOGF_ERROR("Failed to set blink exposure to %ldus (%s).", usecsDuration, Helpers::toString(ret));
         return;
     }
 
@@ -147,7 +147,7 @@ void ASIBase::workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int bli
 
     if (blinks > 0)
     {
-        LOGF_WARN("%ld blink exposure(s) NOT done.", blinks);
+        LOGF_WARN("%d blink exposure(s) NOT done.", blinks);
     }
 }
 
@@ -460,7 +460,7 @@ bool ASIBase::initProperties()
     LOGF_DEBUG("ID: %d", mCameraInfo.CameraID);
     LOGF_DEBUG("MaxWidth: %d MaxHeight: %d", mCameraInfo.MaxWidth, mCameraInfo.MaxHeight);
     LOGF_DEBUG("PixelSize: %.2f", mCameraInfo.PixelSize);
-    LOGF_DEBUG("IsColorCamera: %s", mCameraInfo.IsCoolerCam ? "True" : "False");
+    LOGF_DEBUG("IsColorCamera: %s", mCameraInfo.IsColorCam ? "True" : "False");
     LOGF_DEBUG("MechanicalShutter: %s", mCameraInfo.MechanicalShutter ? "True" : "False");
     LOGF_DEBUG("ST4Port: %s", mCameraInfo.ST4Port ? "True" : "False");
     LOGF_DEBUG("IsCoolerCam: %s", mCameraInfo.IsCoolerCam ? "True" : "False");
@@ -1481,7 +1481,7 @@ void ASIBase::temperatureTimerTimeout()
 
 IPState ASIBase::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir)
 {
-    timer.stop();
+    stopGuidePulse(timer);
     ASIPulseGuideOn(mCameraInfo.CameraID, dir);
 
     LOGF_DEBUG("Starting %s guide for %f ms.", Helpers::toString(dir), ms);
@@ -1593,7 +1593,7 @@ void ASIBase::createControls(int piNumberOfControls)
                 value = 0.8 * cap.MaxValue;
 #endif
 
-            LOGF_DEBUG("createControls->set USB %d", value);
+            LOGF_DEBUG("createControls->set USB %ld", value);
             ASISetControlValue(mCameraInfo.CameraID, cap.ControlType, value, ASI_FALSE);
         }
 
