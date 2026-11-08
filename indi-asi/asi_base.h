@@ -30,6 +30,7 @@
 #include "indipropertytext.h"
 #include "indisinglethreadpool.h"
 
+#include <limits>
 #include <vector>
 
 #include <indiccd.h>
@@ -97,8 +98,10 @@ class ASIBase : public INDI::CCD
         int grabImage(float duration);
 
     protected:
-        double mTargetTemperature;
-        double mCurrentTemperature;
+        double mTargetTemperature {std::numeric_limits<double>::quiet_NaN()};
+        double mCurrentTemperature {0};
+        bool mTemperatureReadFailed {false};
+        IPState mTemperatureStateBeforeFailure {IPS_IDLE};
         INDI::Timer mTimerTemperature;
         void temperatureTimerTimeout();
 

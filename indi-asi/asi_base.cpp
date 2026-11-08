@@ -403,7 +403,7 @@ bool ASIBase::initProperties()
     CoolerSP[1].fill("COOLER_OFF", "OFF", ISS_ON);
     CoolerSP.fill(getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
 
-    CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0);
+    CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 1., 0.0);
     CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
     ControlNP.fill(getDeviceName(), "CCD_CONTROLS",      "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
@@ -627,6 +627,9 @@ bool ASIBase::Connect()
         return false;
     }
 
+    // Unknown after a reconnect, SetTemperature() has to send it again
+    mTargetTemperature = std::numeric_limits<double>::quiet_NaN();
+
     mTimerTemperature.callOnTimeout(std::bind(&ASIBase::temperatureTimerTimeout, this));
     mTimerTemperature.start(TEMP_TIMER_MS);
 
@@ -710,17 +713,6 @@ void ASIBase::setupParams()
         LOGF_ERROR("Failed to get number of controls (%s).", Helpers::toString(ret));
 
     createControls(piNumberOfControls);
-
-    if (HasCooler())
-    {
-        ASI_CONTROL_CAPS pCtrlCaps;
-        ret = ASIGetControlCaps(mCameraInfo.CameraID, ASI_TARGET_TEMP, &pCtrlCaps);
-        if (ret == ASI_SUCCESS)
-        {
-            CoolerNP[0].setMinMax(pCtrlCaps.MinValue, pCtrlCaps.MaxValue);
-            CoolerNP[0].setValue(pCtrlCaps.DefaultValue);
-        }
-    }
 
     // Set minimum ASI_BANDWIDTHOVERLOAD on ARM
 #ifdef LOW_USB_BANDWIDTH
@@ -827,6 +819,12 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
 
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+        if (TemperatureNP.isNameMatch(name) && std::round(values[0]) != values[0])
+        {
+            LOGF_INFO("The camera only accepts whole degrees, using %.0f C instead of %.2f C.", std::round(values[0]), values[0]);
+            values[0] = std::round(values[0]);
+        }
+
         if (ControlNP.isNameMatch(name))
         {
             std::vector<double> oldValues;
@@ -1100,9 +1098,10 @@ bool ASIBase::setVideoFormat(uint8_t index)
 
 int ASIBase::SetTemperature(double temperature)
 {
-    // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    // #PS: how will it warm up?
-    if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
+    // Only done if the camera is already regulating to this target. On its way to
+    // another one it would not stop here.
+    if (CoolerSP[0].getState() == ISS_ON && std::round(temperature) == std::round(mTargetTemperature)
+            && std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
     if (activateCooler(true) == false)
@@ -1427,11 +1426,17 @@ void ASIBase::temperatureTimerTimeout()
     if (ret != ASI_SUCCESS)
     {
         LOGF_ERROR("Failed to get temperature (%s).", Helpers::toString(ret));
+        if (!mTemperatureReadFailed)
+            mTemperatureStateBeforeFailure = newState;
+        mTemperatureReadFailed = true;
         newState = IPS_ALERT;
     }
     else
     {
         mCurrentTemperature = value / 10.0;
+        if (mTemperatureReadFailed)
+            newState = mTemperatureStateBeforeFailure;
+        mTemperatureReadFailed = false;
         // If cooling is active, show goal status
         //        if (CoolerSP[0].getState() == ISS_ON)
         //        {
