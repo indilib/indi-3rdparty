@@ -168,6 +168,8 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
     if (ret != ASI_SUCCESS)
     {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        PrimaryCCD.setExposureFailed();
+        return;
     }
 
     // Try exposure for 3 times
@@ -179,7 +181,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
         if (ret == ASI_SUCCESS)
             break;
 
-        LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
+        LOGF_ERROR("Failed to start exposure (%s)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
     }
@@ -190,6 +192,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             "ASI firmware might require an update to *compatible mode."
             "Check http://www.indilib.org/devices/ccds/zwo-optics-asi-cameras.html for details."
         );
+        PrimaryCCD.setExposureFailed();
         return;
     }
 
@@ -1289,7 +1292,8 @@ int ASIBase::grabImage(float duration)
         buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
         if (buffer == nullptr)
         {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24).", getDeviceName());
+            LOG_ERROR("Malloc failed (RGB 24).");
+            PrimaryCCD.setExposureFailed();
             return -1;
         }
     }
@@ -1303,6 +1307,7 @@ int ASIBase::grabImage(float duration)
         );
         if (type == ASI_IMG_RGB24)
             free(buffer);
+        PrimaryCCD.setExposureFailed();
         return -1;
     }
 
