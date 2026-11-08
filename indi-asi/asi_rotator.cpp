@@ -20,108 +20,31 @@
 #include "asi_rotator.h"
 #include "config.h"
 
-#include <CAA_API.h>
+#include <hotplugmanager.h>
+#include "asi_rotator_hotplug_handler.h"
+
 #include <inditimer.h>
 #include <map>
+#include <memory>
 
 static class Loader
 {
-        INDI::Timer hotPlugTimer;
-        std::map<int, std::shared_ptr<ASICAA>> rotators;
+        std::shared_ptr<INDI::ASICAAHotPlugHandler> hotPlugHandler;
     public:
         Loader()
         {
-            load(false);
+            hotPlugHandler = std::make_shared<INDI::ASICAAHotPlugHandler>();
+            INDI::HotPlugManager::getInstance().registerHandler(hotPlugHandler);
+            INDI::HotPlugManager::getInstance().start(1000); // Start hot-plug checks every 1 second
         }
-
-    public:
-        static size_t getCountOfConnectedRotators()
-        {
-            return size_t(std::max(CAAGetNum(), 0));
-        }
-
-        static std::vector<CAA_INFO> getConnectedRotators()
-        {
-            std::vector<CAA_INFO> result;
-            int count = getCountOfConnectedRotators();
-            for(int i = 0; i < count; i++)
-            {
-                int id = -1;
-                if (CAAGetID(i, &id) == CAA_SUCCESS)
-                {
-                    CAA_INFO info;
-                    if (CAAGetProperty(id, &info) == CAA_SUCCESS)
-                        result.push_back(info);
-                }
-            }
-            return result;
-        }
-
-    public:
-        void load(bool isHotPlug)
-        {
-            auto usedRotators = std::move(rotators);
-            UniqueName uniqueName(usedRotators);
-
-            for(const auto &rotatorInfo : getConnectedRotators())
-            {
-                int id = rotatorInfo.ID;
-
-                // rotator already created
-                if (usedRotators.find(id) != usedRotators.end())
-                {
-                    std::swap(rotators[id], usedRotators[id]);
-                    continue;
-                }
-
-                CAA_SN serialNumber;
-                std::string serialNumberStr = "";
-                if(CAAGetSerialNumber(id, &serialNumber) == CAA_SUCCESS)
-                {
-                    char snChars[100];
-                    auto &sn = serialNumber;
-                    sprintf(snChars, "%02x%02x%02x%02x%02x%02x%02x%02x", sn.id[0], sn.id[1],
-                            sn.id[2], sn.id[3], sn.id[4], sn.id[5], sn.id[6], sn.id[7]);
-                    snChars[16] = 0;
-                    serialNumberStr = std::string(snChars);
-                }
-
-                ASICAA *asiRotator = new ASICAA(rotatorInfo.ID, uniqueName.make(rotatorInfo));
-                rotators[id] = std::shared_ptr<ASICAA>(asiRotator);
-                if (isHotPlug)
-                    asiRotator->ISGetProperties(nullptr);
-            }
-        }
-
-    public:
-        class UniqueName
-        {
-                std::map<std::string, bool> used;
-            public:
-                UniqueName() = default;
-                UniqueName(const std::map<int, std::shared_ptr<ASICAA>> &usedRotators)
-                {
-                    for (const auto &rotator : usedRotators)
-                        used[rotator.second->getDeviceName()] = true;
-                }
-
-                std::string make(const CAA_INFO &rotatorInfo)
-                {
-                    std::string rotatorName = "ZWO CAA " + std::string(rotatorInfo.Name);
-                    std::string uniqueName = rotatorName;
-
-                    for (int index = 0; used[uniqueName] == true; )
-                        uniqueName = rotatorName + " " + std::to_string(++index);
-
-                    used[uniqueName] = true;
-                    return uniqueName;
-                }
-        };
 } loader;
 
-ASICAA::ASICAA(int ID, const std::string &rotatorName) : m_ID(ID)
+ASICAA::ASICAA(const CAA_INFO &info, const char *name, const std::string &serialNumber)
+    : m_ID(info.ID)
+    , m_Info(info)
+    , m_SerialNumber(serialNumber)
 {
-    setDeviceName(rotatorName.c_str());
+    setDeviceName(name);
 
     setVersion(ASI_VERSION_MAJOR, ASI_VERSION_MINOR);
 
