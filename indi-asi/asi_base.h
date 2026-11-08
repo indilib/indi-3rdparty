@@ -112,6 +112,9 @@ class ASIBase : public INDI::CCD
         /** Get initial parameters from camera */
         void setupParams();
 
+        /** Fill the format properties, needed before INDI::CCD defines CCD_CAPTURE_FORMAT */
+        void setupCaptureFormats();
+
         /** Create number and switch controls for camera by querying the API */
         void createControls(int piNumberOfControls);
 

@@ -495,6 +495,9 @@ bool ASIBase::initProperties()
 
 bool ASIBase::updateProperties()
 {
+    if (isConnected())
+        setupCaptureFormats();
+
     INDI::CCD::updateProperties();
 
     if (isConnected())
@@ -661,6 +664,41 @@ bool ASIBase::Disconnect()
     return true;
 }
 
+void ASIBase::setupCaptureFormats()
+{
+    int w = 0, h = 0, bin = 0;
+    ASI_IMG_TYPE imgType = ASI_IMG_END;
+
+    ASI_ERROR_CODE ret = ASIGetROIFormat(mCameraInfo.CameraID, &w, &h, &bin, &imgType);
+    if (ret != ASI_SUCCESS)
+    {
+        LOGF_ERROR("Failed to get ROI format (%s).", Helpers::toString(ret));
+    }
+
+    VideoFormatSP.resize(0);
+    for (const auto &videoFormat : mCameraInfo.SupportedVideoFormat)
+    {
+        if (videoFormat == ASI_IMG_END)
+            break;
+
+        INDI::WidgetSwitch node;
+        node.fill(
+            Helpers::toString(videoFormat),
+            Helpers::toPrettyString(videoFormat),
+            videoFormat == imgType ? ISS_ON : ISS_OFF
+        );
+
+        node.setAux(const_cast<ASI_IMG_TYPE*>(&videoFormat));
+        VideoFormatSP.push(std::move(node));
+        CaptureFormat format = {Helpers::toString(videoFormat),
+                                Helpers::toPrettyString(videoFormat),
+                                static_cast<uint8_t>((videoFormat == ASI_IMG_RAW16) ? 16 : 8),
+                                videoFormat == imgType
+                               };
+        addCaptureFormat(format);
+    }
+}
+
 void ASIBase::setupParams()
 {
     int piNumberOfControls = 0;
@@ -723,29 +761,6 @@ void ASIBase::setupParams()
 
         default:
             break;
-    }
-
-    VideoFormatSP.resize(0);
-    for (const auto &videoFormat : mCameraInfo.SupportedVideoFormat)
-    {
-        if (videoFormat == ASI_IMG_END)
-            break;
-
-        INDI::WidgetSwitch node;
-        node.fill(
-            Helpers::toString(videoFormat),
-            Helpers::toPrettyString(videoFormat),
-            videoFormat == imgType ? ISS_ON : ISS_OFF
-        );
-
-        node.setAux(const_cast<ASI_IMG_TYPE*>(&videoFormat));
-        VideoFormatSP.push(std::move(node));
-        CaptureFormat format = {Helpers::toString(videoFormat),
-                                Helpers::toPrettyString(videoFormat),
-                                static_cast<uint8_t>((videoFormat == ASI_IMG_RAW16) ? 16 : 8),
-                                videoFormat == imgType
-                               };
-        addCaptureFormat(format);
     }
 
     float x_pixel_size = mCameraInfo.PixelSize;
