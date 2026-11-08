@@ -22,6 +22,7 @@
 #include "asi_serial_helpers.h" // For Helpers::toHexString
 #include "indilogger.h"   // For LOG_INFO, LOG_DEBUG, etc.
 #include <algorithm>      // For std::remove_if, std::find_if
+#include <cstdio>         // For snprintf
 #include <EFW_filter.h>   // For EFW SDK functions
 #include <string>         // For std::string, std::to_string
 #include <vector>         // For std::vector
@@ -102,9 +103,23 @@ std::shared_ptr<DefaultDevice> ASIWHEELHotPlugHandler::createDevice(const std::s
             int id;
             if (EFWGetID(i, &id) == EFW_SUCCESS && id == wheelID)
             {
-                // Get properties (note: may return ERROR_CLOSED, which is acceptable)
+                // Open first: libEFWFilter 1.8 needs it, and its codes from
+                // EFW_ERROR_CLOSED on differ from the 1.7 header used on all platforms.
+                if (EFWOpen(id) != EFW_SUCCESS)
+                    continue;
+
                 EFW_ERROR_CODE result = EFWGetProperty(id, &efwInfo);
-                if (result == EFW_SUCCESS || result == EFW_ERROR_CLOSED)
+                EFWClose(id);
+
+                // Still detecting its slots after power-on. Connect() reads them later.
+                if (result == EFW_ERROR_MOVING)
+                {
+                    efwInfo.ID = id;
+                    snprintf(efwInfo.Name, sizeof(efwInfo.Name), "EFW");
+                    result = EFW_SUCCESS;
+                }
+
+                if (result == EFW_SUCCESS)
                 {
                     foundWheel = true;
                     break;
