@@ -145,6 +145,9 @@ class ASIBase : public INDI::CCD
         /** Reset USB device when camera gets stuck */
         void resetUSBDevice();
 
+        /** Send the current settings to the camera again after it was reopened */
+        void restoreCameraSettings();
+
         /** Additional Properties to INDI::CCD */
         INDI::PropertyNumber  CoolerNP {1};
         INDI::PropertySwitch  CoolerSP {2};
@@ -179,6 +182,7 @@ class ASIBase : public INDI::CCD
         std::string mCameraName, mCameraID, mSerialNumber;
         ASI_CAMERA_INFO mCameraInfo;
         uint8_t mExposureRetry {0};
+        bool mUSBResetDone {false};
         ASI_IMG_TYPE mCurrentVideoFormat;
         std::vector<ASI_CONTROL_CAPS> mControlCaps;
 };

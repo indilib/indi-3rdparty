@@ -278,8 +278,9 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             }
 
             // If USB reset is enabled
-            if (USBResetSP[INDI_ENABLED].getState() == ISS_ON)
+            if (USBResetSP[INDI_ENABLED].getState() == ISS_ON && !mUSBResetDone)
             {
+                mUSBResetDone = true;
                 LOGF_WARN("Exposure failed after %d attempts. Attempting USB reset...", mExposureRetry);
                 ASIStopExposure(mCameraInfo.CameraID);
                 ASICloseCamera(mCameraInfo.CameraID);
@@ -328,8 +329,11 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
                     return;
                 }
 
+                restoreCameraSettings();
+
                 // Try one more time after reset
                 LOG_INFO("Attempting exposure again after USB reset...");
+                mExposureRetry = 0;
                 ASIStopExposure(mCameraInfo.CameraID);
                 workerExposure(isAboutToQuit, duration);
                 return;
@@ -1147,6 +1151,7 @@ bool ASIBase::activateCooler(bool enable)
 bool ASIBase::StartExposure(float duration)
 {
     mExposureRetry = 0;
+    mUSBResetDone = false;
     mWorker.start(std::bind(&ASIBase::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
@@ -1713,6 +1718,57 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
         if (np)
         {
             fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
+        }
+    }
+}
+
+void ASIBase::restoreCameraSettings()
+{
+    ASI_ERROR_CODE ret;
+
+    for (auto &num : ControlNP)
+    {
+        auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.getAux());
+
+        // See createControls(): these fail exposures on cameras without GPS
+        if (numCtrlCap->ControlType == ASI_GPS_START_LINE || numCtrlCap->ControlType == ASI_GPS_END_LINE)
+            continue;
+
+        auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch & it) -> bool
+        {
+            return static_cast<const ASI_CONTROL_CAPS *>(it.getAux())->ControlType == numCtrlCap->ControlType;
+        });
+        ASI_BOOL isAuto = (sw != ControlSP.end() && sw->getState() == ISS_ON) ? ASI_TRUE : ASI_FALSE;
+
+        ret = ASISetControlValue(mCameraInfo.CameraID, numCtrlCap->ControlType, static_cast<long>(num.getValue()), isAuto);
+        if (ret != ASI_SUCCESS)
+            LOGF_WARN("Failed to restore %s (%s).", num.getName(), Helpers::toString(ret));
+    }
+
+    if (hasFlipControl())
+    {
+        int flip = 0;
+        if (FlipSP[FLIP_HORIZONTAL].getState() == ISS_ON)
+            flip |= ASI_FLIP_HORIZ;
+        if (FlipSP[FLIP_VERTICAL].getState() == ISS_ON)
+            flip |= ASI_FLIP_VERT;
+
+        ret = ASISetControlValue(mCameraInfo.CameraID, ASI_FLIP, flip, ASI_FALSE);
+        if (ret != ASI_SUCCESS)
+            LOGF_WARN("Failed to restore ASI_FLIP (%s).", Helpers::toString(ret));
+    }
+
+    if (HasCooler() && CoolerSP[0].getState() == ISS_ON)
+    {
+        ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, ASI_TRUE, ASI_FALSE);
+        if (ret != ASI_SUCCESS)
+            LOGF_WARN("Failed to restore the cooler (%s).", Helpers::toString(ret));
+
+        if (!std::isnan(mTargetTemperature))
+        {
+            ret = ASISetControlValue(mCameraInfo.CameraID, ASI_TARGET_TEMP, std::round(mTargetTemperature), ASI_TRUE);
+            if (ret != ASI_SUCCESS)
+                LOGF_WARN("Failed to restore the target temperature (%s).", Helpers::toString(ret));
         }
     }
 }
