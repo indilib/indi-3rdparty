@@ -27,7 +27,7 @@ else(INDI_HIDAPILIB)
 endif(INDI_HIDAPILIB)
 
 set(ASI_VERSION_MAJOR 2)
-set(ASI_VERSION_MINOR 7)
+set(ASI_VERSION_MINOR 8)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_asi.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_asi.xml)
