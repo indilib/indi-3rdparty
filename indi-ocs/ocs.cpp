@@ -38,7 +38,10 @@ USB and network connections supported.
 #include "ocs.h"
 #include "termios.h"
 
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <strings.h>
 #include <ctime>
 #include <memory>
 #include <mutex>
@@ -68,6 +71,10 @@ OCS::OCS() : INDI::Dome(), WI(this)
     setVersion(1, 5);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
+    for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement++) {
+        WeatherRepollTimers[measurement].setSingleShot(true);
+        WeatherRepollTimers[measurement].callOnTimeout(std::bind(&OCS::WeatherRepollHit, this, measurement));
+    }
 }
 
 /*******************************************************
@@ -307,46 +314,20 @@ void OCS::GetCapabilites()
     }
 
     // Get available weather measurements
+    resetWeatherFaults();
     for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
-        char measurement_reponse[RB_MAX_LEN];
-        char measurement_command[CMD_MAX_LEN];
-        switch(measurement) {
-            case WEATHER_TEMPERATURE:
-                indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-                break;
-            case WEATHER_PRESSURE:
-                indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-                break;
-            case WEATHER_HUMIDITY:
-                indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-                break;
-            case WEATHER_WIND:
-                indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-                break;
-            case WEATHER_RAIN:
-                indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-                break;
-            case WEATHER_DIFF_SKY_TEMP:
-                indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-                break;
-            case WEATHER_CLOUD:
-                indi_strlcpy(measurement_command, OCS_get_cloud_description, sizeof(measurement_command));
-                break;
-            case WEATHER_SKY:
-                indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
-                break;
-            case WEATHER_SKY_TEMP:
-                indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-                break;
-            default:
-                break;
-        }
-
+        char measurement_reponse[RB_MAX_LEN] = {0};
         int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
-                                                                                measurement_command);
-        if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") != 0 &&
-            strcmp(measurement_reponse, "nan") != 0 && strcmp(measurement_reponse, "0") != 0) {
+                                                                                weatherCommand(measurement));
+        if (measurement_error_or_fail > 1 && strcasecmp(measurement_reponse, "N/A") != 0 &&
+            strcasecmp(measurement_reponse, "nan") != 0 && strcmp(measurement_reponse, "0") != 0) {
             weather_enabled[measurement] = 1;
+        } else if (measurement < WEATHER_SAFETY_COUNT && strcasecmp(measurement_reponse, "nan") == 0 &&
+                   weatherSensorConfigured(measurement)) {
+            // Configured in OCS but no reading yet, the first poll will treat this as a bad reading
+            weather_enabled[measurement] = 1;
+            LOGF_WARN("Weather sensor %s is configured in OCS but has no reading yet",
+                      weatherParameterName(measurement));
         } else {
             weather_enabled[measurement] = 0;
         }
@@ -355,7 +336,7 @@ void OCS::GetCapabilites()
     // Available weather measurements are now defined as = 1, unavailable as = 0
     // so we can sum these to check if any are defined, if not then keep tab disabled
     int weatherDisabled = 0;
-    for (int wmeasure = 1; wmeasure < WEATHER_MEASUREMENTS_COUNT; wmeasure ++) {
+    for (int wmeasure = 0; wmeasure < WEATHER_MEASUREMENTS_COUNT; wmeasure ++) {
         weatherDisabled += weather_enabled[wmeasure];
     }
     if (weatherDisabled > 0) {
@@ -363,22 +344,18 @@ void OCS::GetCapabilites()
         LOG_INFO("OCS has weather sensor(s), enabling tab");
         // If a weather measurement that has a safety limit set in OCS is active then get that limit
         if (weather_enabled[WEATHER_WIND] || weather_enabled[WEATHER_DIFF_SKY_TEMP]) {
-            char threshold_reponse[RB_MAX_LEN];
+            char threshold_reponse[RB_MAX_LEN] = {0};
             int threshold_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, threshold_reponse,
                                                                                   OCS_get_weather_thresholds);
             if (threshold_error_or_fail > 1 ) { //> 1 as an OCS error would be 1 char in response
                 char *split;
                 split = strtok(threshold_reponse, ",");
-                if (strcmp(split, "N/A") != 0) {
-                    if (charToInt(split) != conversion_error) {
-                        wind_speed_threshold = charToInt(split);
-                    }
+                if (charToInt(split) != conversion_error) { // Also rejects N/A
+                    wind_speed_threshold = charToInt(split);
                 }
                 split = strtok(NULL, ",");
-                if (strcmp(split, "N/A") != 0) {
-                    if (charToInt(split) != conversion_error) {
-                        diff_temp_threshold = charToInt(split);
-                    }
+                if (charToInt(split) != conversion_error) { // Also rejects N/A
+                    diff_temp_threshold = charToInt(split);
                 }
             } else {
                 LOGF_WARN("Communication error on get Weather thresholds %s",
@@ -386,9 +363,13 @@ void OCS::GetCapabilites()
             }
         }
 
-        // Loop through only the first 6 measurements rather than WEATHER_MEASUREMENTS_COUNT
+        // Loop through only the safety measurements rather than WEATHER_MEASUREMENTS_COUNT
         // as only these are usable for safety status with limits
-        for (int measurement = 0; measurement < 6; measurement ++) {
+        for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement ++) {
+            // Handshake runs on every connect, and INDI Core appends parameters without checking for duplicates
+            if (ParametersNP.findWidgetByName(weatherParameterName(measurement))) {
+                continue;
+            }
             if (weather_enabled[measurement] == 1) {
                 switch(measurement) {
                     case WEATHER_TEMPERATURE:
@@ -408,7 +389,8 @@ void OCS::GetCapabilites()
                         setCriticalParameter("WEATHER_WIND");
                         break;
                     case WEATHER_RAIN:
-                        addParameter("WEATHER_RAIN", "Rain state", 3, 3, 67);
+                        // 1 = Rain, 2 = Warn, 3 = Dry. Only Dry is safe. INDI Core creates no limits if min == max
+                        addParameter("WEATHER_RAIN", "Rain state", 2.5, 3.5, 0);
                         setCriticalParameter("WEATHER_RAIN");
                         break;
                     case WEATHER_DIFF_SKY_TEMP:
@@ -1409,104 +1391,216 @@ IPState OCS::updateWeather() {
         LOG_DEBUG("Weather update called");
 
         for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
-            if (weather_enabled[measurement] == 1) {
-                char measurement_reponse[RB_MAX_LEN];
-                char measurement_command[CMD_MAX_LEN];
-
-                LOGF_DEBUG("In weather measurements loop, %u", measurement);
-
-                switch (measurement) {
-                    case WEATHER_TEMPERATURE:
-                        indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-                        break;
-                    case WEATHER_PRESSURE:
-                        indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-                        break;
-                    case WEATHER_HUMIDITY:
-                        indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-                        break;
-                    case WEATHER_WIND:
-                        indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-                        break;
-                    case WEATHER_RAIN:
-                        indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-                        break;
-                    case WEATHER_DIFF_SKY_TEMP:
-                        indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-                        break;
-
-                    // case WEATHER_CLOUD: Not handled in this switch as it returns a string so needs a different call
-
-                    case WEATHER_SKY:
-                        indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
-                        break;
-                    case WEATHER_SKY_TEMP:
-                        indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-                        break;
-                    default:
-                        break;
-                }
-
-                double value = conversion_error;
-                int measurement_error_or_fail = getCommandDoubleResponse(PortFD, &value, measurement_reponse,
-                                                                         measurement_command);
-                if ((measurement_error_or_fail >= 0) && (value != conversion_error) &&
-                    (weather_enabled[measurement] == 1)) {
-                    switch(measurement) {
-                        case WEATHER_TEMPERATURE:
-                            setParameterValue("WEATHER_TEMPERATURE", value);
-                            break;
-                        case WEATHER_PRESSURE:
-                            setParameterValue("WEATHER_PRESSURE", value);
-                            break;
-                        case WEATHER_HUMIDITY:
-                            setParameterValue("WEATHER_HUMIDITY", value);
-                            break;
-                        case WEATHER_WIND:
-                            setParameterValue("WEATHER_WIND", value);
-                            break;
-                        case WEATHER_RAIN:
-                            setParameterValue("WEATHER_RAIN", value);
-                            break;
-                        case WEATHER_DIFF_SKY_TEMP:
-                            setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
-                            break;
-
-                     // case WEATHER_CLOUD: Not handled in this switch as it returns a string so needs a different call
-
-                        case WEATHER_SKY:
-                            IUSaveText(&Weather_SkyT[0], measurement_reponse);
-                            IDSetText(&Weather_SkyTP, nullptr);
-                            break;
-                        case WEATHER_SKY_TEMP:
-                            IUSaveText(&Weather_Sky_TempT[0], measurement_reponse);
-                            IDSetText(&Weather_Sky_TempTP, nullptr);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-
-                // Separate because WEATHER_CLOUD is the only weather parameter that return a string
-                if ((measurement == WEATHER_CLOUD) && (weather_enabled[WEATHER_CLOUD] == 1)) {
-                    char measurement_reponse[RB_MAX_LEN];
-                    int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
-                                                                             OCS_get_cloud_description);
-                    if (measurement_error_or_fail > 1) {
-                        IUSaveText(&Weather_CloudT[0], measurement_reponse);
-                        IDSetText(&Weather_CloudTP, nullptr);
-                    }
-                }
+            if (weather_enabled[measurement] != 1) {
+                continue;
             }
-            if (WI::syncCriticalParameters()) {
-                LOG_DEBUG("SyncCriticalParameters = true");
-            } else {
-                LOG_DEBUG("SyncCriticalParameters = false");
+
+            LOGF_DEBUG("In weather measurements loop, %u", measurement);
+
+            // Separate because WEATHER_CLOUD is the only weather parameter that return a string
+            if (measurement == WEATHER_CLOUD) {
+                char cloud_response[RB_MAX_LEN] = {0};
+                int cloud_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, cloud_response,
+                                                                                  weatherCommand(WEATHER_CLOUD));
+                if (cloud_error_or_fail > 1) {
+                    IUSaveText(&Weather_CloudT[0], cloud_response);
+                    IDSetText(&Weather_CloudTP, nullptr);
+                }
+                continue;
+            }
+
+            char measurement_response[RB_MAX_LEN] = {0};
+            double value = conversion_error;
+            bool valid = readWeatherMeasurement(measurement, value, measurement_response);
+
+            if (measurement < WEATHER_SAFETY_COUNT) {
+                if (valid) {
+                    handleGoodWeatherReading(measurement, value);
+                } else {
+                    handleBadWeatherReading(measurement);
+                }
+            } else if (valid) {
+                if (measurement == WEATHER_SKY) {
+                    IUSaveText(&Weather_SkyT[0], measurement_response);
+                    IDSetText(&Weather_SkyTP, nullptr);
+                } else if (measurement == WEATHER_SKY_TEMP) {
+                    IUSaveText(&Weather_Sky_TempT[0], measurement_response);
+                    IDSetText(&Weather_Sky_TempTP, nullptr);
+                }
             }
         }
     }
 
+    // Always IPS_OK, as INDI Core only evaluates the critical parameters in that case.
+    // A confirmed bad sensor is held out of range so that evaluation raises the Alert.
     return IPS_OK;
+}
+
+/*****************************************************************************
+ * Does OCS name a sensor for this measurement? A name means it is configured in
+ * OCS, and was found at boot if it is on I2C. It does not mean it is working now
+ *****************************************************************************/
+bool OCS::weatherSensorNamed(const char *name_command)
+{
+    char response[RB_MAX_LEN] = {0};
+    int error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, response, name_command);
+    return error_or_fail > 1 && strcasecmp(response, "None") != 0 && strcasecmp(response, "N/A") != 0;
+}
+
+bool OCS::weatherSensorConfigured(int measurement)
+{
+    switch (measurement) {
+        case WEATHER_TEMPERATURE:
+            return weatherSensorNamed(OCS_get_outside_temperature_name);
+        case WEATHER_PRESSURE:
+            return weatherSensorNamed(OCS_get_pressure_name);
+        case WEATHER_HUMIDITY:
+            return weatherSensorNamed(OCS_get_humidity_name);
+        case WEATHER_WIND:
+            return weatherSensorNamed(OCS_get_wind_speed_name);
+        case WEATHER_RAIN:
+            return weatherSensorNamed(OCS_get_rain_sensor_name);
+        case WEATHER_DIFF_SKY_TEMP:
+            // Calculated by OCS from these two sensors, so it has no name of its own
+            return weatherSensorNamed(OCS_get_outside_temperature_name) &&
+                   weatherSensorNamed(OCS_get_sky_IR_temperature_name);
+        default:
+            return false;
+    }
+}
+
+/********************************************************
+ * The OCS command that reads the given weather measurement
+ ********************************************************/
+const char *OCS::weatherCommand(int measurement)
+{
+    switch (measurement) {
+        case WEATHER_TEMPERATURE:
+            return OCS_get_outside_temperature;
+        case WEATHER_PRESSURE:
+            return OCS_get_pressure;
+        case WEATHER_HUMIDITY:
+            return OCS_get_humidity;
+        case WEATHER_WIND:
+            return OCS_get_wind_speed;
+        case WEATHER_RAIN:
+            return OCS_get_rain_sensor_status;
+        case WEATHER_DIFF_SKY_TEMP:
+            return OCS_get_sky_diff_temperature;
+        case WEATHER_CLOUD:
+            return OCS_get_cloud_description;
+        case WEATHER_SKY:
+            return OCS_get_sky_quality;
+        case WEATHER_SKY_TEMP:
+            return OCS_get_sky_IR_temperature;
+        default:
+            return "";
+    }
+}
+
+/*****************************************************
+ * The INDI parameter name of a safety weather measurement
+ *****************************************************/
+const char *OCS::weatherParameterName(int measurement)
+{
+    switch (measurement) {
+        case WEATHER_TEMPERATURE:
+            return "WEATHER_TEMPERATURE";
+        case WEATHER_PRESSURE:
+            return "WEATHER_PRESSURE";
+        case WEATHER_HUMIDITY:
+            return "WEATHER_HUMIDITY";
+        case WEATHER_WIND:
+            return "WEATHER_WIND";
+        case WEATHER_RAIN:
+            return "WEATHER_RAIN";
+        case WEATHER_DIFF_SKY_TEMP:
+            return "WEATHER_SKY_DIFF_TEMP";
+        default:
+            return "";
+    }
+}
+
+/*****************************************************************
+ * Read a numeric weather measurement, false if failed or not valid
+ *****************************************************************/
+bool OCS::readWeatherMeasurement(int measurement, double &value, char *response)
+{
+    value = conversion_error;
+    int error_or_fail = getCommandDoubleResponse(PortFD, &value, response, weatherCommand(measurement));
+    return error_or_fail >= 0 && std::isfinite(value) && value != conversion_error;
+}
+
+/*****************************************************************
+ * A safety sensor gave a valid reading, any bad reading count ends
+ *****************************************************************/
+void OCS::handleGoodWeatherReading(int measurement, double value)
+{
+    if (weather_suspect[measurement]) {
+        WeatherRepollTimers[measurement].stop();
+        weather_suspect[measurement] = false;
+    }
+    if (weather_failed[measurement]) {
+        weather_failed[measurement] = false;
+        LOGF_INFO("Weather sensor %s has recovered", weatherParameterName(measurement));
+    }
+    setParameterValue(weatherParameterName(measurement), value);
+}
+
+/*************************************************************************
+ * A safety sensor that replied at connection gave a NaN or failed to read
+ *************************************************************************/
+void OCS::handleBadWeatherReading(int measurement)
+{
+    if (weather_failed[measurement]) {
+        setParameterValue(weatherParameterName(measurement), WEATHER_INVALID_VALUE);
+    } else if (!weather_suspect[measurement]) {
+        // Tolerate one bad reading, the re-poll decides and the last good value stays in place
+        weather_suspect[measurement] = true;
+        WeatherRepollTimers[measurement].start(WEATHER_REPOLL_MS);
+        LOGF_WARN("Weather sensor %s gave a bad reading, re-polling in %u seconds",
+                  weatherParameterName(measurement), WEATHER_REPOLL_MS / 1000);
+    }
+}
+
+/**************************************************************************
+ * Confirm a bad weather reading, independent of the weather polling period
+ **************************************************************************/
+void OCS::WeatherRepollHit(int measurement)
+{
+    if (!isConnected() || !weather_suspect[measurement]) {
+        return;
+    }
+
+    char measurement_response[RB_MAX_LEN] = {0};
+    double value = conversion_error;
+    weather_suspect[measurement] = false;
+    if (readWeatherMeasurement(measurement, value, measurement_response)) {
+        setParameterValue(weatherParameterName(measurement), value);
+        LOGF_INFO("Weather sensor %s reading recovered on re-poll", weatherParameterName(measurement));
+    } else {
+        weather_failed[measurement] = true;
+        setParameterValue(weatherParameterName(measurement), WEATHER_INVALID_VALUE);
+        LOGF_ERROR("Weather sensor %s has failed, two consecutive bad readings", weatherParameterName(measurement));
+    }
+
+    ParametersNP.apply();
+    if (OverrideSP[0].getState() != ISS_ON) {
+        syncCriticalParameters();
+        critialParametersLP.apply();
+    }
+}
+
+/********************************************
+ * Forget bad readings and any pending re-poll
+ ********************************************/
+void OCS::resetWeatherFaults()
+{
+    for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement++) {
+        WeatherRepollTimers[measurement].stop();
+        weather_suspect[measurement] = false;
+        weather_failed[measurement] = false;
+    }
 }
 
 /*************************************
@@ -1777,6 +1871,7 @@ bool OCS::Connect()
 bool OCS::Disconnect()
 {
     SlowTimer.stop();
+    resetWeatherFaults();
     bool status = INDI::Dome::Disconnect();
     return status;
 }

@@ -271,10 +271,12 @@ enum {
 
 // Get the outside temperature in deg. C
 #define OCS_get_outside_temperature ":G1#"
+#define OCS_get_outside_temperature_name ":G1N#"
 // Returns: nnn.n#
 
 // Get the sky IR temperature in deg. C
 #define OCS_get_sky_IR_temperature ":G2#"
+#define OCS_get_sky_IR_temperature_name ":G2N#"
 // Returns: nnn.n#
 
 // Get the sky differential temperature
@@ -290,6 +292,7 @@ enum {
 
 // Get the absolute barometric pressure as Float (mbar, sea-level compensated)
 #define OCS_get_pressure ":Gb#"
+#define OCS_get_pressure_name ":GbN#"
 // Returns: n.nnn#
 // where n ranges from about 980.0 to 1050.0
 
@@ -299,6 +302,7 @@ enum {
 
 // Get relative humidity reading as Float (% Rh)
 #define OCS_get_humidity ":Gh#"
+#define OCS_get_humidity_name ":GhN#"
 // Returns: n.n#
 // where n ranges from 0.0 to 100.0
 
@@ -308,6 +312,7 @@ enum {
 
 // Get rain sensor status
 #define OCS_get_rain_sensor_status ":GR#"
+#define OCS_get_rain_sensor_name ":GRN#"
 // Returns: -1000# for invalid, 0# for N/A, 1# for Rain, 2# for Warn, and 3# for Dry
 
 // Get wind status
@@ -316,6 +321,7 @@ enum {
 
 // Get wind speed
 #define OCS_get_wind_speed ":Gw#"
+#define OCS_get_wind_speed_name ":GwN#"
 // Returns: n# kph, Invalid#, or N/A#
 
 // Get the weather threshold #defines
@@ -678,7 +684,30 @@ private:
         WEATHER_MEASUREMENTS_COUNT
     };
 
-    int weather_enabled[WEATHER_MEASUREMENTS_COUNT];
+    int weather_enabled[WEATHER_MEASUREMENTS_COUNT] {};
+
+    // Measurements before WEATHER_CLOUD feed the safety status, the rest are display only
+    static constexpr int WEATHER_SAFETY_COUNT = WEATHER_CLOUD;
+    // A sensor that returned a bad reading is read again after this long
+    static constexpr uint32_t WEATHER_REPOLL_MS = 10000;
+    // Written to a failed sensor's parameter to force Alert, as NaN passes every limit check
+    static constexpr double WEATHER_INVALID_VALUE = -9999;
+
+    // First bad reading seen, 10 second re-poll pending
+    bool weather_suspect[WEATHER_SAFETY_COUNT] {};
+    // Two consecutive bad readings, parameter held out of range until a valid reading
+    bool weather_failed[WEATHER_SAFETY_COUNT] {};
+    INDI::Timer WeatherRepollTimers[WEATHER_SAFETY_COUNT];
+
+    const char *weatherCommand(int measurement);
+    bool weatherSensorNamed(const char *name_command);
+    bool weatherSensorConfigured(int measurement);
+    const char *weatherParameterName(int measurement);
+    bool readWeatherMeasurement(int measurement, double &value, char *response);
+    void handleGoodWeatherReading(int measurement, double value);
+    void handleBadWeatherReading(int measurement);
+    void WeatherRepollHit(int measurement);
+    void resetWeatherFaults();
 
     ITextVectorProperty Weather_CloudTP;
     IText Weather_CloudT[1] {};
