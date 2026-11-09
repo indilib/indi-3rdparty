@@ -810,39 +810,43 @@ void OCS::TimerHit()
         LOGF_DEBUG("roof_was_in_error, %d", roof_was_in_error);
 
         char *split;
-        char roof_message[30];
+        char roof_message[RB_MAX_LEN * 2] = {0};
         split = strtok(roof_status_response, ",");
-        if (strcmp(split, "o") == 0) {
+        const char *roof_motion = split ? split : "";
+        split = strtok(NULL, ",");
+        const char *roof_detail = split ? split : "";
+        if (strcmp(roof_motion, "o") == 0) {
             if (getShutterState() != SHUTTER_MOVING) {
                 setShutterState(SHUTTER_MOVING);
             }
-            split = strtok(NULL, ",");
-            sprintf(roof_message, "Opening, travel %s", split);
-        } else if (strcmp(split, "c") == 0) {
+            snprintf(roof_message, sizeof(roof_message), "Opening, travel %s", roof_detail);
+        } else if (strcmp(roof_motion, "c") == 0) {
             if (getShutterState() != SHUTTER_MOVING) {
                 setShutterState(SHUTTER_MOVING);
             }
-            split = strtok(NULL, ",");
-            sprintf(roof_message, "Closing, travel %s", split);
-        } else if (strcmp(split, "i") == 0) {
-            split = strtok(NULL, ",");
-            if (strcmp(split, "OPEN") == 0) {
+            snprintf(roof_message, sizeof(roof_message), "Closing, travel %s", roof_detail);
+        } else if (strcmp(roof_motion, "i") == 0) {
+            if (strcmp(roof_detail, "OPEN") == 0) {
                 if (getShutterState() != SHUTTER_OPENED) {
                     setShutterState(SHUTTER_OPENED);
                 }
-                sprintf(roof_message, "Idle - Open");
-            } else if (strcmp(split, "CLOSED") == 0) {
+                snprintf(roof_message, sizeof(roof_message), "Idle - Open");
+            } else if (strcmp(roof_detail, "CLOSED") == 0) {
                 if (getShutterState() != SHUTTER_CLOSED) {
                     setShutterState(SHUTTER_CLOSED);
                 }
-                sprintf(roof_message, "Idle - Closed");
-            } else if (strcmp(split, "No Error") == 0) {
-                sprintf(roof_message, "Idle - No Error");
-            } else if (strcmp(split, "Waiting for mount to park") == 0) {
-                sprintf(roof_message, "Waiting for mount to park");
+                snprintf(roof_message, sizeof(roof_message), "Idle - Closed");
+            } else if (strcmp(roof_detail, "No Error") == 0) {
+                // Stopped between the limits, or a fault has been cleared
+                if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_ERROR) {
+                    setShutterState(SHUTTER_UNKNOWN);
+                }
+                snprintf(roof_message, sizeof(roof_message), "Idle - No Error");
+            } else if (strcmp(roof_detail, "Waiting for mount to park") == 0) {
+                snprintf(roof_message, sizeof(roof_message), "Waiting for mount to park");
             } else {
                 // Must be an error message
-                sprintf(roof_message, "Roof/shutter: %s", split);
+                snprintf(roof_message, sizeof(roof_message), "Roof/shutter: %s", roof_detail);
                 if (getShutterState() != SHUTTER_ERROR) {
                     setShutterState(SHUTTER_ERROR);
                 }
@@ -858,7 +862,7 @@ void OCS::TimerHit()
                     LOG_INFO("Roof/shutter error cleared");
                 }
             }
-            sprintf(last_shutter_status, "%s", roof_message);
+            indi_strlcpy(last_shutter_status, roof_message, sizeof(last_shutter_status));
         }
 
         IUSaveText(&ShutterStatusT[0], roof_message);
@@ -868,7 +872,7 @@ void OCS::TimerHit()
     // Dome updates
     if (hasDome) {
         // Get the dome status
-        char dome_message[10];
+        char dome_message[10] = {0};
         char dome_status_response[RB_MAX_LEN] = {0};
         int dome_status_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, dome_status_response,
                                                                                  OCS_get_dome_status);
@@ -923,7 +927,7 @@ void OCS::TimerHit()
             IDSetText(&DomeStatusTP, nullptr);
         } else {
             LOGF_WARN("Communication error on get Dome status %s, this update aborted, will try again...", OCS_get_dome_status);
-            LOGF_WARN("Received %S", dome_status_response);
+            LOGF_WARN("Received %s", dome_status_response);
         }
 
         // Get the dome position
@@ -937,7 +941,7 @@ void OCS::TimerHit()
             DomeAbsPosNP.apply();
         } else {
             LOGF_WARN("Communication error on get Dome position %s, this update aborted, will try again...", OCS_get_dome_azimuth);
-            LOGF_WARN("Received %d", position);
+            LOGF_WARN("Received %s", dome_position_response);
         }
     }
 
@@ -1688,7 +1692,7 @@ IPState OCS::MoveAbs(double az)
             break;
         }
     } else {
-        LOGF_ERROR("Dome goto produced error %s", dome_goto_target_error_or_fail);
+        LOGF_ERROR("Dome goto produced error %d", dome_goto_target_error_or_fail);
         return IPS_ALERT;
     }
 }
@@ -2478,6 +2482,9 @@ int OCS::flushIO(int fd)
 int OCS::charToInt (char *inString)
 {
     int value = conversion_error;
+    if (inString == nullptr) {
+        return value;
+    }
     try {
         value = std::stoi(inString);
     } catch (const std::invalid_argument&) {

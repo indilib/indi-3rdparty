@@ -495,9 +495,9 @@ private:
     // Main control tab controls
     //--------------------------
     ITextVectorProperty ShutterStatusTP;
-    IText ShutterStatusT[1];
+    IText ShutterStatusT[1] {};
     ITextVectorProperty DomeStatusTP;
-    IText DomeStatusT[1];
+    IText DomeStatusT[1] {};
     enum {
         DOME_SET_PARK,
         DOME_RETURN_HOME,
@@ -562,7 +562,7 @@ private:
         THERMOSTAT_HUMIDITY_RELAY,
         THERMOSTAT_RELAY_COUNT
     };
-    int thermostat_relays[THERMOSTAT_RELAY_COUNT];
+    int thermostat_relays[THERMOSTAT_RELAY_COUNT] {};
 
     // Power tab controls
     //-------------------
@@ -578,7 +578,7 @@ private:
         POWER_DEVICE_COUNT
     };
 
-    int power_device_relays[POWER_DEVICE_COUNT];
+    int power_device_relays[POWER_DEVICE_COUNT] {};
     char POWER_DEVICE1_NAME[RB_MAX_LEN];
     char POWER_DEVICE2_NAME[RB_MAX_LEN];
     char POWER_DEVICE3_NAME[RB_MAX_LEN];
@@ -645,7 +645,7 @@ private:
         LIGHT_COUNT
     };
 
-    int light_relays[LIGHT_COUNT];
+    int light_relays[LIGHT_COUNT] {};
 
     ISwitchVectorProperty LIGHT_WRWSP;
     ISwitch LIGHT_WRWS[SWITCH_TOGGLE_COUNT];
@@ -680,11 +680,11 @@ private:
     int weather_enabled[WEATHER_MEASUREMENTS_COUNT];
 
     ITextVectorProperty Weather_CloudTP;
-    IText Weather_CloudT[1];
+    IText Weather_CloudT[1] {};
     ITextVectorProperty Weather_SkyTP;
-    IText Weather_SkyT[1];
+    IText Weather_SkyT[1] {};
     ITextVectorProperty Weather_Sky_TempTP;
-    IText Weather_Sky_TempT[1];
+    IText Weather_Sky_TempT[1] {};
 
     // Manual tab controls
     //--------------------
