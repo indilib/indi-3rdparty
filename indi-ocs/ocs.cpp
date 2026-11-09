@@ -225,13 +225,13 @@ void OCS::GetCapabilites()
         // Defined devices have a positive integer relay definition, undefined return -1
         // so we can sum these to check if any are defined, if not then keep tab hidden
         int powerDisabled = 0;
-        for (int deviceNo = 1; deviceNo < POWER_DEVICE_COUNT; deviceNo ++) {
+        for (int deviceNo = 0; deviceNo < POWER_DEVICE_COUNT; deviceNo ++) {
             powerDisabled += power_device_relays[deviceNo];
         }
         if (powerDisabled != (-1 * POWER_DEVICE_COUNT)) {
             power_tab_enabled = true;
             LOG_INFO("OCS has power device(s), enabling tab");
-            for (int deviceNo = 1; deviceNo < POWER_DEVICE_COUNT; deviceNo ++) {
+            for (int deviceNo = 1; deviceNo <= POWER_DEVICE_COUNT; deviceNo ++) {
                 if (power_device_relays[(deviceNo - 1)] != -1) {
                     char power_relay_name_response[RB_MAX_LEN] = {0};
                     char get_power_device_name_command[CMD_MAX_LEN] = {0};
@@ -300,7 +300,7 @@ void OCS::GetCapabilites()
         // Defined lights have a positive integer relay definition, undefined return -1
         // so we can sum these to check if any are defined, if not then keep tab hidden
         int lightsDisabled = 0;
-        for (int lrelay = 1; lrelay < LIGHT_COUNT; lrelay ++) {
+        for (int lrelay = 0; lrelay < LIGHT_COUNT; lrelay ++) {
             lightsDisabled += light_relays[lrelay];
         }
         if (lightsDisabled != (-1 * LIGHT_COUNT)) {
@@ -450,15 +450,15 @@ bool OCS::initProperties()
     IUFillText(&Thermostat_StatusT[THERMOSTAT_TEMERATURE], "THERMOSTAT_TEMPERATURE", "Temperature °C", "---");
     IUFillText(&Thermostat_StatusT[THERMOSTAT_HUMIDITY], "THERMOSTAT_HUMIDITY", "Humidity %", "---");
 
-    IUFillNumberVector(&Thermostat_heat_setpointNP, Thermostat_heat_setpointN, 1, getDefaultName(), "THERMOSTAT_HEAT_SETPOINT", "Heat setpoint",
+    IUFillNumber(&Thermostat_heat_setpointN[0], "THERMOSTAT_HEAT_SETPOINT", "Heat °C (0=OFF)", "%.0f", 0, 40, 1, 0);
+    IUFillNumberVector(&Thermostat_heat_setpointNP, Thermostat_heat_setpointN, 1, getDeviceName(), "THERMOSTAT_HEAT_SETPOINT", "Heat setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_heat_setpointN[1], "THERMOSTAT_HEAT_SEPOINT", "Heat °C (0=OFF)", "%.0f", 0, 40, 1, 0);
-    IUFillNumberVector(&Thermostat_cool_setpointNP, Thermostat_cool_setpointN, 1, getDefaultName(), "THERMOSTAT_COOL_SETPOINT", "Cool setpoint",
+    IUFillNumber(&Thermostat_cool_setpointN[0], "THERMOSTAT_COOL_SETPOINT", "Cool °C (0=OFF)", "%.0f", 0, 40, 1, 0);
+    IUFillNumberVector(&Thermostat_cool_setpointNP, Thermostat_cool_setpointN, 1, getDeviceName(), "THERMOSTAT_COOL_SETPOINT", "Cool setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_cool_setpointN[1], "THERMOSTAT_COOL_SEPOINT", "Cool °C (0=OFF)", "%.0f", 0, 40, 1, 0);
-    IUFillNumberVector(&Thermostat_humidity_setpointNP, Thermostat_humidity_setpointN, 1, getDefaultName(), "THERMOSTAT_HUMIDITY_SETPOINT", "Humidity setpoint",
+    IUFillNumber(&Thermostat_humidity_setpointN[0], "THERMOSTAT_HUMIDITY_SETPOINT", "Dehumidify % (0=OFF)", "%.0f", 0, 80, 1, 0);
+    IUFillNumberVector(&Thermostat_humidity_setpointNP, Thermostat_humidity_setpointN, 1, getDeviceName(), "THERMOSTAT_HUMIDITY_SETPOINT", "Humidity setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_humidity_setpointN[1], "THERMOSTAT_HUMIDITY_SEPOINT", "Dehumidify % (0=OFF)", "%.0f", 0, 80, 1, 0);
 
     IUFillSwitchVector(&Thermostat_heat_relaySP, Thermostat_heat_relayS, SWITCH_TOGGLE_COUNT, getDeviceName(), "Thermo_heat_relay", "Heat Relay",
                        THERMOSTAT_TAB, IP_RO, ISR_1OFMANY, 60, IPS_OK);
@@ -869,7 +869,7 @@ void OCS::TimerHit()
                 sprintf(dome_message, "Home");
             } else if (strcmp(dome_status_response, "P") == 0) {
                 if (getDomeState() != DOME_PARKED) {
-                    setDomeState(DOME_PARKED);
+                    SetParked(true);
                     ParkSP[0].setState(ISS_ON);
                     ParkSP[1].setState(ISS_OFF);
                     ParkSP.setState(IPS_OK);
@@ -979,7 +979,9 @@ void OCS::SlowTimerHit()
     int roof_error_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, roof_error_response,
                                                                             OCS_get_roof_last_error);
     if (roof_error_error_or_fail > 1) {
-        if (strcmp(roof_error_response, "Error: Open safety interlock") == 0 &&
+        if (strcmp(roof_error_response, "No Error") == 0) {
+            last_shutter_error[0] = '\0';
+        } else if (strcmp(roof_error_response, "Error: Open safety interlock") == 0 &&
                 strcmp(roof_error_response, last_shutter_error) != 0) {
             indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
             if (getShutterState() != SHUTTER_ERROR) {
@@ -1027,7 +1029,7 @@ void OCS::SlowTimerHit()
             if (getShutterState() != SHUTTER_ERROR) {
                 setShutterState(SHUTTER_ERROR);
             }
-            LOG_WARN("Roof/shutter error - Close unknow");
+            LOG_WARN("Roof/shutter error - Close unknown");
         } else if (strcmp(roof_error_response, "Error: Close limit sw fail") == 0 &&
                    strcmp(roof_error_response, last_shutter_error) != 0) {
             indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
@@ -1042,7 +1044,7 @@ void OCS::SlowTimerHit()
                 setShutterState(SHUTTER_ERROR);
             }
             LOG_WARN("Roof/shutter error - Close max time exceeded");
-        } else if (strcmp(roof_error_response, "Error: Close under tim") == 0 &&
+        } else if (strcmp(roof_error_response, "Error: Close under time") == 0 &&
             strcmp(roof_error_response, last_shutter_error) != 0) {
             indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
             LOG_WARN("Roof/shutter error - Close min time not reached");
@@ -1099,13 +1101,13 @@ void OCS::SlowTimerHit()
                    strcmp(roof_error_response, last_shutter_error) != 0) {
                indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
                LOG_WARN("Roof/shutter warning - Roof/shutter is already open");
-        } else if (strcmp(roof_error_response, "Error: Open location unknow") == 0 &&
+        } else if (strcmp(roof_error_response, "Error: Open location unknown") == 0 &&
                    strcmp(roof_error_response, last_shutter_error) != 0) {
                indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
                if (getShutterState() != SHUTTER_ERROR) {
                    setShutterState(SHUTTER_ERROR);
                }
-               LOG_WARN("Roof/shutter error - Open location unknow");
+               LOG_WARN("Roof/shutter error - Open location unknown");
         } else if (strcmp(roof_error_response, "Error: Open already in motion") == 0 &&
                    strcmp(roof_error_response, last_shutter_error) != 0) {
                indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
@@ -1659,8 +1661,8 @@ IPState OCS::Park()
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
     }
     if (sendOCSCommand(OCS_dome_park)) {
+        // TimerHit marks the dome as parked once OCS reports it
         setDomeState(DOME_PARKING);
-        SetParked(true);
         return IPS_BUSY;
     } else {
         setDomeState(DOME_ERROR);
@@ -1898,6 +1900,34 @@ bool OCS::saveConfigItems(FILE *fp)
     return true;
 }
 
+/*****************************************************************
+ * Apply a client request to an ON/OFF relay switch. The switch only
+ * moves if OCS accepted the command, otherwise it keeps the old state
+ *****************************************************************/
+bool OCS::setRelayFromSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n, int relay)
+{
+    const int previous = IUFindOnSwitchIndex(svp);
+    if (IUUpdateSwitch(svp, states, names, n) < 0) {
+        return false;
+    }
+
+    char relay_command[CMD_MAX_LEN];
+    snprintf(relay_command, sizeof(relay_command), "%s%d,%s%s", OCS_set_relay_part, relay,
+             svp->sp[ON_SWITCH].s == ISS_ON ? "ON" : "OFF", OCS_command_terminator);
+
+    const bool accepted = sendOCSCommand(relay_command);
+    if (!accepted) {
+        IUResetSwitch(svp);
+        if (previous >= 0) {
+            svp->sp[previous].s = ISS_ON;
+        }
+        LOGF_ERROR("OCS did not accept the command for %s", svp->label);
+    }
+    svp->s = accepted ? IPS_OK : IPS_ALERT;
+    IDSetSwitch(svp, nullptr);
+    return accepted;
+}
+
 /**************************************************
  * Client has changed the state of a switch, update
  **************************************************/
@@ -1910,209 +1940,48 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
         // Power devices
         //--------------
         if (strcmp(Power_Device1SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device1SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE1_ON") == 0) {
-                    char set_power_dev_1_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_1_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE1], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device1SP, nullptr);
-                    return sendOCSCommand(set_power_dev_1_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE1_OFF") == 0) {
-                    char set_power_dev_1_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_1_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE1], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device1SP, nullptr);
-                    return sendOCSCommand(set_power_dev_1_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device1SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device1SP, states, names, n, power_device_relays[POWER_DEVICE1]);
         } else if (strcmp(Power_Device2SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device2SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE2_ON") == 0) {
-                    char set_power_dev_2_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_2_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE2], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device2SP, nullptr);
-                    return sendOCSCommand(set_power_dev_2_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE2_OFF") == 0) {
-                    char set_power_dev_2_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_2_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE2], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device2SP, nullptr);
-                    return sendOCSCommand(set_power_dev_2_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device2SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device2SP, states, names, n, power_device_relays[POWER_DEVICE2]);
         } else if (strcmp(Power_Device3SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device3SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE3_ON") == 0) {
-                    char set_power_dev_3_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_3_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE3], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device3SP, nullptr);
-                    return sendOCSCommand(set_power_dev_3_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE3_OFF") == 0) {
-                    char set_power_dev_3_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_3_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE3], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device3SP, nullptr);
-                    return sendOCSCommand(set_power_dev_3_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device3SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device3SP, states, names, n, power_device_relays[POWER_DEVICE3]);
         } else if (strcmp(Power_Device4SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device4SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE4_ON") == 0) {
-                    char set_power_dev_4_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_4_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE4], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device4SP, nullptr);
-                    return sendOCSCommand(set_power_dev_4_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE4_OFF") == 0) {
-                    char set_power_dev_4_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_4_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE4], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device4SP, nullptr);
-                    return sendOCSCommand(set_power_dev_4_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device4SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device4SP, states, names, n, power_device_relays[POWER_DEVICE4]);
         } else if (strcmp(Power_Device5SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device5SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE5_ON") == 0) {
-                    char set_power_dev_5_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_5_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE5], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device5SP, nullptr);
-                    return sendOCSCommand(set_power_dev_5_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE5_OFF") == 0) {
-                    char set_power_dev_5_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_5_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE5], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device5SP, nullptr);
-                    return sendOCSCommand(set_power_dev_5_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device5SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device5SP, states, names, n, power_device_relays[POWER_DEVICE5]);
         } else if (strcmp(Power_Device6SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device6SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE1_ON") == 0) {
-                    char set_power_dev_6_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_6_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE6], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device6SP, nullptr);
-                    return sendOCSCommand(set_power_dev_6_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE6_OFF") == 0) {
-                    char set_power_dev_6_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_6_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE6], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device6SP, nullptr);
-                    return sendOCSCommand(set_power_dev_6_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device6SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device6SP, states, names, n, power_device_relays[POWER_DEVICE6]);
 
         // Lights
         //-------
         } else if (strcmp(LIGHT_WRWSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_WRWSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "WRW_ON") == 0) {
-                    char set_light_wrw_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrw_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_WRW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRWSP, nullptr);
-                    return sendOCSCommand(set_light_wrw_on_cmd);
-                } else if (strcmp(names[i], "WRW_OFF") == 0) {
-                    char set_light_wrw_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrw_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_WRW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRWSP, nullptr);
-                    return sendOCSCommand(set_light_wrw_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_WRWSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_WRWSP, states, names, n, light_relays[LIGHT_WRW_RELAY]);
         } else if (strcmp(LIGHT_WRRSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_WRRSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "WRR_ON") == 0) {
-                    char set_light_wrr_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrr_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_WRR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRRSP, nullptr);
-                    return sendOCSCommand(set_light_wrr_on_cmd);
-                } else if (strcmp(names[i], "WRR_OFF") == 0) {
-                    char set_light_wrr_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrr_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_WRR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRRSP, nullptr);
-                    return sendOCSCommand(set_light_wrr_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_WRRSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_WRRSP, states, names, n, light_relays[LIGHT_WRR_RELAY]);
         } else if (strcmp(LIGHT_ORWSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_ORWSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "ORW_ON") == 0) {
-                    char set_light_orw_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orw_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_ORW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORWSP, nullptr);
-                    return sendOCSCommand(set_light_orw_on_cmd);
-                } else if (strcmp(names[i], "ORW_OFF") == 0) {
-                    char set_light_orw_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orw_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_ORW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORWSP, nullptr);
-                    return sendOCSCommand(set_light_orw_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_ORWSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_ORWSP, states, names, n, light_relays[LIGHT_ORW_RELAY]);
         } else if (strcmp(LIGHT_ORRSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_ORRSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "ORR_ON") == 0) {
-                    char set_light_orr_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orr_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_ORR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORRSP, nullptr);
-                    return sendOCSCommand(set_light_orr_on_cmd);
-                } else if (strcmp(names[i], "ORR_OFF") == 0) {
-                    char set_light_orr_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orr_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_ORR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORRSP, nullptr);
-                    return sendOCSCommand(set_light_orr_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_ORRSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_ORRSP, states, names, n, light_relays[LIGHT_ORR_RELAY]);
         } else if (strcmp(LIGHT_OUTSIDESP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_OUTSIDESP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "OUTSIDE_ON") == 0) {
-                    char set_light_outside_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_outside_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_OUTSIDE_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
-                    return sendOCSCommand(set_light_outside_on_cmd);
-                } else if (strcmp(names[i], "OUTSIDE_OFF") == 0) {
-                    char set_light_outside_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_outside_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_OUTSIDE_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
-                    return sendOCSCommand(set_light_outside_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_OUTSIDESP, states, names, n, light_relays[LIGHT_OUTSIDE_RELAY]);
 
         // Safety Override
         //----------------
         } else if (strcmp(Safety_Interlock_OverrideSP.name, name) == 0) {
-            IUUpdateSwitch(&Safety_Interlock_OverrideSP, states, names, n);
             IUResetSwitch(&Safety_Interlock_OverrideSP);
-            return sendOCSCommand(OCS_roof_safety_override);
+            bool override_ok = sendOCSCommand(OCS_roof_safety_override);
+            Safety_Interlock_OverrideSP.s = override_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
+            return override_ok;
 
         // Roof max power
         //---------------
         } else if (strcmp(Roof_High_PowerSP.name, name) == 0) {
-            IUUpdateSwitch(&Roof_High_PowerSP, states, names, n);
             IUResetSwitch(&Roof_High_PowerSP);
-            return sendOCSCommand(OCS_roof_high_power_mode);
+            bool high_power_ok = sendOCSCommand(OCS_roof_high_power_mode);
+            Roof_High_PowerSP.s = high_power_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&Roof_High_PowerSP, nullptr);
+            return high_power_ok;
 
         // Reset Watchdog
         //---------------
@@ -2120,33 +1989,46 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             char watchdog_response[RB_MAX_LEN] = {0};
             int watchdog_fail_or_error = getCommandSingleCharErrorOrLongResponse(PortFD, watchdog_response, OCS_set_watchdog_flag);
             (void) watchdog_fail_or_error;
-            if (strcmp(watchdog_response, "Rebooting in a few seconds...") == 0) {
+            IUResetSwitch(&Watchdog_ResetSP);
+            bool watchdog_ok = strcmp(watchdog_response, "Rebooting in a few seconds...") == 0;
+            if (watchdog_ok) {
                 LOG_WARN("Rebooting the OCS controller in a few seconds...");
-                IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
-                return true;
             } else if (strcmp(watchdog_response, "23") == 0) {
                 LOG_WARN("Unable to reboot, roof/shutter/dome in motion");
-                IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
-                return false;
-            } else if (strcmp(watchdog_response, "0") == 0) {
+            } else {
                 LOGF_DEBUG("OCS watchdog reset error, reponse was: %s. Maybe watchdog is not enabled?", watchdog_response);
-                IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
-                return false;
             }
+            Watchdog_ResetSP.s = watchdog_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&Watchdog_ResetSP, nullptr);
+            return watchdog_ok;
 
         // Additional dome controls
         //-------------------------
         } else if (strcmp(DomeControlsSP.name, name) == 0) {
+            bool dome_control_ok = false;
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "SET_PARK_SW") == 0) {
-                    return SetCurrentPark();
+                    dome_control_ok = SetCurrentPark();
+                    break;
                 } else if (strcmp(names[i], "RETURN_HOME_SW") == 0) {
-                    return ReturnHome();
+                    dome_control_ok = ReturnHome();
+                    break;
                 } else if (strcmp(names[i], "RESET_HOME_SW") == 0) {
-                    return ResetHome();
+                    dome_control_ok = ResetHome();
+                    break;
                 }
             }
+            IUResetSwitch(&DomeControlsSP);
+            DomeControlsSP.s = dome_control_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&DomeControlsSP, nullptr);
+            return dome_control_ok;
         }
+
+        // Weather interface controls, Refresh and Override
+        if (WI::processSwitch(dev, name, states, names, n)) {
+            return true;
+        }
+
         return INDI::Dome::ISNewSwitch(dev, name, states, names, n);
     } else {
         return false;
@@ -2165,45 +2047,57 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
         if (!strcmp(Thermostat_heat_setpointNP.name, name)) {
             char thermostat_setpoint_command[CMD_MAX_LEN];
             sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                    OCS_set_thermostat_heat_setpoint_part, values[THERMOSTAT_HEAT_SETPOINT], OCS_command_terminator);
-            char response[RB_MAX_LEN];
+                    OCS_set_thermostat_heat_setpoint_part, values[0], OCS_command_terminator);
+            char response[RB_MAX_LEN] = {0};
             int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
             if(res < 0 || response[0] == '0') {
                 LOGF_ERROR("Failed to set Thermostat heat setpoint %s", response);
+                Thermostat_heat_setpointNP.s = IPS_ALERT;
+                IDSetNumber(&Thermostat_heat_setpointNP, nullptr);
                 return false;
             } else {
-                LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
-                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HEAT_SETPOINT], &names[THERMOSTAT_HEAT_SETPOINT], n);
+                LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[0]);
+                IUUpdateNumber(&Thermostat_heat_setpointNP, values, names, n);
+                Thermostat_heat_setpointNP.s = IPS_OK;
+                IDSetNumber(&Thermostat_heat_setpointNP, nullptr);
                 return true;
             }
         }
         if (!strcmp(Thermostat_cool_setpointNP.name, name)) {
             char thermostat_setpoint_command[CMD_MAX_LEN];
             sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                    OCS_set_thermostat_cool_setpoint_part, values[THERMOSTAT_COOL_SETPOINT], OCS_command_terminator);
-            char response[RB_MAX_LEN];
+                    OCS_set_thermostat_cool_setpoint_part, values[0], OCS_command_terminator);
+            char response[RB_MAX_LEN] = {0};
             int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
             if(res < 0 || response[0] == '0') {
                 LOGF_ERROR("Failed to set Thermostat cool setpoint %s", response);
+                Thermostat_cool_setpointNP.s = IPS_ALERT;
+                IDSetNumber(&Thermostat_cool_setpointNP, nullptr);
                 return false;
             } else {
-                LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
-                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_COOL_SETPOINT], &names[THERMOSTAT_COOL_SETPOINT], n);
+                LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[0]);
+                IUUpdateNumber(&Thermostat_cool_setpointNP, values, names, n);
+                Thermostat_cool_setpointNP.s = IPS_OK;
+                IDSetNumber(&Thermostat_cool_setpointNP, nullptr);
                 return true;
             }
         }
         if (!strcmp(Thermostat_humidity_setpointNP.name, name)) {
             char thermostat_setpoint_command[CMD_MAX_LEN];
             sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                    OCS_set_thermostat_humidity_setpoint_part, values[THERMOSTAT_HUMIDITY_SETPOINT], OCS_command_terminator);
-            char response[RB_MAX_LEN];
+                    OCS_set_thermostat_humidity_setpoint_part, values[0], OCS_command_terminator);
+            char response[RB_MAX_LEN] = {0};
             int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
             if(res < 0 || response[0] == '0') {
                 LOGF_ERROR("Failed to set Thermostat humidity setpoint %s", response);
+                Thermostat_humidity_setpointNP.s = IPS_ALERT;
+                IDSetNumber(&Thermostat_humidity_setpointNP, nullptr);
                 return false;
             } else {
-                LOGF_INFO("Set Thermostat humidity setpoint to: %.0f °C", values[THERMOSTAT_HUMIDITY_SETPOINT]);
-                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HUMIDITY_SETPOINT], &names[THERMOSTAT_HUMIDITY_SETPOINT], n);
+                LOGF_INFO("Set Thermostat humidity setpoint to: %.0f %%", values[0]);
+                IUUpdateNumber(&Thermostat_humidity_setpointNP, values, names, n);
+                Thermostat_humidity_setpointNP.s = IPS_OK;
+                IDSetNumber(&Thermostat_humidity_setpointNP, nullptr);
                 return true;
             }
         }

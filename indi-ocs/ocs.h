@@ -447,6 +447,7 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     bool sendOCSCommand(const char *cmd);
     bool sendOCSCommandBlind(const char *cmd);
     int flushIO(int fd);
+    bool setRelayFromSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n, int relay);
     int getCommandSingleCharResponse(int fd, char *data, const char *cmd); //Reimplemented from getCommandString
     int getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char *cmd); //Reimplemented from getCommandString
     int getCommandDoubleResponse(int fd, double *value, char *data,
