@@ -78,7 +78,7 @@ Controls for configuring the dome > mount slaving functionality. Refer to [INDI 
 Shows miscellaneous details about the OCS.
 
 - Firmware version - As reported by OCS. The driver expects a minimum version and will report if the connected OCS software is below this.
-- Roof last error - This message is persistent until a roof/shutter movement clears the status.
+- Roof last error - This message is persistent until a roof/shutter movement or a stop clears the status in OCS.
 - Mains status - This is dependent on OCS configuration and does not contribute toward the Safe status of the observatory within the driver, which is independent of the safe status within OCS.
 - MCU temperature ℃ - the internal temperature of the OCS microcontroller, if supported by the OCS hardware used.
 
@@ -99,6 +99,10 @@ These controls define the minimum and maximum limits outside of which the measur
 **Note that the OCS internal safety status is independent of these driver settings. OCS considers Rain, Cloud cover, Wind speed & Mains power present towards it's safety status (if they are configured) and will operate independent of these settings and driver connection.**
 
 **Safe limits defined in the OCS software for Wind speed and Cloud cover are copied into the driver as initial limits upon connection. They may be over-ridden here but are not applied back to the OCS software. In addition, temperature, pressure & humidity are considered towards the INDI safety status. If not required for this purpose but only to be monitored, just set the min/max limits very wide so that they are always considered to be safe**.
+
+The Rain status is 1 for rain, 2 for warning and 3 for dry. Only dry is treated as safe, so a warning also shows Alert.
+
+**Failed sensors:** a sensor that OCS reports at connection is expected to keep reporting. If it reads NaN or does not reply, the driver keeps the last good value and polls that sensor again 10 seconds later, whatever the update period. A second bad reading in a row sets its status to Alert and its parameter to -9999. The next valid reading clears the Alert. A sensor that reads NaN at connection is treated as not fitted, unless it is configured in OCS and has a sensor name, in which case the same rule applies. A name only shows that the sensor is configured, and that it was detected at boot if it is on I2C, so a sensor that is configured but not connected can show Alert.
 
 There are some weather measurements supported by the OCS that can not be used as contributors towards the safety status. If configured in the OCS software these will appear at the bottom of the tab.
 

@@ -36,6 +36,7 @@ USB and network connections supported.
 // Debug only end
 
 #include "ocs.h"
+#include "config.h"
 #include "termios.h"
 
 #include <cmath>
@@ -68,7 +69,7 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 5);
+    setVersion(INDI_OCS_VERSION_MAJOR, INDI_OCS_VERSION_MINOR);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
     for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement++) {

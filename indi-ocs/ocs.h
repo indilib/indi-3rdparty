@@ -108,8 +108,8 @@ An unterminated 0 is returned from unconfigured items
 // Get the roof/shutter status
 #define OCS_get_roof_status ":RS#"
 // Returns:
-// OPEN#, CLOSED#, c,Travel: n%# (for closing), o,Travel: n%# for opening,
-// i,No Error# for idle or i,Waiting for mount to park#
+// c,s# when closing, o,s# when opening and i,s# when idle, where s is one of
+// OPEN, CLOSED, Travel: n%, No Error, Waiting for mount to park or an error from the list below
 
 // Get the roof/shutter last status error
 #define OCS_get_roof_last_error ":RSL#"
