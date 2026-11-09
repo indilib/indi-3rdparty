@@ -448,6 +448,7 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     int getCommandIntResponse(int fd, int *value, char *data, const char *cmd);
     int getCommandIntFromCharResponse(int fd, char *data, int *response, const char *cmd); //Calls getCommandSingleCharErrorOrLongResponse with conversion of return
     int charToInt(char *inString);
+    double charToDouble(char *inString);
     void blockUntilClear();
     void clearBlock();
 
@@ -470,10 +471,10 @@ private:
 
     // Roof/Shutter control
     //---------------------
-    int ROOF_TIME_PRE_MOTION = 0;
-    int ROOF_TIME_POST_MOTION = 0;
-    char last_shutter_status[RB_MAX_LEN];
-    char last_shutter_error[RB_MAX_LEN];
+    double ROOF_TIME_PRE_MOTION = 0;
+    double ROOF_TIME_POST_MOTION = 0;
+    char last_shutter_status[RB_MAX_LEN] {};
+    char last_shutter_error[RB_MAX_LEN] {};
     IPState ControlShutter(ShutterOperation operation) override;
 
     // Dome control

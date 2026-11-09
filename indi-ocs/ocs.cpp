@@ -100,8 +100,7 @@ bool OCS::Handshake()
         }
 
         char handshake_response[RB_MAX_LEN] = {0};
-        handshake_status = getCommandSingleCharErrorOrLongResponse(PortFD, handshake_response,
-                                                                   OCS_handshake);
+        getCommandSingleCharErrorOrLongResponse(PortFD, handshake_response, OCS_handshake);
         if (strcmp(handshake_response, "OCS") == 0)
         {
             LOG_DEBUG("OCS handshake established");
@@ -110,7 +109,7 @@ bool OCS::Handshake()
             SlowTimer.start(60000);
         }
         else {
-            LOGF_DEBUG("OCS handshake error, reponse was: %s", handshake_response);
+            LOGF_ERROR("OCS handshake failed, response was: %s", handshake_response);
         }
     }
     else {
@@ -133,11 +132,11 @@ void OCS::GetCapabilites()
         IUSaveText(&Status_ItemsT[STATUS_FIRMWARE], OCS_firmware_response);
         IDSetText(&Status_ItemsTP, nullptr);
         LOGF_DEBUG("OCS version: %s", OCS_firmware_response);
+        if (strtof(OCS_firmware_response, nullptr) < minimum_OCS_fw) {
+            LOGF_WARN("OCS version %s is lower than this driver expects (%1.2f). Behaviour is unknown.", OCS_firmware_response, minimum_OCS_fw);
+        }
     } else {
         LOG_ERROR("OCS version not retrieved");
-    }
-    if (std::stof(OCS_firmware_response) < minimum_OCS_fw) {
-        LOGF_WARN("OCS version %s is lower than this driver expects (%1.1f). Behaviour is unknown.", OCS_firmware_response, minimum_OCS_fw);
     }
 
     // Get dome presence
@@ -160,12 +159,12 @@ void OCS::GetCapabilites()
     if (roof_timeout_error_or_fail > 1) {
         char *split;
         split = strtok(roof_timeout_response, ",");
-        if (charToInt(split) != conversion_error) {
-            ROOF_TIME_PRE_MOTION = charToInt(split);
+        if (charToDouble(split) != conversion_error) {
+            ROOF_TIME_PRE_MOTION = charToDouble(split);
         }
         split = strtok(NULL, ",");
-        if (charToInt(split) != conversion_error) {
-            ROOF_TIME_POST_MOTION = charToInt(split);
+        if (charToDouble(split) != conversion_error) {
+            ROOF_TIME_POST_MOTION = charToDouble(split);
         }
     }
     else {
@@ -1546,7 +1545,7 @@ IPState OCS::ControlShutter(ShutterOperation operation)
     // that allow for the delays between roof/shutter start/end of travel
     // and the activation of the respective interlock switches
     // Delay from OCS in seconds, need to convert to ms and add 1/2 second
-    SetTimer((ROOF_TIME_PRE_MOTION * 1000) + 500);
+    SetTimer(static_cast<uint32_t>(ROOF_TIME_PRE_MOTION * 1000) + 500);
 
     return IPS_BUSY;
 }
@@ -2216,8 +2215,10 @@ bool OCS::sendOCSCommand(const char *cmd)
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(PortFD, TCIFLUSH);
 
-    if ((error_type = tty_write_string(PortFD, cmd, &nbytes_write)) != TTY_OK)
-        return error_type;
+    if ((error_type = tty_write_string(PortFD, cmd, &nbytes_write)) != TTY_OK) {
+        clearBlock();
+        return false;
+    }
 
     error_type = tty_read_expanded(PortFD, response, 1, OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
 
@@ -2251,14 +2252,18 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
     /* Add mutex */
     std::unique_lock<std::mutex> guard(ocsCommsLock);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        clearBlock();
         return error_type;
+    }
 
     error_type = tty_read_expanded(fd, data, 1, OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
     tcflush(fd, TCIFLUSH);
 
-    if (error_type != TTY_OK)
+    if (error_type != TTY_OK) {
+        clearBlock();
         return error_type;
+    }
 
     term = strchr(data, '#');
     if (term)
@@ -2295,10 +2300,12 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIFLUSH);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        clearBlock();
         return error_type;
+    }
 
-    error_type = tty_read_section_expanded(fd, data, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    error_type = tty_nread_section_expanded(fd, data, RB_MAX_LEN, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2350,8 +2357,10 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIFLUSH);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        clearBlock();
         return error_type;
+    }
 
     error_type = tty_read_expanded(fd, data, sizeof(char), OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
     tcflush(fd, TCIFLUSH);
@@ -2404,10 +2413,12 @@ int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char 
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIFLUSH);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        clearBlock();
         return error_type;
+    }
 
-    error_type = tty_read_section_expanded(fd, data, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    error_type = tty_nread_section_expanded(fd, data, RB_MAX_LEN, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2463,18 +2474,18 @@ int OCS::flushIO(int fd)
 {
     tcflush(fd, TCIOFLUSH);
     int error_type = 0;
-    int nbytes_read;
+    int nbytes_read = 0;
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIOFLUSH);
     do {
         char discard_data[RB_MAX_LEN] = {0};
-        error_type = tty_read_section_expanded(fd, discard_data, '#', 0, 1000, &nbytes_read);
+        error_type = tty_nread_section_expanded(fd, discard_data, RB_MAX_LEN, '#', 0, 1000, &nbytes_read);
         if (error_type >= 0) {
             LOGF_DEBUG("flushIO: Information in buffer: Bytes: %u, string: %s", nbytes_read, discard_data);
         }
         //LOGF_DEBUG("flushIO: error_type = %i", error_type);
     }
-    while (error_type > 0);
+    while (error_type == TTY_OK && nbytes_read > 0);
 
     return 0;
 }
@@ -2491,6 +2502,16 @@ int OCS::charToInt (char *inString)
     } catch (const std::out_of_range&) {
     }
     return value;
+}
+
+double OCS::charToDouble(char *inString)
+{
+    if (inString == nullptr) {
+        return conversion_error;
+    }
+    char *end = nullptr;
+    double value = strtod(inString, &end);
+    return (end == inString || !std::isfinite(value)) ? conversion_error : value;
 }
 
 /*******************************************************
