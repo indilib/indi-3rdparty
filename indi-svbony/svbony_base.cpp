@@ -669,7 +669,10 @@ bool SVBONYBase::Disconnect()
     stopGuidePulse(mTimerWE);
     mTimerTemperature.stop();
 
+    // Wait for the worker so it makes no SDK calls after the camera is closed.
+    // start() returns once the running function has finished.
     mWorker.quit();
+    mWorker.start([](const std::atomic_bool &) {});
     Streamer->setStream(false);
 
     if (isSimulation() == false)
