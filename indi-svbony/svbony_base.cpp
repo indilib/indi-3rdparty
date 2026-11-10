@@ -294,6 +294,9 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
             switch (ret)
             {
                 case SVB_SUCCESS:
+                    // Aborted while reading: drop the frame, the top of the loop handles the abort.
+                    if (isAboutToQuit)
+                        break;
                     if (Helpers::isRGB(type))
                     {
                         uint8_t *dstR = image;
