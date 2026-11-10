@@ -245,6 +245,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         {
             LOGF_ERROR("%s: %d malloc failed (RGB 24/32).", getDeviceName(), nTotalBytes);
             guard.unlock();
+            PrimaryCCD.setExposureFailed();
             return;
         }
     }
