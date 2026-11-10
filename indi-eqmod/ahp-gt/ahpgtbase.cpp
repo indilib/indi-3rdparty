@@ -68,7 +68,7 @@ bool AHPGTBase::initProperties()
     GTRASteppingModeSP[GT_MIXED_MODE].fill("GT_MIXED_MODE", "Mixed", ISS_ON);
     GTRASteppingModeSP[GT_MICROSTEPPING_MODE].fill("GT_MICROSTEPPING_MODE", "Microstepping", ISS_OFF);
     GTRASteppingModeSP[GT_HALFSTEP_MODE].fill("GT_HALFSTEP_MODE", "Half-step", ISS_OFF);
-    GTRASteppingModeSP.fill(getDeviceName(), "GT_RA_STEPPING_MODE", "Invert RA Axis", CONFIGURATION_TAB,
+    GTRASteppingModeSP.fill(getDeviceName(), "GT_RA_STEPPING_MODE", "RA Stepping Mode", CONFIGURATION_TAB,
                             IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     GTRAWindingSP[GT_AABB].fill("GT_AABB", "AABB", ISS_ON);
     GTRAWindingSP[GT_ABAB].fill("GT_ABAB", "ABAB", ISS_OFF);
@@ -96,18 +96,18 @@ bool AHPGTBase::initProperties()
     GTDESteppingModeSP[GT_MIXED_MODE].fill("GT_MIXED_MODE", "Mixed", ISS_ON);
     GTDESteppingModeSP[GT_MICROSTEPPING_MODE].fill("GT_MICROSTEPPING_MODE", "Microstepping", ISS_OFF);
     GTDESteppingModeSP[GT_HALFSTEP_MODE].fill("GT_HALFSTEP_MODE", "Half-step", ISS_OFF);
-    GTDESteppingModeSP.fill(getDeviceName(), "GT_DE_STEPPING_MODE", "Invert DE Axis", CONFIGURATION_TAB,
+    GTDESteppingModeSP.fill(getDeviceName(), "GT_DE_STEPPING_MODE", "DEC Stepping Mode", CONFIGURATION_TAB,
                             IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     GTDEWindingSP[GT_AABB].fill("GT_AABB", "AABB", ISS_ON);
     GTDEWindingSP[GT_ABAB].fill("GT_ABAB", "ABAB", ISS_OFF);
     GTDEWindingSP[GT_ABBA].fill("GT_ABBA", "ABBA", ISS_OFF);
-    GTDEWindingSP.fill(getDeviceName(), "GT_DE_WINDING", "DE motor windings", CONFIGURATION_TAB,
+    GTDEWindingSP.fill(getDeviceName(), "GT_DE_WINDING", "DEC motor windings", CONFIGURATION_TAB,
                        IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     GTDEGPIOConfigSP[GT_NONE].fill("GT_NONE", "Nothing", ISS_ON);
     GTDEGPIOConfigSP[GT_ST4].fill("GT_ST4", "ST4", ISS_OFF);
     GTDEGPIOConfigSP[GT_ENCODER].fill("GT_ENCODER", "Encoder", ISS_OFF);
     GTDEGPIOConfigSP[GT_STEPDIR].fill("GT_STEPDIR", "Step/Dir", ISS_OFF);
-    GTDEGPIOConfigSP.fill(getDeviceName(), "GT_DE_GPIO_CONFIG", "DE GPIO port", CONFIGURATION_TAB,
+    GTDEGPIOConfigSP.fill(getDeviceName(), "GT_DE_GPIO_CONFIG", "DEC GPIO port", CONFIGURATION_TAB,
                           IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
 
     GTFOCConfigurationNP[GT_MOTOR_STEPS].fill("GT_MOTOR_STEPS", "Motor steps", "%.0f", 1, 1000, 1, 200);
@@ -116,7 +116,7 @@ bool AHPGTBase::initProperties()
     GTFOCConfigurationNP[GT_CROWN_TEETH].fill("GT_CROWN_TEETH", "Crown teeth", "%.0f", 1, 100000, 1, 180);
     GTFOCConfigurationNP[GT_MAX_SPEED].fill("GT_MAX_SPEED", "Max speed", "%.0f", 1, 1000, 1, 800);
     GTFOCConfigurationNP[GT_ACCELERATION].fill("GT_ACCELERATION", "Acceleration (deg)", "%.1f", 1, 20, 0.1, 1.0);
-    GTFOCConfigurationNP.fill(getDeviceName(), "GT_FOC_PARAMS", "DEC Parameters", CONFIGURATION_TAB,
+    GTFOCConfigurationNP.fill(getDeviceName(), "GT_FOC_PARAMS", "Focuser Parameters", CONFIGURATION_TAB,
                              IP_RW, 60, IPS_IDLE);
     GTFOCInvertAxisSP[GT_INVERTED].fill("GT_INVERTED", "Invert Focuser Axis", ISS_OFF);
     GTFOCInvertAxisSP.fill(getDeviceName(), "GT_FOC_INVERT", "Invert Focuser Axis", CONFIGURATION_TAB,
@@ -124,22 +124,24 @@ bool AHPGTBase::initProperties()
     GTFOCSteppingModeSP[GT_MIXED_MODE].fill("GT_MIXED_MODE", "Mixed", ISS_ON);
     GTFOCSteppingModeSP[GT_MICROSTEPPING_MODE].fill("GT_MICROSTEPPING_MODE", "Microstepping", ISS_OFF);
     GTFOCSteppingModeSP[GT_HALFSTEP_MODE].fill("GT_HALFSTEP_MODE", "Half-step", ISS_OFF);
-    GTFOCSteppingModeSP.fill(getDeviceName(), "GT_FOC_STEPPING_MODE", "Invert Focuser Axis", CONFIGURATION_TAB,
+    GTFOCSteppingModeSP.fill(getDeviceName(), "GT_FOC_STEPPING_MODE", "Focuser Stepping Mode", CONFIGURATION_TAB,
                             IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     GTFOCWindingSP[GT_AABB].fill("GT_AABB", "AABB", ISS_ON);
     GTFOCWindingSP[GT_ABAB].fill("GT_ABAB", "ABAB", ISS_OFF);
     GTFOCWindingSP[GT_ABBA].fill("GT_ABBA", "ABBA", ISS_OFF);
-    GTFOCWindingSP.fill(getDeviceName(), "GT_FOC_WINDING", "DE motor windings", CONFIGURATION_TAB,
+    GTFOCWindingSP.fill(getDeviceName(), "GT_FOC_WINDING", "Focuser motor windings", CONFIGURATION_TAB,
                        IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
     GTFOCGPIOConfigSP[GT_NONE].fill("GT_NONE", "Nothing", ISS_ON);
     GTFOCGPIOConfigSP[GT_ST4].fill("GT_ST4", "ST4", ISS_OFF);
     GTFOCGPIOConfigSP[GT_ENCODER].fill("GT_ENCODER", "Encoder", ISS_OFF);
     GTFOCGPIOConfigSP[GT_STEPDIR].fill("GT_STEPDIR", "Step/Dir", ISS_OFF);
-    GTFOCGPIOConfigSP.fill(getDeviceName(), "GT_FOC_GPIO_CONFIG", "DE GPIO port", CONFIGURATION_TAB,
+    GTFOCGPIOConfigSP.fill(getDeviceName(), "GT_FOC_GPIO_CONFIG", "Focuser GPIO port", CONFIGURATION_TAB,
                           IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+    
     GTConfigurationNP.fill(getDeviceName(), "GT_PARAMS", "Advanced", CONFIGURATION_TAB,
                            IP_RW, 60, IPS_IDLE);
     GTConfigurationNP[GT_PWM_FREQ].fill("GT_PWM_FREQ", "PWM Freq (Hz)", "%.0f", 1500, 8200, 700, 6400);
+    
     GTMountConfigSP[GT_GEM].fill("GT_GEM", "German mount", ISS_ON);
     GTMountConfigSP[GT_AZEQ].fill("GT_AZEQ", "AZ/EQ mount", ISS_OFF);
     GTMountConfigSP[GT_FORK].fill("GT_FORK", "Fork mount", ISS_OFF);
@@ -198,6 +200,8 @@ bool AHPGTBase::updateProperties()
         defineProperty(GTFOCGPIOConfigSP);
         defineProperty(GTMountConfigSP);
         defineProperty(GTConfigurationNP);
+
+        // RA Axis (0)
         GTRAInvertAxisSP[GT_INVERTED].setState(ahp_gt_get_direction_invert(0) ? ISS_ON : ISS_OFF);
         GTRAInvertAxisSP.apply();
         for(int x = 0; x < GT_N_STEPPING_MODE; x++)
@@ -219,10 +223,12 @@ bool AHPGTBase::updateProperties()
         GTRAConfigurationNP[GT_MAX_SPEED].setValue(ahp_gt_get_max_speed(0));
         GTRAConfigurationNP[GT_ACCELERATION].setValue(ahp_gt_get_acceleration_angle(0) * 180.0 / M_PI);
         GTRAConfigurationNP.apply();
+
+        // DEC Axis (1)
         GTDEInvertAxisSP[GT_INVERTED].setState(ahp_gt_get_direction_invert(1) ? ISS_ON : ISS_OFF);
         GTDEInvertAxisSP.apply();
         for(int x = 0; x < GT_N_STEPPING_MODE; x++)
-            GTDESteppingModeSP[0].setState(ISS_OFF);
+            GTDESteppingModeSP[x].setState(ISS_OFF); // CORRETTO: era GTDESteppingModeSP[0]
         GTDESteppingModeSP[ahp_gt_get_stepping_mode(1)].setState(ISS_ON);
         GTDESteppingModeSP.apply();
         for(int x = 0; x < GT_N_WINDING_MODE; x++)
@@ -240,27 +246,31 @@ bool AHPGTBase::updateProperties()
         GTDEConfigurationNP[GT_MAX_SPEED].setValue(ahp_gt_get_max_speed(1));
         GTDEConfigurationNP[GT_ACCELERATION].setValue(ahp_gt_get_acceleration_angle(1) * 180.0 / M_PI);
         GTDEConfigurationNP.apply();
-        GTFOCInvertAxisSP[GT_INVERTED].setState(ahp_gt_get_direction_invert(1) ? ISS_ON : ISS_OFF);
+
+        // Focuser Axis (2) - CORRETTO: puntava a 1 prima
+        GTFOCInvertAxisSP[GT_INVERTED].setState(ahp_gt_get_direction_invert(2) ? ISS_ON : ISS_OFF);
         GTFOCInvertAxisSP.apply();
         for(int x = 0; x < GT_N_STEPPING_MODE; x++)
-            GTFOCSteppingModeSP[0].setState(ISS_OFF);
-        GTFOCSteppingModeSP[ahp_gt_get_stepping_mode(1)].setState(ISS_ON);
+            GTFOCSteppingModeSP[x].setState(ISS_OFF); // CORRETTO: era GTFOCSteppingModeSP[0]
+        GTFOCSteppingModeSP[ahp_gt_get_stepping_mode(2)].setState(ISS_ON);
         GTFOCSteppingModeSP.apply();
         for(int x = 0; x < GT_N_WINDING_MODE; x++)
             GTFOCWindingSP[x].setState(ISS_OFF);
-        GTFOCWindingSP[ahp_gt_get_stepping_conf(1)].setState(ISS_ON);
+        GTFOCWindingSP[ahp_gt_get_stepping_conf(2)].setState(ISS_ON);
         GTFOCWindingSP.apply();
         for(int x = 0; x < GT_N_GPIO_CONFIG; x++)
             GTFOCGPIOConfigSP[x].setState(ISS_OFF);
-        GTFOCGPIOConfigSP[ahp_gt_get_feature(1)].setState(ISS_ON);
+        GTFOCGPIOConfigSP[ahp_gt_get_feature(2)].setState(ISS_ON);
         GTFOCGPIOConfigSP.apply();
-        GTFOCConfigurationNP[GT_MOTOR_STEPS].setValue(ahp_gt_get_motor_steps(1));
-        GTFOCConfigurationNP[GT_MOTOR_TEETH].setValue(ahp_gt_get_motor_teeth(1));
-        GTFOCConfigurationNP[GT_WORM_TEETH].setValue(ahp_gt_get_worm_teeth(1));
-        GTFOCConfigurationNP[GT_CROWN_TEETH].setValue(ahp_gt_get_crown_teeth(1));
-        GTFOCConfigurationNP[GT_MAX_SPEED].setValue(ahp_gt_get_max_speed(1));
-        GTFOCConfigurationNP[GT_ACCELERATION].setValue(ahp_gt_get_acceleration_angle(1) * 180.0 / M_PI);
+        GTFOCConfigurationNP[GT_MOTOR_STEPS].setValue(ahp_gt_get_motor_steps(2));
+        GTFOCConfigurationNP[GT_MOTOR_TEETH].setValue(ahp_gt_get_motor_teeth(2));
+        GTFOCConfigurationNP[GT_WORM_TEETH].setValue(ahp_gt_get_worm_teeth(2));
+        GTFOCConfigurationNP[GT_CROWN_TEETH].setValue(ahp_gt_get_crown_teeth(2));
+        GTFOCConfigurationNP[GT_MAX_SPEED].setValue(ahp_gt_get_max_speed(2));
+        GTFOCConfigurationNP[GT_ACCELERATION].setValue(ahp_gt_get_acceleration_angle(2) * 180.0 / M_PI);
         GTFOCConfigurationNP.apply();
+
+        // Mount Configuration
         for(int x = 0; x < GT_N_MOUNT_CONFIG; x++)
             GTMountConfigSP[x].setState(ISS_OFF);
         int fork = (ahp_gt_get_mount_flags() & isForkMount) ? 1 : 0;
@@ -274,9 +284,9 @@ bool AHPGTBase::updateProperties()
         else
             GTMountConfigSP[GT_GEM].setState(ISS_ON);
         GTMountConfigSP.apply();
-        // AZ/EQ mounts are driven equatorially, so only the fork flag changes the geometry
+
         setMountType(GTMountConfigSP[GT_FORK].getState() == ISS_ON ? MOUNT_EQ_FORK : MOUNT_EQ_GEM);
-        GTConfigurationNP.apply();
+        
         GTConfigurationNP[GT_PWM_FREQ].setValue(ahp_gt_get_pwm_frequency(0) * 700 + 1500);
         GTConfigurationNP.apply();
     }
@@ -340,16 +350,16 @@ bool AHPGTBase::ISNewNumber(const char *dev, const char *name, double values[], 
             ahp_gt_write_values(2, &progress, &write_finished);
             updateProperties();
         }
-    }
-    if(!strcmp(GTConfigurationNP.getName(), name))
-    {
-        ahp_gt_set_pwm_frequency(0, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
-        ahp_gt_set_pwm_frequency(1, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
-        ahp_gt_set_pwm_frequency(2, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
-        ahp_gt_write_values(0, &progress, &write_finished);
-        ahp_gt_write_values(1, &progress, &write_finished);
-        ahp_gt_write_values(2, &progress, &write_finished);
-        updateProperties();
+        if(!strcmp(GTConfigurationNP.getName(), name))
+        {
+            ahp_gt_set_pwm_frequency(0, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+            ahp_gt_set_pwm_frequency(1, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+            ahp_gt_set_pwm_frequency(2, (GTConfigurationNP[GT_PWM_FREQ].getValue() - 1500) / 366);
+            ahp_gt_write_values(0, &progress, &write_finished);
+            ahp_gt_write_values(1, &progress, &write_finished);
+            ahp_gt_write_values(2, &progress, &write_finished);
+            updateProperties();
+        }
     }
     return EQMod::ISNewNumber(dev, name, values, names, n);
 }
@@ -386,6 +396,7 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             ahp_gt_write_values(2, &progress, &write_finished);
             updateProperties();
         }
+        // RA Axis (0) switches
         if(!strcmp(GTRAInvertAxisSP.getName(), name))
         {
             ahp_gt_set_direction_invert(0, GTRAInvertAxisSP[GT_INVERTED].s == ISS_ON);
@@ -410,6 +421,7 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             ahp_gt_write_values(0, &progress, &write_finished);
             updateProperties();
         }
+        // DEC Axis (1) switches
         if(!strcmp(GTDEInvertAxisSP.getName(), name))
         {
             ahp_gt_set_direction_invert(1, GTDEInvertAxisSP[GT_INVERTED].s == ISS_ON);
@@ -434,6 +446,7 @@ bool AHPGTBase::ISNewSwitch(const char *dev, const char *name, ISState *states, 
             ahp_gt_write_values(1, &progress, &write_finished);
             updateProperties();
         }
+        // Focuser Axis (2) switches - CORRETTO: puntavano a 0 o 1 prima
         if(!strcmp(GTFOCInvertAxisSP.getName(), name))
         {
             ahp_gt_set_direction_invert(2, GTFOCInvertAxisSP[GT_INVERTED].s == ISS_ON);
