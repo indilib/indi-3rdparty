@@ -100,11 +100,11 @@ class SVBONYBase : public INDI::CCD
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
-        /** Send a soft trigger, up to three attempts. */
-        bool sendSoftTrigger();
+        /** Send a soft trigger, up to three attempts. Returns false if aborted. */
+        bool sendSoftTrigger(const std::atomic_bool &isAboutToQuit);
 
-        /** Restart video capture and trigger the exposure again. */
-        bool restartCaptureAndTrigger(float duration);
+        /** Restart video capture and trigger the exposure again, unless aborted. */
+        bool restartCaptureAndTrigger(float duration, const std::atomic_bool &isAboutToQuit);
 
         /** Send CCD image to client */
         void sendImage(SVB_IMG_TYPE type, float duration);

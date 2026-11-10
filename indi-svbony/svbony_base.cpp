@@ -167,10 +167,13 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     }
 }
 
-bool SVBONYBase::sendSoftTrigger()
+bool SVBONYBase::sendSoftTrigger(const std::atomic_bool &isAboutToQuit)
 {
     for (int attempt = 1; attempt <= 3; attempt++)
     {
+        if (isAboutToQuit)
+            return false;
+
         SVB_ERROR_CODE ret = SVBSendSoftTrigger(mCameraInfo.CameraID);
         if (ret == SVB_SUCCESS)
             return true;
@@ -183,8 +186,11 @@ bool SVBONYBase::sendSoftTrigger()
     return false;
 }
 
-bool SVBONYBase::restartCaptureAndTrigger(float duration)
+bool SVBONYBase::restartCaptureAndTrigger(float duration, const std::atomic_bool &isAboutToQuit)
 {
+    if (isAboutToQuit)
+        return false;
+
     SVB_ERROR_CODE ret = SVBStopVideoCapture(mCameraInfo.CameraID);
     LOGF_DEBUG("Restart capture: SVBStopVideoCapture(%s)", Helpers::toString(ret));
 
@@ -209,7 +215,9 @@ bool SVBONYBase::restartCaptureAndTrigger(float duration)
     if (ret != SVB_SUCCESS)
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
 
-    return sendSoftTrigger();
+    // Restamp the start time for DATE-OBS.
+    PrimaryCCD.setExposureDuration(duration);
+    return sendSoftTrigger(isAboutToQuit);
 }
 
 void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
@@ -248,7 +256,8 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
     }
 
-    if (!sendSoftTrigger())
+    // On abort, continue: the loop below stops capture.
+    if (!sendSoftTrigger(isAboutToQuit) && !isAboutToQuit)
     {
         PrimaryCCD.setExposureFailed();
         return;
@@ -378,6 +387,9 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                     return;
 
                 case SVB_ERROR_TIMEOUT:
+                    // Aborted while waiting: handled at the top of the loop.
+                    if (isAboutToQuit)
+                        break;
                     --nRetry;
                     LOGF_DEBUG("Remaining retry count for SVBGetVideoData:%d", nRetry);
                     if (!captureRestarted && nRetry <= nRetryBeforeRestart)
@@ -385,7 +397,8 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                         captureRestarted = true;
                         LOGF_WARN("No image data %.1f s after the exposure ended. Restarting video capture and taking the exposure again.",
                                   exposureTimer.elapsed() / 1000.0 - duration);
-                        if (restartCaptureAndTrigger(duration))
+                        // On abort, skip the error path below.
+                        if (restartCaptureAndTrigger(duration, isAboutToQuit) || isAboutToQuit)
                         {
                             exposureTimer.start();
                             nRetry = 50;
