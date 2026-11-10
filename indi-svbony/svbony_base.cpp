@@ -202,8 +202,7 @@ bool SVBONYBase::restartCaptureAndTrigger(float duration)
         return false;
     }
 
-    // The frame the SDK held back usually shows up right after the restart. Drop it: it is not
-    // certain which exposure it belongs to.
+    // Drop the held-back frame: which exposure it belongs to is unknown.
     discardVideoData();
 
     ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, duration * 1000 * 1000, SVB_FALSE);
@@ -289,18 +288,14 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         Perform exposure and image data reading
     */
     int nRetry = 50; // Number of retries when ret is SVB_ERROR_TIMEOUT
-    // After this many timeouts in a row past the end of the exposure (about 7 s), assume the SDK is
-    // holding the frame back. Seen after video capture was stopped and restarted (abort, then a new
-    // exposure): from then on every frame stays missing until capture is restarted again.
+    // No frame ~7 s after the exposure: the SDK is holding it back (happens after a capture stop/start).
     const int nRetryBeforeRestart = 45;
     bool captureRestarted = false;
     while (1)
     {
         if (isAboutToQuit)
         {
-            // Aborted, or replaced by a new exposure. Cancel the exposure by stopping video capture
-            // here, in the thread that makes the other SDK calls, so they never overlap.
-            // INDI::CCD has already set the exposure state, so it is not touched here.
+            // Stop capture in this thread so SDK calls don't overlap. INDI::CCD sets the exposure state.
             ret = SVBStopVideoCapture(mCameraInfo.CameraID);
             LOGF_DEBUG("Exposure aborted: SVBStopVideoCapture(%s)", Helpers::toString(ret));
             if (Helpers::isRGB(type))
@@ -396,7 +391,6 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                             nRetry = 50;
                             break;
                         }
-                        // Restart failed: report the exposure as failed below.
                     }
                     else if (nRetry)
                     {
@@ -1116,10 +1110,8 @@ bool SVBONYBase::AbortExposure()
 {
     LOG_DEBUG("Aborting exposure...");
 
-    // If an exposure is running, its worker stops video capture itself when it sees the quit request.
-    // If none is running (Ekos sends an abort at the end of every autofocus run, for example), video
-    // capture is left running: stopping and restarting it can make the camera hold back every later
-    // frame until capture is restarted again.
+    // A running worker stops capture itself. When idle, leave capture running: a stop/start can make
+    // the SDK hold back frames.
     mWorker.quit();
     return true;
 }
