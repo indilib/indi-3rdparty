@@ -1063,8 +1063,7 @@ bool SVBONYBase::AbortExposure()
     LOG_DEBUG("Aborting exposure...");
 
     // Wait for the worker to end: quit() returns at once, the following start() waits for the running
-    // function. A frame is then either sent before the abort completes or not at all, and capture is not
-    // stopped while the worker is still reading from the SDK.
+    // function. After that the worker can't hand over a frame or be inside an SDK call.
     mWorker.quit();
     mWorker.start([](const std::atomic_bool &) {});
 
