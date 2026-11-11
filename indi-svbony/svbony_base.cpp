@@ -95,6 +95,8 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     double ExposureRequest = 1.0 / Streamer->getTargetFPS();
     long uSecs = static_cast<long>(ExposureRequest * 950000.0);
 
+    mStreamThread = std::this_thread::get_id();
+
     ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, uSecs, SVB_FALSE);
     if (ret != SVB_SUCCESS)
     {
@@ -1079,7 +1081,10 @@ bool SVBONYBase::StartStreaming()
 
 bool SVBONYBase::StopStreaming()
 {
-    mWorker.quit();
+    // The stream worker ends the stream itself on a read error. It is about to return anyway, and quit() from
+    // the worker thread would drop a function another thread is waiting to start, without waking that thread.
+    if (std::this_thread::get_id() != mStreamThread)
+        mWorker.quit();
     return true;
 }
 

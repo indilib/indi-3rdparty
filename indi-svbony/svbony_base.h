@@ -30,6 +30,8 @@
 #include "indipropertytext.h"
 #include "indisinglethreadpool.h"
 
+#include <atomic>
+#include <thread>
 #include <vector>
 
 #include <indiccd.h>
@@ -97,6 +99,7 @@ class SVBONYBase : public INDI::CCD
 
     protected:
         INDI::SingleThreadPool mWorker;
+        std::atomic<std::thread::id> mStreamThread {};
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
 
