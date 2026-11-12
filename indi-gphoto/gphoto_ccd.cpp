@@ -1087,6 +1087,11 @@ bool GPhotoCCD::StartExposure(float duration)
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 bool GPhotoCCD::AbortExposure()
 {
+    // Nothing is exposing: the read-out below would wait for an image that never comes,
+    // blocking the driver for the whole download timeout.
+    if (!InExposure)
+        return true;
+
     if (!isSimulation())
     {
         gphoto_abort_exposure(gphotodrv);
