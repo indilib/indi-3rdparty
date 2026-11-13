@@ -56,7 +56,7 @@ bool SVBONYBase::SetROIFormat(int x, int y, int w, int h, int bin)
     SVB_ERROR_CODE ret;
     int currentX = 0, currentY = 0, currentW = 0, currentH = 0, currentBin = 0;
 
-    ret = SVBGetROIFormat(mCameraInfo.CameraID, &currentY, &currentY, &currentW, &currentH, &currentBin);
+    ret = SVBGetROIFormat(mCameraInfo.CameraID, &currentX, &currentY, &currentW, &currentH, &currentBin);
     if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to get ROI format (%s).", Helpers::toString(ret));
