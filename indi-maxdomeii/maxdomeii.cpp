@@ -1087,15 +1087,7 @@ IPState MaxDomeII::Park()
     LOGF_INFO("Parking to %.2f azimuth...", targetAz);
     MoveAbs(targetAz);
 
-    if (HasShutter() && ShutterParkPolicySP[SHUTTER_CLOSE_ON_PARK].getState() == ISS_ON)
-    {
-        LOG_INFO("Closing shutter on parking...");
-        ControlShutter(ShutterOperation::SHUTTER_CLOSE);
-        DomeShutterSP[SHUTTER_OPEN].setState(ISS_OFF);
-        DomeShutterSP[SHUTTER_CLOSE].setState(ISS_ON);
-        setShutterState(SHUTTER_MOVING);
-    }
-
+    // The shutter is closed by INDI::Dome according to the shutter park policy.
     return IPS_BUSY;
 }
 
@@ -1115,13 +1107,6 @@ IPState MaxDomeII::UnPark()
     nTimeSinceAzimuthStart = 0;
     nTargetAzimuth         = -1;
 
-    if (HasShutter() && ShutterParkPolicySP[SHUTTER_OPEN_ON_UNPARK].getState() == ISS_ON)
-    {
-        LOG_INFO("Opening shutter on unparking...");
-        ControlShutter(ShutterOperation::SHUTTER_OPEN);
-        DomeShutterSP[SHUTTER_OPEN].setState(ISS_ON);
-        DomeShutterSP[SHUTTER_CLOSE].setState(ISS_OFF);
-        setShutterState(SHUTTER_MOVING);
-    }
+    // The shutter is opened by INDI::Dome according to the shutter park policy.
     return IPS_BUSY;
 }

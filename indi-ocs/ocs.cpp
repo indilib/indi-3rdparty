@@ -67,6 +67,9 @@ OCS::OCS() : INDI::Dome(), WI(this)
 
     setVersion(1, 5);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
+    // OCS reports and manages the park state itself from the controller status, including the
+    // roof/shutter, so it applies the shutter park policy in Park()/UnPark().
+    SetShutterParkPolicyHandledByDriver(true);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
 }
 
