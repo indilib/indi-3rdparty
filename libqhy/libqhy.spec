@@ -16,6 +16,8 @@ Provides: libqhyccd.so.21()(64bit)
 Provides: libqhyccd.so
 
 BuildRequires: cmake
+BuildRequires: gcc
+BuildRequires: gcc-c++
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd

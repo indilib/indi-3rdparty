@@ -17,6 +17,8 @@ Provides: libSVBCameraSDK.so
 Provides: libSVBCameraSDK.so(libSVBCameraSDK)(64bit)
 
 BuildRequires: cmake
+BuildRequires: gcc
+BuildRequires: gcc-c++
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd
