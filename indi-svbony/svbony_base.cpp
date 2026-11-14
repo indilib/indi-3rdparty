@@ -95,6 +95,8 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     double ExposureRequest = 1.0 / Streamer->getTargetFPS();
     long uSecs = static_cast<long>(ExposureRequest * 950000.0);
 
+    mStreamThread = std::this_thread::get_id();
+
     ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, uSecs, SVB_FALSE);
     if (ret != SVB_SUCCESS)
     {
@@ -341,6 +343,9 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
             switch (ret)
             {
                 case SVB_SUCCESS:
+                    // Aborted while reading: drop the frame, the top of the loop handles the abort.
+                    if (isAboutToQuit)
+                        break;
                     if (Helpers::isRGB(type))
                     {
                         uint8_t *dstR = image;
@@ -733,7 +738,10 @@ bool SVBONYBase::Disconnect()
     stopGuidePulse(mTimerWE);
     mTimerTemperature.stop();
 
+    // Wait for the worker so it makes no SDK calls after the camera is closed.
+    // start() returns once the running function has finished.
     mWorker.quit();
+    mWorker.start([](const std::atomic_bool &) {});
     Streamer->setStream(false);
 
     if (isSimulation() == false)
@@ -1123,9 +1131,12 @@ bool SVBONYBase::AbortExposure()
 {
     LOG_DEBUG("Aborting exposure...");
 
+    // Wait for the worker to end: quit() returns at once, the following start() waits for the running
+    // function. After that the worker can't hand over a frame or be inside an SDK call.
     // A running worker stops capture itself. When idle, leave capture running: a stop/start can make
     // the SDK hold back frames.
     mWorker.quit();
+    mWorker.start([](const std::atomic_bool &) {});
     return true;
 }
 
@@ -1137,7 +1148,10 @@ bool SVBONYBase::StartStreaming()
 
 bool SVBONYBase::StopStreaming()
 {
-    mWorker.quit();
+    // The stream worker ends the stream itself on a read error. It is about to return anyway, and quit() from
+    // the worker thread would drop a function another thread is waiting to start, without waking that thread.
+    if (std::this_thread::get_id() != mStreamThread)
+        mWorker.quit();
     return true;
 }
 
