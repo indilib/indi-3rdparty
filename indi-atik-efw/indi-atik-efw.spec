@@ -1,7 +1,7 @@
 %define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-atik-efw
 Version:2.1.3.git
-Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
+Release: %(T=%{_topdir}; mkdir -p $T 2>/dev/null; [ -f $T/.release-stamp-%{name} ] || date -u +%%Y%%m%%d%%H%%M%%S > $T/.release-stamp-%{name} 2>/dev/null; cat $T/.release-stamp-%{name} 2>/dev/null || date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: INDI driver for Atik serial electronic filter wheels
 
 License: LGPLv2
