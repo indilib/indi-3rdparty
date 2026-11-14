@@ -95,6 +95,8 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     double ExposureRequest = 1.0 / Streamer->getTargetFPS();
     long uSecs = static_cast<long>(ExposureRequest * 950000.0);
 
+    mStreamThread = std::this_thread::get_id();
+
     ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, uSecs, SVB_FALSE);
     if (ret != SVB_SUCCESS)
     {
@@ -167,6 +169,59 @@ void SVBONYBase::workerStreamVideo(const std::atomic_bool &isAboutToQuit)
     }
 }
 
+bool SVBONYBase::sendSoftTrigger(const std::atomic_bool &isAboutToQuit)
+{
+    for (int attempt = 1; attempt <= 3; attempt++)
+    {
+        if (isAboutToQuit)
+            return false;
+
+        SVB_ERROR_CODE ret = SVBSendSoftTrigger(mCameraInfo.CameraID);
+        if (ret == SVB_SUCCESS)
+            return true;
+
+        LOGF_ERROR("Failed to start exposure (%s)", Helpers::toString(ret));
+        // Wait 100ms before trying again
+        usleep(100 * 1000);
+    }
+    LOG_ERROR("Failed to start exposure three times.");
+    return false;
+}
+
+bool SVBONYBase::restartCaptureAndTrigger(float duration, const std::atomic_bool &isAboutToQuit)
+{
+    if (isAboutToQuit)
+        return false;
+
+    SVB_ERROR_CODE ret = SVBStopVideoCapture(mCameraInfo.CameraID);
+    LOGF_DEBUG("Restart capture: SVBStopVideoCapture(%s)", Helpers::toString(ret));
+
+    ret = SVBSetCameraMode(mCameraInfo.CameraID, SVB_MODE_TRIG_SOFT);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to set soft trigger mode (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    ret = SVBStartVideoCapture(mCameraInfo.CameraID);
+    if (ret != SVB_SUCCESS)
+    {
+        LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
+        return false;
+    }
+
+    // Drop the held-back frame: which exposure it belongs to is unknown.
+    discardVideoData();
+
+    ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, duration * 1000 * 1000, SVB_FALSE);
+    if (ret != SVB_SUCCESS)
+        LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+
+    // Restamp the start time for DATE-OBS.
+    PrimaryCCD.setExposureDuration(duration);
+    return sendSoftTrigger(isAboutToQuit);
+}
+
 void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float duration)
 {
     SVB_ERROR_CODE ret;
@@ -176,6 +231,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     if(ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to set soft trigger mode (%s).", Helpers::toString(ret));
+        PrimaryCCD.setExposureFailed();
         return;
     }
     LOG_DEBUG("Camera soft trigger mode");
@@ -184,6 +240,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     if (ret != SVB_SUCCESS)
     {
         LOGF_ERROR("Failed to start video capture (%s).", Helpers::toString(ret));
+        PrimaryCCD.setExposureFailed();
         return;
     }
 
@@ -201,21 +258,34 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
     }
 
-    // Try exposure for 3 times
-    int nRetry = 3; // Number of retries to start exposure
-    while (nRetry--)
-    {
-        ret = SVBSendSoftTrigger(mCameraInfo.CameraID);
-        if (ret == SVB_SUCCESS)
-            break;
+    /*
+        Prepare a read buffer for SVB_IMG_RGB24 and SVB_IMG_RGB32 before the trigger: if the allocation
+        fails, no exposure is started and no frame is left behind for the next one.
+    */
+    SVB_IMG_TYPE type = getImageType();
 
-        LOGF_ERROR("Failed to start exposure (%s)", Helpers::toString(ret));
-        // Wait 100ms before trying again
-        usleep(100 * 1000);
-    }
-    if (!nRetry)
+    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+    int nChannels = Helpers::getNChannels(type);
+    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
+
+    uint8_t *rgbBuffer = nullptr;
+    if (Helpers::isRGB(type))
     {
-        LOG_ERROR("Failed to start exposure three times.");
+        rgbBuffer = static_cast<uint8_t *>(malloc(nTotalBytes));
+        if (rgbBuffer == nullptr)
+        {
+            LOGF_ERROR("%s: %d malloc failed (RGB 24/32).", getDeviceName(), nTotalBytes);
+            PrimaryCCD.setExposureFailed();
+            return;
+        }
+    }
+
+    // On abort, continue: the loop below stops capture.
+    if (!sendSoftTrigger(isAboutToQuit) && !isAboutToQuit)
+    {
+        free(rgbBuffer);
+        PrimaryCCD.setExposureFailed();
         return;
     }
 
@@ -224,45 +294,28 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     if (duration > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
-    /*
-        Prepare a read buffer for SVB_IMG_RGB24 and SVB_IMG_RGB32
-    */
-    SVB_IMG_TYPE type = getImageType();
-
+    // The buffer lock is taken after the trigger, so the exposure runs while the previous frame is still uploading.
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     uint8_t *image = PrimaryCCD.getFrameBuffer();
-    uint8_t *buffer = image;
-
-    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
-    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-    int nChannels = Helpers::getNChannels(type);
-    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
-
-    if (Helpers::isRGB(type))
-    {
-        buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
-        if (buffer == nullptr)
-        {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24/32).", getDeviceName(), nTotalBytes);
-            guard.unlock();
-            return;
-        }
-    }
+    uint8_t *buffer = Helpers::isRGB(type) ? rgbBuffer : image;
 
     /*
         Perform exposure and image data reading
     */
-    nRetry = 50; // Number of retries when ret is SVB_ERROR_TIMEOUT
+    int nRetry = 50; // Number of retries when ret is SVB_ERROR_TIMEOUT
+    // No frame ~7 s after the exposure: the SDK is holding it back (happens after a capture stop/start).
+    const int nRetryBeforeRestart = 45;
+    bool captureRestarted = false;
     while (1)
     {
         if (isAboutToQuit)
         {
-            ret = SVBGetVideoData(mCameraInfo.CameraID, buffer, nTotalBytes,  1000);
-            LOGF_DEBUG("Discard unretrieved exposure data: SVBGetVideoData(%s)", Helpers::toString(ret));
+            // Stop capture in this thread so SDK calls don't overlap. INDI::CCD sets the exposure state.
+            ret = SVBStopVideoCapture(mCameraInfo.CameraID);
+            LOGF_DEBUG("Exposure aborted: SVBStopVideoCapture(%s)", Helpers::toString(ret));
             if (Helpers::isRGB(type))
                 free(buffer);
             guard.unlock();
-            PrimaryCCD.setExposureLeft(0);
             return;
         }
 
@@ -294,6 +347,9 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
             switch (ret)
             {
                 case SVB_SUCCESS:
+                    // Aborted while reading: drop the frame, the top of the loop handles the abort.
+                    if (isAboutToQuit)
+                        break;
                     if (Helpers::isRGB(type))
                     {
                         uint8_t *dstR = image;
@@ -340,9 +396,25 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                     return;
 
                 case SVB_ERROR_TIMEOUT:
+                    // Aborted while waiting: handled at the top of the loop.
+                    if (isAboutToQuit)
+                        break;
                     --nRetry;
                     LOGF_DEBUG("Remaining retry count for SVBGetVideoData:%d", nRetry);
-                    if (nRetry)
+                    if (!captureRestarted && nRetry <= nRetryBeforeRestart)
+                    {
+                        captureRestarted = true;
+                        LOGF_WARN("No image data %.1f s after the exposure ended. Restarting video capture and taking the exposure again.",
+                                  exposureTimer.elapsed() / 1000.0 - duration);
+                        // On abort, skip the error path below.
+                        if (restartCaptureAndTrigger(duration, isAboutToQuit) || isAboutToQuit)
+                        {
+                            exposureTimer.start();
+                            nRetry = 50;
+                            break;
+                        }
+                    }
+                    else if (nRetry)
                     {
                         // No image data is prepared in the buffer yet. Retry next step of while loop.
                         delay = 0.5f;
@@ -350,6 +422,7 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
                     }
                 //fall through
                 default: // Cannot continue to retrive image data when ret is any error except timeout.
+                    LOGF_ERROR("Exposure failed: no image data from the camera (%s).", Helpers::toString(ret));
                     if (Helpers::isRGB(type))
                         free(buffer);
                     guard.unlock();
@@ -669,7 +742,10 @@ bool SVBONYBase::Disconnect()
     stopGuidePulse(mTimerWE);
     mTimerTemperature.stop();
 
+    // Wait for the worker so it makes no SDK calls after the camera is closed.
+    // start() returns once the running function has finished.
     mWorker.quit();
+    mWorker.start([](const std::atomic_bool &) {});
     Streamer->setStream(false);
 
     if (isSimulation() == false)
@@ -1059,9 +1135,12 @@ bool SVBONYBase::AbortExposure()
 {
     LOG_DEBUG("Aborting exposure...");
 
+    // Wait for the worker to end: quit() returns at once, the following start() waits for the running
+    // function. After that the worker can't hand over a frame or be inside an SDK call.
+    // A running worker stops capture itself. When idle, leave capture running: a stop/start can make
+    // the SDK hold back frames.
     mWorker.quit();
-
-    SVBStopVideoCapture(mCameraInfo.CameraID);
+    mWorker.start([](const std::atomic_bool &) {});
     return true;
 }
 
@@ -1073,7 +1152,10 @@ bool SVBONYBase::StartStreaming()
 
 bool SVBONYBase::StopStreaming()
 {
-    mWorker.quit();
+    // The stream worker ends the stream itself on a read error. It is about to return anyway, and quit() from
+    // the worker thread would drop a function another thread is waiting to start, without waking that thread.
+    if (std::this_thread::get_id() != mStreamThread)
+        mWorker.quit();
     return true;
 }
 
