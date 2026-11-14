@@ -258,9 +258,33 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
     }
 
+    /*
+        Prepare a read buffer for SVB_IMG_RGB24 and SVB_IMG_RGB32 before the trigger: if the allocation
+        fails, no exposure is started and no frame is left behind for the next one.
+    */
+    SVB_IMG_TYPE type = getImageType();
+
+    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
+    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
+    int nChannels = Helpers::getNChannels(type);
+    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
+
+    uint8_t *rgbBuffer = nullptr;
+    if (Helpers::isRGB(type))
+    {
+        rgbBuffer = static_cast<uint8_t *>(malloc(nTotalBytes));
+        if (rgbBuffer == nullptr)
+        {
+            LOGF_ERROR("%s: %d malloc failed (RGB 24/32).", getDeviceName(), nTotalBytes);
+            PrimaryCCD.setExposureFailed();
+            return;
+        }
+    }
+
     // On abort, continue: the loop below stops capture.
     if (!sendSoftTrigger(isAboutToQuit) && !isAboutToQuit)
     {
+        free(rgbBuffer);
         PrimaryCCD.setExposureFailed();
         return;
     }
@@ -270,31 +294,10 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     if (duration > VERBOSE_EXPOSURE)
         LOGF_INFO("Taking a %g seconds frame...", duration);
 
-    /*
-        Prepare a read buffer for SVB_IMG_RGB24 and SVB_IMG_RGB32
-    */
-    SVB_IMG_TYPE type = getImageType();
-
+    // The buffer lock is taken after the trigger, so the exposure runs while the previous frame is still uploading.
     std::unique_lock<std::mutex> guard(ccdBufferLock);
     uint8_t *image = PrimaryCCD.getFrameBuffer();
-    uint8_t *buffer = image;
-
-    uint16_t subW = PrimaryCCD.getSubW() / PrimaryCCD.getBinX();
-    uint16_t subH = PrimaryCCD.getSubH() / PrimaryCCD.getBinY();
-    int nChannels = Helpers::getNChannels(type);
-    size_t nTotalBytes = subW * subH * nChannels * (PrimaryCCD.getBPP() / 8);
-
-    if (Helpers::isRGB(type))
-    {
-        buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
-        if (buffer == nullptr)
-        {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24/32).", getDeviceName(), nTotalBytes);
-            guard.unlock();
-            PrimaryCCD.setExposureFailed();
-            return;
-        }
-    }
+    uint8_t *buffer = Helpers::isRGB(type) ? rgbBuffer : image;
 
     /*
         Perform exposure and image data reading
