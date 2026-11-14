@@ -1,4 +1,3 @@
-%define __cmake_in_source_build %{_vpath_builddir}
 
 Name: libasi
 Version:2.1.3.git
@@ -76,13 +75,13 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %define _lto_cflags %{nil}
 
 cd libasi
-%cmake .
-make VERBOSE=1 %{?_smp_mflags} -j4
+%cmake
+%cmake_build
 
 %install
 cd libasi
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
-make DESTDIR=%{buildroot} install
+%cmake_install
 
 %files
 /usr/lib/udev/rules.d/99-asi.rules

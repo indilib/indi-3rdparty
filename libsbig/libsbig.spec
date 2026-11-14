@@ -1,4 +1,3 @@
-%define __cmake_in_source_build %{_vpath_builddir}
 Name: libsbig
 Version:2.1.3.git
 Release: %(T=%{_topdir}; mkdir -p $T 2>/dev/null; [ -f $T/.release-stamp-%{name} ] || date -u +%%Y%%m%%d%%H%%M%%S > $T/.release-stamp-%{name} 2>/dev/null; cat $T/.release-stamp-%{name} 2>/dev/null || date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
@@ -65,13 +64,13 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %define _lto_cflags %{nil}
 
 cd libsbig
-%cmake .
-make VERBOSE=1 %{?_smp_mflags} -j4
+%cmake
+%cmake_build
 
 %install
 cd libsbig
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
-make DESTDIR=%{buildroot} install
+%cmake_install
 
 %files
 %{_libdir}/*

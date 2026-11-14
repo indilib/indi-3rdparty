@@ -1,4 +1,3 @@
-%define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-atik-efw
 Version:2.1.3.git
 Release: %(T=%{_topdir}; mkdir -p $T 2>/dev/null; [ -f $T/.release-stamp-%{name} ] || date -u +%%Y%%m%%d%%H%%M%%S > $T/.release-stamp-%{name} 2>/dev/null; cat $T/.release-stamp-%{name} 2>/dev/null || date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
@@ -24,12 +23,12 @@ INDI driver for Atik serial electronic filter wheels.
 %define _lto_cflags %{nil}
 
 cd indi-atik-efw
-%cmake -DINDI_DATA_DIR=/usr/share/indi .
-make VERBOSE=1 %{?_smp_mflags} -j4
+%cmake -DINDI_DATA_DIR=/usr/share/indi
+%cmake_build
 
 %install
 cd indi-atik-efw
-make DESTDIR=%{buildroot} install
+%cmake_install
 
 %files
 %license LICENSE
