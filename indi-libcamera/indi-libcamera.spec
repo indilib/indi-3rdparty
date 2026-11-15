@@ -9,6 +9,14 @@ License: LGPLv2
 URL: https://indilib.org
 Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 
+# rpicam-apps (libcamera-apps-devel) exists only on Fedora 44+: on Fedora 43
+# x86_64 it is the pre-rpicam_app-soname 1.5.0, and on aarch64 it is not
+# packaged at all; RHEL/EPEL has no libcamera either.  Skip cleanly there.
+%if (0%{?fedora} && 0%{?fedora} < 44) || (0%{?rhel} && 0%{?rhel} < 9)
+%define skip_build 1
+%endif
+
+%if !0%{?skip_build}
 BuildRequires: cmake
 BuildRequires: gcc
 BuildRequires: gcc-c++
@@ -34,6 +42,7 @@ BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
 BuildRequires: libasi
+%endif
 BuildRequires: ffmpeg-free-devel
 BuildRequires: libavcodec-free-devel
 BuildRequires: libcamera-apps-devel
@@ -61,13 +70,29 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %autosetup -v -p1 -n indi-3rdparty-master
 
 %build
+%if 0%{?skip_build}
+Exit: 0
+%endif
 # This package tries to mix and match PIE and PIC which is wrong and will
 # trigger link errors when LTO is enabled.
 # Disable LTO
 %define _lto_cflags %{nil}
 
 cd indi-libcamera
+# Fedora ships upstream libcamera (no Raspberry Pi controls) on non-RPi arches;
+# the rpicam-apps headers gate their RPi-only code behind DISABLE_RPI_FEATURES.
+# A cache init file injects the define on both old and new cmake-rpm-macros.
+%ifnarch aarch64
+mkdir -p build-init
+cat > build-init/init-cache.txt <<'CACHE'
+CMAKE_CXX_FLAGS:STRING=-DDISABLE_RPI_FEATURES
+CACHE
+%endif
+%ifnarch aarch64
+%cmake -DINDI_DATA_DIR=/usr/share/indi -C build-init/init-cache.txt
+%else
 %cmake -DINDI_DATA_DIR=/usr/share/indi
+%endif
 %cmake_build
 
 %install
