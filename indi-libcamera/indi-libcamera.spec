@@ -14,6 +14,7 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 # packaged at all; RHEL/EPEL has no libcamera either.  Skip cleanly there.
 %if (0%{?fedora} && 0%{?fedora} < 44) || (0%{?rhel} && 0%{?rhel} < 9)
 %define skip_build 1
+ExcludeArch: x86_64 aarch64
 %endif
 
 %if !0%{?skip_build}
@@ -70,9 +71,6 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %autosetup -v -p1 -n indi-3rdparty-master
 
 %build
-%if 0%{?skip_build}
-Exit: 0
-%endif
 # This package tries to mix and match PIE and PIC which is wrong and will
 # trigger link errors when LTO is enabled.
 # Disable LTO
@@ -85,7 +83,7 @@ cd indi-libcamera
 %ifnarch aarch64
 mkdir -p build-init
 cat > build-init/init-cache.txt <<'CACHE'
-CMAKE_CXX_FLAGS:STRING=-DDISABLE_RPI_FEATURES
+set(ENV{CXXFLAGS} "$ENV{CXXFLAGS} -DDISABLE_RPI_FEATURES")
 CACHE
 %endif
 %ifnarch aarch64
