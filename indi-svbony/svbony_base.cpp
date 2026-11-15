@@ -215,7 +215,10 @@ bool SVBONYBase::restartCaptureAndTrigger(float duration, const std::atomic_bool
 
     ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, duration * 1000 * 1000, SVB_FALSE);
     if (ret != SVB_SUCCESS)
+    {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        return false;
+    }
 
     // Restamp the start time for DATE-OBS.
     PrimaryCCD.setExposureDuration(duration);
@@ -255,7 +258,10 @@ void SVBONYBase::workerExposure(const std::atomic_bool &isAboutToQuit, float dur
     ret = SVBSetControlValue(mCameraInfo.CameraID, SVB_EXPOSURE, duration * 1000 * 1000, SVB_FALSE);
     if (ret != SVB_SUCCESS)
     {
+        // Don't trigger: the camera would expose with the previous duration.
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        PrimaryCCD.setExposureFailed();
+        return;
     }
 
     /*
