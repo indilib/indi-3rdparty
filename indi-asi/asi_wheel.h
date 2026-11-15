@@ -26,12 +26,14 @@
 
 #include <EFW_filter.h>
 
+#include <indielapsedtimer.h>
 #include <indifilterwheel.h>
 #include <indipropertytext.h>
 
 #include <string>
 
 #define EFW_IS_MOVING -1
+#define EFW_MOVE_TIMEOUT_MS 60000
 
 class ASIWHEEL : public INDI::FilterWheel
 {
@@ -98,6 +100,11 @@ class ASIWHEEL : public INDI::FilterWheel
     private:
         int fw_id = -1;
         EFW_INFO mEFWInfo;
+
+        bool mQueryFailed {false};
+        // Report the position once the wheel has stopped, it may still be homing on connect
+        bool mSyncPosition {false};
+        INDI::ElapsedTimer mMoveTimer;
 
         // EFW serial number, used to persist a nickname across enumeration-order changes
         std::string mSerialNumber;

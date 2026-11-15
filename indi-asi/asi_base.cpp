@@ -108,12 +108,12 @@ void ASIBase::workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int bli
     ASI_ERROR_CODE ret;
     long usecsDuration = duration * 1000 * 1000;
 
-    LOGF_DEBUG("Blinking %ld time(s) before exposure.", blinks);
+    LOGF_DEBUG("Blinking %d time(s) before exposure.", blinks);
 
     ret = ASISetControlValue(mCameraInfo.CameraID, ASI_EXPOSURE, usecsDuration, ASI_FALSE);
     if (ret != ASI_SUCCESS)
     {
-        LOGF_ERROR("Failed to set blink exposure to %ldus (%d).", usecsDuration, Helpers::toString(ret));
+        LOGF_ERROR("Failed to set blink exposure to %ldus (%s).", usecsDuration, Helpers::toString(ret));
         return;
     }
 
@@ -147,7 +147,7 @@ void ASIBase::workerBlinkExposure(const std::atomic_bool &isAboutToQuit, int bli
 
     if (blinks > 0)
     {
-        LOGF_WARN("%ld blink exposure(s) NOT done.", blinks);
+        LOGF_WARN("%d blink exposure(s) NOT done.", blinks);
     }
 }
 
@@ -168,6 +168,8 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
     if (ret != ASI_SUCCESS)
     {
         LOGF_ERROR("Failed to set exposure duration (%s).", Helpers::toString(ret));
+        PrimaryCCD.setExposureFailed();
+        return;
     }
 
     // Try exposure for 3 times
@@ -179,7 +181,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
         if (ret == ASI_SUCCESS)
             break;
 
-        LOGF_ERROR("Failed to start exposure (%d)", Helpers::toString(ret));
+        LOGF_ERROR("Failed to start exposure (%s)", Helpers::toString(ret));
         // Wait 100ms before trying again
         usleep(100 * 1000);
     }
@@ -190,6 +192,7 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             "ASI firmware might require an update to *compatible mode."
             "Check http://www.indilib.org/devices/ccds/zwo-optics-asi-cameras.html for details."
         );
+        PrimaryCCD.setExposureFailed();
         return;
     }
 
@@ -275,8 +278,9 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
             }
 
             // If USB reset is enabled
-            if (USBResetSP[INDI_ENABLED].getState() == ISS_ON)
+            if (USBResetSP[INDI_ENABLED].getState() == ISS_ON && !mUSBResetDone)
             {
+                mUSBResetDone = true;
                 LOGF_WARN("Exposure failed after %d attempts. Attempting USB reset...", mExposureRetry);
                 ASIStopExposure(mCameraInfo.CameraID);
                 ASICloseCamera(mCameraInfo.CameraID);
@@ -325,8 +329,11 @@ void ASIBase::workerExposure(const std::atomic_bool &isAboutToQuit, float durati
                     return;
                 }
 
+                restoreCameraSettings();
+
                 // Try one more time after reset
                 LOG_INFO("Attempting exposure again after USB reset...");
+                mExposureRetry = 0;
                 ASIStopExposure(mCameraInfo.CameraID);
                 workerExposure(isAboutToQuit, duration);
                 return;
@@ -400,7 +407,7 @@ bool ASIBase::initProperties()
     CoolerSP[1].fill("COOLER_OFF", "OFF", ISS_ON);
     CoolerSP.fill(getDeviceName(), "CCD_COOLER", "Cooler", MAIN_CONTROL_TAB, IP_WO, ISR_1OFMANY, 0, IPS_IDLE);
 
-    CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 1., .2, 0.0);
+    CoolerNP[0].fill("CCD_COOLER_VALUE", "Cooling Power (%)", "%+06.2f", 0., 100., 1., 0.0);
     CoolerNP.fill(getDeviceName(), "CCD_COOLER_POWER", "Cooling Power", MAIN_CONTROL_TAB, IP_RO, 60, IPS_IDLE);
 
     ControlNP.fill(getDeviceName(), "CCD_CONTROLS",      "Controls", CONTROL_TAB, IP_RW, 60, IPS_IDLE);
@@ -453,7 +460,7 @@ bool ASIBase::initProperties()
     LOGF_DEBUG("ID: %d", mCameraInfo.CameraID);
     LOGF_DEBUG("MaxWidth: %d MaxHeight: %d", mCameraInfo.MaxWidth, mCameraInfo.MaxHeight);
     LOGF_DEBUG("PixelSize: %.2f", mCameraInfo.PixelSize);
-    LOGF_DEBUG("IsColorCamera: %s", mCameraInfo.IsCoolerCam ? "True" : "False");
+    LOGF_DEBUG("IsColorCamera: %s", mCameraInfo.IsColorCam ? "True" : "False");
     LOGF_DEBUG("MechanicalShutter: %s", mCameraInfo.MechanicalShutter ? "True" : "False");
     LOGF_DEBUG("ST4Port: %s", mCameraInfo.ST4Port ? "True" : "False");
     LOGF_DEBUG("IsCoolerCam: %s", mCameraInfo.IsCoolerCam ? "True" : "False");
@@ -492,6 +499,9 @@ bool ASIBase::initProperties()
 
 bool ASIBase::updateProperties()
 {
+    if (isConnected())
+        setupCaptureFormats();
+
     INDI::CCD::updateProperties();
 
     if (isConnected())
@@ -621,6 +631,9 @@ bool ASIBase::Connect()
         return false;
     }
 
+    // Unknown after a reconnect, SetTemperature() has to send it again
+    mTargetTemperature = std::numeric_limits<double>::quiet_NaN();
+
     mTimerTemperature.callOnTimeout(std::bind(&ASIBase::temperatureTimerTimeout, this));
     mTimerTemperature.start(TEMP_TIMER_MS);
 
@@ -658,6 +671,41 @@ bool ASIBase::Disconnect()
     return true;
 }
 
+void ASIBase::setupCaptureFormats()
+{
+    int w = 0, h = 0, bin = 0;
+    ASI_IMG_TYPE imgType = ASI_IMG_END;
+
+    ASI_ERROR_CODE ret = ASIGetROIFormat(mCameraInfo.CameraID, &w, &h, &bin, &imgType);
+    if (ret != ASI_SUCCESS)
+    {
+        LOGF_ERROR("Failed to get ROI format (%s).", Helpers::toString(ret));
+    }
+
+    VideoFormatSP.resize(0);
+    for (const auto &videoFormat : mCameraInfo.SupportedVideoFormat)
+    {
+        if (videoFormat == ASI_IMG_END)
+            break;
+
+        INDI::WidgetSwitch node;
+        node.fill(
+            Helpers::toString(videoFormat),
+            Helpers::toPrettyString(videoFormat),
+            videoFormat == imgType ? ISS_ON : ISS_OFF
+        );
+
+        node.setAux(const_cast<ASI_IMG_TYPE*>(&videoFormat));
+        VideoFormatSP.push(std::move(node));
+        CaptureFormat format = {Helpers::toString(videoFormat),
+                                Helpers::toPrettyString(videoFormat),
+                                static_cast<uint8_t>((videoFormat == ASI_IMG_RAW16) ? 16 : 8),
+                                videoFormat == imgType
+                               };
+        addCaptureFormat(format);
+    }
+}
+
 void ASIBase::setupParams()
 {
     int piNumberOfControls = 0;
@@ -669,17 +717,6 @@ void ASIBase::setupParams()
         LOGF_ERROR("Failed to get number of controls (%s).", Helpers::toString(ret));
 
     createControls(piNumberOfControls);
-
-    if (HasCooler())
-    {
-        ASI_CONTROL_CAPS pCtrlCaps;
-        ret = ASIGetControlCaps(mCameraInfo.CameraID, ASI_TARGET_TEMP, &pCtrlCaps);
-        if (ret == ASI_SUCCESS)
-        {
-            CoolerNP[0].setMinMax(pCtrlCaps.MinValue, pCtrlCaps.MaxValue);
-            CoolerNP[0].setValue(pCtrlCaps.DefaultValue);
-        }
-    }
 
     // Set minimum ASI_BANDWIDTHOVERLOAD on ARM
 #ifdef LOW_USB_BANDWIDTH
@@ -722,29 +759,6 @@ void ASIBase::setupParams()
             break;
     }
 
-    VideoFormatSP.resize(0);
-    for (const auto &videoFormat : mCameraInfo.SupportedVideoFormat)
-    {
-        if (videoFormat == ASI_IMG_END)
-            break;
-
-        INDI::WidgetSwitch node;
-        node.fill(
-            Helpers::toString(videoFormat),
-            Helpers::toPrettyString(videoFormat),
-            videoFormat == imgType ? ISS_ON : ISS_OFF
-        );
-
-        node.setAux(const_cast<ASI_IMG_TYPE*>(&videoFormat));
-        VideoFormatSP.push(std::move(node));
-        CaptureFormat format = {Helpers::toString(videoFormat),
-                                Helpers::toPrettyString(videoFormat),
-                                static_cast<uint8_t>((videoFormat == ASI_IMG_RAW16) ? 16 : 8),
-                                videoFormat == imgType
-                               };
-        addCaptureFormat(format);
-    }
-
     float x_pixel_size = mCameraInfo.PixelSize;
     float y_pixel_size = mCameraInfo.PixelSize;
 
@@ -771,6 +785,11 @@ void ASIBase::setupParams()
 #endif
 
     SetCCDParams(maxWidth, maxHeight, bit_depth, x_pixel_size, y_pixel_size);
+
+    mRequestedFrameX = 0;
+    mRequestedFrameY = 0;
+    mRequestedFrameW = maxWidth;
+    mRequestedFrameH = maxHeight;
 
     // Let's calculate required buffer
     int nbuf = PrimaryCCD.getXRes() * PrimaryCCD.getYRes() * PrimaryCCD.getBPP() / 8;
@@ -804,6 +823,12 @@ bool ASIBase::ISNewNumber(const char *dev, const char *name, double values[], ch
 
     if (dev != nullptr && !strcmp(dev, getDeviceName()))
     {
+        if (TemperatureNP.isNameMatch(name) && std::round(values[0]) != values[0])
+        {
+            LOGF_INFO("The camera only accepts whole degrees, using %.0f C instead of %.2f C.", std::round(values[0]), values[0]);
+            values[0] = std::round(values[0]);
+        }
+
         if (ControlNP.isNameMatch(name))
         {
             std::vector<double> oldValues;
@@ -1077,9 +1102,10 @@ bool ASIBase::setVideoFormat(uint8_t index)
 
 int ASIBase::SetTemperature(double temperature)
 {
-    // If there difference, for example, is less than 0.1 degrees, let's immediately return OK.
-    // #PS: how will it warm up?
-    if (std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
+    // Only done if the camera is already regulating to this target. On its way to
+    // another one it would not stop here.
+    if (CoolerSP[0].getState() == ISS_ON && std::round(temperature) == std::round(mTargetTemperature)
+            && std::abs(temperature - mCurrentTemperature) < TEMP_THRESHOLD)
         return 1;
 
     if (activateCooler(true) == false)
@@ -1125,6 +1151,7 @@ bool ASIBase::activateCooler(bool enable)
 bool ASIBase::StartExposure(float duration)
 {
     mExposureRetry = 0;
+    mUSBResetDone = false;
     mWorker.start(std::bind(&ASIBase::workerExposure, this, std::placeholders::_1, duration));
     return true;
 }
@@ -1241,6 +1268,11 @@ bool ASIBase::UpdateCCDFrame(int x, int y, int w, int h)
         return false;
     }
 
+    mRequestedFrameX = x;
+    mRequestedFrameY = y;
+    mRequestedFrameW = w;
+    mRequestedFrameH = h;
+
     // Set UNBINNED coords
     //PrimaryCCD.setFrame(x, y, w, h);
     PrimaryCCD.setFrame(subX * binX, subY * binY, subW * binX, subH * binY);
@@ -1264,7 +1296,8 @@ bool ASIBase::UpdateCCDBin(int binx, int biny)
 
     PrimaryCCD.setBin(binx, binx);
 
-    return UpdateCCDFrame(PrimaryCCD.getSubX(), PrimaryCCD.getSubY(), PrimaryCCD.getSubW(), PrimaryCCD.getSubH());
+    // The current frame may be rounded down for the previous binning
+    return UpdateCCDFrame(mRequestedFrameX, mRequestedFrameY, mRequestedFrameW, mRequestedFrameH);
 }
 
 /* Downloads the image from the CCD.
@@ -1289,7 +1322,8 @@ int ASIBase::grabImage(float duration)
         buffer = static_cast<uint8_t *>(malloc(nTotalBytes));
         if (buffer == nullptr)
         {
-            LOGF_ERROR("%s: %d malloc failed (RGB 24).", getDeviceName());
+            LOG_ERROR("Malloc failed (RGB 24).");
+            PrimaryCCD.setExposureFailed();
             return -1;
         }
     }
@@ -1303,6 +1337,7 @@ int ASIBase::grabImage(float duration)
         );
         if (type == ASI_IMG_RGB24)
             free(buffer);
+        PrimaryCCD.setExposureFailed();
         return -1;
     }
 
@@ -1396,11 +1431,17 @@ void ASIBase::temperatureTimerTimeout()
     if (ret != ASI_SUCCESS)
     {
         LOGF_ERROR("Failed to get temperature (%s).", Helpers::toString(ret));
+        if (!mTemperatureReadFailed)
+            mTemperatureStateBeforeFailure = newState;
+        mTemperatureReadFailed = true;
         newState = IPS_ALERT;
     }
     else
     {
         mCurrentTemperature = value / 10.0;
+        if (mTemperatureReadFailed)
+            newState = mTemperatureStateBeforeFailure;
+        mTemperatureReadFailed = false;
         // If cooling is active, show goal status
         //        if (CoolerSP[0].getState() == ISS_ON)
         //        {
@@ -1440,7 +1481,7 @@ void ASIBase::temperatureTimerTimeout()
 
 IPState ASIBase::guidePulse(INDI::Timer &timer, float ms, ASI_GUIDE_DIRECTION dir)
 {
-    timer.stop();
+    stopGuidePulse(timer);
     ASIPulseGuideOn(mCameraInfo.CameraID, dir);
 
     LOGF_DEBUG("Starting %s guide for %f ms.", Helpers::toString(dir), ms);
@@ -1552,7 +1593,7 @@ void ASIBase::createControls(int piNumberOfControls)
                 value = 0.8 * cap.MaxValue;
 #endif
 
-            LOGF_DEBUG("createControls->set USB %d", value);
+            LOGF_DEBUG("createControls->set USB %ld", value);
             ASISetControlValue(mCameraInfo.CameraID, cap.ControlType, value, ASI_FALSE);
         }
 
@@ -1677,6 +1718,57 @@ void ASIBase::addFITSKeywords(INDI::CCDChip *targetChip, std::vector<INDI::FITSR
         if (np)
         {
             fitsKeywords.push_back({"WB_B", np->value, 3, "White Balance - Blue"});
+        }
+    }
+}
+
+void ASIBase::restoreCameraSettings()
+{
+    ASI_ERROR_CODE ret;
+
+    for (auto &num : ControlNP)
+    {
+        auto numCtrlCap = static_cast<ASI_CONTROL_CAPS *>(num.getAux());
+
+        // See createControls(): these fail exposures on cameras without GPS
+        if (numCtrlCap->ControlType == ASI_GPS_START_LINE || numCtrlCap->ControlType == ASI_GPS_END_LINE)
+            continue;
+
+        auto sw = ControlSP.find_if([&numCtrlCap](const INDI::WidgetSwitch & it) -> bool
+        {
+            return static_cast<const ASI_CONTROL_CAPS *>(it.getAux())->ControlType == numCtrlCap->ControlType;
+        });
+        ASI_BOOL isAuto = (sw != ControlSP.end() && sw->getState() == ISS_ON) ? ASI_TRUE : ASI_FALSE;
+
+        ret = ASISetControlValue(mCameraInfo.CameraID, numCtrlCap->ControlType, static_cast<long>(num.getValue()), isAuto);
+        if (ret != ASI_SUCCESS)
+            LOGF_WARN("Failed to restore %s (%s).", num.getName(), Helpers::toString(ret));
+    }
+
+    if (hasFlipControl())
+    {
+        int flip = 0;
+        if (FlipSP[FLIP_HORIZONTAL].getState() == ISS_ON)
+            flip |= ASI_FLIP_HORIZ;
+        if (FlipSP[FLIP_VERTICAL].getState() == ISS_ON)
+            flip |= ASI_FLIP_VERT;
+
+        ret = ASISetControlValue(mCameraInfo.CameraID, ASI_FLIP, flip, ASI_FALSE);
+        if (ret != ASI_SUCCESS)
+            LOGF_WARN("Failed to restore ASI_FLIP (%s).", Helpers::toString(ret));
+    }
+
+    if (HasCooler() && CoolerSP[0].getState() == ISS_ON)
+    {
+        ret = ASISetControlValue(mCameraInfo.CameraID, ASI_COOLER_ON, ASI_TRUE, ASI_FALSE);
+        if (ret != ASI_SUCCESS)
+            LOGF_WARN("Failed to restore the cooler (%s).", Helpers::toString(ret));
+
+        if (!std::isnan(mTargetTemperature))
+        {
+            ret = ASISetControlValue(mCameraInfo.CameraID, ASI_TARGET_TEMP, std::round(mTargetTemperature), ASI_TRUE);
+            if (ret != ASI_SUCCESS)
+                LOGF_WARN("Failed to restore the target temperature (%s).", Helpers::toString(ret));
         }
     }
 }
