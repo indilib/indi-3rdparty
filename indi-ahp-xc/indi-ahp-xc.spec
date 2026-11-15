@@ -1,7 +1,6 @@
-%define __cmake_in_source_build %{_vpath_builddir}
 Name: indi-ahp-xc
 Version:2.1.3.git
-Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
+Release: %(T=%{_topdir}; mkdir -p $T 2>/dev/null; [ -f $T/.release-stamp-%{name} ] || date -u +%%Y%%m%%d%%H%%M%%S > $T/.release-stamp-%{name} 2>/dev/null; cat $T/.release-stamp-%{name} 2>/dev/null || date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
 License: LGPLv2
@@ -10,8 +9,20 @@ License: LGPLv2
 URL: https://indilib.org
 Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 
+# This driver requires libahp-xc, which upstream indi-3rdparty removed in
+# favor of the distro-packaged library ("AHP libraries from Debian and
+# Fedora repos").  Fedora ships libahp-xc-devel only through Fedora 43; it
+# was retired in Fedora 44+, and RHEL/EPEL never carried it, so the driver
+# cannot build anywhere else until the library is revived.
+%if (0%{?rhel}) || (0%{?fedora} && 0%{?fedora} >= 44)
+%define skip_build 1
+ExcludeArch: x86_64 aarch64
+%endif
+
 BuildRequires: cmake
-BuildRequires: libfli-devel
+BuildRequires: gcc
+BuildRequires: gcc-c++
+BuildRequires: libahp-xc-devel
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd
@@ -31,7 +42,6 @@ BuildRequires: gpsd-devel
 BuildRequires: libdc1394-devel
 BuildRequires: boost-devel
 BuildRequires: boost-regex
-BuildRequires: libahp-xc
 
 BuildRequires: gmock
 
@@ -61,12 +71,12 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %define _lto_cflags %{nil}
 
 cd indi-ahp-xc
-%cmake -DINDI_DATA_DIR=/usr/share/indi .
-make VERBOSE=1 %{?_smp_mflags} -j4
+%cmake -DINDI_DATA_DIR=/usr/share/indi
+%cmake_build
 
 %install
 cd indi-ahp-xc
-make DESTDIR=%{buildroot} install
+%cmake_install
 
 %files
 %{_bindir}/*

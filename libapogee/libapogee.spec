@@ -1,7 +1,6 @@
-%define __cmake_in_source_build %{_vpath_builddir}
 Name: libapogee
 Version:2.1.3.git
-Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
+Release: %(T=%{_topdir}; mkdir -p $T 2>/dev/null; [ -f $T/.release-stamp-%{name} ] || date -u +%%Y%%m%%d%%H%%M%%S > $T/.release-stamp-%{name} 2>/dev/null; cat $T/.release-stamp-%{name} 2>/dev/null || date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
 License: LGPLv2
@@ -14,7 +13,8 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 %define __find_requires %{nil}
 
 BuildRequires: cmake
-BuildRequires: libfli-devel
+BuildRequires: gcc
+BuildRequires: gcc-c++
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd
@@ -52,6 +52,14 @@ astronomical instrumentation. INDI is small, flexible, easy to parse,
 and scalable. It supports common DCS functions such as remote control,
 data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 
+%package devel
+Summary: Development files for %{name}
+Requires: %{name}%{?_isa} = %{version}-%{release}
+
+%description devel
+Header files and the shared library link target for developing
+applications that use libapogee, such as the indi-apogee driver.
+
 
 %prep
 %autosetup -v -p1 -n indi-3rdparty-master
@@ -63,19 +71,22 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %define _lto_cflags %{nil}
 
 cd libapogee
-%cmake .
-make VERBOSE=1 %{?_smp_mflags} -j4
+%cmake
+%cmake_build
 
 %install
 cd libapogee
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
-make DESTDIR=%{buildroot} install
+%cmake_install
 
 %files
-%{_libdir}/*
-%{_includedir}/libapogee
+%{_libdir}/*.so.*
 %{_sysconfdir}/Apogee
 /usr/lib/udev/rules.d/99-apogee.rules
+
+%files devel
+%{_libdir}/*.so
+%{_includedir}/libapogee
 
 
 %changelog

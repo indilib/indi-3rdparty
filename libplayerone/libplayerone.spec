@@ -1,8 +1,7 @@
-%define __cmake_in_source_build %{_vpath_builddir}
 
 Name: libplayerone
 Version:2.1.3.git
-Release: %(date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
+Release: %(T=%{_topdir}; mkdir -p $T 2>/dev/null; [ -f $T/.release-stamp-%{name} ] || date -u +%%Y%%m%%d%%H%%M%%S > $T/.release-stamp-%{name} 2>/dev/null; cat $T/.release-stamp-%{name} 2>/dev/null || date -u +%%Y%%m%%d%%H%%M%%S)%{?dist}
 Summary: Instrument Neutral Distributed Interface 3rd party drivers
 
 License: LGPLv2
@@ -22,7 +21,8 @@ Provides: libPlayerOnePW.so()(64bit)
 
 
 BuildRequires: cmake
-BuildRequires: libfli-devel
+BuildRequires: gcc
+BuildRequires: gcc-c++
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd
@@ -71,13 +71,13 @@ data acquisition, monitoring, and a lot more. This is a 3rd party driver.
 %define _lto_cflags %{nil}
 
 cd libplayerone
-%cmake .
-make VERBOSE=1 %{?_smp_mflags} -j4
+%cmake
+%cmake_build
 
 %install
 cd libplayerone
 find %buildroot -type f \( -name '*.so' -o -name '*.so.*' \) -exec chmod 755 {} +
-make DESTDIR=%{buildroot} install
+%cmake_install
 
 %files
 /usr/lib/udev/rules.d/99-player_one_astronomy.rules
