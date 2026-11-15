@@ -157,6 +157,10 @@ struct _gphoto_driver
     int upload_settings;
     CameraImageHandling handle_sdcard_image;
     bool is_aborted;
+    // True while the camera may still hold events from the last capture that the next exposure would mistake
+    // for its own. Cleared by the BULB read path once it has consumed GP_EVENT_CAPTURE_COMPLETE for a frame it
+    // downloaded, which leaves nothing behind. See drain_pending_events.
+    bool stale_events_possible;
 
     char *model;
     char *manufacturer;
@@ -1107,6 +1111,12 @@ int gphoto_mirrorlock(gphoto_driver *gphoto, int msec)
 // events queued between two frames and the ptp2 driver spends the whole timeout on each one: at 10 ms that was
 // 0.25 s of camera idle in front of every sub (measured on an ILCE-7M4, INDI 2.2.5). 2 ms drains the same
 // queue in a tenth of the time.
+//
+// Even at 2 ms the drain costs about 12 ms per queued event on the Sony ptp2 path, 80 to 90 ms per sub on an
+// ILCE-7M4 that only ever has property-change events waiting. The stale CAPTURE_COMPLETE that this guards
+// against can only be left behind by the predefined-exposure path, which returns right after the download
+// without reading it. The BULB path reads it (or waits a second for it) before it returns, so after a BULB
+// frame there is nothing to drain and gphoto_start_exposure skips the call.
 static void drain_pending_events(gphoto_driver *gphoto)
 {
     for (int i = 0; i < 20; i++)
@@ -1140,7 +1150,10 @@ static void drain_pending_events(gphoto_driver *gphoto)
 int gphoto_start_exposure(gphoto_driver *gphoto, uint32_t exptime_usec, int mirror_lock)
 {
     gphoto->is_aborted = false;
-    drain_pending_events(gphoto);
+    if (gphoto->stale_events_possible)
+        drain_pending_events(gphoto);
+    // Until the read path proves otherwise, assume this capture leaves events behind.
+    gphoto->stale_events_possible = true;
     if (gphoto->exposure_widget == nullptr)
     {
         DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "No exposure widget found. Can not expose!");
@@ -1485,6 +1498,9 @@ int gphoto_read_exposure_fd(gphoto_driver *gphoto, int fd)
         {
             case GP_EVENT_CAPTURE_COMPLETE:
                 DEBUGDEVICE(device, INDI::Logger::DBG_DEBUG, "Capture event completed.");
+                // The image is downloaded and its completion event consumed: the next exposure can skip the drain.
+                if (downloadComplete)
+                    gphoto->stale_events_possible = false;
                 return GP_OK;
 
             case GP_EVENT_FILE_ADDED:
@@ -1792,6 +1808,7 @@ gphoto_driver *gphoto_open(Camera *camera, GPContext *context, const char *model
     gphoto->download_timeout       = 60;
     gphoto->dsusb                  = nullptr;
     gphoto->force_bulb             = true;
+    gphoto->stale_events_possible  = true;
     gphoto->last_sensor_temp       = -273.0; // 0 degrees Kelvin
     gphoto->eos_press_full_index   = -1;
     gphoto->eos_release_full_index = -1;
