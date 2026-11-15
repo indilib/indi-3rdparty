@@ -17,6 +17,14 @@ Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 ExcludeArch: x86_64 aarch64
 %endif
 
+# Rawhide (and once branched, Fedora 46+) ships a libcamera release that
+# removed properties::PixelArraySize, which this driver still calls; the
+# code needs an upstream fix before it can build there again.
+%if (0%{?fedora} && 0%{?fedora} >= 46)
+%define skip_build 1
+ExcludeArch: x86_64 aarch64
+%endif
+
 %if !0%{?skip_build}
 BuildRequires: cmake
 BuildRequires: gcc

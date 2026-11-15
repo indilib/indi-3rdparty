@@ -9,9 +9,20 @@ License: LGPLv2
 URL: https://indilib.org
 Source0: https://github.com/indilib/indi-3rdparty/archive/master.tar.gz
 
+# This driver requires libahp-xc, which upstream indi-3rdparty removed in
+# favor of the distro-packaged library ("AHP libraries from Debian and
+# Fedora repos").  Fedora ships libahp-xc-devel only through Fedora 43; it
+# was retired in Fedora 44+, and RHEL/EPEL never carried it, so the driver
+# cannot build anywhere else until the library is revived.
+%if (0%{?rhel}) || (0%{?fedora} && 0%{?fedora} >= 44)
+%define skip_build 1
+ExcludeArch: x86_64 aarch64
+%endif
+
 BuildRequires: cmake
 BuildRequires: gcc
 BuildRequires: gcc-c++
+BuildRequires: libahp-xc-devel
 BuildRequires: libnova-devel
 BuildRequires: qt5-qtbase-devel
 BuildRequires: systemd
