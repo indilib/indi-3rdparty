@@ -102,7 +102,12 @@ target_link_libraries(indi_asi_focuser ${INDI_LIBRARIES} ${HIDAPILIB} ${ASI_LIBR
 ENDIF()
 
 ########### indi_asi_rotator ###########
-add_executable(indi_asi_rotator ${CMAKE_CURRENT_SOURCE_DIR}/asi_rotator.cpp)
+set(indi_asi_rotator_SRCS
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_rotator.cpp
+   ${CMAKE_CURRENT_SOURCE_DIR}/asi_rotator_hotplug_handler.cpp
+   )
+
+add_executable(indi_asi_rotator ${indi_asi_rotator_SRCS})
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
 target_link_libraries(indi_asi_rotator ${INDI_LIBRARIES} ${HIDAPILIB} ${ASI_LIBRARIES} ${LIBUSB_LIBRARIES})
