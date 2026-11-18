@@ -3,6 +3,7 @@ import asyncio
 import subprocess
 import time
 import os
+import shutil
 import socket
 import sys
 from .indi_client import INDIClient
@@ -31,6 +32,27 @@ def is_port_open(port):
     """Check if a local port is already in use."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         return s.connect_ex(("localhost", port)) == 0
+
+
+CONFIG_PATH = os.path.expanduser("~/.indi/Celestron AUX_config.xml")
+
+
+@pytest.fixture(autouse=True)
+def backup_config():
+    """Backup and restore INDI config file around each test."""
+    backup_path = CONFIG_PATH + ".test_backup"
+    has_backup = False
+
+    if os.path.exists(CONFIG_PATH):
+        shutil.copy2(CONFIG_PATH, backup_path)
+        has_backup = True
+
+    yield
+
+    if has_backup and os.path.exists(backup_path):
+        shutil.move(backup_path, CONFIG_PATH)
+    elif not has_backup and os.path.exists(CONFIG_PATH):
+        os.remove(CONFIG_PATH)
 
 
 @pytest.fixture(scope="session")
