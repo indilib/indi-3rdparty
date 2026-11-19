@@ -30,6 +30,8 @@
 #include "indipropertytext.h"
 #include "indisinglethreadpool.h"
 
+#include <atomic>
+#include <thread>
 #include <vector>
 
 #include <indiccd.h>
@@ -97,8 +99,15 @@ class SVBONYBase : public INDI::CCD
 
     protected:
         INDI::SingleThreadPool mWorker;
+        std::atomic<std::thread::id> mStreamThread {};
         void workerStreamVideo(const std::atomic_bool &isAboutToQuit);
         void workerExposure(const std::atomic_bool &isAboutToQuit, float duration);
+
+        /** Send a soft trigger, up to three attempts. Returns false if aborted. */
+        bool sendSoftTrigger(const std::atomic_bool &isAboutToQuit);
+
+        /** Restart video capture and trigger the exposure again, unless aborted. */
+        bool restartCaptureAndTrigger(float duration, const std::atomic_bool &isAboutToQuit);
 
         /** Send CCD image to client */
         void sendImage(SVB_IMG_TYPE type, float duration);
