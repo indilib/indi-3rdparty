@@ -135,6 +135,8 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         INumber *MinPulseN                   = nullptr;
         INumber *MinPulseTimerN              = nullptr;
         INDI::PropertyNumber   PulseLimitsNP       {INDI::Property()};
+        // User override of the motor controller steps/360 for mounts with modified gearing
+        INDI::PropertyNumber   CustomSteps360NP    {2};
 
         enum Hemisphere
         {

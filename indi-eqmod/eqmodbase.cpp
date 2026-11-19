@@ -264,6 +264,12 @@ bool EQMod::initProperties()
 
     loadProperties();
 
+    // Mounts with modified axis gearing report the stock steps/360 from the firmware.
+    // 0 keeps the firmware value. Defined before connection so it applies when the mount is first read.
+    CustomSteps360NP[0].fill("RA_STEPS360", "RA Steps/360", "%.0f", 0, 16777215, 1, 0);
+    CustomSteps360NP[1].fill("DE_STEPS360", "DE Steps/360", "%.0f", 0, 16777215, 1, 0);
+    CustomSteps360NP.fill(getDeviceName(), "CUSTOM_STEPS360", "Custom Gearing", "Firmware", IP_RW, 0, IPS_IDLE);
+
     initSlewRates();
 
     AddTrackMode("TRACK_SIDEREAL", "Sidereal", true);
@@ -311,6 +317,10 @@ void EQMod::initSlewRates()
 void EQMod::ISGetProperties(const char *dev)
 {
     INDI::Telescope::ISGetProperties(dev);
+
+    defineProperty(CustomSteps360NP);
+    if (!isConnected())
+        loadConfig(true, CustomSteps360NP.getName());
 
     if (isConnected())
     {
@@ -471,6 +481,8 @@ bool EQMod::updateProperties()
                 LOGF_DEBUG("Got Board Property %s: %s", it.getName(), it.getText());
             }
 
+            mount->SetCustomSteps360(static_cast<uint32_t>(CustomSteps360NP[0].getValue()),
+                                     static_cast<uint32_t>(CustomSteps360NP[1].getValue()));
             mount->InquireRAEncoderInfo(SteppersNP);
             mount->InquireDEEncoderInfo(SteppersNP);
 
@@ -2461,6 +2473,26 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
         //  This is for our device
         //  Now lets see if it's something we process here
 
+        if (CustomSteps360NP.isNameMatch(name))
+        {
+            const double previousRA = CustomSteps360NP[0].getValue();
+            const double previousDE = CustomSteps360NP[1].getValue();
+            CustomSteps360NP.update(values, names, n);
+            CustomSteps360NP.setState(IPS_OK);
+            CustomSteps360NP.apply();
+            // Config is also reloaded right after connecting: stay quiet when nothing changed.
+            if (previousRA == CustomSteps360NP[0].getValue() && previousDE == CustomSteps360NP[1].getValue())
+                return true;
+            saveConfig(CustomSteps360NP);
+            if (isConnected())
+                LOG_WARN("Custom gearing is applied on the next connection. Reconnect the mount, "
+                         "then set the park position again since saved park steps use the previous gearing.");
+            else
+                LOGF_INFO("Custom gearing set to RA=%.0f DE=%.0f steps/360 (0 = firmware value).",
+                          CustomSteps360NP[0].getValue(), CustomSteps360NP[1].getValue());
+            return true;
+        }
+
         if (strcmp(name, "SLEWSPEEDS") == 0)
         {
             // Just store the requested custom slew speeds. The actual speeds are
@@ -3519,6 +3551,7 @@ bool EQMod::saveConfigItems(FILE *fp)
         GuideRateNP.save(fp);
     if (PulseLimitsNP)
         PulseLimitsNP.save(fp);
+    CustomSteps360NP.save(fp);
     if (SlewSpeedsNP)
         SlewSpeedsNP.save(fp);
     if (ReverseDECSP)

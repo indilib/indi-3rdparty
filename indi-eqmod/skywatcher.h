@@ -76,6 +76,10 @@ class Skywatcher
         uint32_t GetRAPeriod();
         uint32_t GetDEPeriod();
 
+        // Override the steps/360 reported by the motor controller, e.g. for mounts whose
+        // axis gearing was modified (belt/worm wheel changes). 0 means use the firmware value.
+        void SetCustomSteps360(uint32_t ra, uint32_t de);
+
         INDI_DEPRECATED("Use GetRAMotorStatus(INDI::PropertyLight).")
         void GetRAMotorStatus(ILightVectorProperty *motorLP);
         void GetRAMotorStatus(INDI::PropertyLight motorLP);
@@ -321,6 +325,8 @@ class Skywatcher
         uint32_t DEStepInit; // Initial DE position in step
         uint32_t RAStepHome; // Home RA position in step
         uint32_t DEStepHome; // Home DE position in step
+        uint32_t CustomRASteps360 {0}; // User override of RASteps360, 0 = firmware value
+        uint32_t CustomDESteps360 {0}; // User override of DESteps360, 0 = firmware value
         uint32_t RAPeriod {256};   // Current RA worm period
         uint32_t DEPeriod {256};   // Current DE worm period
 

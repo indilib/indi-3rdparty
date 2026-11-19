@@ -181,6 +181,12 @@ uint32_t Skywatcher::GetDEEncoderTotal()
     return DESteps360;
 }
 
+void Skywatcher::SetCustomSteps360(uint32_t ra, uint32_t de)
+{
+    CustomRASteps360 = ra;
+    CustomDESteps360 = de;
+}
+
 uint32_t Skywatcher::GetDEEncoderHome()
 {
     LOGF_DEBUG("%s() = %ld", __FUNCTION__, static_cast<long>(DEStepHome));
@@ -350,6 +356,18 @@ void Skywatcher::Init()
         LOGF_WARN("%s() : Setting default Init steps --  RAInit=%ld DEInit = %ld", __FUNCTION__,
                   static_cast<long>(RAStepInit), static_cast<long>(DEStepInit));
     }
+    // Dec travel spans -90..+270 degrees of axis rotation around DEStepInit (see EQMod::EncoderFromDegree).
+    // With home a quarter turn above 0x800000, axes with more than ~11.18M steps/360 overflow the 24-bit
+    // motor controller position on one pier side. In that case centre the travel on 0x800000 instead,
+    // which is also the position the controller reports at power-up in the home position.
+    if (static_cast<uint64_t>(DEStepInit) + (3ULL * DESteps360) / 4 > 0xFFFFFF)
+    {
+        DEStepHome = 0x800000;
+        DEStepInit = DEStepHome - DESteps360 / 4;
+        LOGF_WARN("%s() : DE steps/360 (%u) too large for the default encoder layout, using DEInit=%ld DEHome=%ld",
+                  __FUNCTION__, DESteps360, static_cast<long>(DEStepInit), static_cast<long>(DEStepHome));
+    }
+
     LOGF_DEBUG("%s() : Setting Home steps RAHome=%ld DEHome = %ld", __FUNCTION__,
                static_cast<long>(RAStepHome), static_cast<long>(DEStepHome));
 
@@ -741,6 +759,17 @@ void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
     dispatch_command(InquireGridPerRevolution, axis, nullptr);
     //read_eqmod();
     *Steps360        = Revu24str2long(response + 1);
+
+    // The firmware only knows the stock gearing. Mounts with modified axis gearing
+    // (e.g. a changed motor-to-worm belt ratio) need the real steps/360 supplied by the user.
+    uint32_t customSteps360 = (axis == Axis1) ? CustomRASteps360 : CustomDESteps360;
+    if (customSteps360 > 0 && customSteps360 != *Steps360)
+    {
+        LOGF_WARN("%s: using custom %sSteps360 %u in place of firmware value %u (ratio %.6f)", __FUNCTION__,
+                  axis == Axis1 ? "RA" : "DE", customSteps360, *Steps360,
+                  static_cast<double>(customSteps360) / static_cast<double>(*Steps360));
+        *Steps360 = customSteps360;
+    }
 
     // Steps per Worm
     dispatch_command(InquireTimerInterruptFreq, axis, nullptr);
