@@ -1,0 +1,8 @@
+<driversList>
+  <devGroup group="Telescopes">
+    <device label="10Micron Native Motion" manufacturer="10Micron">
+      <driver name="10Micron Native Motion">indi_10micron_native_motion</driver>
+      <version>0.28</version>
+    </device>
+  </devGroup>
+</driversList>

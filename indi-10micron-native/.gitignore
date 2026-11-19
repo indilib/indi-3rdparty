@@ -1,0 +1,4 @@
+/build*/
+/stage/
+__pycache__/
+*.log

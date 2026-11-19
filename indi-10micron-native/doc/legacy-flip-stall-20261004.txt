@@ -1,0 +1,38 @@
+Original source SHA256: ed78c5e3fc23e5aa702ca02d3290770d5b2340cd4bc2c39ec2a99165dd58948d
+Times are CDT (UTC-05:00). Excerpt only; local home paths redacted.
+
+1: [2026-10-04T00:50:12.962 CDT INFO ][                org.kde.kstars] - "Welcome to KStars" 3.8.2 Stable
+101: [2026-10-04T00:50:25.932 CDT INFO ][           org.kde.kstars.indi] - LX200 10micron :  "[INFO] Product:10micron GM1000HPS Control box:Q-TYPE2016 Firmware:3.4 of 2026-06-10T17:10:10 "
+206: [2026-10-04T00:50:31.600 CDT INFO ][           org.kde.kstars.indi] - LX200 10micron :  "[INFO] Unattended Flip is disabled. "
+210: [2026-10-04T00:50:32.021 CDT INFO ][           org.kde.kstars.indi] - LX200 10micron :  "[INFO] Unattended Flip from config and mount are disabled "
+224: [2026-10-04T00:50:32.420 CDT INFO ][           org.kde.kstars.indi] - LX200 10micron :  "[INFO] Unattended flip disabled "
+3429: [2026-10-04T03:13:58.744 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Capturing 120.000-second NoFilter image..."
+3430: [2026-10-04T03:13:58.745 CDT INFO ][   org.kde.kstars.ekos.capture] - "Capture exposure = 120 sec, type = Light, filter = NoFilter, upload mode = 0, gain = 100, offset = 0, batch mode = true, seq prefix = IC 1805_Light_NoFilter, format = RAW 16, encoding = FITS, binning = 1x1, ROI = (0+8192, 0+8192)"
+3431: [2026-10-04T03:15:40.263 CDT INFO ][     org.kde.kstars.ekos.mount] - Meridian flip planned with LST= "02h 54m 47s"  scope RA= "02h 34m 47s"  ha= 0.333363 , meridian diff= 0.333333 , hrstoFlip= -2.99764e-05 , flipDelayHrs= 0 ,  "Pier Side: West (pointing East)"
+3432: [2026-10-04T03:15:55.336 CDT INFO ][           org.kde.kstars.indi] - LX200 10micron :  "[INFO] Gstat changed from 0 to 1 "
+3433: [2026-10-04T03:16:01.004 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Download Time: 1.78 s, New Download Time Estimate: 1.78 s."
+3434: [2026-10-04T03:16:01.005 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Received image 54 out of 120."
+3435: [2026-10-04T03:16:01.336 CDT WARN ][              kf.notifications] - Failed to play sound with canberra: IO error
+3436: [2026-10-04T03:16:01.339 CDT INFO ][ org.kde.kstars.ekos.scheduler] - "Job 'IC 1805' 120x120\" NoFilter sees 54 captures in output folder '<USER_HOME>/Pictures/IC_1805/Light/NoFilter'."
+3437: [2026-10-04T03:16:01.339 CDT INFO ][ org.kde.kstars.ekos.scheduler] - "Job 'IC 1805' estimated to take 02h 15m 30s to complete."
+3438: [2026-10-04T03:16:01.339 CDT INFO ][ org.kde.kstars.ekos.scheduler] - "Job 'M 42' 120x120\" NoFilter sees 0 captures in output folder '<USER_HOME>/Pictures/M_42/Light/NoFilter'."
+3439: [2026-10-04T03:16:01.339 CDT INFO ][ org.kde.kstars.ekos.scheduler] - "Job 'M 42' estimated to take 04h 03m 30s to complete."
+3440: [2026-10-04T03:16:02.750 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Captured <USER_HOME>/Pictures/IC_1805/Light/NoFilter/IC_1805_Light_NoFilter_054.fits"
+3441: [2026-10-04T03:16:03.034 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Executing capture script <USER_HOME>/observatory-scripts/session-postcapture.py"
+3442: [2026-10-04T03:16:03.352 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] SESSION=20261003 stamped into <USER_HOME>/Pictures/IC_1805/Light/NoFilter/IC_1805_Light_NoFilter_054.fits\n"
+3443: [2026-10-04T03:16:03.410 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Post capture script finished with code 0."
+3444: [2026-10-04T03:16:03.411 CDT DEBG ][     org.kde.kstars.ekos.focus] - Frame is reset. X: 0 Y: 0 W: 8192 H: 5460 binX: 1 binY: 1
+3445: [2026-10-04T03:16:03.411 CDT INFO ][     org.kde.kstars.ekos.mount] - "Meridian flip ready to start..."
+3446: [2026-10-04T03:16:03.418 CDT INFO ][   org.kde.kstars.ekos.capture] - "[ToupTek SkyEye45AC-plus] Processing meridian flip..."
+3447: [2026-10-04T03:16:04.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3448: [2026-10-04T03:16:05.262 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3449: [2026-10-04T03:16:06.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3450: [2026-10-04T03:16:07.262 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3451: [2026-10-04T03:16:08.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3452: [2026-10-04T03:16:09.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3453: [2026-10-04T03:16:10.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3454: [2026-10-04T03:16:11.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3455: [2026-10-04T03:16:12.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3456: [2026-10-04T03:16:13.262 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3457: [2026-10-04T03:16:14.266 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
+3458: [2026-10-04T03:16:15.263 CDT INFO ][     org.kde.kstars.ekos.mount] - No meridian flip: mount not tracking, current state: "Idle"
