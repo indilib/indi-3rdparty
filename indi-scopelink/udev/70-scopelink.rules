@@ -21,6 +21,11 @@
 # /dev/scopelink is the convenience for the ordinary case of one controller. Two of them plugged in at once
 # both claim it and one wins, so a profile that has to name a particular unit should point at that unit's
 # /dev/serial/by-id path instead, which is per unit by construction.
+#
+# The number in the file name is load bearing. uaccess is a tag, not an action: systemd's own
+# 73-seat-late.rules is what turns it into an ACL for the user at the console, and it only sees tags that
+# were set before it ran. Numbered 99, this file tagged the device after that and the console user got
+# nothing, which left dialout membership as the only way in after all.
 
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="a5d4", MODE="0660", GROUP="dialout", TAG+="uaccess", SYMLINK+="scopelink"
 SUBSYSTEM=="tty", ATTRS{idVendor}=="0483", ATTRS{idProduct}=="a5d3", MODE="0660", GROUP="dialout", TAG+="uaccess", SYMLINK+="scopelink"

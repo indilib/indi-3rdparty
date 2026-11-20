@@ -18,7 +18,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake_modules/")
 
 set(SCOPELINK_VERSION_MAJOR 1)
-set(SCOPELINK_VERSION_MINOR 2)
+set(SCOPELINK_VERSION_MINOR 3)
 
 find_package(INDI 2.0.0 REQUIRED)
 
@@ -87,7 +87,7 @@ if(INDI_INSTALL_UDEV_RULES AND UNIX AND NOT APPLE)
   if(NOT DEFINED UDEVRULES_INSTALL_DIR)
     set(UDEVRULES_INSTALL_DIR "/usr/lib/udev/rules.d" CACHE STRING "Base directory for udev rules")
   endif()
-  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/udev/99-scopelink.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
+  install(FILES ${CMAKE_CURRENT_SOURCE_DIR}/udev/70-scopelink.rules DESTINATION ${UDEVRULES_INSTALL_DIR})
 endif()
 
 # ---------------------------------------------------------------------------------------------------

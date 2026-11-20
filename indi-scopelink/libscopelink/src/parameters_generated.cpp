@@ -16,7 +16,7 @@
     GENERATED FILE - do not edit.
 
     Produced by tools/gen_did_catalogue.py from the ScopeLink firmware description,
-    params.json, interface version 1.2. Neither that script nor its input is part of
+    params.json, interface version 1.3. Neither that script nor its input is part of
     this tree; regenerate the file there rather than editing it here.
 
     Everything in it is the firmware's own statement about its parameters - the limits,
@@ -35,7 +35,7 @@ namespace catalogue
 
 const char * const Product = "ScopeLink";
 const int InterfaceMajor   = 1;
-const int InterfaceMinor   = 2;
+const int InterfaceMinor   = 3;
 
 static const DidOption OptionsMotorDirection[] = {
     { 0, "MOTOR_DIR_NORMAL", "Normal" },
@@ -66,6 +66,16 @@ static const DidOption OptionsSensorModule[] = {
     { 3, "SENSOR_MODULE_C", "Module C (LIS2DW12 + TMP112)" },
 };
 
+static const DidOption OptionsPowerOutputMode[] = {
+    { 0, "OUTPUT_MODE_SWITCH", "Switch" },
+    { 1, "OUTPUT_MODE_DEW_HEATER", "Dew heater" },
+};
+
+static const DidOption OptionsHeaterControl[] = {
+    { 0, "HEATER_CONTROL_MANUAL", "Manual" },
+    { 1, "HEATER_CONTROL_AUTO", "Automatic" },
+};
+
 static const DidOption OptionsFeatureState[] = {
     { 0, "FEATURE_DISABLED", "Disabled" },
     { 1, "FEATURE_ENABLED", "Enabled" },
@@ -83,6 +93,8 @@ const DidGroupInfo Groups[] = {
     { "temperature", "Temperature processing", "PARAMS_TEMPERATURE", 60 },
     { "sensor_module", "Sensor module", "PARAMS_SENSOR_MODULE", 65 },
     { "supply", "Sensor supply", "PARAMS_SUPPLY", 70 },
+    { "power_out", "Power outputs", "PARAMS_POWER_OUT", 75 },
+    { "dew_auto", "Automatic dew control", "PARAMS_DEW_AUTO", 76 },
     { "smartsw", "Smart switch monitoring", "PARAMS_SMARTSW", 80 },
     { "uc_temp", "Controller temperature", "PARAMS_UC_TEMP", 90 },
     { "learnt", "Learnt positions", "PARAMS_LEARNT", 100 },
@@ -462,6 +474,66 @@ const DidDescriptor Parameters[] = {
       "How far the sensor module supply may fall below the controller supply before it is treated as an overcurrent. "
       "Reaching it switches the sensor module supply off until the next reset. The reference is the 3.3 V rail, so a "
       "threshold at or above it never trips." },
+    // 0x0900 power.out1.mode
+    { 0x0900u, "power.out1.mode", "Output 1 mode", "power_out", "", DidType::UInt8, false, 0, 1, 0, 1, true, false,
+      OptionsPowerOutputMode, sizeof(OptionsPowerOutputMode) / sizeof(OptionsPowerOutputMode[0]),
+      "PARAM_POWER_OUT1_MODE",
+      "Whether power output 1 is a switch, on or off, or drives a dew heater, switched on for a share of every second "
+      "that can be set from 0 to 100 %. A change takes effect at the next reset." },
+    // 0x0901 power.out1.startup_value
+    { 0x0901u, "power.out1.startup_value", "Output 1 at power-up", "power_out", "%", DidType::UInt8, false, 0, 100, 0,
+      1, true, false, nullptr, 0, nullptr,
+      "What power output 1 does from power-up until a host says otherwise. A dew heater starts at this share; a switch "
+      "starts on when it is not zero." },
+    // 0x0902 power.out2.mode
+    { 0x0902u, "power.out2.mode", "Output 2 mode", "power_out", "", DidType::UInt8, false, 0, 1, 0, 1, true, false,
+      OptionsPowerOutputMode, sizeof(OptionsPowerOutputMode) / sizeof(OptionsPowerOutputMode[0]),
+      "PARAM_POWER_OUT2_MODE",
+      "Whether power output 2 is a switch, on or off, or drives a dew heater, switched on for a share of every second "
+      "that can be set from 0 to 100 %. A change takes effect at the next reset." },
+    // 0x0903 power.out2.startup_value
+    { 0x0903u, "power.out2.startup_value", "Output 2 at power-up", "power_out", "%", DidType::UInt8, false, 0, 100, 0,
+      1, true, false, nullptr, 0, nullptr,
+      "What power output 2 does from power-up until a host says otherwise. A dew heater starts at this share; a switch "
+      "starts on when it is not zero." },
+    // 0x0904 power.out1.startup_control
+    { 0x0904u, "power.out1.startup_control", "Output 1 control at power-up", "power_out", "", DidType::UInt8, false, 0,
+      1, 0, 1, true, false, OptionsHeaterControl, sizeof(OptionsHeaterControl) / sizeof(OptionsHeaterControl[0]),
+      "PARAM_POWER_OUT1_STARTUP_CONTROL",
+      "Whether a dew heater on power output 1 starts at its power-up value or under automatic dew control. A host can "
+      "change it at any time; this is only where it starts. Under automatic control the power-up value is also what "
+      "the heater runs at while there is no dew point to work from. Ignored for a switch." },
+    // 0x0905 power.out1.auto_max_duty
+    { 0x0905u, "power.out1.auto_max_duty", "Output 1 automatic maximum", "power_out", "%", DidType::UInt8, false, 1,
+      100, 100, 1, true, false, nullptr, 0, nullptr,
+      "The most automatic dew control gives the heater on power output 1, reached when the margin to the dew point is "
+      "down to the full power margin. Set it lower for a strap that needs less, or for a supply that cannot carry both "
+      "heaters. A duty set by hand is not limited by it." },
+    // 0x0906 power.out2.startup_control
+    { 0x0906u, "power.out2.startup_control", "Output 2 control at power-up", "power_out", "", DidType::UInt8, false, 0,
+      1, 0, 1, true, false, OptionsHeaterControl, sizeof(OptionsHeaterControl) / sizeof(OptionsHeaterControl[0]),
+      "PARAM_POWER_OUT2_STARTUP_CONTROL",
+      "Whether a dew heater on power output 2 starts at its power-up value or under automatic dew control. A host can "
+      "change it at any time; this is only where it starts. Under automatic control the power-up value is also what "
+      "the heater runs at while there is no dew point to work from. Ignored for a switch." },
+    // 0x0907 power.out2.auto_max_duty
+    { 0x0907u, "power.out2.auto_max_duty", "Output 2 automatic maximum", "power_out", "%", DidType::UInt8, false, 1,
+      100, 100, 1, true, false, nullptr, 0, nullptr,
+      "The most automatic dew control gives the heater on power output 2, reached when the margin to the dew point is "
+      "down to the full power margin. Set it lower for a strap that needs less, or for a supply that cannot carry both "
+      "heaters. A duty set by hand is not limited by it." },
+    // 0x0910 dew_auto.start_margin
+    { 0x0910u, "dew_auto.start_margin", "Start margin", "dew_auto", "K", DidType::UInt16, false, 0, 5000, 250, 50, true,
+      false, nullptr, 0, nullptr,
+      "How close the ambient temperature has to come to the dew point before automatic dew control starts heating. "
+      "Between this and the full power margin the duty rises in proportion, from nothing to the output's automatic "
+      "maximum." },
+    // 0x0911 dew_auto.full_margin
+    { 0x0911u, "dew_auto.full_margin", "Full power margin", "dew_auto", "K", DidType::UInt16, false, 0, 5000, 50, 50,
+      true, false, nullptr, 0, nullptr,
+      "The margin between the ambient temperature and the dew point at and below which automatic dew control runs a "
+      "heater at its automatic maximum. It has to be below the start margin; when it is not, the heater goes from "
+      "nothing to its maximum at the start margin." },
     // 0x0600 smartsw.short_to_vcc_diff
     { 0x0600u, "smartsw.short_to_vcc_diff", "Short to supply threshold", "smartsw", "V", DidType::UInt16, false, 0,
       6000, 250, 1000, true, false, nullptr, 0, nullptr,
@@ -477,7 +549,9 @@ const DidDescriptor Parameters[] = {
     // 0x0602 smartsw.open_load_detection
     { 0x0602u, "smartsw.open_load_detection", "Open load detection enabled", "smartsw", "", DidType::UInt8, false, 0, 1,
       0, 1, true, false, OptionsFeatureState, sizeof(OptionsFeatureState) / sizeof(OptionsFeatureState[0]),
-      "PARAM_SMARTSW_OPEN_LOAD_DETECTION", "Reports a switched-on output that draws no current as an open load." },
+      "PARAM_SMARTSW_OPEN_LOAD_DETECTION",
+      "Reports a switched-on output that draws no current as an open load. A dew heater output is never checked for "
+      "it: the two power outputs share the one status line it is read from." },
     // 0x0700 uc_temperature.warning_level
     { 0x0700u, "uc_temperature.warning_level", "Warning level", "uc_temp", "degC", DidType::UInt8, false, 40, 125, 70,
       1, true, false, nullptr, 0, nullptr,

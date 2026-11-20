@@ -185,7 +185,17 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         void publishLightBox(const scopelink::Status &status);
         void publishFans(const scopelink::Status &status);
         void publishPower(const scopelink::Status &status);
+        void publishDewHeaters(const scopelink::Status &status);
         void publishCalibration(const scopelink::Status &status);
+
+        /**
+         * Labels the power outputs' controls with the names in OutputNamesTP, and defines them again if they
+         * are on show: a label is part of a property's definition, so a client only sees it change that way.
+         */
+        void applyOutputNames();
+
+        /** Labels the power outputs' controls with the names in OutputNamesTP, without defining them. */
+        void labelOutputs();
 
         // Orientation reference ---------------------------------------------------------------------------
 
@@ -638,10 +648,13 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
          *
          * The port is remembered rather than asked for while the wait runs, because the connection plugin
          * has been disconnected and the wait is what decides whether it is ever reconnected. Nothing here
-         * outlives the wait; m_restarting is what says there is one.
+         * outlives the wait; m_restarting is what says there is one. An answer counts only once the port has
+         * been seen gone, or once the settling time is up for a port that never goes.
          */
         bool m_restarting{ false };
+        bool m_restartPortGone{ false };
         std::string m_restartPort;
+        std::chrono::steady_clock::time_point m_restartSettled;
         std::chrono::steady_clock::time_point m_restartDeadline;
         std::chrono::steady_clock::time_point m_restartNextProbe;
 
@@ -758,6 +771,33 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         INDI::PropertyNumber FanTargetNP{ 2 };
 
         INDI::PropertySwitch AuxPowerSP{ 2 };
+        /**
+         * What is plugged into each power output, which labels its controls. Kept in this driver's
+         * configuration: the controller holds no names.
+         */
+        INDI::PropertyText OutputNamesTP{ 2 };
+
+        /**
+         * The outputs, 0 or 1, that run as dew heaters, in output order. Read from the first status sample
+         * when the controller connects: the firmware reads an output's mode as it starts, so a change of
+         * mode takes a restart, and a restart reconnects.
+         */
+        std::vector<int> m_heaterOutputs;
+
+        /**
+         * One element per dew heater: the duty it is running at, in percent, which sets it by hand. Sized at
+         * connect time from m_heaterOutputs, and only defined on a controller that has a heater.
+         */
+        INDI::PropertyNumber DewHeaterNP{ 2 };
+
+        /** One element per dew heater: on while the controller sets its duty from the dew point. */
+        INDI::PropertySwitch DewHeaterAutoSP{ 2 };
+
+        /**
+         * One lamp per dew heater: green while automatic control is following the dew point, amber while it
+         * is on automatic with no dew point to follow and runs its power-up duty, and idle when set by hand.
+         */
+        INDI::PropertyLight DewHeaterLP{ 2 };
         /**
          * Sized at connect time: two ports and two fault lamps on generation 3, six ports and no fault
          * lamps on generation 4.
