@@ -105,6 +105,17 @@ constexpr uint8_t EepromStatistics       = 0x18; /**< Read the EEPROM wear stati
  * cannot be unplugged half way through.
  */
 constexpr uint8_t Function = 0x1a;
+
+/**
+ * Set an auxiliary power output's duty: a dew heater to any share of the second from 0 to 100 %, or to
+ * PowerOutputAutomatic to hand it to the controller's automatic dew control; a switch to 0 or 100 only.
+ *
+ * Interface 1.3 onwards. Answered with one byte, 1 when the controller took it.
+ */
+constexpr uint8_t PowerOutputDuty = 0x1b;
+
+/** The duty a PowerOutputDuty request carries to hand a dew heater to automatic control. */
+constexpr uint8_t PowerOutputAutomatic = 0xff;
 } // namespace command
 
 /** @brief What a @ref command::Function request can be addressed to, in byte 0 of its payload. */

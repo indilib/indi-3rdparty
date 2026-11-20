@@ -125,6 +125,8 @@ SimulatedController::SimulatedController(int hardwareMajor, int interfaceMinor)
     // configuration, and what it reads is what it drives from until it is restarted.
     m_running = storedRoles();
 
+    startPowerOutputs();
+
     m_lastTick = now();
 }
 
@@ -179,8 +181,14 @@ Frame SimulatedController::handle(const Frame &request)
 
         case command::PowerSwitch:
             if (payload.size() > 1)
-                m_power[payload[0] & 1] = payload[1] != 0;
+                switchPowerOutput(payload[0] & 1, payload[1] != 0);
             return frame(commandId, Frame{ 1 });
+
+        // Interface 1.3 onwards, and refused before it the way an unknown command is
+        case command::PowerOutputDuty:
+            if (m_capabilities.hasPowerOutputModes)
+                return powerOutputCommand(payload);
+            break;
 
         case command::Reset:
             // The one thing a restart does that is worth modelling: the configuration is read again, so
@@ -188,6 +196,7 @@ Frame SimulatedController::handle(const Frame &request)
             // Nothing else is reset - the motors keep their positions, which is close enough to a real
             // controller that reads its learnt positions back out of the same memory.
             m_running = storedRoles();
+            startPowerOutputs();
             return frame(commandId, Frame{ 1 });
 
         case command::EepromStatistics:
@@ -298,8 +307,14 @@ Frame SimulatedController::statusPayload() const
         put32(payload, static_cast<unsigned>(m_motors[index].position)); // 32, 38, 44
     }
 
-    payload.push_back(m_power[0] ? 1 : 0);
-    payload.push_back(m_power[1] ? 1 : 0);
+    // An on flag before interface 1.3, and the duty each output is running at from it
+    for (int output = 0; output < 2; output++)
+    {
+        if (m_capabilities.hasPowerOutputModes)
+            payload.push_back(static_cast<uint8_t>(powerOutputDuty(output)));
+        else
+            payload.push_back(m_power[output] ? 1 : 0);
+    }
 
     // The four digital inputs, which interface 1.1 dropped. Everything below moves four bytes forward on
     // a controller that does not send them, which is the whole of the layout difference between the two
@@ -346,7 +361,152 @@ Frame SimulatedController::statusPayload() const
         put16(payload, axes ? 1000u : 0x7FFFu);      // 1 g, lying flat
     }
 
+    // Interface 1.3: which outputs are heaters, which of those are automatic, which of those have no dew point
+    if (m_capabilities.hasPowerOutputModes)
+        payload.push_back(powerOutputModes());
+
     return payload;
+}
+
+void SimulatedController::startPowerOutputs()
+{
+    // value() rather than m_dids[], so that a controller before interface 1.3, which does not hold these
+    // identifiers, reads both outputs as switches and does not start answering for them.
+    const uint32_t mode[2]     = { 0x0900, 0x0902 };
+    const uint32_t startup[2]  = { 0x0901, 0x0903 };
+    const uint32_t control[2]  = { 0x0904, 0x0906 };
+
+    for (int output = 0; output < 2; output++)
+    {
+        m_heater[output]          = m_capabilities.hasPowerOutputModes && (value(mode[output]) == 1);
+        m_heaterDuty[output]      = value(startup[output]);
+        m_heaterAutomatic[output] = m_heater[output] && (value(control[output]) == 1);
+
+        m_heaterResumeAutomatic[output] = m_heaterAutomatic[output];
+        m_heaterResumeDuty[output]      = (m_heaterDuty[output] > 0) ? m_heaterDuty[output] : 100;
+
+        // A switch starts on when its power-up value is not zero
+        if (!m_heater[output] && m_capabilities.hasPowerOutputModes)
+            m_power[output] = m_heaterDuty[output] != 0;
+    }
+}
+
+void SimulatedController::switchPowerOutput(int output, bool on)
+{
+    if (!m_heater[output])
+    {
+        m_power[output] = on;
+        return;
+    }
+
+    // Off is a manual duty of nothing, and on goes back to whichever control the heater was last under
+    if (on)
+    {
+        m_heaterAutomatic[output] = m_heaterResumeAutomatic[output];
+        m_heaterDuty[output]      = m_heaterResumeDuty[output];
+    }
+    else
+    {
+        m_heaterResumeAutomatic[output] = m_heaterAutomatic[output];
+        m_heaterAutomatic[output]       = false;
+        m_heaterDuty[output]            = 0;
+    }
+}
+
+Frame SimulatedController::powerOutputCommand(const Frame &payload)
+{
+    if ((payload.size() < 2) || (payload[0] > 1))
+        return frame(command::PowerOutputDuty, Frame{ 0 });
+
+    const int output   = payload[0];
+    const uint8_t duty = payload[1];
+
+    // A switch takes nothing but off and on, written as 0 and 100
+    if (!m_heater[output])
+    {
+        if ((duty != 0) && (duty != 100))
+            return frame(command::PowerOutputDuty, Frame{ 0 });
+
+        m_power[output] = duty == 100;
+
+        return frame(command::PowerOutputDuty, Frame{ 1 });
+    }
+
+    if (duty == command::PowerOutputAutomatic)
+    {
+        m_heaterAutomatic[output]       = true;
+        m_heaterResumeAutomatic[output] = true;
+
+        return frame(command::PowerOutputDuty, Frame{ 1 });
+    }
+
+    if (duty > 100)
+        return frame(command::PowerOutputDuty, Frame{ 0 });
+
+    m_heaterAutomatic[output]       = false;
+    m_heaterResumeAutomatic[output] = false;
+    m_heaterDuty[output]            = duty;
+
+    if (duty > 0)
+        m_heaterResumeDuty[output] = duty;
+
+    return frame(command::PowerOutputDuty, Frame{ 1 });
+}
+
+int SimulatedController::powerOutputDuty(int output) const
+{
+    if (!m_heater[output])
+        return m_power[output] ? 100 : 0;
+
+    if (!m_heaterAutomatic[output])
+        return m_heaterDuty[output];
+
+    // Without a dew point the firmware runs the power-up duty, which is what the manual duty starts as
+    return powerOutputInFallback(output) ? value((output == 0) ? 0x0901 : 0x0903) : automaticDuty(output);
+}
+
+int SimulatedController::automaticDuty(int output) const
+{
+    // The status frame's own ambient and dew point, 20.01 C and 8.01 C, in the fiftieths of a kelvin the
+    // margins are held in. The curve is the firmware's: nothing at or above the start margin, the maximum at
+    // or below the full power margin, and in proportion between. The 5 % a period the firmware moves by on
+    // the way is not modelled - a simulated heater is at its duty as soon as it is asked.
+    const int margin  = 14658 - 14058;
+    const int start   = value(0x0910);
+    const int full    = value(0x0911);
+    const int maximum = value((output == 0) ? 0x0905 : 0x0907);
+
+    if (margin >= start)
+        return 0;
+
+    if ((margin <= full) || (start <= full))
+        return maximum;
+
+    return (maximum * (start - margin)) / (start - full);
+}
+
+bool SimulatedController::powerOutputInFallback(int output) const
+{
+    return m_heaterAutomatic[output] && (value(Capabilities::SensorModuleDid) != Capabilities::SensorModuleWithHumidity);
+}
+
+uint8_t SimulatedController::powerOutputModes() const
+{
+    uint8_t modes = 0;
+
+    for (int output = 0; output < 2; output++)
+    {
+        if (m_heater[output])
+            modes |= static_cast<uint8_t>(1u << output);
+
+        if (m_heaterAutomatic[output])
+            modes |= static_cast<uint8_t>(1u << (2 + output));
+
+        if (powerOutputInFallback(output))
+            modes |= static_cast<uint8_t>(1u << (4 + output));
+    }
+
+    return modes;
 }
 
 /**
@@ -543,6 +703,27 @@ int SimulatedController::defaultValue(uint32_t did)
 
         case 0x0701: // controller temperature error level
             return 85;
+
+        // The power outputs, from interface 1.3. Output 1 a dew heater under automatic control and output 2
+        // left a switch, which the firmware defaults both to: a simulated session has one of each to drive.
+        case 0x0900: // output 1 mode, a dew heater
+            return 1;
+
+        case 0x0901: // output 1 power-up duty
+            return 30;
+
+        case 0x0904: // output 1 control at power-up, automatic
+            return 1;
+
+        case 0x0905: // automatic maximum, each output
+        case 0x0907:
+            return 100;
+
+        case 0x0910: // automatic dew control start margin, 5 K in fiftieths
+            return 250;
+
+        case 0x0911: // full power margin, 1 K
+            return 50;
 
         default:
             return 0;
