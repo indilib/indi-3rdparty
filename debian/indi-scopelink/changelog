@@ -1,3 +1,23 @@
+indi-scopelink (1.3) jammy; urgency=medium
+
+  * Interface version 1.3 is supported: either auxiliary power output can run as a dew heater, set by
+    hand or under the controller's automatic dew control, with a lamp saying whether it is following
+    the dew point.
+  * The power outputs can be named, in the driver's configuration, and every control of an output
+    carries its name.
+  * Switching one auxiliary output no longer sends the other one its state as well, which on a dew
+    heater under automatic control would have taken it off automatic.
+  * A dew heater duty outside 0 to 100 % is refused, rather than clamped to full power.
+  * Restart controller could reconnect to the controller before it had reset, which acknowledges the
+    request and resets about a second later, and then lose it again halfway through reading the motor
+    assignment. A controller now counts as back only once it has left the bus, and it is given a
+    minute rather than thirty seconds to return.
+  * The udev rule is now 70-scopelink.rules. Numbered 99 it tagged the controller for uaccess after
+    systemd's 73-seat-late.rules had already run, so the user at the console was given no access and
+    only dialout membership let anybody in.
+
+ -- Bence Toth <bence.toth@astrolabs.hu>  Fri, 20 Nov 2026 12:00:00 +0100
+
 indi-scopelink (1.2) jammy; urgency=medium
 
   * Interface version 1.2 is supported: the controller names its sensor module, and the status
