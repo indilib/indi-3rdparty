@@ -33,7 +33,7 @@ The standard INDI Dome parameters configuration is required for Dome slaving.
 <img src="Main_Control_Tab.png" alt="Main Control Tab" width="422" height="359" title="Main Control Tab">
 
 - Connection - Connect(ed)/Disconnect(ed) control/indication
-- Shutter - Open(ed)/Close(d) control/indication. For OCS ROR configurations this control is for the **roof**. Unfortunately there is no way to rename this standard control
+- Shutter - Open(ed)/Close(d) control/indication. For OCS ROR configurations this control is for the **roof**. Unfortunately there is no way to rename this standard control. If OCS has no roof/shutter configured, this control is not shown
 - Status > Roof/Shutter - The current status of the roof/shutter system is displayed eg. Open, Closing: Travel 36%, Error code, etc.
 - Absolute Position > Degrees - Setting an Azimuth position instructs the dome to move to it.
 - Abort Motion - Immediately requests a halt of both dome and roof/shutter movement.

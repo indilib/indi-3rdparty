@@ -469,6 +469,7 @@ private:
     // Capability queries on connection
     void GetCapabilites();
     bool hasDome = false;
+    bool hasRoof = false;
 
     // Timer for slow updates, once per minute
     INDI::Timer SlowTimer;

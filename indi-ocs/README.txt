@@ -17,6 +17,7 @@ Version 1.7
     Power and light switches keep their state and show Alert if OCS rejects the command
     Roof last error clears when OCS reports no error
     Renamed misspelt THERMOSTAT_*_SEPOINT elements to THERMOSTAT_*_SETPOINT
+    Roof/shutter is only polled, and its controls only shown, if OCS has one
 
 Version 1.5
     Fixed shutdown issue

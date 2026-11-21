@@ -147,18 +147,28 @@ void OCS::GetCapabilites()
         LOG_ERROR("OCS version not retrieved");
     }
 
+    // Get roof/shutter presence, OCS only answers :RS# if it has one
+    char OCS_roof_present_response[RB_MAX_LEN] = {0};
+    hasRoof = getCommandSingleCharErrorOrLongResponse(PortFD, OCS_roof_present_response, OCS_get_roof_status) > 1;
+    LOG_INFO(hasRoof ? "OCS has roof/shutter" : "OCS does not have roof/shutter");
+
     // Get dome presence
     char OCS_dome_present_response[RB_MAX_LEN] = {0};
     int OCS_dome_present_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, OCS_dome_present_response,
                                                                                  OCS_get_dome_status);
-    if (OCS_dome_present_error_or_fail > 0) {
-        SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_PARK | DOME_CAN_ABS_MOVE | DOME_CAN_SYNC | DOME_HAS_SHUTTER);
+    hasDome = OCS_dome_present_error_or_fail > 0;
+    uint32_t dome_capability = DOME_CAN_ABORT;
+    if (hasRoof) {
+        dome_capability |= DOME_HAS_SHUTTER;
+    }
+    if (hasDome) {
+        dome_capability |= DOME_CAN_PARK | DOME_CAN_ABS_MOVE | DOME_CAN_SYNC;
         setDomeState(DOME_UNKNOWN);
-        hasDome = true;
         LOG_INFO("OCS has dome");
     } else {
         LOG_INFO("OCS does not have dome");
     }
+    SetDomeCapability(dome_capability);
 
     // Get roof delays
     char roof_timeout_response[RB_MAX_LEN] = {0};
@@ -784,8 +794,11 @@ void OCS::TimerHit()
 {
     // Get the roof/shutter status
     char roof_status_response[RB_MAX_LEN] = {0};
-    int roof_status_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, roof_status_response,
-                                                                             OCS_get_roof_status);
+    int roof_status_error_or_fail = 0;
+    if (hasRoof) {
+        roof_status_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, roof_status_response,
+                                                                            OCS_get_roof_status);
+    }
     if (roof_status_error_or_fail > 1) {
         bool roof_was_in_error = (getShutterState() == SHUTTER_ERROR);
 
@@ -977,8 +990,11 @@ void OCS::SlowTimerHit()
     // at the time it could miss a transient condition that has been cleared in-between poll periods.
     // Last roof error holds the condition until cleared by a shutter/roof action.
     char roof_error_response[RB_MAX_LEN] = {0};
-    int roof_error_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, roof_error_response,
-                                                                            OCS_get_roof_last_error);
+    int roof_error_error_or_fail = 0;
+    if (hasRoof) {
+        roof_error_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, roof_error_response,
+                                                                           OCS_get_roof_last_error);
+    }
     if (roof_error_error_or_fail > 1) {
         if (strcmp(roof_error_response, "No Error") == 0) {
             last_shutter_error[0] = '\0';
