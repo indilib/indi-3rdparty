@@ -20,6 +20,7 @@ Version 1.7
     Roof/shutter is only polled, and its controls only shown, if OCS has one
     If OCS stops replying for longer than its roof interlock delays plus 5 seconds, commands fail
     at once and one is retried every 5 seconds
+    Added tests against a mock OCS controller, run with ctest when INDI_BUILD_UNITTESTS is on
 
 Version 1.5
     Fixed shutdown issue
