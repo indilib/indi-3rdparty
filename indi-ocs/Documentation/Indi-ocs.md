@@ -33,7 +33,7 @@ The standard INDI Dome parameters configuration is required for Dome slaving.
 <img src="Main_Control_Tab.png" alt="Main Control Tab" width="422" height="359" title="Main Control Tab">
 
 - Connection - Connect(ed)/Disconnect(ed) control/indication
-- Shutter - Open(ed)/Close(d) control/indication. For OCS ROR configurations this control is for the **roof**. Unfortunately there is no way to rename this standard control
+- Shutter - Open(ed)/Close(d) control/indication. For OCS ROR configurations this control is for the **roof**. Unfortunately there is no way to rename this standard control. If OCS has no roof/shutter configured, this control is not shown
 - Status > Roof/Shutter - The current status of the roof/shutter system is displayed eg. Open, Closing: Travel 36%, Error code, etc.
 - Absolute Position > Degrees - Setting an Azimuth position instructs the dome to move to it.
 - Abort Motion - Immediately requests a halt of both dome and roof/shutter movement.
@@ -50,6 +50,8 @@ The standard INDI Dome parameters configuration is required for Dome slaving.
 
 Standard INDI Connection tab controls.
 Use either Serial (USB) connection (which in testing of OCS4 hardware showed up as /dev/ttyACM0 or auto mapped /dev/serial/by-id/usb-Teensyduino\_USB\_Serial_12345678-if00) or Network using the OCS address and port 9998.
+
+If OCS stops replying for longer than its roof interlock delays (ROOF\_INTERLOCK\_PRE\_MOVE\_TIME plus ROOF\_INTERLOCK\_POST\_MOVE\_TIME) plus 5 seconds, the driver logs an error and stops waiting on every command. OCS does not answer while it waits out those delays, so shorter gaps are normal. It tries one command every 5 seconds until OCS replies, then resumes normal polling. Weather sensors go to Alert while there are no replies.
 
 ### Options
 <img src="Options_Tab.png" alt="Options Tab" width="422" height="359" title="Options Tab">
@@ -78,7 +80,7 @@ Controls for configuring the dome > mount slaving functionality. Refer to [INDI 
 Shows miscellaneous details about the OCS.
 
 - Firmware version - As reported by OCS. The driver expects a minimum version and will report if the connected OCS software is below this.
-- Roof last error - This message is persistent until a roof/shutter movement clears the status.
+- Roof last error - This message is persistent until a roof/shutter movement or a stop clears the status in OCS.
 - Mains status - This is dependent on OCS configuration and does not contribute toward the Safe status of the observatory within the driver, which is independent of the safe status within OCS.
 - MCU temperature ℃ - the internal temperature of the OCS microcontroller, if supported by the OCS hardware used.
 
@@ -99,6 +101,10 @@ These controls define the minimum and maximum limits outside of which the measur
 **Note that the OCS internal safety status is independent of these driver settings. OCS considers Rain, Cloud cover, Wind speed & Mains power present towards it's safety status (if they are configured) and will operate independent of these settings and driver connection.**
 
 **Safe limits defined in the OCS software for Wind speed and Cloud cover are copied into the driver as initial limits upon connection. They may be over-ridden here but are not applied back to the OCS software. In addition, temperature, pressure & humidity are considered towards the INDI safety status. If not required for this purpose but only to be monitored, just set the min/max limits very wide so that they are always considered to be safe**.
+
+The Rain status is 1 for rain, 2 for warning and 3 for dry. Only dry is treated as safe, so a warning also shows Alert. Rain is only monitored if OCS reports a name for its rain sensor, which needs OCS firmware that answers the :GR# and :GRN# commands correctly.
+
+**Failed sensors:** a sensor that OCS reports at connection is expected to keep reporting. If it reads NaN or does not reply, the driver keeps the last good value and polls that sensor again 10 seconds later, whatever the update period. A second bad reading in a row sets its status to Alert and its parameter to -9999. The next valid reading clears the Alert. A sensor that reads NaN at connection is treated as not fitted, unless it is configured in OCS and has a sensor name, in which case the same rule applies. A name only shows that the sensor is configured, and that it was detected at boot if it is on I2C, so a sensor that is configured but not connected can show Alert.
 
 There are some weather measurements supported by the OCS that can not be used as contributors towards the safety status. If configured in the OCS software these will appear at the bottom of the tab.
 
