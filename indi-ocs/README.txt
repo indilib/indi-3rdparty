@@ -23,6 +23,9 @@ Version 1.7
     at once and one is retried every 5 seconds
     Added tests against a mock OCS controller, run with ctest when INDI_BUILD_UNITTESTS is on
 
+Version 1.6
+    Fixed another shutdown issue
+
 Version 1.5
     Fixed shutdown issue
 
