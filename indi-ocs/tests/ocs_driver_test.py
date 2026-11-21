@@ -149,6 +149,8 @@ def test_weather_connect(driver):
         ("named sensor reading NaN is kept", {":Gw#": "nan#", ":GwN#": "Cup Anemometer#"}, True),
         ("unnamed sensor reading NaN is not fitted", {":Gw#": "nan#", ":GwN#": "None#"}, False),
         ("sensor reading NaN on firmware without names is not fitted", {":Gw#": "nan#"}, False),
+        ("sensor reading 0 (no wind) is fitted", {":Gw#": "0#"}, True),
+        ("unsupported command (unframed 0) is not fitted", {":Gw#": "0"}, False),
     )
     for label, replies, fitted in cases:
         with Session(driver, **replies) as (_, rig):

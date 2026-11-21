@@ -335,8 +335,10 @@ void OCS::GetCapabilites()
         char measurement_reponse[RB_MAX_LEN] = {0};
         int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
                                                                                 weatherCommand(measurement));
+        // An unsupported command gets an unframed 0, which times out waiting for '#' and fails here.
+        // A framed 0# is a valid reading, such as no wind, so it must not be rejected
         if (measurement_error_or_fail > 1 && strcasecmp(measurement_reponse, "N/A") != 0 &&
-            strcasecmp(measurement_reponse, "nan") != 0 && strcmp(measurement_reponse, "0") != 0) {
+            strcasecmp(measurement_reponse, "nan") != 0) {
             weather_enabled[measurement] = 1;
         } else if (measurement < WEATHER_SAFETY_COUNT && strcasecmp(measurement_reponse, "nan") == 0 &&
                    weatherSensorConfigured(measurement)) {
