@@ -18,6 +18,8 @@ Version 1.7
     Roof last error clears when OCS reports no error
     Renamed misspelt THERMOSTAT_*_SEPOINT elements to THERMOSTAT_*_SETPOINT
     Roof/shutter is only polled, and its controls only shown, if OCS has one
+    If OCS stops replying for longer than its roof interlock delays plus 5 seconds, commands fail
+    at once and one is retried every 5 seconds
 
 Version 1.5
     Fixed shutdown issue

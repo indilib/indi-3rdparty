@@ -43,6 +43,7 @@ USB and network connections supported.
 #include <cstdlib>
 #include <cstring>
 #include <strings.h>
+#include <chrono>
 #include <ctime>
 #include <memory>
 #include <mutex>
@@ -106,6 +107,10 @@ bool OCS::Handshake()
             OCSTimeoutMicroSeconds = 100000;
             OCSTimeoutSeconds = 0;
         }
+
+        comms_failures = 0;
+        comms_lost = false;
+        comms_last_reply = steadyMilliseconds();
 
         char handshake_response[RB_MAX_LEN] = {0};
         getCommandSingleCharErrorOrLongResponse(PortFD, handshake_response, OCS_handshake);
@@ -2208,6 +2213,9 @@ bool OCS::sendOCSCommandBlind(const char *cmd)
  * *******************************************************************/
 bool OCS::sendOCSCommand(const char *cmd)
 {
+    if (!commsAvailable()) {
+        return false;
+    }
     blockUntilClear();
 
     char response[1] = {0};
@@ -2222,11 +2230,13 @@ bool OCS::sendOCSCommand(const char *cmd)
     tcflush(PortFD, TCIFLUSH);
 
     if ((error_type = tty_write_string(PortFD, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
         clearBlock();
         return false;
     }
 
     error_type = tty_read_expanded(PortFD, response, 1, OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
 
     tcflush(PortFD, TCIFLUSH);
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%c>", response[0]);
@@ -2246,6 +2256,9 @@ bool OCS::sendOCSCommand(const char *cmd)
  * **********************************************************/
 int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2259,11 +2272,13 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
     std::unique_lock<std::mutex> guard(ocsCommsLock);
 
     if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
         clearBlock();
         return error_type;
     }
 
     error_type = tty_read_expanded(fd, data, 1, OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     if (error_type != TTY_OK) {
@@ -2293,6 +2308,9 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
  * ************************************************/
 int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2307,11 +2325,13 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
     tcflush(fd, TCIFLUSH);
 
     if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
         clearBlock();
         return error_type;
     }
 
     error_type = tty_nread_section_expanded(fd, data, RB_MAX_LEN, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2350,6 +2370,9 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
  * **********************************************/
 int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2364,11 +2387,13 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
     tcflush(fd, TCIFLUSH);
 
     if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
         clearBlock();
         return error_type;
     }
 
     error_type = tty_read_expanded(fd, data, sizeof(char), OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2406,6 +2431,9 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
  * *************************************************************************/
 int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2420,11 +2448,13 @@ int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char 
     tcflush(fd, TCIFLUSH);
 
     if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
         clearBlock();
         return error_type;
     }
 
     error_type = tty_nread_section_expanded(fd, data, RB_MAX_LEN, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2518,6 +2548,60 @@ double OCS::charToDouble(char *inString)
     char *end = nullptr;
     double value = strtod(inString, &end);
     return (end == inString || !std::isfinite(value)) ? conversion_error : value;
+}
+
+/*****************************************************************
+ * A controller that has stopped replying would otherwise cost a full
+ * timeout on every command. Once COMMS_LOST_AFTER commands in a row
+ * get no reply, and there has been no reply for commsSilenceLimitMs(),
+ * commands fail at once and one is tried every COMMS_RETRY_MS until
+ * OCS replies again
+ *****************************************************************/
+bool OCS::commsAvailable()
+{
+    if (!comms_lost) {
+        return true;
+    }
+    const int64_t now = steadyMilliseconds();
+    if (now - comms_last_attempt >= COMMS_RETRY_MS) {
+        comms_last_attempt = now;
+        return true;
+    }
+    return false;
+}
+
+void OCS::noteReply(bool replied)
+{
+    const int64_t now = steadyMilliseconds();
+    if (replied) {
+        comms_failures = 0;
+        comms_last_reply = now;
+        if (comms_lost.exchange(false)) {
+            LOG_INFO("Communication with OCS restored");
+        }
+        return;
+    }
+    const int64_t silence = now - comms_last_reply;
+    if (++comms_failures >= COMMS_LOST_AFTER && silence >= commsSilenceLimitMs() && !comms_lost.exchange(true)) {
+        comms_last_attempt = now;
+        LOGF_ERROR("No reply from OCS for %.1f seconds, retrying every %d seconds",
+                   silence / 1000.0, COMMS_RETRY_MS / 1000);
+    }
+}
+
+/*****************************************************************
+ * OCS blocks while it waits out the roof interlock delays, so allow
+ * for both of them before treating silence as lost communication
+ *****************************************************************/
+int64_t OCS::commsSilenceLimitMs()
+{
+    return static_cast<int64_t>((ROOF_TIME_PRE_MOTION + ROOF_TIME_POST_MOTION) * 1000) + COMMS_SILENCE_MARGIN_MS;
+}
+
+int64_t OCS::steadyMilliseconds()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 /*******************************************************

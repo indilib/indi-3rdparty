@@ -456,6 +456,10 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     int getCommandIntFromCharResponse(int fd, char *data, int *response, const char *cmd); //Calls getCommandSingleCharErrorOrLongResponse with conversion of return
     int charToInt(char *inString);
     double charToDouble(char *inString);
+    bool commsAvailable();
+    void noteReply(bool replied);
+    int64_t commsSilenceLimitMs();
+    static int64_t steadyMilliseconds();
     void blockUntilClear();
     void clearBlock();
 
@@ -476,6 +480,15 @@ private:
 
     // Command sequence enforcement
     std::atomic<bool>waitingForResponse {false};
+
+    // No reply handling, see commsAvailable()
+    static constexpr int COMMS_LOST_AFTER = 3;
+    static constexpr int COMMS_RETRY_MS = 5000;
+    static constexpr int COMMS_SILENCE_MARGIN_MS = 5000;
+    std::atomic<int> comms_failures {0};
+    std::atomic<bool> comms_lost {false};
+    std::atomic<int64_t> comms_last_attempt {0};
+    std::atomic<int64_t> comms_last_reply {0};
 
     // Roof/Shutter control
     //---------------------

@@ -51,6 +51,8 @@ The standard INDI Dome parameters configuration is required for Dome slaving.
 Standard INDI Connection tab controls.
 Use either Serial (USB) connection (which in testing of OCS4 hardware showed up as /dev/ttyACM0 or auto mapped /dev/serial/by-id/usb-Teensyduino\_USB\_Serial_12345678-if00) or Network using the OCS address and port 9998.
 
+If OCS stops replying for longer than its roof interlock delays (ROOF\_INTERLOCK\_PRE\_MOVE\_TIME plus ROOF\_INTERLOCK\_POST\_MOVE\_TIME) plus 5 seconds, the driver logs an error and stops waiting on every command. OCS does not answer while it waits out those delays, so shorter gaps are normal. It tries one command every 5 seconds until OCS replies, then resumes normal polling. Weather sensors go to Alert while there are no replies.
+
 ### Options
 <img src="Options_Tab.png" alt="Options Tab" width="422" height="359" title="Options Tab">
 
