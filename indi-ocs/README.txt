@@ -15,6 +15,7 @@ Version 1.7
     Dome is only marked parked once the controller reports it
     Sensor reading NaN at connection is kept if it is configured in OCS and has a sensor name
     A wind sensor reading 0 at connection is no longer treated as not fitted
+    Rain is only monitored if OCS names its rain sensor, as older OCS firmware misroutes :GR#
     Power and light switches keep their state and show Alert if OCS rejects the command
     Roof last error clears when OCS reports no error
     Renamed misspelt THERMOSTAT_*_SEPOINT elements to THERMOSTAT_*_SETPOINT

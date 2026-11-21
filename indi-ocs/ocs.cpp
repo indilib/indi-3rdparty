@@ -340,6 +340,13 @@ void OCS::GetCapabilites()
         if (measurement_error_or_fail > 1 && strcasecmp(measurement_reponse, "N/A") != 0 &&
             strcasecmp(measurement_reponse, "nan") != 0) {
             weather_enabled[measurement] = 1;
+            // OCS firmware without the :GR# fix usually passes :GR# to its relay handler, which
+            // replies with an error, but leftover parameter bytes can let one :GR# through.
+            // That firmware also misroutes :GRN#, so only trust rain when the sensor is named
+            if (measurement == WEATHER_RAIN && !weatherSensorNamed(OCS_get_rain_sensor_name)) {
+                weather_enabled[measurement] = 0;
+                LOG_WARN("OCS did not name its rain sensor, rain is not monitored. OCS firmware with the :GR# fix is needed");
+            }
         } else if (measurement < WEATHER_SAFETY_COUNT && strcasecmp(measurement_reponse, "nan") == 0 &&
                    weatherSensorConfigured(measurement)) {
             // Configured in OCS but no reading yet, the first poll will treat this as a bad reading

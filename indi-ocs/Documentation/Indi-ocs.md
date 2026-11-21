@@ -102,7 +102,7 @@ These controls define the minimum and maximum limits outside of which the measur
 
 **Safe limits defined in the OCS software for Wind speed and Cloud cover are copied into the driver as initial limits upon connection. They may be over-ridden here but are not applied back to the OCS software. In addition, temperature, pressure & humidity are considered towards the INDI safety status. If not required for this purpose but only to be monitored, just set the min/max limits very wide so that they are always considered to be safe**.
 
-The Rain status is 1 for rain, 2 for warning and 3 for dry. Only dry is treated as safe, so a warning also shows Alert.
+The Rain status is 1 for rain, 2 for warning and 3 for dry. Only dry is treated as safe, so a warning also shows Alert. Rain is only monitored if OCS reports a name for its rain sensor, which needs OCS firmware that answers the :GR# and :GRN# commands correctly.
 
 **Failed sensors:** a sensor that OCS reports at connection is expected to keep reporting. If it reads NaN or does not reply, the driver keeps the last good value and polls that sensor again 10 seconds later, whatever the update period. A second bad reading in a row sets its status to Alert and its parameter to -9999. The next valid reading clears the Alert. A sensor that reads NaN at connection is treated as not fitted, unless it is configured in OCS and has a sensor name, in which case the same rule applies. A name only shows that the sensor is configured, and that it was detected at boot if it is on I2C, so a sensor that is configured but not connected can show Alert.
 

@@ -151,11 +151,15 @@ def test_weather_connect(driver):
         ("sensor reading NaN on firmware without names is not fitted", {":Gw#": "nan#"}, False),
         ("sensor reading 0 (no wind) is fitted", {":Gw#": "0#"}, True),
         ("unsupported command (unframed 0) is not fitted", {":Gw#": "0"}, False),
+        ("named rain sensor is fitted", {}, True, "WEATHER_RAIN"),
+        ("rain answered but not named (firmware without the :GR# fix) is not fitted", {":GRN#": "0"}, False,
+         "WEATHER_RAIN"),
     )
-    for label, replies, fitted in cases:
+    for label, replies, fitted, *parameter in cases:
         with Session(driver, **replies) as (_, rig):
             rig.connect()
-            check((rig.get("WEATHER_PARAMETERS.WEATHER_WIND") is not None) == fitted, label)
+            name = parameter[0] if parameter else "WEATHER_WIND"
+            check((rig.get(f"WEATHER_PARAMETERS.{name}") is not None) == fitted, label)
 
 
 def test_comms_brief_silence(driver):
