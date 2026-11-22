@@ -6,7 +6,16 @@ COMPILE INSTRUCTIONS:
 
 
 TEST INSTRUCTIONS:
-(Tested with Indi 2.1.1)
+(Tested with Indi 2.1.9)
 
 indiserver ./indi_ocs
+
+
+AUTOMATED TESTS:
+Runs the driver against a mock OCS controller. Linux only, needs indiserver,
+indi_getprop, indi_setprop and Python 3.
+
+> cmake -S . -B build -DINDI_BUILD_UNITTESTS=ON
+> cmake --build build
+> ctest --test-dir build --output-on-failure
 

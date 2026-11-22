@@ -36,9 +36,14 @@ USB and network connections supported.
 // Debug only end
 
 #include "ocs.h"
+#include "config.h"
 #include "termios.h"
 
+#include <cmath>
+#include <cstdlib>
 #include <cstring>
+#include <strings.h>
+#include <chrono>
 #include <ctime>
 #include <memory>
 #include <mutex>
@@ -65,12 +70,16 @@ OCS::OCS() : INDI::Dome(), WI(this)
     // kill(getpid(), SIGSTOP);
     // Debug only end
 
-    setVersion(1, 5);
+    setVersion(INDI_OCS_VERSION_MAJOR, INDI_OCS_VERSION_MINOR);
     SetDomeCapability(DOME_CAN_ABORT | DOME_HAS_SHUTTER);
     // OCS reports and manages the park state itself from the controller status, including the
     // roof/shutter, so it applies the shutter park policy in Park()/UnPark().
     SetShutterParkPolicyHandledByDriver(true);
     SlowTimer.callOnTimeout(std::bind(&OCS::SlowTimerHit, this));
+    for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement++) {
+        WeatherRepollTimers[measurement].setSingleShot(true);
+        WeatherRepollTimers[measurement].callOnTimeout(std::bind(&OCS::WeatherRepollHit, this, measurement));
+    }
 }
 
 /*******************************************************
@@ -102,9 +111,12 @@ bool OCS::Handshake()
             OCSTimeoutSeconds = 0;
         }
 
+        comms_failures = 0;
+        comms_lost = false;
+        comms_last_reply = steadyMilliseconds();
+
         char handshake_response[RB_MAX_LEN] = {0};
-        handshake_status = getCommandSingleCharErrorOrLongResponse(PortFD, handshake_response,
-                                                                   OCS_handshake);
+        getCommandSingleCharErrorOrLongResponse(PortFD, handshake_response, OCS_handshake);
         if (strcmp(handshake_response, "OCS") == 0)
         {
             LOG_DEBUG("OCS handshake established");
@@ -113,7 +125,7 @@ bool OCS::Handshake()
             SlowTimer.start(60000);
         }
         else {
-            LOGF_DEBUG("OCS handshake error, reponse was: %s", handshake_response);
+            LOGF_ERROR("OCS handshake failed, response was: %s", handshake_response);
         }
     }
     else {
@@ -136,25 +148,35 @@ void OCS::GetCapabilites()
         IUSaveText(&Status_ItemsT[STATUS_FIRMWARE], OCS_firmware_response);
         IDSetText(&Status_ItemsTP, nullptr);
         LOGF_DEBUG("OCS version: %s", OCS_firmware_response);
+        if (strtof(OCS_firmware_response, nullptr) < minimum_OCS_fw) {
+            LOGF_WARN("OCS version %s is lower than this driver expects (%1.2f). Behaviour is unknown.", OCS_firmware_response, minimum_OCS_fw);
+        }
     } else {
         LOG_ERROR("OCS version not retrieved");
     }
-    if (std::stof(OCS_firmware_response) < minimum_OCS_fw) {
-        LOGF_WARN("OCS version %s is lower than this driver expects (%1.1f). Behaviour is unknown.", OCS_firmware_response, minimum_OCS_fw);
-    }
+
+    // Get roof/shutter presence, OCS only answers :RS# if it has one
+    char OCS_roof_present_response[RB_MAX_LEN] = {0};
+    hasRoof = getCommandSingleCharErrorOrLongResponse(PortFD, OCS_roof_present_response, OCS_get_roof_status) > 1;
+    LOG_INFO(hasRoof ? "OCS has roof/shutter" : "OCS does not have roof/shutter");
 
     // Get dome presence
     char OCS_dome_present_response[RB_MAX_LEN] = {0};
     int OCS_dome_present_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, OCS_dome_present_response,
                                                                                  OCS_get_dome_status);
-    if (OCS_dome_present_error_or_fail > 0) {
-        SetDomeCapability(DOME_CAN_ABORT | DOME_CAN_PARK | DOME_CAN_ABS_MOVE | DOME_CAN_SYNC | DOME_HAS_SHUTTER);
+    hasDome = OCS_dome_present_error_or_fail > 0;
+    uint32_t dome_capability = DOME_CAN_ABORT;
+    if (hasRoof) {
+        dome_capability |= DOME_HAS_SHUTTER;
+    }
+    if (hasDome) {
+        dome_capability |= DOME_CAN_PARK | DOME_CAN_ABS_MOVE | DOME_CAN_SYNC;
         setDomeState(DOME_UNKNOWN);
-        hasDome = true;
         LOG_INFO("OCS has dome");
     } else {
         LOG_INFO("OCS does not have dome");
     }
+    SetDomeCapability(dome_capability);
 
     // Get roof delays
     char roof_timeout_response[RB_MAX_LEN] = {0};
@@ -163,12 +185,12 @@ void OCS::GetCapabilites()
     if (roof_timeout_error_or_fail > 1) {
         char *split;
         split = strtok(roof_timeout_response, ",");
-        if (charToInt(split) != conversion_error) {
-            ROOF_TIME_PRE_MOTION = charToInt(split);
+        if (charToDouble(split) != conversion_error) {
+            ROOF_TIME_PRE_MOTION = charToDouble(split);
         }
         split = strtok(NULL, ",");
-        if (charToInt(split) != conversion_error) {
-            ROOF_TIME_POST_MOTION = charToInt(split);
+        if (charToDouble(split) != conversion_error) {
+            ROOF_TIME_POST_MOTION = charToDouble(split);
         }
     }
     else {
@@ -222,13 +244,13 @@ void OCS::GetCapabilites()
         // Defined devices have a positive integer relay definition, undefined return -1
         // so we can sum these to check if any are defined, if not then keep tab hidden
         int powerDisabled = 0;
-        for (int deviceNo = 1; deviceNo < POWER_DEVICE_COUNT; deviceNo ++) {
+        for (int deviceNo = 0; deviceNo < POWER_DEVICE_COUNT; deviceNo ++) {
             powerDisabled += power_device_relays[deviceNo];
         }
         if (powerDisabled != (-1 * POWER_DEVICE_COUNT)) {
             power_tab_enabled = true;
             LOG_INFO("OCS has power device(s), enabling tab");
-            for (int deviceNo = 1; deviceNo < POWER_DEVICE_COUNT; deviceNo ++) {
+            for (int deviceNo = 1; deviceNo <= POWER_DEVICE_COUNT; deviceNo ++) {
                 if (power_device_relays[(deviceNo - 1)] != -1) {
                     char power_relay_name_response[RB_MAX_LEN] = {0};
                     char get_power_device_name_command[CMD_MAX_LEN] = {0};
@@ -297,7 +319,7 @@ void OCS::GetCapabilites()
         // Defined lights have a positive integer relay definition, undefined return -1
         // so we can sum these to check if any are defined, if not then keep tab hidden
         int lightsDisabled = 0;
-        for (int lrelay = 1; lrelay < LIGHT_COUNT; lrelay ++) {
+        for (int lrelay = 0; lrelay < LIGHT_COUNT; lrelay ++) {
             lightsDisabled += light_relays[lrelay];
         }
         if (lightsDisabled != (-1 * LIGHT_COUNT)) {
@@ -311,46 +333,29 @@ void OCS::GetCapabilites()
     }
 
     // Get available weather measurements
+    resetWeatherFaults();
     for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
-        char measurement_reponse[RB_MAX_LEN];
-        char measurement_command[CMD_MAX_LEN];
-        switch(measurement) {
-            case WEATHER_TEMPERATURE:
-                indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-                break;
-            case WEATHER_PRESSURE:
-                indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-                break;
-            case WEATHER_HUMIDITY:
-                indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-                break;
-            case WEATHER_WIND:
-                indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-                break;
-            case WEATHER_RAIN:
-                indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-                break;
-            case WEATHER_DIFF_SKY_TEMP:
-                indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-                break;
-            case WEATHER_CLOUD:
-                indi_strlcpy(measurement_command, OCS_get_cloud_description, sizeof(measurement_command));
-                break;
-            case WEATHER_SKY:
-                indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
-                break;
-            case WEATHER_SKY_TEMP:
-                indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-                break;
-            default:
-                break;
-        }
-
+        char measurement_reponse[RB_MAX_LEN] = {0};
         int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
-                                                                                measurement_command);
-        if (measurement_error_or_fail > 1 && strcmp(measurement_reponse, "N/A") != 0 &&
-            strcmp(measurement_reponse, "nan") != 0 && strcmp(measurement_reponse, "0") != 0) {
+                                                                                weatherCommand(measurement));
+        // An unsupported command gets an unframed 0, which times out waiting for '#' and fails here.
+        // A framed 0# is a valid reading, such as no wind, so it must not be rejected
+        if (measurement_error_or_fail > 1 && strcasecmp(measurement_reponse, "N/A") != 0 &&
+            strcasecmp(measurement_reponse, "nan") != 0) {
             weather_enabled[measurement] = 1;
+            // OCS firmware without the :GR# fix usually passes :GR# to its relay handler, which
+            // replies with an error, but leftover parameter bytes can let one :GR# through.
+            // That firmware also misroutes :GRN#, so only trust rain when the sensor is named
+            if (measurement == WEATHER_RAIN && !weatherSensorNamed(OCS_get_rain_sensor_name)) {
+                weather_enabled[measurement] = 0;
+                LOG_WARN("OCS did not name its rain sensor, rain is not monitored. OCS firmware with the :GR# fix is needed");
+            }
+        } else if (measurement < WEATHER_SAFETY_COUNT && strcasecmp(measurement_reponse, "nan") == 0 &&
+                   weatherSensorConfigured(measurement)) {
+            // Configured in OCS but no reading yet, the first poll will treat this as a bad reading
+            weather_enabled[measurement] = 1;
+            LOGF_WARN("Weather sensor %s is configured in OCS but has no reading yet",
+                      weatherParameterName(measurement));
         } else {
             weather_enabled[measurement] = 0;
         }
@@ -359,7 +364,7 @@ void OCS::GetCapabilites()
     // Available weather measurements are now defined as = 1, unavailable as = 0
     // so we can sum these to check if any are defined, if not then keep tab disabled
     int weatherDisabled = 0;
-    for (int wmeasure = 1; wmeasure < WEATHER_MEASUREMENTS_COUNT; wmeasure ++) {
+    for (int wmeasure = 0; wmeasure < WEATHER_MEASUREMENTS_COUNT; wmeasure ++) {
         weatherDisabled += weather_enabled[wmeasure];
     }
     if (weatherDisabled > 0) {
@@ -367,22 +372,18 @@ void OCS::GetCapabilites()
         LOG_INFO("OCS has weather sensor(s), enabling tab");
         // If a weather measurement that has a safety limit set in OCS is active then get that limit
         if (weather_enabled[WEATHER_WIND] || weather_enabled[WEATHER_DIFF_SKY_TEMP]) {
-            char threshold_reponse[RB_MAX_LEN];
+            char threshold_reponse[RB_MAX_LEN] = {0};
             int threshold_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, threshold_reponse,
                                                                                   OCS_get_weather_thresholds);
             if (threshold_error_or_fail > 1 ) { //> 1 as an OCS error would be 1 char in response
                 char *split;
                 split = strtok(threshold_reponse, ",");
-                if (strcmp(split, "N/A") != 0) {
-                    if (charToInt(split) != conversion_error) {
-                        wind_speed_threshold = charToInt(split);
-                    }
+                if (charToInt(split) != conversion_error) { // Also rejects N/A
+                    wind_speed_threshold = charToInt(split);
                 }
                 split = strtok(NULL, ",");
-                if (strcmp(split, "N/A") != 0) {
-                    if (charToInt(split) != conversion_error) {
-                        diff_temp_threshold = charToInt(split);
-                    }
+                if (charToInt(split) != conversion_error) { // Also rejects N/A
+                    diff_temp_threshold = charToInt(split);
                 }
             } else {
                 LOGF_WARN("Communication error on get Weather thresholds %s",
@@ -390,9 +391,13 @@ void OCS::GetCapabilites()
             }
         }
 
-        // Loop through only the first 6 measurements rather than WEATHER_MEASUREMENTS_COUNT
+        // Loop through only the safety measurements rather than WEATHER_MEASUREMENTS_COUNT
         // as only these are usable for safety status with limits
-        for (int measurement = 0; measurement < 6; measurement ++) {
+        for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement ++) {
+            // Handshake runs on every connect, and INDI Core appends parameters without checking for duplicates
+            if (ParametersNP.findWidgetByName(weatherParameterName(measurement))) {
+                continue;
+            }
             if (weather_enabled[measurement] == 1) {
                 switch(measurement) {
                     case WEATHER_TEMPERATURE:
@@ -412,7 +417,8 @@ void OCS::GetCapabilites()
                         setCriticalParameter("WEATHER_WIND");
                         break;
                     case WEATHER_RAIN:
-                        addParameter("WEATHER_RAIN", "Rain state", 3, 3, 67);
+                        // 1 = Rain, 2 = Warn, 3 = Dry. Only Dry is safe. INDI Core creates no limits if min == max
+                        addParameter("WEATHER_RAIN", "Rain state", 2.5, 3.5, 0);
                         setCriticalParameter("WEATHER_RAIN");
                         break;
                     case WEATHER_DIFF_SKY_TEMP:
@@ -472,15 +478,15 @@ bool OCS::initProperties()
     IUFillText(&Thermostat_StatusT[THERMOSTAT_TEMERATURE], "THERMOSTAT_TEMPERATURE", "Temperature °C", "---");
     IUFillText(&Thermostat_StatusT[THERMOSTAT_HUMIDITY], "THERMOSTAT_HUMIDITY", "Humidity %", "---");
 
-    IUFillNumberVector(&Thermostat_heat_setpointNP, Thermostat_heat_setpointN, 1, getDefaultName(), "THERMOSTAT_HEAT_SETPOINT", "Heat setpoint",
+    IUFillNumber(&Thermostat_heat_setpointN[0], "THERMOSTAT_HEAT_SETPOINT", "Heat °C (0=OFF)", "%.0f", 0, 40, 1, 0);
+    IUFillNumberVector(&Thermostat_heat_setpointNP, Thermostat_heat_setpointN, 1, getDeviceName(), "THERMOSTAT_HEAT_SETPOINT", "Heat setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_heat_setpointN[1], "THERMOSTAT_HEAT_SEPOINT", "Heat °C (0=OFF)", "%.0f", 0, 40, 1, 0);
-    IUFillNumberVector(&Thermostat_cool_setpointNP, Thermostat_cool_setpointN, 1, getDefaultName(), "THERMOSTAT_COOL_SETPOINT", "Cool setpoint",
+    IUFillNumber(&Thermostat_cool_setpointN[0], "THERMOSTAT_COOL_SETPOINT", "Cool °C (0=OFF)", "%.0f", 0, 40, 1, 0);
+    IUFillNumberVector(&Thermostat_cool_setpointNP, Thermostat_cool_setpointN, 1, getDeviceName(), "THERMOSTAT_COOL_SETPOINT", "Cool setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_cool_setpointN[1], "THERMOSTAT_COOL_SEPOINT", "Cool °C (0=OFF)", "%.0f", 0, 40, 1, 0);
-    IUFillNumberVector(&Thermostat_humidity_setpointNP, Thermostat_humidity_setpointN, 1, getDefaultName(), "THERMOSTAT_HUMIDITY_SETPOINT", "Humidity setpoint",
+    IUFillNumber(&Thermostat_humidity_setpointN[0], "THERMOSTAT_HUMIDITY_SETPOINT", "Dehumidify % (0=OFF)", "%.0f", 0, 80, 1, 0);
+    IUFillNumberVector(&Thermostat_humidity_setpointNP, Thermostat_humidity_setpointN, 1, getDeviceName(), "THERMOSTAT_HUMIDITY_SETPOINT", "Humidity setpoint",
                        THERMOSTAT_TAB, IP_RW, 60, IPS_OK);
-    IUFillNumber(&Thermostat_humidity_setpointN[1], "THERMOSTAT_HUMIDITY_SEPOINT", "Dehumidify % (0=OFF)", "%.0f", 0, 80, 1, 0);
 
     IUFillSwitchVector(&Thermostat_heat_relaySP, Thermostat_heat_relayS, SWITCH_TOGGLE_COUNT, getDeviceName(), "Thermo_heat_relay", "Heat Relay",
                        THERMOSTAT_TAB, IP_RO, ISR_1OFMANY, 60, IPS_OK);
@@ -805,47 +811,54 @@ void OCS::TimerHit()
 {
     // Get the roof/shutter status
     char roof_status_response[RB_MAX_LEN] = {0};
-    int roof_status_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, roof_status_response,
-                                                                             OCS_get_roof_status);
+    int roof_status_error_or_fail = 0;
+    if (hasRoof) {
+        roof_status_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, roof_status_response,
+                                                                            OCS_get_roof_status);
+    }
     if (roof_status_error_or_fail > 1) {
         bool roof_was_in_error = (getShutterState() == SHUTTER_ERROR);
 
         LOGF_DEBUG("roof_was_in_error, %d", roof_was_in_error);
 
         char *split;
-        char roof_message[30];
+        char roof_message[RB_MAX_LEN * 2] = {0};
         split = strtok(roof_status_response, ",");
-        if (strcmp(split, "o") == 0) {
+        const char *roof_motion = split ? split : "";
+        split = strtok(NULL, ",");
+        const char *roof_detail = split ? split : "";
+        if (strcmp(roof_motion, "o") == 0) {
             if (getShutterState() != SHUTTER_MOVING) {
                 setShutterState(SHUTTER_MOVING);
             }
-            split = strtok(NULL, ",");
-            sprintf(roof_message, "Opening, travel %s", split);
-        } else if (strcmp(split, "c") == 0) {
+            snprintf(roof_message, sizeof(roof_message), "Opening, travel %s", roof_detail);
+        } else if (strcmp(roof_motion, "c") == 0) {
             if (getShutterState() != SHUTTER_MOVING) {
                 setShutterState(SHUTTER_MOVING);
             }
-            split = strtok(NULL, ",");
-            sprintf(roof_message, "Closing, travel %s", split);
-        } else if (strcmp(split, "i") == 0) {
-            split = strtok(NULL, ",");
-            if (strcmp(split, "OPEN") == 0) {
+            snprintf(roof_message, sizeof(roof_message), "Closing, travel %s", roof_detail);
+        } else if (strcmp(roof_motion, "i") == 0) {
+            if (strcmp(roof_detail, "OPEN") == 0) {
                 if (getShutterState() != SHUTTER_OPENED) {
                     setShutterState(SHUTTER_OPENED);
                 }
-                sprintf(roof_message, "Idle - Open");
-            } else if (strcmp(split, "CLOSED") == 0) {
+                snprintf(roof_message, sizeof(roof_message), "Idle - Open");
+            } else if (strcmp(roof_detail, "CLOSED") == 0) {
                 if (getShutterState() != SHUTTER_CLOSED) {
                     setShutterState(SHUTTER_CLOSED);
                 }
-                sprintf(roof_message, "Idle - Closed");
-            } else if (strcmp(split, "No Error") == 0) {
-                sprintf(roof_message, "Idle - No Error");
-            } else if (strcmp(split, "Waiting for mount to park") == 0) {
-                sprintf(roof_message, "Waiting for mount to park");
+                snprintf(roof_message, sizeof(roof_message), "Idle - Closed");
+            } else if (strcmp(roof_detail, "No Error") == 0) {
+                // Stopped between the limits, or a fault has been cleared
+                if (getShutterState() == SHUTTER_MOVING || getShutterState() == SHUTTER_ERROR) {
+                    setShutterState(SHUTTER_UNKNOWN);
+                }
+                snprintf(roof_message, sizeof(roof_message), "Idle - No Error");
+            } else if (strcmp(roof_detail, "Waiting for mount to park") == 0) {
+                snprintf(roof_message, sizeof(roof_message), "Waiting for mount to park");
             } else {
                 // Must be an error message
-                sprintf(roof_message, "Roof/shutter: %s", split);
+                snprintf(roof_message, sizeof(roof_message), "Roof/shutter: %s", roof_detail);
                 if (getShutterState() != SHUTTER_ERROR) {
                     setShutterState(SHUTTER_ERROR);
                 }
@@ -861,7 +874,7 @@ void OCS::TimerHit()
                     LOG_INFO("Roof/shutter error cleared");
                 }
             }
-            sprintf(last_shutter_status, "%s", roof_message);
+            indi_strlcpy(last_shutter_status, roof_message, sizeof(last_shutter_status));
         }
 
         IUSaveText(&ShutterStatusT[0], roof_message);
@@ -871,7 +884,7 @@ void OCS::TimerHit()
     // Dome updates
     if (hasDome) {
         // Get the dome status
-        char dome_message[10];
+        char dome_message[10] = {0};
         char dome_status_response[RB_MAX_LEN] = {0};
         int dome_status_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, dome_status_response,
                                                                                  OCS_get_dome_status);
@@ -887,7 +900,7 @@ void OCS::TimerHit()
                 sprintf(dome_message, "Home");
             } else if (strcmp(dome_status_response, "P") == 0) {
                 if (getDomeState() != DOME_PARKED) {
-                    setDomeState(DOME_PARKED);
+                    SetParked(true);
                     ParkSP[0].setState(ISS_ON);
                     ParkSP[1].setState(ISS_OFF);
                     ParkSP.setState(IPS_OK);
@@ -926,7 +939,7 @@ void OCS::TimerHit()
             IDSetText(&DomeStatusTP, nullptr);
         } else {
             LOGF_WARN("Communication error on get Dome status %s, this update aborted, will try again...", OCS_get_dome_status);
-            LOGF_WARN("Received %S", dome_status_response);
+            LOGF_WARN("Received %s", dome_status_response);
         }
 
         // Get the dome position
@@ -940,7 +953,7 @@ void OCS::TimerHit()
             DomeAbsPosNP.apply();
         } else {
             LOGF_WARN("Communication error on get Dome position %s, this update aborted, will try again...", OCS_get_dome_azimuth);
-            LOGF_WARN("Received %d", position);
+            LOGF_WARN("Received %s", dome_position_response);
         }
     }
 
@@ -994,10 +1007,15 @@ void OCS::SlowTimerHit()
     // at the time it could miss a transient condition that has been cleared in-between poll periods.
     // Last roof error holds the condition until cleared by a shutter/roof action.
     char roof_error_response[RB_MAX_LEN] = {0};
-    int roof_error_error_or_fail  = getCommandSingleCharErrorOrLongResponse(PortFD, roof_error_response,
-                                                                            OCS_get_roof_last_error);
+    int roof_error_error_or_fail = 0;
+    if (hasRoof) {
+        roof_error_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, roof_error_response,
+                                                                           OCS_get_roof_last_error);
+    }
     if (roof_error_error_or_fail > 1) {
-        if (strcmp(roof_error_response, "Error: Open safety interlock") == 0 &&
+        if (strcmp(roof_error_response, "No Error") == 0) {
+            last_shutter_error[0] = '\0';
+        } else if (strcmp(roof_error_response, "Error: Open safety interlock") == 0 &&
                 strcmp(roof_error_response, last_shutter_error) != 0) {
             indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
             if (getShutterState() != SHUTTER_ERROR) {
@@ -1045,7 +1063,7 @@ void OCS::SlowTimerHit()
             if (getShutterState() != SHUTTER_ERROR) {
                 setShutterState(SHUTTER_ERROR);
             }
-            LOG_WARN("Roof/shutter error - Close unknow");
+            LOG_WARN("Roof/shutter error - Close unknown");
         } else if (strcmp(roof_error_response, "Error: Close limit sw fail") == 0 &&
                    strcmp(roof_error_response, last_shutter_error) != 0) {
             indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
@@ -1060,7 +1078,7 @@ void OCS::SlowTimerHit()
                 setShutterState(SHUTTER_ERROR);
             }
             LOG_WARN("Roof/shutter error - Close max time exceeded");
-        } else if (strcmp(roof_error_response, "Error: Close under tim") == 0 &&
+        } else if (strcmp(roof_error_response, "Error: Close under time") == 0 &&
             strcmp(roof_error_response, last_shutter_error) != 0) {
             indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
             LOG_WARN("Roof/shutter error - Close min time not reached");
@@ -1117,13 +1135,13 @@ void OCS::SlowTimerHit()
                    strcmp(roof_error_response, last_shutter_error) != 0) {
                indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
                LOG_WARN("Roof/shutter warning - Roof/shutter is already open");
-        } else if (strcmp(roof_error_response, "Error: Open location unknow") == 0 &&
+        } else if (strcmp(roof_error_response, "Error: Open location unknown") == 0 &&
                    strcmp(roof_error_response, last_shutter_error) != 0) {
                indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
                if (getShutterState() != SHUTTER_ERROR) {
                    setShutterState(SHUTTER_ERROR);
                }
-               LOG_WARN("Roof/shutter error - Open location unknow");
+               LOG_WARN("Roof/shutter error - Open location unknown");
         } else if (strcmp(roof_error_response, "Error: Open already in motion") == 0 &&
                    strcmp(roof_error_response, last_shutter_error) != 0) {
                indi_strlcpy(last_shutter_error,roof_error_response, RB_MAX_LEN);
@@ -1409,104 +1427,216 @@ IPState OCS::updateWeather() {
         LOG_DEBUG("Weather update called");
 
         for (int measurement = 0; measurement < WEATHER_MEASUREMENTS_COUNT; measurement ++) {
-            if (weather_enabled[measurement] == 1) {
-                char measurement_reponse[RB_MAX_LEN];
-                char measurement_command[CMD_MAX_LEN];
-
-                LOGF_DEBUG("In weather measurements loop, %u", measurement);
-
-                switch (measurement) {
-                    case WEATHER_TEMPERATURE:
-                        indi_strlcpy(measurement_command, OCS_get_outside_temperature, sizeof(measurement_command));
-                        break;
-                    case WEATHER_PRESSURE:
-                        indi_strlcpy(measurement_command, OCS_get_pressure, sizeof(measurement_command));
-                        break;
-                    case WEATHER_HUMIDITY:
-                        indi_strlcpy(measurement_command, OCS_get_humidity, sizeof(measurement_command));
-                        break;
-                    case WEATHER_WIND:
-                        indi_strlcpy(measurement_command, OCS_get_wind_speed, sizeof(measurement_command));
-                        break;
-                    case WEATHER_RAIN:
-                        indi_strlcpy(measurement_command, OCS_get_rain_sensor_status, sizeof(measurement_command));
-                        break;
-                    case WEATHER_DIFF_SKY_TEMP:
-                        indi_strlcpy(measurement_command, OCS_get_sky_diff_temperature, sizeof(measurement_command));
-                        break;
-
-                    // case WEATHER_CLOUD: Not handled in this switch as it returns a string so needs a different call
-
-                    case WEATHER_SKY:
-                        indi_strlcpy(measurement_command, OCS_get_sky_quality, sizeof(measurement_command));
-                        break;
-                    case WEATHER_SKY_TEMP:
-                        indi_strlcpy(measurement_command, OCS_get_sky_IR_temperature, sizeof(measurement_command));
-                        break;
-                    default:
-                        break;
-                }
-
-                double value = conversion_error;
-                int measurement_error_or_fail = getCommandDoubleResponse(PortFD, &value, measurement_reponse,
-                                                                         measurement_command);
-                if ((measurement_error_or_fail >= 0) && (value != conversion_error) &&
-                    (weather_enabled[measurement] == 1)) {
-                    switch(measurement) {
-                        case WEATHER_TEMPERATURE:
-                            setParameterValue("WEATHER_TEMPERATURE", value);
-                            break;
-                        case WEATHER_PRESSURE:
-                            setParameterValue("WEATHER_PRESSURE", value);
-                            break;
-                        case WEATHER_HUMIDITY:
-                            setParameterValue("WEATHER_HUMIDITY", value);
-                            break;
-                        case WEATHER_WIND:
-                            setParameterValue("WEATHER_WIND", value);
-                            break;
-                        case WEATHER_RAIN:
-                            setParameterValue("WEATHER_RAIN", value);
-                            break;
-                        case WEATHER_DIFF_SKY_TEMP:
-                            setParameterValue("WEATHER_SKY_DIFF_TEMP", value);
-                            break;
-
-                     // case WEATHER_CLOUD: Not handled in this switch as it returns a string so needs a different call
-
-                        case WEATHER_SKY:
-                            IUSaveText(&Weather_SkyT[0], measurement_reponse);
-                            IDSetText(&Weather_SkyTP, nullptr);
-                            break;
-                        case WEATHER_SKY_TEMP:
-                            IUSaveText(&Weather_Sky_TempT[0], measurement_reponse);
-                            IDSetText(&Weather_Sky_TempTP, nullptr);
-                            break;
-                        default:
-                            break;
-                    }
-                }
-
-                // Separate because WEATHER_CLOUD is the only weather parameter that return a string
-                if ((measurement == WEATHER_CLOUD) && (weather_enabled[WEATHER_CLOUD] == 1)) {
-                    char measurement_reponse[RB_MAX_LEN];
-                    int measurement_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, measurement_reponse,
-                                                                             OCS_get_cloud_description);
-                    if (measurement_error_or_fail > 1) {
-                        IUSaveText(&Weather_CloudT[0], measurement_reponse);
-                        IDSetText(&Weather_CloudTP, nullptr);
-                    }
-                }
+            if (weather_enabled[measurement] != 1) {
+                continue;
             }
-            if (WI::syncCriticalParameters()) {
-                LOG_DEBUG("SyncCriticalParameters = true");
-            } else {
-                LOG_DEBUG("SyncCriticalParameters = false");
+
+            LOGF_DEBUG("In weather measurements loop, %u", measurement);
+
+            // Separate because WEATHER_CLOUD is the only weather parameter that return a string
+            if (measurement == WEATHER_CLOUD) {
+                char cloud_response[RB_MAX_LEN] = {0};
+                int cloud_error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, cloud_response,
+                                                                                  weatherCommand(WEATHER_CLOUD));
+                if (cloud_error_or_fail > 1) {
+                    IUSaveText(&Weather_CloudT[0], cloud_response);
+                    IDSetText(&Weather_CloudTP, nullptr);
+                }
+                continue;
+            }
+
+            char measurement_response[RB_MAX_LEN] = {0};
+            double value = conversion_error;
+            bool valid = readWeatherMeasurement(measurement, value, measurement_response);
+
+            if (measurement < WEATHER_SAFETY_COUNT) {
+                if (valid) {
+                    handleGoodWeatherReading(measurement, value);
+                } else {
+                    handleBadWeatherReading(measurement);
+                }
+            } else if (valid) {
+                if (measurement == WEATHER_SKY) {
+                    IUSaveText(&Weather_SkyT[0], measurement_response);
+                    IDSetText(&Weather_SkyTP, nullptr);
+                } else if (measurement == WEATHER_SKY_TEMP) {
+                    IUSaveText(&Weather_Sky_TempT[0], measurement_response);
+                    IDSetText(&Weather_Sky_TempTP, nullptr);
+                }
             }
         }
     }
 
+    // Always IPS_OK, as INDI Core only evaluates the critical parameters in that case.
+    // A confirmed bad sensor is held out of range so that evaluation raises the Alert.
     return IPS_OK;
+}
+
+/*****************************************************************************
+ * Does OCS name a sensor for this measurement? A name means it is configured in
+ * OCS, and was found at boot if it is on I2C. It does not mean it is working now
+ *****************************************************************************/
+bool OCS::weatherSensorNamed(const char *name_command)
+{
+    char response[RB_MAX_LEN] = {0};
+    int error_or_fail = getCommandSingleCharErrorOrLongResponse(PortFD, response, name_command);
+    return error_or_fail > 1 && strcasecmp(response, "None") != 0 && strcasecmp(response, "N/A") != 0;
+}
+
+bool OCS::weatherSensorConfigured(int measurement)
+{
+    switch (measurement) {
+        case WEATHER_TEMPERATURE:
+            return weatherSensorNamed(OCS_get_outside_temperature_name);
+        case WEATHER_PRESSURE:
+            return weatherSensorNamed(OCS_get_pressure_name);
+        case WEATHER_HUMIDITY:
+            return weatherSensorNamed(OCS_get_humidity_name);
+        case WEATHER_WIND:
+            return weatherSensorNamed(OCS_get_wind_speed_name);
+        case WEATHER_RAIN:
+            return weatherSensorNamed(OCS_get_rain_sensor_name);
+        case WEATHER_DIFF_SKY_TEMP:
+            // Calculated by OCS from these two sensors, so it has no name of its own
+            return weatherSensorNamed(OCS_get_outside_temperature_name) &&
+                   weatherSensorNamed(OCS_get_sky_IR_temperature_name);
+        default:
+            return false;
+    }
+}
+
+/********************************************************
+ * The OCS command that reads the given weather measurement
+ ********************************************************/
+const char *OCS::weatherCommand(int measurement)
+{
+    switch (measurement) {
+        case WEATHER_TEMPERATURE:
+            return OCS_get_outside_temperature;
+        case WEATHER_PRESSURE:
+            return OCS_get_pressure;
+        case WEATHER_HUMIDITY:
+            return OCS_get_humidity;
+        case WEATHER_WIND:
+            return OCS_get_wind_speed;
+        case WEATHER_RAIN:
+            return OCS_get_rain_sensor_status;
+        case WEATHER_DIFF_SKY_TEMP:
+            return OCS_get_sky_diff_temperature;
+        case WEATHER_CLOUD:
+            return OCS_get_cloud_description;
+        case WEATHER_SKY:
+            return OCS_get_sky_quality;
+        case WEATHER_SKY_TEMP:
+            return OCS_get_sky_IR_temperature;
+        default:
+            return "";
+    }
+}
+
+/*****************************************************
+ * The INDI parameter name of a safety weather measurement
+ *****************************************************/
+const char *OCS::weatherParameterName(int measurement)
+{
+    switch (measurement) {
+        case WEATHER_TEMPERATURE:
+            return "WEATHER_TEMPERATURE";
+        case WEATHER_PRESSURE:
+            return "WEATHER_PRESSURE";
+        case WEATHER_HUMIDITY:
+            return "WEATHER_HUMIDITY";
+        case WEATHER_WIND:
+            return "WEATHER_WIND";
+        case WEATHER_RAIN:
+            return "WEATHER_RAIN";
+        case WEATHER_DIFF_SKY_TEMP:
+            return "WEATHER_SKY_DIFF_TEMP";
+        default:
+            return "";
+    }
+}
+
+/*****************************************************************
+ * Read a numeric weather measurement, false if failed or not valid
+ *****************************************************************/
+bool OCS::readWeatherMeasurement(int measurement, double &value, char *response)
+{
+    value = conversion_error;
+    int error_or_fail = getCommandDoubleResponse(PortFD, &value, response, weatherCommand(measurement));
+    return error_or_fail >= 0 && std::isfinite(value) && value != conversion_error;
+}
+
+/*****************************************************************
+ * A safety sensor gave a valid reading, any bad reading count ends
+ *****************************************************************/
+void OCS::handleGoodWeatherReading(int measurement, double value)
+{
+    if (weather_suspect[measurement]) {
+        WeatherRepollTimers[measurement].stop();
+        weather_suspect[measurement] = false;
+    }
+    if (weather_failed[measurement]) {
+        weather_failed[measurement] = false;
+        LOGF_INFO("Weather sensor %s has recovered", weatherParameterName(measurement));
+    }
+    setParameterValue(weatherParameterName(measurement), value);
+}
+
+/*************************************************************************
+ * A safety sensor that replied at connection gave a NaN or failed to read
+ *************************************************************************/
+void OCS::handleBadWeatherReading(int measurement)
+{
+    if (weather_failed[measurement]) {
+        setParameterValue(weatherParameterName(measurement), WEATHER_INVALID_VALUE);
+    } else if (!weather_suspect[measurement]) {
+        // Tolerate one bad reading, the re-poll decides and the last good value stays in place
+        weather_suspect[measurement] = true;
+        WeatherRepollTimers[measurement].start(WEATHER_REPOLL_MS);
+        LOGF_WARN("Weather sensor %s gave a bad reading, re-polling in %u seconds",
+                  weatherParameterName(measurement), WEATHER_REPOLL_MS / 1000);
+    }
+}
+
+/**************************************************************************
+ * Confirm a bad weather reading, independent of the weather polling period
+ **************************************************************************/
+void OCS::WeatherRepollHit(int measurement)
+{
+    if (!isConnected() || !weather_suspect[measurement]) {
+        return;
+    }
+
+    char measurement_response[RB_MAX_LEN] = {0};
+    double value = conversion_error;
+    weather_suspect[measurement] = false;
+    if (readWeatherMeasurement(measurement, value, measurement_response)) {
+        setParameterValue(weatherParameterName(measurement), value);
+        LOGF_INFO("Weather sensor %s reading recovered on re-poll", weatherParameterName(measurement));
+    } else {
+        weather_failed[measurement] = true;
+        setParameterValue(weatherParameterName(measurement), WEATHER_INVALID_VALUE);
+        LOGF_ERROR("Weather sensor %s has failed, two consecutive bad readings", weatherParameterName(measurement));
+    }
+
+    ParametersNP.apply();
+    if (OverrideSP[0].getState() != ISS_ON) {
+        syncCriticalParameters();
+        critialParametersLP.apply();
+    }
+}
+
+/********************************************
+ * Forget bad readings and any pending re-poll
+ ********************************************/
+void OCS::resetWeatherFaults()
+{
+    for (int measurement = 0; measurement < WEATHER_SAFETY_COUNT; measurement++) {
+        WeatherRepollTimers[measurement].stop();
+        weather_suspect[measurement] = false;
+        weather_failed[measurement] = false;
+    }
 }
 
 /*************************************
@@ -1545,7 +1675,7 @@ IPState OCS::ControlShutter(ShutterOperation operation)
     // that allow for the delays between roof/shutter start/end of travel
     // and the activation of the respective interlock switches
     // Delay from OCS in seconds, need to convert to ms and add 1/2 second
-    SetTimer((ROOF_TIME_PRE_MOTION * 1000) + 500);
+    SetTimer(static_cast<uint32_t>(ROOF_TIME_PRE_MOTION * 1000) + 500);
 
     return IPS_BUSY;
 }
@@ -1565,8 +1695,8 @@ IPState OCS::Park()
         ControlShutter(ShutterOperation::SHUTTER_CLOSE);
     }
     if (sendOCSCommand(OCS_dome_park)) {
+        // TimerHit marks the dome as parked once OCS reports it
         setDomeState(DOME_PARKING);
-        SetParked(true);
         return IPS_BUSY;
     } else {
         setDomeState(DOME_ERROR);
@@ -1691,7 +1821,7 @@ IPState OCS::MoveAbs(double az)
             break;
         }
     } else {
-        LOGF_ERROR("Dome goto produced error %s", dome_goto_target_error_or_fail);
+        LOGF_ERROR("Dome goto produced error %d", dome_goto_target_error_or_fail);
         return IPS_ALERT;
     }
 }
@@ -1777,6 +1907,7 @@ bool OCS::Connect()
 bool OCS::Disconnect()
 {
     SlowTimer.stop();
+    resetWeatherFaults();
     bool status = INDI::Dome::Disconnect();
     return status;
 }
@@ -1803,6 +1934,34 @@ bool OCS::saveConfigItems(FILE *fp)
     return true;
 }
 
+/*****************************************************************
+ * Apply a client request to an ON/OFF relay switch. The switch only
+ * moves if OCS accepted the command, otherwise it keeps the old state
+ *****************************************************************/
+bool OCS::setRelayFromSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n, int relay)
+{
+    const int previous = IUFindOnSwitchIndex(svp);
+    if (IUUpdateSwitch(svp, states, names, n) < 0) {
+        return false;
+    }
+
+    char relay_command[CMD_MAX_LEN];
+    snprintf(relay_command, sizeof(relay_command), "%s%d,%s%s", OCS_set_relay_part, relay,
+             svp->sp[ON_SWITCH].s == ISS_ON ? "ON" : "OFF", OCS_command_terminator);
+
+    const bool accepted = sendOCSCommand(relay_command);
+    if (!accepted) {
+        IUResetSwitch(svp);
+        if (previous >= 0) {
+            svp->sp[previous].s = ISS_ON;
+        }
+        LOGF_ERROR("OCS did not accept the command for %s", svp->label);
+    }
+    svp->s = accepted ? IPS_OK : IPS_ALERT;
+    IDSetSwitch(svp, nullptr);
+    return accepted;
+}
+
 /**************************************************
  * Client has changed the state of a switch, update
  **************************************************/
@@ -1815,209 +1974,48 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
         // Power devices
         //--------------
         if (strcmp(Power_Device1SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device1SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE1_ON") == 0) {
-                    char set_power_dev_1_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_1_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE1], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device1SP, nullptr);
-                    return sendOCSCommand(set_power_dev_1_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE1_OFF") == 0) {
-                    char set_power_dev_1_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_1_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE1], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device1SP, nullptr);
-                    return sendOCSCommand(set_power_dev_1_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device1SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device1SP, states, names, n, power_device_relays[POWER_DEVICE1]);
         } else if (strcmp(Power_Device2SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device2SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE2_ON") == 0) {
-                    char set_power_dev_2_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_2_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE2], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device2SP, nullptr);
-                    return sendOCSCommand(set_power_dev_2_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE2_OFF") == 0) {
-                    char set_power_dev_2_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_2_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE2], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device2SP, nullptr);
-                    return sendOCSCommand(set_power_dev_2_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device2SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device2SP, states, names, n, power_device_relays[POWER_DEVICE2]);
         } else if (strcmp(Power_Device3SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device3SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE3_ON") == 0) {
-                    char set_power_dev_3_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_3_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE3], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device3SP, nullptr);
-                    return sendOCSCommand(set_power_dev_3_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE3_OFF") == 0) {
-                    char set_power_dev_3_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_3_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE3], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device3SP, nullptr);
-                    return sendOCSCommand(set_power_dev_3_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device3SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device3SP, states, names, n, power_device_relays[POWER_DEVICE3]);
         } else if (strcmp(Power_Device4SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device4SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE4_ON") == 0) {
-                    char set_power_dev_4_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_4_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE4], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device4SP, nullptr);
-                    return sendOCSCommand(set_power_dev_4_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE4_OFF") == 0) {
-                    char set_power_dev_4_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_4_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE4], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device4SP, nullptr);
-                    return sendOCSCommand(set_power_dev_4_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device4SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device4SP, states, names, n, power_device_relays[POWER_DEVICE4]);
         } else if (strcmp(Power_Device5SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device5SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE5_ON") == 0) {
-                    char set_power_dev_5_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_5_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE5], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device5SP, nullptr);
-                    return sendOCSCommand(set_power_dev_5_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE5_OFF") == 0) {
-                    char set_power_dev_5_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_5_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE5], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device5SP, nullptr);
-                    return sendOCSCommand(set_power_dev_5_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device5SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device5SP, states, names, n, power_device_relays[POWER_DEVICE5]);
         } else if (strcmp(Power_Device6SP.name, name) == 0) {
-            IUUpdateSwitch(&Power_Device6SP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "POWER_DEVICE1_ON") == 0) {
-                    char set_power_dev_6_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_6_on_cmd, "%s%d,ON%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE6], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device6SP, nullptr);
-                    return sendOCSCommand(set_power_dev_6_on_cmd);
-                } else if (strcmp(names[i], "POWER_DEVICE6_OFF") == 0) {
-                    char set_power_dev_6_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_power_dev_6_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, power_device_relays[POWER_DEVICE6], OCS_command_terminator);
-                    IDSetSwitch(&Power_Device6SP, nullptr);
-                    return sendOCSCommand(set_power_dev_6_off_cmd);
-                }
-            }
-            IDSetSwitch(&Power_Device6SP, nullptr);
-            return false;
+            return setRelayFromSwitch(&Power_Device6SP, states, names, n, power_device_relays[POWER_DEVICE6]);
 
         // Lights
         //-------
         } else if (strcmp(LIGHT_WRWSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_WRWSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "WRW_ON") == 0) {
-                    char set_light_wrw_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrw_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_WRW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRWSP, nullptr);
-                    return sendOCSCommand(set_light_wrw_on_cmd);
-                } else if (strcmp(names[i], "WRW_OFF") == 0) {
-                    char set_light_wrw_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrw_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_WRW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRWSP, nullptr);
-                    return sendOCSCommand(set_light_wrw_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_WRWSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_WRWSP, states, names, n, light_relays[LIGHT_WRW_RELAY]);
         } else if (strcmp(LIGHT_WRRSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_WRRSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "WRR_ON") == 0) {
-                    char set_light_wrr_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrr_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_WRR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRRSP, nullptr);
-                    return sendOCSCommand(set_light_wrr_on_cmd);
-                } else if (strcmp(names[i], "WRR_OFF") == 0) {
-                    char set_light_wrr_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_wrr_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_WRR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_WRRSP, nullptr);
-                    return sendOCSCommand(set_light_wrr_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_WRRSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_WRRSP, states, names, n, light_relays[LIGHT_WRR_RELAY]);
         } else if (strcmp(LIGHT_ORWSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_ORWSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "ORW_ON") == 0) {
-                    char set_light_orw_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orw_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_ORW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORWSP, nullptr);
-                    return sendOCSCommand(set_light_orw_on_cmd);
-                } else if (strcmp(names[i], "ORW_OFF") == 0) {
-                    char set_light_orw_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orw_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_ORW_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORWSP, nullptr);
-                    return sendOCSCommand(set_light_orw_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_ORWSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_ORWSP, states, names, n, light_relays[LIGHT_ORW_RELAY]);
         } else if (strcmp(LIGHT_ORRSP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_ORRSP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "ORR_ON") == 0) {
-                    char set_light_orr_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orr_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_ORR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORRSP, nullptr);
-                    return sendOCSCommand(set_light_orr_on_cmd);
-                } else if (strcmp(names[i], "ORR_OFF") == 0) {
-                    char set_light_orr_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_orr_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_ORR_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_ORRSP, nullptr);
-                    return sendOCSCommand(set_light_orr_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_ORRSP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_ORRSP, states, names, n, light_relays[LIGHT_ORR_RELAY]);
         } else if (strcmp(LIGHT_OUTSIDESP.name, name) == 0) {
-            IUUpdateSwitch(&LIGHT_OUTSIDESP, states, names, n);
-            for (int i = 0; i < n; i++) {
-                if (strcmp(names[i], "OUTSIDE_ON") == 0) {
-                    char set_light_outside_on_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_outside_on_cmd, "%s%d,ON%s", OCS_set_relay_part, light_relays[LIGHT_OUTSIDE_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
-                    return sendOCSCommand(set_light_outside_on_cmd);
-                } else if (strcmp(names[i], "OUTSIDE_OFF") == 0) {
-                    char set_light_outside_off_cmd[CMD_MAX_LEN];
-                    sprintf(set_light_outside_off_cmd, "%s%d,OFF%s", OCS_set_relay_part, light_relays[LIGHT_OUTSIDE_RELAY], OCS_command_terminator);
-                    IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
-                    return sendOCSCommand(set_light_outside_off_cmd);
-                }
-            }
-            IDSetSwitch(&LIGHT_OUTSIDESP, nullptr);
-            return false;
+            return setRelayFromSwitch(&LIGHT_OUTSIDESP, states, names, n, light_relays[LIGHT_OUTSIDE_RELAY]);
 
         // Safety Override
         //----------------
         } else if (strcmp(Safety_Interlock_OverrideSP.name, name) == 0) {
-            IUUpdateSwitch(&Safety_Interlock_OverrideSP, states, names, n);
             IUResetSwitch(&Safety_Interlock_OverrideSP);
-            return sendOCSCommand(OCS_roof_safety_override);
+            bool override_ok = sendOCSCommand(OCS_roof_safety_override);
+            Safety_Interlock_OverrideSP.s = override_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
+            return override_ok;
 
         // Roof max power
         //---------------
         } else if (strcmp(Roof_High_PowerSP.name, name) == 0) {
-            IUUpdateSwitch(&Roof_High_PowerSP, states, names, n);
             IUResetSwitch(&Roof_High_PowerSP);
-            return sendOCSCommand(OCS_roof_high_power_mode);
+            bool high_power_ok = sendOCSCommand(OCS_roof_high_power_mode);
+            Roof_High_PowerSP.s = high_power_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&Roof_High_PowerSP, nullptr);
+            return high_power_ok;
 
         // Reset Watchdog
         //---------------
@@ -2025,33 +2023,46 @@ bool OCS::ISNewSwitch(const char *dev, const char *name, ISState *states, char *
             char watchdog_response[RB_MAX_LEN] = {0};
             int watchdog_fail_or_error = getCommandSingleCharErrorOrLongResponse(PortFD, watchdog_response, OCS_set_watchdog_flag);
             (void) watchdog_fail_or_error;
-            if (strcmp(watchdog_response, "Rebooting in a few seconds...") == 0) {
+            IUResetSwitch(&Watchdog_ResetSP);
+            bool watchdog_ok = strcmp(watchdog_response, "Rebooting in a few seconds...") == 0;
+            if (watchdog_ok) {
                 LOG_WARN("Rebooting the OCS controller in a few seconds...");
-                IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
-                return true;
             } else if (strcmp(watchdog_response, "23") == 0) {
                 LOG_WARN("Unable to reboot, roof/shutter/dome in motion");
-                IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
-                return false;
-            } else if (strcmp(watchdog_response, "0") == 0) {
+            } else {
                 LOGF_DEBUG("OCS watchdog reset error, reponse was: %s. Maybe watchdog is not enabled?", watchdog_response);
-                IDSetSwitch(&Safety_Interlock_OverrideSP, nullptr);
-                return false;
             }
+            Watchdog_ResetSP.s = watchdog_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&Watchdog_ResetSP, nullptr);
+            return watchdog_ok;
 
         // Additional dome controls
         //-------------------------
         } else if (strcmp(DomeControlsSP.name, name) == 0) {
+            bool dome_control_ok = false;
             for (int i = 0; i < n; i++) {
                 if (strcmp(names[i], "SET_PARK_SW") == 0) {
-                    return SetCurrentPark();
+                    dome_control_ok = SetCurrentPark();
+                    break;
                 } else if (strcmp(names[i], "RETURN_HOME_SW") == 0) {
-                    return ReturnHome();
+                    dome_control_ok = ReturnHome();
+                    break;
                 } else if (strcmp(names[i], "RESET_HOME_SW") == 0) {
-                    return ResetHome();
+                    dome_control_ok = ResetHome();
+                    break;
                 }
             }
+            IUResetSwitch(&DomeControlsSP);
+            DomeControlsSP.s = dome_control_ok ? IPS_OK : IPS_ALERT;
+            IDSetSwitch(&DomeControlsSP, nullptr);
+            return dome_control_ok;
         }
+
+        // Weather interface controls, Refresh and Override
+        if (WI::processSwitch(dev, name, states, names, n)) {
+            return true;
+        }
+
         return INDI::Dome::ISNewSwitch(dev, name, states, names, n);
     } else {
         return false;
@@ -2070,45 +2081,57 @@ bool OCS::ISNewNumber(const char *dev,const char *name,double values[],char *nam
         if (!strcmp(Thermostat_heat_setpointNP.name, name)) {
             char thermostat_setpoint_command[CMD_MAX_LEN];
             sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                    OCS_set_thermostat_heat_setpoint_part, values[THERMOSTAT_HEAT_SETPOINT], OCS_command_terminator);
-            char response[RB_MAX_LEN];
+                    OCS_set_thermostat_heat_setpoint_part, values[0], OCS_command_terminator);
+            char response[RB_MAX_LEN] = {0};
             int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
             if(res < 0 || response[0] == '0') {
                 LOGF_ERROR("Failed to set Thermostat heat setpoint %s", response);
+                Thermostat_heat_setpointNP.s = IPS_ALERT;
+                IDSetNumber(&Thermostat_heat_setpointNP, nullptr);
                 return false;
             } else {
-                LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[THERMOSTAT_HEAT_SETPOINT]);
-                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HEAT_SETPOINT], &names[THERMOSTAT_HEAT_SETPOINT], n);
+                LOGF_INFO("Set Thermostat heat setpoint to: %.0f °C", values[0]);
+                IUUpdateNumber(&Thermostat_heat_setpointNP, values, names, n);
+                Thermostat_heat_setpointNP.s = IPS_OK;
+                IDSetNumber(&Thermostat_heat_setpointNP, nullptr);
                 return true;
             }
         }
         if (!strcmp(Thermostat_cool_setpointNP.name, name)) {
             char thermostat_setpoint_command[CMD_MAX_LEN];
             sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                    OCS_set_thermostat_cool_setpoint_part, values[THERMOSTAT_COOL_SETPOINT], OCS_command_terminator);
-            char response[RB_MAX_LEN];
+                    OCS_set_thermostat_cool_setpoint_part, values[0], OCS_command_terminator);
+            char response[RB_MAX_LEN] = {0};
             int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
             if(res < 0 || response[0] == '0') {
                 LOGF_ERROR("Failed to set Thermostat cool setpoint %s", response);
+                Thermostat_cool_setpointNP.s = IPS_ALERT;
+                IDSetNumber(&Thermostat_cool_setpointNP, nullptr);
                 return false;
             } else {
-                LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[THERMOSTAT_COOL_SETPOINT]);
-                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_COOL_SETPOINT], &names[THERMOSTAT_COOL_SETPOINT], n);
+                LOGF_INFO("Set Thermostat cool setpoint to: %.0f °C", values[0]);
+                IUUpdateNumber(&Thermostat_cool_setpointNP, values, names, n);
+                Thermostat_cool_setpointNP.s = IPS_OK;
+                IDSetNumber(&Thermostat_cool_setpointNP, nullptr);
                 return true;
             }
         }
         if (!strcmp(Thermostat_humidity_setpointNP.name, name)) {
             char thermostat_setpoint_command[CMD_MAX_LEN];
             sprintf(thermostat_setpoint_command, "%s%.0f%s",
-                    OCS_set_thermostat_humidity_setpoint_part, values[THERMOSTAT_HUMIDITY_SETPOINT], OCS_command_terminator);
-            char response[RB_MAX_LEN];
+                    OCS_set_thermostat_humidity_setpoint_part, values[0], OCS_command_terminator);
+            char response[RB_MAX_LEN] = {0};
             int res = getCommandSingleCharResponse(PortFD, response, thermostat_setpoint_command);
             if(res < 0 || response[0] == '0') {
                 LOGF_ERROR("Failed to set Thermostat humidity setpoint %s", response);
+                Thermostat_humidity_setpointNP.s = IPS_ALERT;
+                IDSetNumber(&Thermostat_humidity_setpointNP, nullptr);
                 return false;
             } else {
-                LOGF_INFO("Set Thermostat humidity setpoint to: %.0f °C", values[THERMOSTAT_HUMIDITY_SETPOINT]);
-                IUUpdateNumber(&Thermostat_heat_setpointNP, &values[THERMOSTAT_HUMIDITY_SETPOINT], &names[THERMOSTAT_HUMIDITY_SETPOINT], n);
+                LOGF_INFO("Set Thermostat humidity setpoint to: %.0f %%", values[0]);
+                IUUpdateNumber(&Thermostat_humidity_setpointNP, values, names, n);
+                Thermostat_humidity_setpointNP.s = IPS_OK;
+                IDSetNumber(&Thermostat_humidity_setpointNP, nullptr);
                 return true;
             }
         }
@@ -2202,6 +2225,9 @@ bool OCS::sendOCSCommandBlind(const char *cmd)
  * *******************************************************************/
 bool OCS::sendOCSCommand(const char *cmd)
 {
+    if (!commsAvailable()) {
+        return false;
+    }
     blockUntilClear();
 
     char response[1] = {0};
@@ -2215,10 +2241,14 @@ bool OCS::sendOCSCommand(const char *cmd)
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(PortFD, TCIFLUSH);
 
-    if ((error_type = tty_write_string(PortFD, cmd, &nbytes_write)) != TTY_OK)
-        return error_type;
+    if ((error_type = tty_write_string(PortFD, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
+        clearBlock();
+        return false;
+    }
 
     error_type = tty_read_expanded(PortFD, response, 1, OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
 
     tcflush(PortFD, TCIFLUSH);
     DEBUGF(INDI::Logger::DBG_DEBUG, "RES <%c>", response[0]);
@@ -2238,6 +2268,9 @@ bool OCS::sendOCSCommand(const char *cmd)
  * **********************************************************/
 int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2250,14 +2283,20 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
     /* Add mutex */
     std::unique_lock<std::mutex> guard(ocsCommsLock);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
+        clearBlock();
         return error_type;
+    }
 
     error_type = tty_read_expanded(fd, data, 1, OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
-    if (error_type != TTY_OK)
+    if (error_type != TTY_OK) {
+        clearBlock();
         return error_type;
+    }
 
     term = strchr(data, '#');
     if (term)
@@ -2281,6 +2320,9 @@ int OCS::getCommandSingleCharResponse(int fd, char *data, const char *cmd)
  * ************************************************/
 int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2294,10 +2336,14 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIFLUSH);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
+        clearBlock();
         return error_type;
+    }
 
-    error_type = tty_read_section_expanded(fd, data, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    error_type = tty_nread_section_expanded(fd, data, RB_MAX_LEN, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2336,6 +2382,9 @@ int OCS::getCommandDoubleResponse(int fd, double *value, char *data, const char 
  * **********************************************/
 int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2349,10 +2398,14 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIFLUSH);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
+        clearBlock();
         return error_type;
+    }
 
     error_type = tty_read_expanded(fd, data, sizeof(char), OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2390,6 +2443,9 @@ int OCS::getCommandIntResponse(int fd, int *value, char *data, const char *cmd)
  * *************************************************************************/
 int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char *cmd)
 {
+    if (!commsAvailable()) {
+        return TTY_TIME_OUT;
+    }
     blockUntilClear();
 
     char *term;
@@ -2403,10 +2459,14 @@ int OCS::getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char 
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIFLUSH);
 
-    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK)
+    if ((error_type = tty_write_string(fd, cmd, &nbytes_write)) != TTY_OK) {
+        noteReply(false);
+        clearBlock();
         return error_type;
+    }
 
-    error_type = tty_read_section_expanded(fd, data, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    error_type = tty_nread_section_expanded(fd, data, RB_MAX_LEN, '#', OCSTimeoutSeconds, OCSTimeoutMicroSeconds, &nbytes_read);
+    noteReply(nbytes_read > 0);
     tcflush(fd, TCIFLUSH);
 
     term = strchr(data, '#');
@@ -2462,18 +2522,18 @@ int OCS::flushIO(int fd)
 {
     tcflush(fd, TCIOFLUSH);
     int error_type = 0;
-    int nbytes_read;
+    int nbytes_read = 0;
     std::unique_lock<std::mutex> guard(ocsCommsLock);
     tcflush(fd, TCIOFLUSH);
     do {
         char discard_data[RB_MAX_LEN] = {0};
-        error_type = tty_read_section_expanded(fd, discard_data, '#', 0, 1000, &nbytes_read);
+        error_type = tty_nread_section_expanded(fd, discard_data, RB_MAX_LEN, '#', 0, 1000, &nbytes_read);
         if (error_type >= 0) {
             LOGF_DEBUG("flushIO: Information in buffer: Bytes: %u, string: %s", nbytes_read, discard_data);
         }
         //LOGF_DEBUG("flushIO: error_type = %i", error_type);
     }
-    while (error_type > 0);
+    while (error_type == TTY_OK && nbytes_read > 0);
 
     return 0;
 }
@@ -2481,12 +2541,79 @@ int OCS::flushIO(int fd)
 int OCS::charToInt (char *inString)
 {
     int value = conversion_error;
+    if (inString == nullptr) {
+        return value;
+    }
     try {
         value = std::stoi(inString);
     } catch (const std::invalid_argument&) {
     } catch (const std::out_of_range&) {
     }
     return value;
+}
+
+double OCS::charToDouble(char *inString)
+{
+    if (inString == nullptr) {
+        return conversion_error;
+    }
+    char *end = nullptr;
+    double value = strtod(inString, &end);
+    return (end == inString || !std::isfinite(value)) ? conversion_error : value;
+}
+
+/*****************************************************************
+ * A controller that has stopped replying would otherwise cost a full
+ * timeout on every command. Once COMMS_LOST_AFTER commands in a row
+ * get no reply, and there has been no reply for commsSilenceLimitMs(),
+ * commands fail at once and one is tried every COMMS_RETRY_MS until
+ * OCS replies again
+ *****************************************************************/
+bool OCS::commsAvailable()
+{
+    if (!comms_lost) {
+        return true;
+    }
+    const int64_t now = steadyMilliseconds();
+    if (now - comms_last_attempt >= COMMS_RETRY_MS) {
+        comms_last_attempt = now;
+        return true;
+    }
+    return false;
+}
+
+void OCS::noteReply(bool replied)
+{
+    const int64_t now = steadyMilliseconds();
+    if (replied) {
+        comms_failures = 0;
+        comms_last_reply = now;
+        if (comms_lost.exchange(false)) {
+            LOG_INFO("Communication with OCS restored");
+        }
+        return;
+    }
+    const int64_t silence = now - comms_last_reply;
+    if (++comms_failures >= COMMS_LOST_AFTER && silence >= commsSilenceLimitMs() && !comms_lost.exchange(true)) {
+        comms_last_attempt = now;
+        LOGF_ERROR("No reply from OCS for %.1f seconds, retrying every %d seconds",
+                   silence / 1000.0, COMMS_RETRY_MS / 1000);
+    }
+}
+
+/*****************************************************************
+ * OCS blocks while it waits out the roof interlock delays, so allow
+ * for both of them before treating silence as lost communication
+ *****************************************************************/
+int64_t OCS::commsSilenceLimitMs()
+{
+    return static_cast<int64_t>((ROOF_TIME_PRE_MOTION + ROOF_TIME_POST_MOTION) * 1000) + COMMS_SILENCE_MARGIN_MS;
+}
+
+int64_t OCS::steadyMilliseconds()
+{
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::steady_clock::now().time_since_epoch()).count();
 }
 
 /*******************************************************

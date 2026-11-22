@@ -108,8 +108,8 @@ An unterminated 0 is returned from unconfigured items
 // Get the roof/shutter status
 #define OCS_get_roof_status ":RS#"
 // Returns:
-// OPEN#, CLOSED#, c,Travel: n%# (for closing), o,Travel: n%# for opening,
-// i,No Error# for idle or i,Waiting for mount to park#
+// c,s# when closing, o,s# when opening and i,s# when idle, where s is one of
+// OPEN, CLOSED, Travel: n%, No Error, Waiting for mount to park or an error from the list below
 
 // Get the roof/shutter last status error
 #define OCS_get_roof_last_error ":RSL#"
@@ -271,10 +271,12 @@ enum {
 
 // Get the outside temperature in deg. C
 #define OCS_get_outside_temperature ":G1#"
+#define OCS_get_outside_temperature_name ":G1N#"
 // Returns: nnn.n#
 
 // Get the sky IR temperature in deg. C
 #define OCS_get_sky_IR_temperature ":G2#"
+#define OCS_get_sky_IR_temperature_name ":G2N#"
 // Returns: nnn.n#
 
 // Get the sky differential temperature
@@ -290,6 +292,7 @@ enum {
 
 // Get the absolute barometric pressure as Float (mbar, sea-level compensated)
 #define OCS_get_pressure ":Gb#"
+#define OCS_get_pressure_name ":GbN#"
 // Returns: n.nnn#
 // where n ranges from about 980.0 to 1050.0
 
@@ -299,6 +302,7 @@ enum {
 
 // Get relative humidity reading as Float (% Rh)
 #define OCS_get_humidity ":Gh#"
+#define OCS_get_humidity_name ":GhN#"
 // Returns: n.n#
 // where n ranges from 0.0 to 100.0
 
@@ -308,6 +312,7 @@ enum {
 
 // Get rain sensor status
 #define OCS_get_rain_sensor_status ":GR#"
+#define OCS_get_rain_sensor_name ":GRN#"
 // Returns: -1000# for invalid, 0# for N/A, 1# for Rain, 2# for Warn, and 3# for Dry
 
 // Get wind status
@@ -316,6 +321,7 @@ enum {
 
 // Get wind speed
 #define OCS_get_wind_speed ":Gw#"
+#define OCS_get_wind_speed_name ":GwN#"
 // Returns: n# kph, Invalid#, or N/A#
 
 // Get the weather threshold #defines
@@ -441,6 +447,7 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     bool sendOCSCommand(const char *cmd);
     bool sendOCSCommandBlind(const char *cmd);
     int flushIO(int fd);
+    bool setRelayFromSwitch(ISwitchVectorProperty *svp, ISState *states, char *names[], int n, int relay);
     int getCommandSingleCharResponse(int fd, char *data, const char *cmd); //Reimplemented from getCommandString
     int getCommandSingleCharErrorOrLongResponse(int fd, char *data, const char *cmd); //Reimplemented from getCommandString
     int getCommandDoubleResponse(int fd, double *value, char *data,
@@ -448,6 +455,11 @@ class OCS : public INDI::Dome, public INDI::WeatherInterface
     int getCommandIntResponse(int fd, int *value, char *data, const char *cmd);
     int getCommandIntFromCharResponse(int fd, char *data, int *response, const char *cmd); //Calls getCommandSingleCharErrorOrLongResponse with conversion of return
     int charToInt(char *inString);
+    double charToDouble(char *inString);
+    bool commsAvailable();
+    void noteReply(bool replied);
+    int64_t commsSilenceLimitMs();
+    static int64_t steadyMilliseconds();
     void blockUntilClear();
     void clearBlock();
 
@@ -461,6 +473,7 @@ private:
     // Capability queries on connection
     void GetCapabilites();
     bool hasDome = false;
+    bool hasRoof = false;
 
     // Timer for slow updates, once per minute
     INDI::Timer SlowTimer;
@@ -468,12 +481,21 @@ private:
     // Command sequence enforcement
     std::atomic<bool>waitingForResponse {false};
 
+    // No reply handling, see commsAvailable()
+    static constexpr int COMMS_LOST_AFTER = 3;
+    static constexpr int COMMS_RETRY_MS = 5000;
+    static constexpr int COMMS_SILENCE_MARGIN_MS = 5000;
+    std::atomic<int> comms_failures {0};
+    std::atomic<bool> comms_lost {false};
+    std::atomic<int64_t> comms_last_attempt {0};
+    std::atomic<int64_t> comms_last_reply {0};
+
     // Roof/Shutter control
     //---------------------
-    int ROOF_TIME_PRE_MOTION = 0;
-    int ROOF_TIME_POST_MOTION = 0;
-    char last_shutter_status[RB_MAX_LEN];
-    char last_shutter_error[RB_MAX_LEN];
+    double ROOF_TIME_PRE_MOTION = 0;
+    double ROOF_TIME_POST_MOTION = 0;
+    char last_shutter_status[RB_MAX_LEN] {};
+    char last_shutter_error[RB_MAX_LEN] {};
     IPState ControlShutter(ShutterOperation operation) override;
 
     // Dome control
@@ -495,9 +517,9 @@ private:
     // Main control tab controls
     //--------------------------
     ITextVectorProperty ShutterStatusTP;
-    IText ShutterStatusT[1];
+    IText ShutterStatusT[1] {};
     ITextVectorProperty DomeStatusTP;
-    IText DomeStatusT[1];
+    IText DomeStatusT[1] {};
     enum {
         DOME_SET_PARK,
         DOME_RETURN_HOME,
@@ -562,7 +584,7 @@ private:
         THERMOSTAT_HUMIDITY_RELAY,
         THERMOSTAT_RELAY_COUNT
     };
-    int thermostat_relays[THERMOSTAT_RELAY_COUNT];
+    int thermostat_relays[THERMOSTAT_RELAY_COUNT] {};
 
     // Power tab controls
     //-------------------
@@ -578,7 +600,7 @@ private:
         POWER_DEVICE_COUNT
     };
 
-    int power_device_relays[POWER_DEVICE_COUNT];
+    int power_device_relays[POWER_DEVICE_COUNT] {};
     char POWER_DEVICE1_NAME[RB_MAX_LEN];
     char POWER_DEVICE2_NAME[RB_MAX_LEN];
     char POWER_DEVICE3_NAME[RB_MAX_LEN];
@@ -645,7 +667,7 @@ private:
         LIGHT_COUNT
     };
 
-    int light_relays[LIGHT_COUNT];
+    int light_relays[LIGHT_COUNT] {};
 
     ISwitchVectorProperty LIGHT_WRWSP;
     ISwitch LIGHT_WRWS[SWITCH_TOGGLE_COUNT];
@@ -677,14 +699,37 @@ private:
         WEATHER_MEASUREMENTS_COUNT
     };
 
-    int weather_enabled[WEATHER_MEASUREMENTS_COUNT];
+    int weather_enabled[WEATHER_MEASUREMENTS_COUNT] {};
+
+    // Measurements before WEATHER_CLOUD feed the safety status, the rest are display only
+    static constexpr int WEATHER_SAFETY_COUNT = WEATHER_CLOUD;
+    // A sensor that returned a bad reading is read again after this long
+    static constexpr uint32_t WEATHER_REPOLL_MS = 10000;
+    // Written to a failed sensor's parameter to force Alert, as NaN passes every limit check
+    static constexpr double WEATHER_INVALID_VALUE = -9999;
+
+    // First bad reading seen, 10 second re-poll pending
+    bool weather_suspect[WEATHER_SAFETY_COUNT] {};
+    // Two consecutive bad readings, parameter held out of range until a valid reading
+    bool weather_failed[WEATHER_SAFETY_COUNT] {};
+    INDI::Timer WeatherRepollTimers[WEATHER_SAFETY_COUNT];
+
+    const char *weatherCommand(int measurement);
+    bool weatherSensorNamed(const char *name_command);
+    bool weatherSensorConfigured(int measurement);
+    const char *weatherParameterName(int measurement);
+    bool readWeatherMeasurement(int measurement, double &value, char *response);
+    void handleGoodWeatherReading(int measurement, double value);
+    void handleBadWeatherReading(int measurement);
+    void WeatherRepollHit(int measurement);
+    void resetWeatherFaults();
 
     ITextVectorProperty Weather_CloudTP;
-    IText Weather_CloudT[1];
+    IText Weather_CloudT[1] {};
     ITextVectorProperty Weather_SkyTP;
-    IText Weather_SkyT[1];
+    IText Weather_SkyT[1] {};
     ITextVectorProperty Weather_Sky_TempTP;
-    IText Weather_Sky_TempT[1];
+    IText Weather_Sky_TempT[1] {};
 
     // Manual tab controls
     //--------------------

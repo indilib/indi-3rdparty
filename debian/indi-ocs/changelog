@@ -1,3 +1,9 @@
+indi-ocs (1.7) nobel; urgency=medium
+
+  * New release - Fixed crashes on roof faults and dome goto errors, weather
+    sensor failure detection, rain limits, relay, thermostat and park fixes,
+    lost communication handling and tests against a mock OCS controller
+
 indi-ocs (1.6) nobel; urgency=medium
 
   * New release - Fixed another shutdown issue
