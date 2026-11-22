@@ -42,9 +42,18 @@ class TestWheel : public POAWHEEL
         using POAWHEEL::TimerHit;
         using POAWHEEL::SelectFilter;
 
-        int slot() const { return CurrentFilter; }
-        int target() const { return TargetFilter; }
-        IPState slotState() const { return FilterSlotNP.getState(); }
+        int slot() const
+        {
+            return CurrentFilter;
+        }
+        int target() const
+        {
+            return TargetFilter;
+        }
+        IPState slotState() const
+        {
+            return FilterSlotNP.getState();
+        }
 };
 
 void connect(TestWheel &wheel)
@@ -146,41 +155,66 @@ void finishHotplugTest(void *context)
 
 extern "C"
 {
-int POAGetPWCount() { return static_cast<int>(devices.size()); }
-PWErrors POAGetPWProperties(int index, PWProperties *info)
-{
-    if (index == failIndex || index < 0 || static_cast<size_t>(index) >= devices.size())
-        return PW_ERROR_INVALID_INDEX;
-    *info = devices[index];
-    return PW_OK;
-}
-PWErrors POAGetPWPropertiesByHandle(int handle, PWProperties *info)
-{
-    for (const auto &device : devices)
-        if (device.Handle == handle)
-        {
-            *info = device;
-            return PW_OK;
-        }
-    return PW_ERROR_INVALID_HANDLE;
-}
-PWErrors POAOpenPW(int) { ++openCount; return PW_OK; }
-PWErrors POAClosePW(int)
-{
-    ++closeCount;
-    lastClose = std::chrono::steady_clock::now();
-    return closeResult;
-}
-PWErrors POAGetPWState(int, PWState *value) { *value = state; return stateResult; }
-PWErrors POAGetCurrentPosition(int, int *value)
-{
-    *value = position;
-    return positionResult;
-}
-PWErrors POAGotoPosition(int, int) { ++gotoCount; return PW_OK; }
-PWErrors POAGetOneWay(int, int *value) { *value = 0; return PW_OK; }
-PWErrors POASetOneWay(int, int) { return PW_OK; }
-PWErrors POAResetPW(int) { return PW_OK; }
+    int POAGetPWCount()
+    {
+        return static_cast<int>(devices.size());
+    }
+    PWErrors POAGetPWProperties(int index, PWProperties *info)
+    {
+        if (index == failIndex || index < 0 || static_cast<size_t>(index) >= devices.size())
+            return PW_ERROR_INVALID_INDEX;
+        *info = devices[index];
+        return PW_OK;
+    }
+    PWErrors POAGetPWPropertiesByHandle(int handle, PWProperties *info)
+    {
+        for (const auto &device : devices)
+            if (device.Handle == handle)
+            {
+                *info = device;
+                return PW_OK;
+            }
+        return PW_ERROR_INVALID_HANDLE;
+    }
+    PWErrors POAOpenPW(int)
+    {
+        ++openCount;
+        return PW_OK;
+    }
+    PWErrors POAClosePW(int)
+    {
+        ++closeCount;
+        lastClose = std::chrono::steady_clock::now();
+        return closeResult;
+    }
+    PWErrors POAGetPWState(int, PWState *value)
+    {
+        *value = state;
+        return stateResult;
+    }
+    PWErrors POAGetCurrentPosition(int, int *value)
+    {
+        *value = position;
+        return positionResult;
+    }
+    PWErrors POAGotoPosition(int, int)
+    {
+        ++gotoCount;
+        return PW_OK;
+    }
+    PWErrors POAGetOneWay(int, int *value)
+    {
+        *value = 0;
+        return PW_OK;
+    }
+    PWErrors POASetOneWay(int, int)
+    {
+        return PW_OK;
+    }
+    PWErrors POAResetPW(int)
+    {
+        return PW_OK;
+    }
 }
 
 int main(int argc, char **argv)

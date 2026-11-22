@@ -13,7 +13,10 @@
 PlayerOneWheelHotPlugHandler::PlayerOneWheelHotPlugHandler()
 {
     mRetryTimer.setInterval(2000);
-    mRetryTimer.callOnTimeout([this]() { retryDiscovery(); });
+    mRetryTimer.callOnTimeout([this]()
+    {
+        retryDiscovery();
+    });
 }
 
 PlayerOneWheelHotPlugHandler::~PlayerOneWheelHotPlugHandler()
@@ -99,9 +102,9 @@ std::shared_ptr<INDI::DefaultDevice> PlayerOneWheelHotPlugHandler::createDevice(
 
         std::string name = baseName;
         unsigned int suffix = 1;
-        auto nameInUse = [&](const std::string &candidate)
+        auto nameInUse = [&](const std::string & candidate)
         {
-            return std::any_of(mDevices.begin(), mDevices.end(), [&](const auto &entry)
+            return std::any_of(mDevices.begin(), mDevices.end(), [&](const auto & entry)
             {
                 return candidate == entry.second->getDeviceName();
             });
