@@ -74,6 +74,10 @@ cd indi-playerone
 %{_datadir}/indi
 
 %changelog
+* Sun Nov 22 2026 Hiroshi Saito <hiro3110g@gmail.com>
+- Add: hotplug and nickname support for filter wheels
+- Replace blocking startup and filter movement waits with timer-based polling
+- BugFix: Filter wheel connection, calibration and timeout handling
 * Mon Oct 26 2026 Hiroshi Saito <hiro3110g@gmail.com>
 - BugFix: Fix type handling for camera config
 - Improved streaming video stability

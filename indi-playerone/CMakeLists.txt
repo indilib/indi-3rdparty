@@ -13,7 +13,7 @@ find_package(USB1 REQUIRED)
 find_package(Threads REQUIRED)
 
 set(PLAYERONE_VERSION_MAJOR 1)
-set(PLAYERONE_VERSION_MINOR 25)
+set(PLAYERONE_VERSION_MINOR 26)
 
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/config.h.cmake ${CMAKE_CURRENT_BINARY_DIR}/config.h )
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/indi_playerone.xml.cmake ${CMAKE_CURRENT_BINARY_DIR}/indi_playerone.xml)
@@ -46,13 +46,29 @@ add_executable(indi_playerone_single_ccd ${indi_playerone_single_SRCS})
 target_link_libraries(indi_playerone_single_ccd ${INDI_LIBRARIES} ${CFITSIO_LIBRARIES} ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${ZLIB_LIBRARY} ${CMAKE_THREAD_LIBS_INIT})
 
 ########### indi_playerone_wheel ###########
-add_executable(indi_playerone_wheel ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel.cpp)
+add_executable(indi_playerone_wheel
+    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel_hotplug_handler.cpp)
 IF (APPLE)
 set(CMAKE_EXE_LINKER_FLAGS "-framework IOKit -framework CoreFoundation")
 target_link_libraries(indi_playerone_wheel ${INDI_LIBRARIES} ${PLAYERONE_LIBRARIES} ${LIBUSB_LIBRARIES})
 ELSE()
 target_link_libraries(indi_playerone_wheel ${INDI_LIBRARIES} ${PLAYERONE_LIBRARIES} ${USB1_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
 ENDIF()
+
+if(INDI_BUILD_UNITTESTS)
+    enable_testing()
+    add_executable(playerone_wheel_unit_test
+        ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel_unit_test.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel.cpp
+        ${CMAKE_CURRENT_SOURCE_DIR}/playerone_wheel_hotplug_handler.cpp)
+    target_compile_definitions(playerone_wheel_unit_test PRIVATE PLAYERONE_WHEEL_DISABLE_LOADER)
+    target_link_libraries(playerone_wheel_unit_test ${INDI_LIBRARIES} ${CMAKE_THREAD_LIBS_INIT})
+    add_test(NAME playerone_wheel_unit_test COMMAND playerone_wheel_unit_test)
+    add_test(NAME playerone_wheel_startup_ready_test COMMAND playerone_wheel_unit_test ready)
+    add_test(NAME playerone_wheel_startup_timeout_test COMMAND playerone_wheel_unit_test timeout)
+    add_test(NAME playerone_wheel_hotplug_test COMMAND playerone_wheel_unit_test hotplug)
+endif()
 
 ########### playerone_camera_test ###########
 add_executable(playerone_camera_test ${CMAKE_CURRENT_SOURCE_DIR}/playerone_camera_test.cpp)

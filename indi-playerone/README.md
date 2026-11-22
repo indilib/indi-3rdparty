@@ -1,5 +1,5 @@
 This is the INDI driver for the Player One Astronomy's cameras. It was tested
-with the Neptune-C II but, hopefully, should work with
+with the Poseidon-C Pro, Saturn-C SQR, Neptune-C II and Sedna-M but, hopefully, should work with
 other cameras from Player One Astronomy too.
 
 COMPILING
@@ -37,6 +37,17 @@ The driver was tested with KStars/EKOS as a remote INDI
 server (just select remote driver, the IP of machine where indi_playerone_ccd
 is running and the default port 7624). Connect to the camera you want
 to use and have fun!
+
+FILTER WHEEL
+
+`indi_playerone_wheel` detects wheels connected after the driver starts.
+After connecting, the connection remains busy while the wheel completes its
+power-on rotation. The driver allows at least 20 seconds of scheduled waiting,
+not counting time spent in SDK calls. Filter controls appear when the wheel is
+ready. If initialization times out, retry connecting after the wheel has stopped.
+Moving and calibration have separate 60-second and 5-minute timeouts.
+Individual SDK calls are synchronous and may still block if the SDK itself
+does not return promptly.
 
 NOTES
 

@@ -26,125 +26,44 @@
  */
 
 #include "playerone_wheel.h"
-
+#include "playerone_wheel_hotplug_handler.h"
 #include "config.h"
 
-#include <string.h>
-#include <unistd.h>
-#include <deque>
+#include <hotplugmanager.h>
+#include <cstring>
 #include <memory>
-#include <thread>
-#include <chrono>
 
-//#define SIMULATION
-#define WAIT_AFTER_OPEN_DEVICE
+namespace
+{
+constexpr int STARTUP_WAIT_MS = 20000;
+constexpr int MOVE_TIMEOUT_MS = 60000;
+constexpr int CALIBRATION_TIMEOUT_MS = 300000;
 
+#ifndef PLAYERONE_WHEEL_DISABLE_LOADER
 static class Loader
 {
-        std::deque<std::unique_ptr<POAWHEEL>> wheels;
+        std::shared_ptr<PlayerOneWheelHotPlugHandler> mHandler;
     public:
         Loader()
         {
-#ifdef SIMULATION
-            PWProperties info;
-            info.Handle = 1;
-            strncpy(info.Name, "Simulated EFW8", 64);
-            info.slotNum = 0;
-            wheels.push_back(std::unique_ptr<POAWHEEL>(new POAWHEEL(info, info.Name)));
-#else
-            int num_wheels = POAGetPWCount();
-
-            if (num_wheels <= 0)
-            {
-                IDLog("No PlayerOne EFW detected.");
-                return;
-            }
-            int num_wheels_ok = 0;
-#ifndef WAIT_AFTER_OPEN_DEVICE
-            int interval = 250;       // millisecond
-            int elapsed_time = 0;
-#endif // WAIT_AFTER_OPEN_DEVICE
-            for (int i = 0; i < num_wheels; i++)
-            {
-                PWProperties info;
-                PWErrors result = POAGetPWProperties(i, &info);
-                if (result != PW_OK)
-                {
-                    IDLog("ERROR: PlayerOne EFW %d POAGetPWProperties error %d.", i + 1, result);
-                    continue;
-                }
-                int id = info.Handle;
-                result = POAGetPWPropertiesByHandle(id, &info);
-                if (result != PW_OK /*&& result != EFW_ERROR_CLOSED*/)   // TODO: remove the ERROR_CLOSED hack
-                {
-                    IDLog("ERROR: PlayerOne EFW %d POAGetPWPropertiesByHandle error %d.", i + 1, result);
-                    continue;
-                }
-
-                // Skip devices with invalid/error names reported by the SDK
-                if (strcasestr(info.Name, "error") != nullptr)
-                {
-                    IDLog("ERROR: PlayerOne EFW %d has invalid name '%s', skipping.", i + 1, info.Name);
-                    continue;
-                }
-
-#ifndef WAIT_AFTER_OPEN_DEVICE
-                PWState state;
-                result = POAGetPWState(id, &state);
-                if (result != PW_OK)
-                {
-                    IDLog("ERROR: PlayerOne EFW %d POAGetPWState error %d.", i + 1, result);
-                    return;
-                }
-
-                // Wait for initial moving in case of just after plugged-in the device
-                while (state == PW_STATE_MOVING && elapsed_time < POA_EFW_TIMEOUT)
-                {
-                    std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-                    result = POAGetPWState(id, &state);
-                    if (result != PW_OK)
-                    {
-                        IDLog("ERROR: PlayerOne EFW %d POAGetPWState error %d.", i + 1, result);
-                        return;
-                    }
-                    elapsed_time += interval;
-                }
-
-                if (state == PW_STATE_MOVING)
-                {
-                    IDLog("ERROR: PlayerOne EFW %d time out initial moving. state = %d.", i + 1, state);
-                    return;
-                }
-#endif // WAIT_AFTER_OPEN_DEVICE
-
-                std::string name = "PlayerOne " + std::string(info.Name);
-
-                // If we only have a single device connected
-                // then favor the INDIDEV driver label over the auto-generated name above
-                if (num_wheels == 1)
-                {
-                    char *envDev = getenv("INDIDEV");
-                    if (envDev && envDev[0])
-                        name = envDev;
-                }
-                else
-                    name += " " + std::to_string(i);
-
-                wheels.push_back(std::unique_ptr<POAWHEEL>(new POAWHEEL(info, name.c_str())));
-                num_wheels_ok++;
-            }
-            IDLog("%d PlayerOne EFW attached out of %d detected.", num_wheels_ok, num_wheels);
-#endif
+            mHandler = std::make_shared<PlayerOneWheelHotPlugHandler>();
+            auto &manager = INDI::HotPlugManager::getInstance();
+            manager.registerHandler(mHandler);
+            manager.setNonUdevPollingDuration(0);
+            manager.start(1000);
         }
 } loader;
+#endif
+}
 
 POAWHEEL::POAWHEEL(const PWProperties &info, const char *name)
+    : fw_id(info.Handle), mSerialNumber(info.SN, strnlen(info.SN, sizeof(info.SN)))
 {
-    fw_id              = info.Handle;
-    CurrentFilter      = 0;
+    CurrentFilter = 0;
     FilterSlotNP[0].setMin(0);
     FilterSlotNP[0].setMax(0);
-    setDeviceName(name);
+    if (mSerialNumber.empty() || !setDeviceNicknameFromId(mSerialNumber.c_str()))
+        setDeviceName(name);
     setVersion(PLAYERONE_VERSION_MAJOR, PLAYERONE_VERSION_MINOR);
 }
 
@@ -162,111 +81,68 @@ bool POAWHEEL::Connect()
 {
     if (isSimulation())
     {
-        LOG_INFO("Simulation connected.");
-        fw_id = 0;
         FilterSlotNP[0].setMin(1);
         FilterSlotNP[0].setMax(8);
+        CurrentFilter = TargetFilter = 1;
+        mPhase = Phase::Ready;
+        return true;
     }
-    else if (fw_id >= 0)
+
+    if (fw_id < 0)
     {
-        PWErrors result = POAOpenPW(fw_id);
-        if (result != PW_OK)
-        {
-            LOGF_ERROR("%s(): POAOpenPW() = %d", __FUNCTION__, result);
-            return false;
-        }
-
-#ifdef WAIT_AFTER_OPEN_DEVICE
-        PWState state;
-        result = POAGetPWState(fw_id, &state);
-        if (result != PW_OK)
-        {
-            LOGF_ERROR("%s(): POAGetPWState() = %d", __FUNCTION__, result);
-            return false;
-        }
-
-        // Wait for initial moving in case of just after plugged-in the device
-        int interval = getCurrentPollingPeriod();       // millisecond
-        int elapsed_time = 0;
-        while (state != PW_STATE_OPENED && elapsed_time < POA_EFW_TIMEOUT)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-            result = POAGetPWState(fw_id, &state);
-            if (result != PW_OK)
-            {
-                LOGF_ERROR("%s(): POAGetPWState() = %d", __FUNCTION__, result);
-                return false;
-            }
-            elapsed_time += interval;
-        }
-
-        if (state != PW_STATE_OPENED)
-        {
-            LOGF_ERROR("%s(): Can't open device. state = %d", __FUNCTION__, state);
-            return false;
-        }
-#endif // WAIT_AFTER_OPEN_DEVICE
-
-        PWProperties info;
-        result = POAGetPWPropertiesByHandle(fw_id, &info);
-        if (result != PW_OK)
-        {
-            LOGF_ERROR("%s(): POAGetPWPropertiesByHandle() = %d", __FUNCTION__, result);
-            return false;
-        }
-
-        LOGF_INFO("Detected %d-position filter wheel.", info.PositionCount);
-
-        FilterSlotNP[0].setMin(1);
-        FilterSlotNP[0].setMax(info.PositionCount);
-
-        // get current filter
-        int current;
-        result = POAGetCurrentPosition(fw_id, &current);
-        if (result != PW_OK)
-        {
-            LOGF_ERROR("%s(): POAGetCurrentPosition() = %d", __FUNCTION__, result);
-            return false;
-        }
-
-        SelectFilter(current + 1);
-        LOGF_DEBUG("%s(): current filter position %d", __FUNCTION__, CurrentFilter);
-    }
-    else
-    {
-        LOGF_INFO("%s(): no filter wheel known, fw_id = %d", __FUNCTION__, fw_id);
+        LOG_ERROR("No filter wheel handle available.");
         return false;
     }
+    if (mOpen)
+    {
+        LOG_ERROR("The filter wheel is still open after a failed close.");
+        return false;
+    }
+
+    PWErrors result = POAOpenPW(fw_id);
+    if (result != PW_OK)
+    {
+        LOGF_ERROR("POAOpenPW failed: %d", result);
+        return false;
+    }
+
+    mOpen = true;
+    mPhase = Phase::Starting;
+    mStartupWaitMs = 0;
+    mScheduledWaitMs = getCurrentPollingPeriod();
+    SetTimer(mScheduledWaitMs);
+    LOG_INFO("Waiting for the filter wheel's initial rotation.");
     return true;
 }
 
 bool POAWHEEL::Disconnect()
 {
-    if (isSimulation())
-        LOG_INFO("Simulation disconnected.");
-    else if (fw_id >= 0)
+    RemoveTimer(0);
+    mPhase = Phase::Idle;
+    CalibrateSP.s = IPS_IDLE;
+    FilterSlotNP.setState(IPS_IDLE);
+    if (!mOpen)
+        return true;
+
+    PWErrors result = POAClosePW(fw_id);
+    if (result != PW_OK)
     {
-        PWErrors result = POAClosePW(fw_id);
-        if (result != PW_OK)
-        {
-            LOGF_ERROR("%s(): POAClosePW() = %d", __FUNCTION__, result);
-            return false;
-        }
-    }
-    else
-    {
-        LOGF_INFO("%s(): no filter wheel known, fw_id = %d", __FUNCTION__, fw_id);
+        LOGF_ERROR("POAClosePW failed: %d", result);
         return false;
     }
-    // NOTE: do not unset fw_id here, otherwise we cannot reconnect without reloading the driver
+    mOpen = false;
     return true;
+}
+
+void POAWHEEL::unplug()
+{
+    Disconnect();
 }
 
 bool POAWHEEL::initProperties()
 {
     INDI::FilterWheel::initProperties();
 
-    // Unidirectional motion
     IUFillSwitch(&UniDirectionalS[INDI_ENABLED], "INDI_ENABLED", "Enable", ISS_OFF);
     IUFillSwitch(&UniDirectionalS[INDI_DISABLED], "INDI_DISABLED", "Disable", ISS_ON);
     IUFillSwitchVector(&UniDirectionalSP, UniDirectionalS, 2, getDeviceName(), "FILTER_UNIDIRECTIONAL_MOTION", "Uni Direction",
@@ -276,52 +152,97 @@ bool POAWHEEL::initProperties()
     IUFillSwitchVector(&CalibrateSP, CalibrateS, 1, getDeviceName(), "FILTER_CALIBRATION", "Calibrate",
                        MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 0, IPS_IDLE);
 
+    SerialNumberTP[0].fill("SN", "SN", mSerialNumber);
+    SerialNumberTP.fill(getDeviceName(), "Serial Number", "Serial Number", INFO_TAB, IP_RO, 60, IPS_IDLE);
     addAuxControls();
+    addNicknameControl();
     setDefaultPollingPeriod(250);
     return true;
 }
 
 bool POAWHEEL::updateProperties()
 {
-    INDI::FilterWheel::updateProperties();
+    if (mPhase == Phase::Starting)
+    {
+        // DefaultDevice treats BUSY as disconnected, so defer filter properties.
+        INDI::DefaultDevice::updateProperties();
+        setConnected(true, IPS_BUSY);
+        return true;
+    }
 
+    INDI::FilterWheel::updateProperties();
     if (isConnected())
     {
-        int isUniDirection = false;
-        if (!isSimulation() && POAGetOneWay(fw_id, &isUniDirection) == PW_OK)
+        int isUniDirection = 0;
+        if (!isSimulation())
         {
-            UniDirectionalS[INDI_ENABLED].s = (isUniDirection == 1 ? ISS_ON : ISS_OFF);
-            UniDirectionalS[INDI_DISABLED].s = (isUniDirection == 1 ? ISS_OFF : ISS_ON);
+            PWErrors result = POAGetOneWay(fw_id, &isUniDirection);
+            if (result != PW_OK)
+                LOGF_WARN("POAGetOneWay failed: %d", result);
         }
+        UniDirectionalS[INDI_ENABLED].s = isUniDirection ? ISS_ON : ISS_OFF;
+        UniDirectionalS[INDI_DISABLED].s = isUniDirection ? ISS_OFF : ISS_ON;
         defineProperty(&UniDirectionalSP);
         defineProperty(&CalibrateSP);
+        if (!mSerialNumber.empty())
+            defineProperty(SerialNumberTP);
     }
     else
     {
         deleteProperty(UniDirectionalSP.name);
         deleteProperty(CalibrateSP.name);
+        if (!mSerialNumber.empty())
+            deleteProperty(SerialNumberTP);
     }
-
     return true;
 }
 
 bool POAWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n)
 {
-    if (dev != nullptr && !strcmp(dev, getDeviceName()))
+    if (dev && !strcmp(dev, getDeviceName()))
     {
+        if ((mPhase == Phase::Starting || (mOpen && !isConnected())) && !strcmp(name, "CONNECTION"))
+        {
+            for (int i = 0; i < n; ++i)
+            {
+                if (!strcmp(names[i], "DISCONNECT") && states[i] == ISS_ON)
+                {
+                    if (!Disconnect())
+                    {
+                        setConnected(true, IPS_ALERT);
+                        return true;
+                    }
+                    setConnected(false, IPS_IDLE);
+                    return true;
+                }
+                if (mPhase == Phase::Starting && !strcmp(names[i], "CONNECT") && states[i] == ISS_ON)
+                {
+                    setConnected(true, IPS_BUSY);
+                    return true;
+                }
+            }
+        }
         if (!strcmp(name, UniDirectionalSP.name))
         {
-            PWErrors rc = POASetOneWay(fw_id, !strcmp(IUFindOnSwitchName(states, names, n),
-                                       UniDirectionalS[INDI_ENABLED].name));
-            if (rc == PW_OK)
+            const char *selected = IUFindOnSwitchName(states, names, n);
+            if (!selected)
             {
-                IUUpdateSwitch(&UniDirectionalSP, states, names, n);
-                UniDirectionalSP.s = IPS_OK;
+                LOG_ERROR("No direction selected.");
+                UniDirectionalSP.s = IPS_ALERT;
             }
             else
             {
-                LOGF_ERROR("%s(): POASetOneWay = %d", __FUNCTION__, rc);
-                UniDirectionalSP.s = IPS_ALERT;
+                PWErrors result = isSimulation() ? PW_OK : POASetOneWay(fw_id, !strcmp(selected, UniDirectionalS[INDI_ENABLED].name));
+                if (result == PW_OK)
+                {
+                    IUUpdateSwitch(&UniDirectionalSP, states, names, n);
+                    UniDirectionalSP.s = IPS_OK;
+                }
+                else
+                {
+                    LOGF_ERROR("POASetOneWay failed: %d", result);
+                    UniDirectionalSP.s = IPS_ALERT;
+                }
             }
             IDSetSwitch(&UniDirectionalSP, nullptr);
             return true;
@@ -329,127 +250,218 @@ bool POAWHEEL::ISNewSwitch(const char *dev, const char *name, ISState *states, c
         if (!strcmp(name, CalibrateSP.name))
         {
             CalibrateS[0].s = ISS_OFF;
-
-            if (isSimulation())
-                return true;
-
-            CalibrateSP.s   = IPS_BUSY;
-            IDSetSwitch(&CalibrateSP, nullptr);
-
-            // make the set filter number busy
-            FilterSlotNP.setState(IPS_BUSY);
-            FilterSlotNP.apply();
-
-            LOGF_DEBUG("Calibrating EFW %d", fw_id);
-            PWErrors rc = POAResetPW(fw_id);
-
-            if (rc == PW_OK)
+            if (mPhase != Phase::Ready)
             {
-                IEAddTimer(getCurrentPollingPeriod(), POAWHEEL::TimerHelperCalibrate, this);
-                return true;
-            }
-            else
-            {
-                LOGF_ERROR("%(): POAResetPW = %d", __FUNCTION__, rc);
+                LOG_ERROR("Cannot calibrate while the wheel is busy.");
                 CalibrateSP.s = IPS_ALERT;
                 IDSetSwitch(&CalibrateSP, nullptr);
-
-                // reset filter slot state
-                FilterSlotNP.setState(IPS_OK);
-                FilterSlotNP.apply();
-                return false;
+                return true;
             }
+            PWErrors result = isSimulation() ? PW_OK : POAResetPW(fw_id);
+            if (result != PW_OK)
+            {
+                LOGF_ERROR("POAResetPW failed: %d", result);
+                CalibrateSP.s = IPS_ALERT;
+                IDSetSwitch(&CalibrateSP, nullptr);
+                return true;
+            }
+            CalibrateSP.s = IPS_BUSY;
+            IDSetSwitch(&CalibrateSP, nullptr);
+            FilterSlotNP.setState(IPS_BUSY);
+            FilterSlotNP.apply();
+            mPhase = Phase::Calibrating;
+            mOperationTimer.start();
+            SetTimer(getCurrentPollingPeriod());
+            return true;
         }
     }
-
     return INDI::FilterWheel::ISNewSwitch(dev, name, states, names, n);
+}
+
+bool POAWHEEL::ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n)
+{
+    if (dev && !strcmp(dev, getDeviceName()) && !strcmp(name, "FILTER_SLOT") && mPhase != Phase::Ready)
+    {
+        LOG_ERROR("Cannot select a filter while the wheel is busy.");
+        FilterSlotNP.apply();
+        return true;
+    }
+    return INDI::FilterWheel::ISNewNumber(dev, name, values, names, n);
+}
+
+bool POAWHEEL::readPosition(int &position)
+{
+    PWErrors result = POAGetCurrentPosition(fw_id, &position);
+    if (result != PW_OK)
+    {
+        if (result != PW_ERROR_IS_MOVING)
+            LOGF_ERROR("POAGetCurrentPosition failed: %d", result);
+        return false;
+    }
+    ++position;
+    if (position < 1 || position > FilterSlotNP[0].getMax())
+    {
+        LOGF_ERROR("Invalid filter position: %d", position);
+        return false;
+    }
+    return true;
 }
 
 int POAWHEEL::QueryFilter()
 {
     if (isSimulation())
         return CurrentFilter;
-
-    if (fw_id >= 0)
-    {
-        PWErrors result;
-        result = POAGetCurrentPosition(fw_id, &CurrentFilter);
-        if (result != PW_OK)
-        {
-            LOGF_ERROR("%s(): POAGetCurrentPosition() = %d", __FUNCTION__, result);
-            return 0;
-        }
-        CurrentFilter++;
-    }
-    else
-    {
-        LOGF_INFO("%s(): no filter wheel known, fw_id = %d", __FUNCTION__, fw_id);
+    int position = 0;
+    if (!readPosition(position))
         return 0;
-    }
-
+    CurrentFilter = position;
     return CurrentFilter;
 }
 
 bool POAWHEEL::SelectFilter(int f)
 {
-    TargetFilter = f;
-    if (isSimulation())
+    if (mPhase != Phase::Ready)
     {
-        CurrentFilter = TargetFilter;
-        return true;
-    }
-
-    if (fw_id >= 0)
-    {
-        PWErrors result;
-        result = POAGotoPosition(fw_id, f - 1);
-        if (result == PW_OK)
-        {
-            int interval = getCurrentPollingPeriod();	// millisecond
-            SetTimer(interval);
-            int elapsed_time = 0;
-            do
-            {
-                std::this_thread::sleep_for(std::chrono::milliseconds(interval));
-                result = POAGetCurrentPosition(fw_id, &CurrentFilter);
-                elapsed_time += interval;
-            }
-            while (result != PW_OK && elapsed_time < POA_EFW_TIMEOUT);
-
-            if (result != PW_OK)
-            {
-                LOGF_ERROR("%s(): POAGotoPosition() = %d", __FUNCTION__, result);
-                return false;
-            }
-            CurrentFilter++;
-            if (CurrentFilter != TargetFilter)
-            {
-                LOGF_ERROR("%s(): POAGotoPosition() CurrentFilter = %d is not TargetFilter", __FUNCTION__, CurrentFilter);
-                return false;
-            }
-        }
-        else
-        {
-            LOGF_ERROR("%s(): POAGotoPosition() = %d", __FUNCTION__, result);
-            return false;
-        }
-    }
-    else
-    {
-        LOGF_INFO("%s(): no filter wheel known, fw_id = %d", __FUNCTION__, fw_id);
+        LOG_ERROR("Cannot select a filter while the wheel is busy.");
         return false;
     }
+    PWErrors result = isSimulation() ? PW_OK : POAGotoPosition(fw_id, f - 1);
+    if (result != PW_OK)
+    {
+        LOGF_ERROR("POAGotoPosition failed: %d", result);
+        return false;
+    }
+    TargetFilter = f;
+    if (isSimulation())
+        CurrentFilter = f;
+    mPhase = Phase::Moving;
+    mOperationTimer.start();
+    SetTimer(getCurrentPollingPeriod());
     return true;
+}
+
+void POAWHEEL::failOperation(const char *message)
+{
+    LOG_ERROR(message);
+    if (mPhase == Phase::Starting)
+    {
+        Disconnect();
+        setConnected(false, IPS_ALERT);
+        return;
+    }
+    if (mPhase == Phase::Calibrating)
+    {
+        CalibrateSP.s = IPS_ALERT;
+        IDSetSwitch(&CalibrateSP, nullptr);
+    }
+    mPhase = Phase::Ready;
+    FilterSlotNP.setState(IPS_ALERT);
+    FilterSlotNP.apply();
 }
 
 void POAWHEEL::TimerHit()
 {
-    QueryFilter();
+    if (mPhase == Phase::Idle || mPhase == Phase::Ready)
+        return;
 
-    if (CurrentFilter != TargetFilter)
+    if (mPhase == Phase::Starting)
+    {
+        mStartupWaitMs += mScheduledWaitMs;
+        PWState state;
+        PWErrors result = POAGetPWState(fw_id, &state);
+        if (result != PW_OK)
+        {
+            LOGF_ERROR("POAGetPWState failed: %d", result);
+            failOperation("Failed to initialize the filter wheel.");
+            return;
+        }
+        if (state == PW_STATE_OPENED)
+        {
+            PWProperties info {};
+            result = POAGetPWPropertiesByHandle(fw_id, &info);
+            if (result != PW_OK || info.PositionCount <= 0)
+            {
+                LOGF_ERROR("Invalid wheel properties (result %d, slots %d).", result, info.PositionCount);
+                failOperation("Failed to initialize the filter wheel.");
+                return;
+            }
+            FilterSlotNP[0].setMin(1);
+            FilterSlotNP[0].setMax(info.PositionCount);
+            int position;
+            result = POAGetCurrentPosition(fw_id, &position);
+            if (result == PW_OK && position >= 0 && position < info.PositionCount)
+            {
+                CurrentFilter = TargetFilter = position + 1;
+                FilterSlotNP[0].setValue(CurrentFilter);
+                FilterSlotNP.setState(IPS_OK);
+                mPhase = Phase::Ready;
+                setConnected(true, IPS_OK);
+                updateProperties();
+                LOGF_INFO("Detected %d-position filter wheel at slot %d.", info.PositionCount, CurrentFilter);
+                return;
+            }
+            if (result != PW_ERROR_IS_MOVING)
+            {
+                LOGF_ERROR("Invalid initial position (result %d, position %d).", result, result == PW_OK ? position : -1);
+                failOperation("Failed to initialize the filter wheel.");
+                return;
+            }
+        }
+        if (mStartupWaitMs >= STARTUP_WAIT_MS)
+        {
+            failOperation("Timed out waiting for the filter wheel's initial rotation.");
+            return;
+        }
+        mScheduledWaitMs = getCurrentPollingPeriod();
+        SetTimer(mScheduledWaitMs);
+        return;
+    }
+
+    if (!isConnected())
+        return;
+
+    const int timeout = mPhase == Phase::Calibrating ? CALIBRATION_TIMEOUT_MS : MOVE_TIMEOUT_MS;
+    if (mOperationTimer.elapsed() >= timeout)
+    {
+        failOperation(mPhase == Phase::Calibrating ? "Filter wheel calibration timed out." : "Filter wheel movement timed out.");
+        return;
+    }
+
+    int position = CurrentFilter;
+    if (!isSimulation())
+    {
+        PWErrors result = POAGetCurrentPosition(fw_id, &position);
+        if (result == PW_ERROR_IS_MOVING)
+        {
+            SetTimer(getCurrentPollingPeriod());
+            return;
+        }
+        if (result != PW_OK)
+        {
+            LOGF_ERROR("POAGetCurrentPosition failed: %d", result);
+            failOperation("Failed to read the filter wheel position.");
+            return;
+        }
+        ++position;
+    }
+    if (position < 1 || position > FilterSlotNP[0].getMax())
+    {
+        failOperation("Filter wheel reported an invalid position.");
+        return;
+    }
+    if (mPhase == Phase::Moving && position != TargetFilter)
+    {
         SetTimer(getCurrentPollingPeriod());
-    else
-        SelectFilterDone(CurrentFilter);
+        return;
+    }
+    if (mPhase == Phase::Calibrating)
+    {
+        CalibrateSP.s = IPS_OK;
+        IDSetSwitch(&CalibrateSP, nullptr);
+    }
+    CurrentFilter = TargetFilter = position;
+    mPhase = Phase::Ready;
+    SelectFilterDone(position);
 }
 
 bool POAWHEEL::saveConfigItems(FILE *fp)
@@ -459,37 +471,8 @@ bool POAWHEEL::saveConfigItems(FILE *fp)
     return true;
 }
 
-void POAWHEEL::TimerHelperCalibrate(void *context)
+void POAWHEEL::nicknameSet(const char *nickname)
 {
-    static_cast<POAWHEEL*>(context)->TimerCalibrate();
-}
-
-void POAWHEEL::TimerCalibrate()
-{
-    // check current state of calibration
-    PWState state;
-    PWErrors rc = POAGetPWState(fw_id, &state);
-
-    if (rc == PW_OK)
-    {
-        if (state == PW_STATE_MOVING)
-        {
-            // while filterwheel is moving we're still calibrating
-            IEAddTimer(getCurrentPollingPeriod(), POAWHEEL::TimerHelperCalibrate, this);
-            return;
-        }
-        LOGF_DEBUG("Successfully calibrated EFW %d", fw_id);
-        CalibrateSP.s   = IPS_OK;
-        IDSetSwitch(&CalibrateSP, nullptr);
-    }
-    else
-    {
-        LOGF_ERROR("%(): EFWCalibrate = %d", __FUNCTION__, rc);
-        CalibrateSP.s = IPS_ALERT;
-        IDSetSwitch(&CalibrateSP, nullptr);
-    }
-
-    FilterSlotNP.setState(IPS_OK);
-    FilterSlotNP.apply();
-    return;
+    if (!mSerialNumber.empty())
+        saveNicknameId(nickname, mSerialNumber.c_str());
 }

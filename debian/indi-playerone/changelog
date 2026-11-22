@@ -1,9 +1,17 @@
+indi-playerone (1.26) bionic; urgency=low
+
+  * Add: hotplug and nickname support for filter wheels
+  * Replace blocking startup and filter movement waits with timer-based polling
+  * BugFix: Filter wheel connection, calibration and timeout handling
+
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Sun, 22 Nov 2026 12:00:00 +0900
+
 indi-playerone (1.25) bionic; urgency=low
 
   * BugFix: Fix type handling for camera config
   * Improved streaming video stability
 
- -- Hiroshi SAITO <hiro3110g@gmail.com>  Mon, 26 Oct 2026
+ -- Hiroshi SAITO <hiro3110g@gmail.com>  Mon, 26 Oct 2026 12:00:00 +0900
 
 indi-playerone (1.24) bionic; urgency=low
 

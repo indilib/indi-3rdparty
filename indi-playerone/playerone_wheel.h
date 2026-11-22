@@ -26,17 +26,20 @@
 #include <PlayerOnePW.h>
 
 #include <indifilterwheel.h>
-
-#define EFW_IS_MOVING -1
-#define POA_EFW_TIMEOUT 20000		// millisecond
+#include <indielapsedtimer.h>
+#include <indipropertytext.h>
+#include <string>
 
 class POAWHEEL : public INDI::FilterWheel
 {
     public:
         POAWHEEL(const PWProperties &info, const char *name);
-        ~POAWHEEL();
+        ~POAWHEEL() override;
 
         virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        int getHandle() const { return fw_id; }
+        void unplug();
 
     protected:
         virtual bool Connect() override;
@@ -52,19 +55,28 @@ class POAWHEEL : public INDI::FilterWheel
 
         // Save config
         virtual bool saveConfigItems(FILE *fp) override;
+        void nicknameSet(const char *nickname) override;
 
     private:
+        enum class Phase { Idle, Starting, Ready, Moving, Calibrating };
+        void failOperation(const char *message);
+        bool readPosition(int &position);
 
         // Unidirectional
         ISwitchVectorProperty UniDirectionalSP;
         ISwitch UniDirectionalS[2];
 
         // Calibrate
-        static void TimerHelperCalibrate(void *context);
-        void TimerCalibrate();
         ISwitchVectorProperty CalibrateSP;
         ISwitch CalibrateS[1];
+        INDI::PropertyText SerialNumberTP {1};
 
     private:
         int fw_id = -1;
+        std::string mSerialNumber;
+        Phase mPhase {Phase::Idle};
+        bool mOpen {false};
+        int mStartupWaitMs {0};
+        int mScheduledWaitMs {0};
+        INDI::ElapsedTimer mOperationTimer;
 };
