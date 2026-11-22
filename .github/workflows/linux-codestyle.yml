@@ -1,0 +1,31 @@
+name: Check Codestyle
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - 'master'
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Get INDI 3rd Party Sources
+        uses: actions/checkout@v4
+        with:
+          # HEAD is the merge of the pull request into its base, so HEAD^1 is the base.
+          fetch-depth: 2
+
+      - name: Check codestyle of the changed lines in files with suffix cpp,cxx,c,h
+        run: |
+          sudo apt-get update
+          sudo apt-get -qq -y install astyle
+          rc=0
+          # Vendor SDK files (lib*) and retired drivers (obsolete) are not ours to format.
+          while IFS= read -r file; do
+            echo "changed file $file"
+            scripts/check-codestyle.sh "$file" HEAD^1 || rc=1
+          done < <(git diff --name-only --diff-filter=AM HEAD^1 HEAD -- . ':(exclude)lib*' ':(exclude)obsolete')
+          exit $rc
+        shell: bash
