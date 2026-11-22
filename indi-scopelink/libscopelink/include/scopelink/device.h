@@ -18,6 +18,7 @@
 #include "scopelink/roles.h"
 #include "scopelink/types.h"
 
+#include <array>
 #include <chrono>
 #include <optional>
 #include <string>
@@ -185,6 +186,15 @@ class Capabilities
         bool hasPowerSwitches{ false };
 
         /**
+         * True when either auxiliary output can be configured as a dew heater: the status frame carries
+         * each output's duty and a byte of modes, and the controller takes command::PowerOutputDuty and
+         * holds the 0x0900 block of configuration identifiers.
+         *
+         * Interface 1.3 onwards, on a controller that has the outputs at all.
+         */
+        bool hasPowerOutputModes{ false };
+
+        /**
          * True when the frames still carry the four digital inputs.
          *
          * Nothing was ever wired to them and the firmware sent them as zeros, so they are stepped over
@@ -333,8 +343,45 @@ class Status
         int stackUsage{ 0 };
         int i2cErrorCounter{ 0 };
 
+        /** Not zero is on: from interface 1.3 a dew heater running at any duty reads on here. */
         bool powerSwitch1State{ false };
         bool powerSwitch2State{ false };
+
+        /** How many auxiliary power outputs a frame can describe. */
+        static constexpr int PowerOutputCount = 2;
+
+        /**
+         * What each auxiliary output is running at, in percent of every second.
+         *
+         * From interface 1.3 this is what the controller reports: the duty actually running, including one
+         * automatic control has worked out, and 0 for an output shut down on a fault. A switch reads 0 or
+         * 100. Before 1.3 the frame carried an on flag, which reads here as 0 or 100 too.
+         */
+        std::array<int, PowerOutputCount> powerOutputDuties{ { 0, 0 } };
+
+        /**
+         * The byte of power output modes from the end of an interface 1.3 frame: bits 0-1 say which outputs
+         * are dew heaters, 2-3 which of those are under automatic control, and 4-5 which of those have no
+         * dew point to follow and run their power-up duty. Output 1 is the lower bit of each pair.
+         */
+        int powerOutputModes{ 0 };
+
+        /** @brief The duty of one output, 0 or 1, in percent; 0 for an output that does not exist. */
+        int powerOutputDuty(int output) const;
+
+        /** @brief True when an output, 0 or 1, is configured as a dew heater rather than a switch. */
+        bool powerOutputIsDewHeater(int output) const { return powerOutputBit(output, 0); }
+
+        /** @brief True while the controller sets a dew heater's duty itself, from the dew point. */
+        bool powerOutputIsAutomatic(int output) const { return powerOutputBit(output, 2); }
+
+        /**
+         * @brief True while a dew heater under automatic control has no dew point to work from.
+         *
+         * It runs its power-up duty instead: the sensor module has no humidity sensor, or has stopped
+         * answering, or has not yet given a first reading.
+         */
+        bool powerOutputIsInFallback(int output) const { return powerOutputBit(output, 4); }
 
         bool fanAManualOverrideEnabled{ false };
         bool fanBManualOverrideEnabled{ false };
@@ -470,6 +517,12 @@ class Status
          * worse than reporting nothing, so the sentinel is rejected, as is anything outside a generous band.
          */
         static bool isTemperaturePlausible(int raw);
+
+        /** @brief One output's bit of powerOutputModes; @p shift is where output 1's bit sits. */
+        bool powerOutputBit(int output, int shift) const
+        {
+            return (output >= 0) && (output < PowerOutputCount) && ((powerOutputModes & (1 << (shift + output))) != 0);
+        }
 };
 
 /**
@@ -619,6 +672,23 @@ class Device
 
         /** @brief Switches an auxiliary power output. */
         void setPowerSwitch(int index, bool on);
+
+        /**
+         * @brief Runs a dew heater at a duty set by hand, which also takes it off automatic control.
+         * @param index Output, 0 or 1
+         * @param percent 0 to 100
+         * @return True when the controller took it; false when it turned it away, which it does for an
+         *         output that is not configured as a dew heater
+         *
+         * Interface 1.3 onwards.
+         */
+        bool setPowerOutputDuty(int index, int percent);
+
+        /**
+         * @brief Hands a dew heater to the controller's automatic dew control.
+         * @return True when the controller took it
+         */
+        bool setPowerOutputAutomatic(int index);
 
         /**
          * @brief Asks the controller to restart into its boot loader, for a firmware update.

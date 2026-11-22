@@ -412,6 +412,11 @@ static bool isHeldBy(uint32_t id, const Capabilities &capabilities)
     if ((id >= 0x0700) && (id <= 0x0701))
         return capabilities.hasConfigurableTemperatureLimits;
 
+    // What each auxiliary output runs as and starts at, and the automatic dew control's margins.
+    // Interface 1.3 onwards, on a controller that has the outputs.
+    if ((id >= 0x0900) && (id <= 0x09FF))
+        return capabilities.hasPowerOutputModes;
+
     // Listed even on a unit that has no sensor fitted, because it is how a sensor gets declared once one
     // is. The two filter coefficients stay listed for the same reason: the controller holds and answers
     // them either way, and the editor's job is to show what the controller has, not what it is using.

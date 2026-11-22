@@ -142,12 +142,18 @@ Capabilities Capabilities::of(const Identification &identification, int sensorMo
     // the status frame and the freeze frame disagree about them, and it is outside this driver's range.
     capabilities.hasDigitalInputs = !capabilities.hasConfigurableMotorRoles;
 
+    // Interface 1.3 lets either auxiliary output run as a dew heater, on a controller that has them at all
+    capabilities.hasPowerOutputModes =
+        capabilities.hasPowerSwitches
+        && ((identification.interfaceMajor > 1)
+            || ((identification.interfaceMajor == 1) && (identification.interfaceMinor >= 3)));
+
     // Built up in the order the frame is laid out rather than looked up per generation, because there is
     // no longer a generation whose length can be read off its number - and there is now a length that
     // belongs to no generation at all. The four measured lengths fall out of this: 44, 56, 60 and 65 for
     // generations 1 to 4. So does the fifth, a generation 3 controller on interface 1.1, which loses four
     // bytes of digital inputs and gains the flap state: 57. Interface 1.2 appends twelve bytes of sensor
-    // module readings, which makes generation 4 77.
+    // module readings, which makes generation 4 77, and interface 1.3 one byte of power output modes: 78.
     //
     // Reading these off the generation alone is what this replaced, and it was not a near miss. A 1.1
     // controller sends 57 where the old arithmetic expected 60, so Status::parse refused every frame it
@@ -164,7 +170,8 @@ Capabilities Capabilities::of(const Identification &identification, int sensorMo
                                      + static_cast<size_t>(capabilities.usbDownstreamPortCount)
                                      + (capabilities.hasUsbPowerFailureReporting ? 2u : 0u)
                                      + (capabilities.hasConfigurableMotorRoles ? 1u : 0u)
-                                     + (capabilities.hasSensorModuleStatus ? 12u : 0u); // the sensor module
+                                     + (capabilities.hasSensorModuleStatus ? 12u : 0u) // the sensor module
+                                     + (capabilities.hasPowerOutputModes ? 1u : 0u);   // power output modes
 
     // The same construction for the freeze frame, in the order Fault::buildSnapshotFields names its
     // fields. Two of these lengths are measured: a controller with one stored fault answers the fault
@@ -206,6 +213,14 @@ MotorReading Status::motor(int index) const
         return {};
 
     return motors[static_cast<size_t>(index)];
+}
+
+int Status::powerOutputDuty(int output) const
+{
+    if ((output < 0) || (output >= PowerOutputCount))
+        return 0;
+
+    return powerOutputDuties[static_cast<size_t>(output)];
 }
 
 bool Status::usbPowerActive(int port) const
@@ -307,10 +322,20 @@ Status Status::parse(const Frame &frame, const Capabilities &capabilities)
 
     size_t at = 30 + (6 * static_cast<size_t>(capabilities.motorCount));
 
+    // An on flag before interface 1.3 and a duty from it, a switch reading 0 or 100. Either way not zero is
+    // on, which is what keeps the two flags right about a heater.
     if (capabilities.hasPowerSwitches)
     {
         status.powerSwitch1State = byte_order::toBool(frame, at);
         status.powerSwitch2State = byte_order::toBool(frame, at + 1);
+
+        for (int output = 0; output < Status::PowerOutputCount; output++)
+        {
+            const int raw = byte_order::toByte(frame, at + static_cast<size_t>(output));
+
+            status.powerOutputDuties[static_cast<size_t>(output)] =
+                capabilities.hasPowerOutputModes ? raw : ((raw != 0) ? 100 : 0);
+        }
 
         at += 2;
     }
@@ -379,7 +404,14 @@ Status Status::parse(const Frame &frame, const Capabilities &capabilities)
         status.accelerationValid = (status.accelerationX != AccelerationNotAvailableRaw)
                                    && (status.accelerationY != AccelerationNotAvailableRaw)
                                    && (status.accelerationZ != AccelerationNotAvailableRaw);
+
+        at += 12;
     }
+
+    // Which outputs are dew heaters, which of those are under automatic control, and which of those have no
+    // dew point and run their power-up duty
+    if (capabilities.hasPowerOutputModes)
+        status.powerOutputModes = byte_order::toByte(frame, at);
 
     return status;
 }
@@ -665,6 +697,34 @@ void Device::setPowerSwitch(int index, bool on)
 {
     m_protocol.transact(command::PowerSwitch, Frame{ static_cast<uint8_t>(index), static_cast<uint8_t>(on ? 1 : 0) },
                         5);
+}
+
+/** @brief Sends one power output duty request and reports whether the controller took it. */
+static bool requestPowerOutputDuty(Protocol &protocol, int index, uint8_t duty)
+{
+    const Frame response =
+        protocol.transact(command::PowerOutputDuty, Frame{ static_cast<uint8_t>(index), duty }, 5);
+
+    return byte_order::toByte(response, 4) == 1;
+}
+
+bool Device::setPowerOutputDuty(int index, int percent)
+{
+    if ((index < 0) || (index >= Status::PowerOutputCount))
+        throw CommunicationError("There is no power output " + std::to_string(index + 1) + ".");
+
+    if ((percent < 0) || (percent > 100))
+        throw CommunicationError("A dew heater duty of " + std::to_string(percent) + " percent is outside 0 to 100.");
+
+    return requestPowerOutputDuty(m_protocol, index, static_cast<uint8_t>(percent));
+}
+
+bool Device::setPowerOutputAutomatic(int index)
+{
+    if ((index < 0) || (index >= Status::PowerOutputCount))
+        throw CommunicationError("There is no power output " + std::to_string(index + 1) + ".");
+
+    return requestPowerOutputDuty(m_protocol, index, command::PowerOutputAutomatic);
 }
 
 /** @brief Sends a request whose whole answer is one byte saying whether the controller accepted it. */

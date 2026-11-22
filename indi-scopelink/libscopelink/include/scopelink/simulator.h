@@ -42,7 +42,7 @@ class SimulatedController
          * @param hardwareMajor Generation to imitate, 2 to 4. What it offers follows from that - how many
          *        motors it drives, how many downstream USB ports it reports, and which fault numbering it
          *        speaks.
-         * @param interfaceMinor Interface version to report, 0 to 2
+         * @param interfaceMinor Interface version to report, 0 to 3
          *
          * The two are separate for the same reason the capability set keeps them apart: the same
          * generation 3 board runs both interface versions, and 1.1 changes the frames it sends without
@@ -51,7 +51,9 @@ class SimulatedController
          *
          * Generation 4 exists only from interface 1.1 - it is the board the assignment was built for - so a
          * caller that asks for generation 4 on 1.0 gets a controller nobody makes. The tool that serves
-         * this refuses that pair rather than serving it. On 1.2 the controller reports module B, the one
+         * this refuses that pair rather than serving it. On 1.3 power output 1 is a dew heater under
+         * automatic control and output 2 a switch, so that both kinds of output are there to be driven.
+         * From 1.2 the controller reports module B, the one
          * with every sensor, so that each reading the status frame can carry has a value to carry.
          */
         explicit SimulatedController(int hardwareMajor, int interfaceMinor = 0);
@@ -96,6 +98,28 @@ class SimulatedController
         Frame motorCommand(const Frame &payload);
         Frame functionCommand(const Frame &payload);
         Frame fanCommand(const Frame &payload);
+        Frame powerOutputCommand(const Frame &payload);
+
+        /**
+         * @brief Reads how each power output is to run, as a controller does at startup and on a reset:
+         *        whether it is a dew heater, and the control and duty a heater starts with.
+         */
+        void startPowerOutputs();
+
+        /** @brief Switches a power output on or off, which a dew heater takes as the firmware does. */
+        void switchPowerOutput(int output, bool on);
+
+        /** @brief What an output is running at, in percent: the duty a heater is under, 0 or 100 for a switch. */
+        int powerOutputDuty(int output) const;
+
+        /** @brief The duty automatic dew control gives a heater, from the margin the status frame reports. */
+        int automaticDuty(int output) const;
+
+        /** @brief True while a heater under automatic control has no dew point: the module has no humidity sensor. */
+        bool powerOutputInFallback(int output) const;
+
+        /** @brief The byte of power output modes an interface 1.3 status frame ends with. */
+        uint8_t powerOutputModes() const;
 
         /**
          * @brief The assignment this controller holds in its configuration, worked out from its own
@@ -153,6 +177,22 @@ class SimulatedController
         bool m_fanOverride[2]{ false, false };
         bool m_fanOn[2]{ false, false };
         bool m_power[2]{ false, false };
+
+        /**
+         * Which outputs run as dew heaters. Read from 0x0900 and 0x0902 at startup and on a reset and not
+         * otherwise, as the firmware does: a mode written while it runs takes effect at the next restart.
+         */
+        bool m_heater[2]{ false, false };
+
+        /** True while a heater is under automatic dew control. */
+        bool m_heaterAutomatic[2]{ false, false };
+
+        /** The duty a heater runs at when set by hand. */
+        int m_heaterDuty[2]{ 0, 0 };
+
+        /** What switching a heater on goes back to: its last control, and its last duty that was not zero. */
+        bool m_heaterResumeAutomatic[2]{ false, false };
+        int m_heaterResumeDuty[2]{ 100, 100 };
         int m_flatboxDuty{ 0 };
 
         std::map<uint32_t, int> m_dids;
@@ -186,7 +226,7 @@ class SimulatedTransport : public ISerialTransport
     public:
         /**
          * @param hardwareMajor Generation the simulated controller reports, 2 or 3
-         * @param interfaceMinor Interface version it reports, 0 to 2
+         * @param interfaceMinor Interface version it reports, 0 to 3
          */
         explicit SimulatedTransport(int hardwareMajor, int interfaceMinor = 0);
 

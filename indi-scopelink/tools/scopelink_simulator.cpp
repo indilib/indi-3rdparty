@@ -44,7 +44,7 @@ int main(int argc, char *argv[])
     // differently. Serving only 1.0 is what left the 1.1 layout untested against anything.
     //
     // Generation 4 is the exception, and only because no such board was ever built with the older
-    // firmware: it comes up on 1.2, which is what its firmware speaks now, unless the caller says
+    // firmware: it comes up on 1.3, which is what its firmware speaks now, unless the caller says
     // otherwise, and asking for 1.0 on it is refused below rather than served.
     int interfaceMinor = -1;
 
@@ -56,10 +56,10 @@ int main(int argc, char *argv[])
             interfaceMinor = std::atoi(argv[++index]);
         else if (std::strcmp(argv[index], "--help") == 0)
         {
-            printf("Usage: scopelink-simulator [--generation 2|3|4] [--interface-minor 0|1|2]\n"
+            printf("Usage: scopelink-simulator [--generation 2|3|4] [--interface-minor 0|1|2|3]\n"
                    "Serves the ScopeLink protocol on a pseudo terminal and prints its device path.\n"
                    "\n"
-                   "The interface version defaults to 1.0, except on generation 4, which defaults to 1.2\n"
+                   "The interface version defaults to 1.0, except on generation 4, which defaults to 1.3\n"
                    "and does not exist on 1.0 - it is the board the motor assignment was built for.\n");
             return 0;
         }
@@ -67,11 +67,11 @@ int main(int argc, char *argv[])
 
     // Still at the sentinel means the caller did not name one.
     if (interfaceMinor < 0)
-        interfaceMinor = (hardwareMajor > 3) ? 2 : 0;
+        interfaceMinor = (hardwareMajor > 3) ? 3 : 0;
 
-    if (interfaceMinor > 2)
+    if (interfaceMinor > 3)
     {
-        fprintf(stderr, "Interface version 1.%d is not one this simulator serves; use 0, 1 or 2.\n", interfaceMinor);
+        fprintf(stderr, "Interface version 1.%d is not one this simulator serves; use 0 to 3.\n", interfaceMinor);
         return 1;
     }
 

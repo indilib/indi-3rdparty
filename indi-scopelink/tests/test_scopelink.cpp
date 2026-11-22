@@ -31,6 +31,7 @@
 #include "scopelink/simulator.h"
 #include "scopelink/transport.h"
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cmath>
@@ -229,8 +230,9 @@ Frame statusPayload(int hardwareMajor, int interfaceMinor = 0)
         put32(payload, 125);   // motor 3 position
     }
 
-    payload.push_back(1); // aux output 1
-    payload.push_back(0); // aux output 2
+    // An on flag each before interface 1.3, and from it the duty: output 1 a heater at 35 %, output 2 off
+    payload.push_back((interfaceMinor >= 3) ? 35 : 1); // aux output 1
+    payload.push_back(0);                              // aux output 2
 
     // The four digital inputs, dropped by interface 1.1. Everything below shifts four bytes forward
     // without them, so a reader that has not noticed finds the flat box duty in the last of them.
@@ -279,6 +281,10 @@ Frame statusPayload(int hardwareMajor, int interfaceMinor = 0)
         put16(payload, 34);     // Y
         put16(payload, 1000);   // Z, lying flat
     }
+
+    // Interface 1.3: output 1 a dew heater (bit 0) under automatic control (bit 2) with no dew point (bit 4)
+    if (interfaceMinor >= 3)
+        payload.push_back(0x15);
 
     return payload;
 }
@@ -433,6 +439,11 @@ void testCapabilities()
     CHECK(capabilitiesFor(4, -1, 1, 1).statusFrameLength == 65);
     CHECK(capabilitiesFor(4, -1, 1, 2).statusFrameLength == 77);
 
+    // Interface 1.3 lets the auxiliary outputs run as dew heaters, and adds one byte of their modes
+    CHECK(capabilitiesFor(4, -1, 1, 3).hasPowerOutputModes);
+    CHECK(!capabilitiesFor(4, -1, 1, 2).hasPowerOutputModes);
+    CHECK(capabilitiesFor(4, -1, 1, 3).statusFrameLength == 78);
+
     // Either side of the supported range is refused rather than decoded with a neighbouring generation's
     // offsets, which would produce plausible readings from the wrong bytes.
     scopelink::Identification tooOld;
@@ -452,7 +463,7 @@ void testStatusParsing()
     // third of these is the same board as the second, reflashed, and the fourth is a different board on
     // the same firmware as the third. The fifth is that board on interface 1.2, with the sensor module's
     // twelve bytes behind the flap state.
-    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 }, { 4, 2 } };
+    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 }, { 4, 2 }, { 4, 3 } };
 
     for (const auto &layout : layouts)
     {
@@ -578,6 +589,31 @@ void testStatusParsing()
             CHECK(!status.humidityValid);
             CHECK(!status.accelerationValid);
         }
+
+        // The auxiliary outputs: a duty from interface 1.3 and the byte of modes at the end of the frame,
+        // an on flag before it, which reads as 0 or 100. Not zero is on either way.
+        CHECK(status.powerSwitch1State);
+        CHECK(!status.powerSwitch2State);
+        CHECK(status.powerOutputDuty(1) == 0);
+
+        if (interfaceMinor >= 3)
+        {
+            CHECK(status.powerOutputDuty(0) == 35);
+            CHECK(status.powerOutputIsDewHeater(0));
+            CHECK(status.powerOutputIsAutomatic(0));
+            CHECK(status.powerOutputIsInFallback(0));
+            CHECK(!status.powerOutputIsDewHeater(1));
+            CHECK(!status.powerOutputIsAutomatic(1));
+        }
+        else
+        {
+            CHECK(status.powerOutputDuty(0) == 100);
+            CHECK(!status.powerOutputIsDewHeater(0));
+            CHECK(!status.powerOutputIsAutomatic(0));
+        }
+
+        CHECK(status.powerOutputDuty(2) == 0);
+        CHECK(!status.powerOutputIsDewHeater(2));
     }
 
     // A frame of the wrong length for the generation is refused rather than decoded with the offsets of
@@ -1185,7 +1221,7 @@ void testFaultDecoding()
  */
 void testSimulatedControllers()
 {
-    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 }, { 4, 2 } };
+    const int layouts[][2] = { { 2, 0 }, { 3, 0 }, { 3, 1 }, { 4, 1 }, { 4, 2 }, { 4, 3 } };
 
     for (const auto &layout : layouts)
     {
@@ -1264,6 +1300,73 @@ void testSimulatedControllers()
         CHECK(snapshotByte(faults[0], "USB DS6 power active", -1) == ((generation > 3) ? 0 : -1));
         CHECK(snapshotByte(faults[0], "Digital input 1 state", -1) == ((interfaceMinor >= 1) ? -1 : 0));
     }
+}
+
+/**
+ * @brief A dew heater driven through the device layer against the simulated 1.3 controller.
+ *
+ * The simulator starts with output 1 a heater under automatic control and output 2 a switch. The margin to
+ * the dew point it reports is twelve kelvin, well above the start margin, so automatic control runs it at
+ * nothing - which is the duty a real controller would give it there.
+ */
+void testSimulatedDewHeaters()
+{
+    scopelink::SimulatedTransport transport(4, 3);
+    scopelink::Protocol protocol(transport);
+    scopelink::Device device(protocol);
+
+    device.open();
+
+    CHECK(device.capabilities().hasPowerOutputModes);
+
+    const scopelink::Status &started = device.status();
+
+    CHECK(started.powerOutputIsDewHeater(0));
+    CHECK(started.powerOutputIsAutomatic(0));
+    CHECK(!started.powerOutputIsInFallback(0));
+    CHECK(started.powerOutputDuty(0) == 0);
+    CHECK(!started.powerOutputIsDewHeater(1));
+
+    // A duty set by hand runs at once and takes the heater off automatic control
+    CHECK(device.setPowerOutputDuty(0, 40));
+    CHECK(device.refreshStatus().powerOutputDuty(0) == 40);
+    CHECK(!device.status().powerOutputIsAutomatic(0));
+    CHECK(device.status().powerSwitch1State);
+
+    // Switched off it is a manual duty of nothing, and switched on again it goes back to that duty
+    device.setPowerSwitch(0, false);
+    CHECK(device.refreshStatus().powerOutputDuty(0) == 0);
+    device.setPowerSwitch(0, true);
+    CHECK(device.refreshStatus().powerOutputDuty(0) == 40);
+
+    // Handed back to the controller
+    CHECK(device.setPowerOutputAutomatic(0));
+    CHECK(device.refreshStatus().powerOutputIsAutomatic(0));
+    CHECK(device.status().powerOutputDuty(0) == 0);
+
+    // A switch takes off and on as 0 and 100 and nothing between, and no automatic control at all
+    CHECK(!device.setPowerOutputDuty(1, 40));
+    CHECK(!device.setPowerOutputAutomatic(1));
+    CHECK(device.setPowerOutputDuty(1, 100));
+    CHECK(device.refreshStatus().powerOutputDuty(1) == 100);
+    CHECK(device.status().powerSwitch2State);
+
+    // Asked of an output that does not exist, refused before anything is sent
+    CHECK(throws<scopelink::CommunicationError>([&] { device.setPowerOutputDuty(2, 10); }));
+    CHECK(throws<scopelink::CommunicationError>([&] { device.setPowerOutputDuty(0, 101); }));
+
+    // The parameters that set the heaters up are offered from 1.3 and not before
+    const auto heldOn = [](int interfaceMinor)
+    {
+        const std::vector<scopelink::Did> catalogue =
+            scopelink::buildDidCatalogue(capabilitiesFor(4, -1, 1, interfaceMinor));
+
+        return std::any_of(catalogue.begin(), catalogue.end(),
+                           [](const scopelink::Did &identifier) { return identifier.id() == 0x0900; });
+    };
+
+    CHECK(heldOn(3));
+    CHECK(!heldOn(2));
 }
 
 /**
@@ -1776,14 +1879,15 @@ void testNarrowedMotorSelections()
 
 void testGeneratedCatalogue()
 {
-    CHECK(scopelink::catalogue::ParameterCount == 80);
-    CHECK(scopelink::catalogue::GroupCount == 14);
+    // Interface 1.3 added the power outputs' ten and the two groups they sit in
+    CHECK(scopelink::catalogue::ParameterCount == 90);
+    CHECK(scopelink::catalogue::GroupCount == 16);
     CHECK(std::string(scopelink::catalogue::Product) == "ScopeLink");
     CHECK(scopelink::catalogue::InterfaceMajor == 1);
 
     // The minor too. Checking only the major is how a table a whole interface version behind sat here
     // unnoticed: 1.0 and 1.1 both read as 1, and nothing else in this tree compares the two.
-    CHECK(scopelink::catalogue::InterfaceMinor == 2);
+    CHECK(scopelink::catalogue::InterfaceMinor == 3);
 
     bool identifiersAreUnique   = true;
     bool rangesHoldTheirDefault = true;
@@ -2965,6 +3069,7 @@ const Test tests[] = {
     { "fault decoding", testFaultDecoding },
     { "fault numbering", testFaultNumbering },
     { "simulated controllers", testSimulatedControllers },
+    { "simulated dew heaters", testSimulatedDewHeaters },
     { "motor role rules", testMotorRoleRules },
     { "motor roles", testMotorRoles },
     { "function commands", testFunctionCommands },

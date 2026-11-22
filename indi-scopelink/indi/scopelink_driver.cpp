@@ -53,12 +53,57 @@ namespace
  * Shorter than the wait after a firmware update, which has a boot loader and a firmware start in front of
  * it; what this waits out is a reset and a USB enumeration. Generous all the same, because the cost of
  * being too patient is a few more seconds of a progress light and the cost of being too impatient is a
- * user told to unplug a controller that was about to answer.
+ * user told to unplug a controller that was about to answer. A unit passed into WSL through usbipd has taken
+ * 27 seconds to reappear, against two or three on a plain Linux machine.
  */
-constexpr int RestartTimeoutMs = 30000;
+constexpr int RestartTimeoutMs = 60000;
 
 /** How often the port is tried while waiting for it. */
 constexpr int RestartProbeIntervalMs = 500;
+
+/**
+ * How long an answer from a port that never left the bus counts as the controller from before the restart.
+ *
+ * The firmware acknowledges the request and resets about a second later, so the first probe can reach the
+ * controller that is about to go - and the reconnection built on it then loses the port halfway through
+ * reading the motor assignment. Seen on a generation 4 unit, one restart in three. A real controller leaves
+ * the bus and that is what the wait looks for; this is for a port that does not, such as the simulator on
+ * a pseudo terminal, and is well past the firmware's delay.
+ */
+constexpr int RestartSettleMs = 5000;
+
+/**
+ * The longest name a power output can be given, in characters.
+ *
+ * The same limit the Windows driver holds its names to, because the names are for the same outputs and the
+ * phone has a row of its own to fit them in.
+ */
+constexpr size_t MaxOutputNameLength = 20;
+
+/** What a power output is called until it is given a name: "Output 1", the controller's own word. */
+std::string defaultOutputName(int output)
+{
+    return "Output " + std::to_string(output + 1);
+}
+
+/** The text with the spaces round it taken off. */
+std::string trimmed(const char *text)
+{
+    const std::string value = (text == nullptr) ? std::string() : std::string(text);
+    const size_t first = value.find_first_not_of(" \t\r\n");
+
+    if (first == std::string::npos)
+        return std::string();
+
+    return value.substr(first, value.find_last_not_of(" \t\r\n") - first + 1);
+}
+
+/** How many characters a UTF-8 string holds, rather than how many bytes: an accent is one character. */
+size_t characters(const std::string &text)
+{
+    return static_cast<size_t>(std::count_if(text.begin(), text.end(),
+                                             [](char c) { return (static_cast<unsigned char>(c) & 0xC0) != 0x80; }));
+}
 
 } // namespace
 
@@ -123,6 +168,13 @@ bool ScopeLink::initProperties()
     ParametersFileTP[0].fill("PATH", "File", "");
     ParametersFileTP.fill(getDeviceName(), "PARAMETERS_FILE", "Parameter file", PARAMETERS_TAB, IP_RW, 60, IPS_IDLE);
 
+    // What is plugged into each power output - "Main scope", "Guide scope" - which labels the output's
+    // controls whatever it runs as. Kept in this driver's configuration, because the controller holds no
+    // names; the Windows driver keeps its own the same way, for the clients it serves.
+    OutputNamesTP[0].fill("OUTPUT_1", "Output 1", defaultOutputName(0).c_str());
+    OutputNamesTP[1].fill("OUTPUT_2", "Output 2", defaultOutputName(1).c_str());
+    OutputNamesTP.fill(getDeviceName(), "OUTPUT_NAMES", "Output names", POWER_TAB, IP_RW, 60, IPS_IDLE);
+
     // Where a sync left the sky relative to the mechanism. It belongs with the settings that have to exist
     // before the device connects, rather than with the hardware properties: it is restored from the
     // configuration file and then used while the rotator is being set up, and a property that only appears
@@ -148,7 +200,7 @@ bool ScopeLink::initProperties()
     // 3 board runs interface 1.0 and 1.1, and 1.1 is what changes the frames - four bytes of digital
     // inputs out of the middle of both of them and the flap state onto the end of the status frame.
     // Generation 4 exists only from 1.1, adds a third motor and four more USB ports on top of it, and is
-    // simulated on 1.2 - the firmware it ships with - so it needs no second entry of its own.
+    // simulated on 1.3 - the firmware it ships with - so it needs no second entry of its own.
     SimulatedGenerationSP[0].fill("GENERATION_2", "2", ISS_OFF);
     SimulatedGenerationSP[1].fill("GENERATION_3", "3", ISS_ON);
     SimulatedGenerationSP[2].fill("GENERATION_3_IF11", "3, interface 1.1", ISS_OFF);
@@ -162,11 +214,13 @@ bool ScopeLink::initProperties()
     defineProperty(ParametersFileTP);
     defineProperty(RotatorOffsetNP);
     defineProperty(OrientationReferenceNP);
+    defineProperty(OutputNamesTP);
 
     loadConfig(true, StepMultiplierNP.getName());
     loadConfig(true, DeveloperSP.getName());
     loadConfig(true, SimulatedGenerationSP.getName());
     loadConfig(true, ParametersFileTP.getName());
+    loadConfig(true, OutputNamesTP.getName());
     loadConfig(true, RotatorOffsetNP.getName());
     loadConfig(true, OrientationReferenceNP.getName());
 
@@ -284,6 +338,14 @@ bool ScopeLink::initProperties()
     AuxPowerSP[0].fill("AUX_1", "Output 1", ISS_OFF);
     AuxPowerSP[1].fill("AUX_2", "Output 2", ISS_OFF);
     AuxPowerSP.fill(getDeviceName(), "AUX_POWER", "Auxiliary outputs", POWER_TAB, IP_RW, ISR_NOFMANY, 60, IPS_IDLE);
+
+    // From interface 1.3 either output can run as a dew heater, switched on for a share of every second. The
+    // elements are filled at connect time, one per output that is a heater - see sizeHardwareProperties.
+    DewHeaterNP.fill(getDeviceName(), "DEW_HEATER_DUTY", "Dew heaters (%)", POWER_TAB, IP_RW, 60, IPS_IDLE);
+    // Labels short enough for the label column of KStars' control panel, which cuts a longer one in the middle
+    DewHeaterAutoSP.fill(getDeviceName(), "DEW_HEATER_AUTO", "Automatic dew", POWER_TAB, IP_RW, ISR_NOFMANY, 60,
+                         IPS_IDLE);
+    DewHeaterLP.fill(getDeviceName(), "DEW_HEATER_DEW_POINT", "Following dew", POWER_TAB, IPS_IDLE);
 
     // As with the motor load, the lamps are filled in at connect time: a generation 3 hub has two ports
     // and reports a fault for each, and a generation 4 hub has six and reports none.
@@ -489,6 +551,34 @@ void ScopeLink::sizeHardwareProperties()
 
         UsbHubLP[ports + index].fill(name.c_str(), label.c_str(), IPS_IDLE);
     }
+
+    // One element per output that runs as a dew heater, named for the output so that a script finds the same
+    // element whichever of the two is the heater. Which they are only the status frame says.
+    m_heaterOutputs.clear();
+
+    if (capabilities.hasPowerOutputModes)
+    {
+        for (int output = 0; output < scopelink::Status::PowerOutputCount; output++)
+        {
+            if (m_device->status().powerOutputIsDewHeater(output))
+                m_heaterOutputs.push_back(output);
+        }
+    }
+
+    const size_t heaters = m_heaterOutputs.size();
+
+    DewHeaterNP.resize(heaters);
+    DewHeaterAutoSP.resize(heaters);
+    DewHeaterLP.resize(heaters);
+
+    for (size_t index = 0; index < heaters; index++)
+    {
+        const std::string name = "OUTPUT_" + std::to_string(m_heaterOutputs[index] + 1);
+
+        DewHeaterNP[index].fill(name.c_str(), name.c_str(), "%.0f", 0, 100, 1, 0);
+        DewHeaterAutoSP[index].fill(name.c_str(), name.c_str(), ISS_OFF);
+        DewHeaterLP[index].fill(name.c_str(), name.c_str(), IPS_IDLE);
+    }
 }
 
 void ScopeLink::defineHardwareProperties()
@@ -548,7 +638,17 @@ void ScopeLink::defineHardwareProperties()
     defineProperty(FanOverrideSP);
     defineProperty(FanStateSP);
 
+    // Labelled here, as they are defined, and not only when the names change: the names are read from the
+    // configuration before this property is filled, and filling it puts the default labels back
+    labelOutputs();
     defineProperty(AuxPowerSP);
+
+    if (!m_heaterOutputs.empty())
+    {
+        defineProperty(DewHeaterNP);
+        defineProperty(DewHeaterAutoSP);
+        defineProperty(DewHeaterLP);
+    }
 
     if (capabilities.hasUsbHub)
         defineProperty(UsbHubLP);
@@ -604,6 +704,9 @@ void ScopeLink::deleteHardwareProperties()
     deleteProperty(FanOverrideSP.getName());
     deleteProperty(FanStateSP.getName());
     deleteProperty(AuxPowerSP.getName());
+    deleteProperty(DewHeaterNP.getName());
+    deleteProperty(DewHeaterAutoSP.getName());
+    deleteProperty(DewHeaterLP.getName());
     deleteProperty(UsbHubLP.getName());
 
     for (ParameterGroup &group : m_parameterGroups)
@@ -692,7 +795,7 @@ bool ScopeLink::identify()
         // motion - is the one a real controller takes.
         const int selected       = SimulatedGenerationSP.findOnSwitchIndex();
         const int generation     = (selected == 0) ? 2 : ((selected == 3) ? 4 : 3);
-        const int interfaceMinor = (selected == 3) ? 2 : ((selected == 2) ? 1 : 0);
+        const int interfaceMinor = (selected == 3) ? 3 : ((selected == 2) ? 1 : 0);
 
         LOGF_INFO("Simulation is on. Answering as a generation %d controller on interface 1.%d; no port is "
                   "opened.",
@@ -1120,6 +1223,8 @@ void ScopeLink::restartController()
     const auto now = std::chrono::steady_clock::now();
 
     m_restarting       = true;
+    m_restartPortGone  = false;
+    m_restartSettled   = now + std::chrono::milliseconds(RestartSettleMs);
     m_restartDeadline  = now + std::chrono::milliseconds(RestartTimeoutMs);
     m_restartNextProbe = now + std::chrono::milliseconds(RestartProbeIntervalMs);
 
@@ -1191,6 +1296,14 @@ bool ScopeLink::controllerAnswers()
     if (!port.reopen())
     {
         LOGF_DEBUG("The restarted ScopeLink's port is not there yet: %s", port.lastError().c_str());
+        m_restartPortGone = true;
+        return false;
+    }
+
+    if (!m_restartPortGone && (std::chrono::steady_clock::now() < m_restartSettled))
+    {
+        LOGF_DEBUG("%s has not left the bus yet, so what is on it is the ScopeLink from before the restart.",
+                   m_restartPort.c_str());
         return false;
     }
 
@@ -1258,7 +1371,7 @@ void ScopeLink::TimerHit()
     {
         // Nothing is polled while the controller is away: there is no port open, and the poll's own idea
         // of a controller that has stopped answering would take the device down three polls into a
-        // restart that has thirty seconds to finish in.
+        // restart that has a minute to finish in.
         tickControllerRestart();
 
         // A finished restart connects again, and connecting arms the timer itself through
@@ -1686,6 +1799,74 @@ void ScopeLink::publishFans(const scopelink::Status &status)
     }
 }
 
+void ScopeLink::labelOutputs()
+{
+    // The element names stay AUX_1 and AUX_2 whatever the outputs are called, so a script that switches
+    // them by name goes on working after they are renamed
+    for (int output = 0; output < 2; output++)
+        AuxPowerSP[output].setLabel(OutputNamesTP[output].getText());
+
+    // A heater goes by the same name: the name is for what is plugged in, not for what the output runs as
+    for (size_t index = 0; index < m_heaterOutputs.size(); index++)
+    {
+        const char *name = OutputNamesTP[m_heaterOutputs[index]].getText();
+
+        DewHeaterNP[index].setLabel(name);
+        DewHeaterAutoSP[index].setLabel(name);
+        DewHeaterLP[index].setLabel(name);
+    }
+}
+
+void ScopeLink::applyOutputNames()
+{
+    labelOutputs();
+
+    // Only where defineHardwareProperties has them on show: until then, it labels them as it defines them
+    if (isConnected() && !m_bootloaderOnly)
+    {
+        deleteProperty(AuxPowerSP.getName());
+        defineProperty(AuxPowerSP);
+
+        if (!m_heaterOutputs.empty())
+        {
+            deleteProperty(DewHeaterNP.getName());
+            deleteProperty(DewHeaterAutoSP.getName());
+            deleteProperty(DewHeaterLP.getName());
+            defineProperty(DewHeaterNP);
+            defineProperty(DewHeaterAutoSP);
+            defineProperty(DewHeaterLP);
+        }
+    }
+}
+
+void ScopeLink::publishDewHeaters(const scopelink::Status &status)
+{
+    bool fallback = false;
+
+    for (size_t index = 0; index < m_heaterOutputs.size(); index++)
+    {
+        const int output       = m_heaterOutputs[index];
+        const bool automatic   = status.powerOutputIsAutomatic(output);
+        const bool noDewPoint  = status.powerOutputIsInFallback(output);
+
+        DewHeaterNP[index].setValue(status.powerOutputDuty(output));
+        DewHeaterAutoSP[index].setState(automatic ? ISS_ON : ISS_OFF);
+        DewHeaterLP[index].setState(!automatic ? IPS_IDLE : (noDewPoint ? IPS_BUSY : IPS_OK));
+
+        fallback = fallback || noDewPoint;
+    }
+
+    DewHeaterNP.setState(IPS_OK);
+    DewHeaterNP.apply();
+
+    DewHeaterAutoSP.setState(IPS_OK);
+    DewHeaterAutoSP.apply();
+
+    // Amber as a whole while a heater on automatic has no dew point, which is the one state worth a look
+    DewHeaterLP.setState(fallback ? IPS_BUSY : IPS_OK);
+    DewHeaterLP.apply();
+}
+
 void ScopeLink::publishPower(const scopelink::Status &status)
 {
     const scopelink::Capabilities &capabilities = m_device->capabilities();
@@ -1694,6 +1875,9 @@ void ScopeLink::publishPower(const scopelink::Status &status)
     AuxPowerSP[1].setState(status.powerSwitch2State ? ISS_ON : ISS_OFF);
     AuxPowerSP.setState(IPS_OK);
     AuxPowerSP.apply();
+
+    if (!m_heaterOutputs.empty())
+        publishDewHeaters(status);
 
     if (capabilities.hasUsbHub)
     {
@@ -2401,6 +2585,61 @@ bool ScopeLink::ISNewNumber(const char *dev, const char *name, double values[], 
         return true;
     }
 
+    // A duty set by hand, which also takes a heater off automatic control - the controller's own rule
+    if (DewHeaterNP.isNameMatch(name))
+    {
+        bool accepted = true;
+
+        // Refused rather than clamped: a duty of 150 must not quietly become a heater at full power, taken
+        // off automatic control on the way
+        for (int i = 0; i < n; i++)
+        {
+            if (!std::isfinite(values[i]) || (values[i] < 0) || (values[i] > 100))
+            {
+                LOGF_ERROR("%g %% is not a duty a dew heater can run at: it takes 0 to 100 %%.", values[i]);
+                DewHeaterNP.setState(IPS_ALERT);
+                DewHeaterNP.apply();
+
+                return true;
+            }
+        }
+
+        try
+        {
+            for (int i = 0; i < n; i++)
+            {
+                for (size_t index = 0; index < DewHeaterNP.size(); index++)
+                {
+                    if (!DewHeaterNP[index].isNameMatch(names[i]))
+                        continue;
+
+                    const int output = m_heaterOutputs[index];
+                    const int duty   = static_cast<int>(std::lround(values[i]));
+
+                    if (!m_device->setPowerOutputDuty(output, duty))
+                    {
+                        LOGF_ERROR("The controller refused a duty for %s. Output %d may no longer be a dew "
+                                   "heater; reconnect to pick up its configuration.",
+                                   OutputNamesTP[output].getText(), output + 1);
+                        accepted = false;
+                    }
+                }
+            }
+
+            publishDewHeaters(m_device->refreshStatus());
+        }
+        catch (const std::exception &error)
+        {
+            LOGF_ERROR("The controller did not accept the dew heater duty: %s", error.what());
+            accepted = false;
+        }
+
+        DewHeaterNP.setState(accepted ? IPS_OK : IPS_ALERT);
+        DewHeaterNP.apply();
+
+        return true;
+    }
+
     // Read only to a client, like the orientation reference below; what arrives here is the configuration
     // file being loaded, before there is a controller to be ready. identify() takes the offset from it.
     if (RotatorOffsetNP.isNameMatch(name))
@@ -2658,12 +2897,22 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
 
     if (AuxPowerSP.isNameMatch(name))
     {
+        const bool wasOn[2] = { AuxPowerSP[0].getState() == ISS_ON, AuxPowerSP[1].getState() == ISS_ON };
+
         AuxPowerSP.update(states, names, n);
 
         try
         {
+            // Only the outputs that changed. Sending both, as this did, was harmless while both were
+            // switches; a dew heater takes "off" as a manual duty of nothing, so switching one output would
+            // have taken the other one, a heater on automatic that happened to read 0 %, off automatic.
             for (int index = 0; index < 2; index++)
-                m_device->setPowerSwitch(index, AuxPowerSP[index].getState() == ISS_ON);
+            {
+                const bool on = AuxPowerSP[index].getState() == ISS_ON;
+
+                if (on != wasOn[index])
+                    m_device->setPowerSwitch(index, on);
+            }
 
             m_device->refreshStatus();
             AuxPowerSP.setState(IPS_OK);
@@ -2675,6 +2924,55 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         }
 
         AuxPowerSP.apply();
+
+        return true;
+    }
+
+    if (DewHeaterAutoSP.isNameMatch(name))
+    {
+        std::vector<bool> wasOn;
+
+        for (size_t index = 0; index < DewHeaterAutoSP.size(); index++)
+            wasOn.push_back(DewHeaterAutoSP[index].getState() == ISS_ON);
+
+        DewHeaterAutoSP.update(states, names, n);
+
+        bool accepted = true;
+
+        try
+        {
+            for (size_t index = 0; index < DewHeaterAutoSP.size(); index++)
+            {
+                const bool on    = DewHeaterAutoSP[index].getState() == ISS_ON;
+                const int output = m_heaterOutputs[index];
+
+                if (on == wasOn[index])
+                    continue;
+
+                // Taken off automatic control, a heater holds the duty it was running at - the same as
+                // the Windows driver, and what somebody switching automatic off means
+                const bool taken = on ? m_device->setPowerOutputAutomatic(output)
+                                      : m_device->setPowerOutputDuty(output, m_device->status().powerOutputDuty(output));
+
+                if (!taken)
+                {
+                    LOGF_ERROR("The controller refused automatic dew control for %s. Output %d may no longer "
+                               "be a dew heater; reconnect to pick up its configuration.",
+                               OutputNamesTP[output].getText(), output + 1);
+                    accepted = false;
+                }
+            }
+
+            publishDewHeaters(m_device->refreshStatus());
+        }
+        catch (const std::exception &error)
+        {
+            LOGF_ERROR("The controller did not accept the dew heater command: %s", error.what());
+            accepted = false;
+        }
+
+        DewHeaterAutoSP.setState(accepted ? IPS_OK : IPS_ALERT);
+        DewHeaterAutoSP.apply();
 
         return true;
     }
@@ -2870,6 +3168,50 @@ bool ScopeLink::ISNewText(const char *dev, const char *name, char *texts[], char
         return true;
     }
 
+    if (OutputNamesTP.isNameMatch(name))
+    {
+        // Checked before anything is taken, so that a request refused for one name leaves both as they were
+        for (int i = 0; i < n; i++)
+        {
+            const std::string offered = trimmed(texts[i]);
+
+            if (characters(offered) > MaxOutputNameLength)
+            {
+                LOGF_ERROR("'%s' is too long for a power output: a name can have at most %d characters.",
+                           offered.c_str(), static_cast<int>(MaxOutputNameLength));
+                OutputNamesTP.setState(IPS_ALERT);
+                OutputNamesTP.apply();
+
+                return true;
+            }
+        }
+
+        const std::string before[2] = { OutputNamesTP[0].getText(), OutputNamesTP[1].getText() };
+
+        OutputNamesTP.update(texts, names, n);
+
+        // Trimmed, and a blank one is the output's number again
+        for (int output = 0; output < 2; output++)
+        {
+            const std::string offered = trimmed(OutputNamesTP[output].getText());
+
+            OutputNamesTP[output].setText(offered.empty() ? defaultOutputName(output) : offered);
+        }
+
+        OutputNamesTP.setState(IPS_OK);
+        OutputNamesTP.apply();
+
+        // Every connection reads the configuration back, which offers the names already in use. Relabelling
+        // then would redefine the outputs for nothing and move them to the bottom of the tab.
+        if ((before[0] != OutputNamesTP[0].getText()) || (before[1] != OutputNamesTP[1].getText()))
+        {
+            applyOutputNames();
+            saveConfig(true, OutputNamesTP.getName());
+        }
+
+        return true;
+    }
+
     return INDI::DefaultDevice::ISNewText(dev, name, texts, names, n);
 }
 
@@ -2886,6 +3228,7 @@ bool ScopeLink::saveConfigItems(FILE *fp)
     SimulatedGenerationSP.save(fp);
     ParametersFileTP.save(fp);
     FirmwareFileTP.save(fp);
+    OutputNamesTP.save(fp);
     CalibrationStepNP.save(fp);
     LightIntensityNP.save(fp);
 
