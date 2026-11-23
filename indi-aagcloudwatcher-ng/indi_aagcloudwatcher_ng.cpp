@@ -26,6 +26,7 @@
 #include "indi_aagcloudwatcher_ng.h"
 
 #include "config.h"
+#include "ambient_source.h"
 
 #include <cstring>
 #include <cmath>
@@ -478,6 +479,19 @@ bool AAGCloudWatcher::ISNewSwitch(const char *dev, const char *name, ISState *st
                 return true;
             }
 
+            if (svp.isNameMatch("ambientSource"))
+            {
+                svp.update(states, names, n);
+                svp.setState(IPS_OK);
+                svp.apply();
+
+                auto rh = svp.findWidgetByName("rh");
+                LOGF_INFO("Ambient temperature source: %s",
+                          (rh != nullptr && rh->getState() == ISS_ON) ? "RH sensor" : "probe / IR sensor");
+                m_AmbientFallbackWarned = false;
+                return true;
+            }
+
         } // svp
     } // dev
 
@@ -868,6 +882,24 @@ bool AAGCloudWatcher::sendData()
         ambientTemperature =
             1.0 / (ambientTemperature / constants.ambientBetaFactor + 1.0 / (ABS_ZERO + 25.0)) - ABS_ZERO;
     }
+
+    // Optionally take the ambient temperature from the RH sensor ("t!"), which Lunatico
+    // recommends over the IR sensor's own temperature. The chosen value feeds the sky
+    // temperature correction and the rain heater as well.
+    auto ambientSourceSP = getSwitch("ambientSource");
+    auto rhSource        = ambientSourceSP.isValid() ? ambientSourceSP.findWidgetByName("rh") : nullptr;
+    bool preferRHSensor  = rhSource != nullptr && rhSource->getState() == ISS_ON;
+    auto ambient         = AAG::selectAmbientTemperature(ambientTemperature, data.tempAct, preferRHSensor);
+    if (preferRHSensor && !ambient.fromRHSensor && !m_AmbientFallbackWarned)
+    {
+        LOGF_WARN("RH sensor temperature unavailable (%.1f), using the probe / IR sensor temperature.", data.tempAct);
+        m_AmbientFallbackWarned = true;
+    }
+    else if (ambient.fromRHSensor)
+    {
+        m_AmbientFallbackWarned = false;
+    }
+    ambientTemperature = ambient.temperature;
 
     nvpS[SENSOR_AMBIENT_TEMPERATURE_SENSOR].setValue(ambientTemperature);
 

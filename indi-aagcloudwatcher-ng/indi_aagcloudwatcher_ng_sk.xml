@@ -18,6 +18,11 @@
     <defSwitch name="GRAY"  label="Gray (old)">Off</defSwitch>
     <defSwitch name="BLACK" label="Black (new)">On</defSwitch>
   </defSwitchVector>
+
+  <defSwitchVector device="AAG Cloud Watcher NG" name="ambientSource" label="Ambient Temp. Source" group="Options" state="Idle" perm="rw" rule="OneOfMany" timeout="0">
+    <defSwitch name="standard" label="Probe / IR sensor">On</defSwitch>
+    <defSwitch name="rh" label="RH sensor">Off</defSwitch>
+  </defSwitchVector>
   
   <defNumberVector device="AAG Cloud Watcher NG" name="sensors" label="Sensors" group="Sensors" state="Idle" perm="ro" timeout="0">
     <defNumber name="infraredSky" label="Infrared Sky (ºC)" format="%.1f" min="-100" max="100" step="0">0</defNumber>
