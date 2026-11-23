@@ -38,110 +38,111 @@ enum HeatingAlgorithmStatus
     pulse
 };
 
+/** Weather driver for the Lunatico AAG CloudWatcher and Pocket CloudWatcher. */
 class AAGCloudWatcher : public INDI::Weather
 {
-public:
-    AAGCloudWatcher();
-    virtual ~AAGCloudWatcher() override;
+    public:
+        AAGCloudWatcher();
+        virtual ~AAGCloudWatcher() override;
 
-    virtual bool initProperties() override;
-    virtual void ISGetProperties(const char *dev) override;
-    virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
-    virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
+        virtual bool initProperties() override;
+        virtual void ISGetProperties(const char *dev) override;
+        virtual bool ISNewNumber(const char *dev, const char *name, double values[], char *names[], int n) override;
+        virtual bool ISNewSwitch(const char *dev, const char *name, ISState *states, char *names[], int n) override;
 
-    virtual const char *getDefaultName() override;
-    bool sendData();
-    float getLastReadPeriod();
-    bool heatingAlgorithm();
+        virtual const char *getDefaultName() override;
+        bool sendData();
+        float getLastReadPeriod();
+        bool heatingAlgorithm();
 
-    auto getElevation();
+        auto getElevation();
 
-protected:
-    virtual bool Handshake() override;
-    virtual IPState updateWeather() override;
-    virtual bool saveConfigItems(FILE *fp) override;
-
-
-private:
-    // Skeleton properties holding user settings that must survive a restart.
-    // Shared by saveConfigItems() and ISGetProperties() so the two cannot drift apart.
-    // "deviceSwitch" is deliberately excluded: it drives the unit's relay and must
-    // not be re-asserted automatically at startup.
-    static constexpr const char *CONFIGURABLE_PROPERTIES[] =
-    {
-        "skyCorrection",
-        "sqmLimit",
-        "anemometerType",
-        "heaterParameters",
-        "heatingAlgorithm",
-        "heaterPIDParameters"
-    };
-
-    bool m_ConfigLoaded {false};
-
-    float lastReadPeriod {0};
-    CloudWatcherConstants constants;
-    CloudWatcherController *cwc {nullptr};
+    protected:
+        virtual bool Handshake() override;
+        virtual IPState updateWeather() override;
+        virtual bool saveConfigItems(FILE *fp) override;
 
 
-    bool sendConstants();
-    //bool resetConstants();
-    bool resetData();
-    double getNumberValueFromVector(INumberVectorProperty *nvp, const char *name);
-    double getNumberValueFromVector(INDI::PropertyNumber nvp, const char *name);
-    bool isWetRain();
+    private:
+        // Skeleton properties holding user settings that must survive a restart.
+        // Shared by saveConfigItems() and ISGetProperties() so the two cannot drift apart.
+        // "deviceSwitch" is deliberately excluded: it drives the unit's relay and must
+        // not be re-asserted automatically at startup.
+        static constexpr const char *CONFIGURABLE_PROPERTIES[] =
+        {
+            "skyCorrection",
+            "sqmLimit",
+            "anemometerType",
+            "heaterParameters",
+            "heatingAlgorithm",
+            "heaterPIDParameters"
+        };
 
-    INumberVectorProperty AagLocationNP;
-    INumber AagLocationN[3];
+        bool m_ConfigLoaded {false};
 
-    HeatingAlgorithmStatus heatingStatus;
+        float lastReadPeriod {0};
+        CloudWatcherConstants constants;
+        CloudWatcherController *cwc {nullptr};
 
-    time_t pulseStartTime;
-    time_t wetStartTime;
 
-    float desiredSensorTemperature;
-    float globalRainSensorHeater;
+        bool sendConstants();
+        //bool resetConstants();
+        bool resetData();
+        double getNumberValueFromVector(INumberVectorProperty *nvp, const char *name);
+        double getNumberValueFromVector(INDI::PropertyNumber nvp, const char *name);
+        bool isWetRain();
 
-    double m_FirmwareVersion;
-    int m_AnemometerStatus;
+        INumberVectorProperty AagLocationNP;
+        INumber AagLocationN[3];
 
-    bool usePIDforHeating;
-    HeaterPID *heaterPID {nullptr};
+        HeatingAlgorithmStatus heatingStatus;
 
-    enum
-    {
-	RAW_SENSOR_SUPPLY,
-	RAW_SENSOR_SKY,
-	RAW_SENSOR_SENSOR,
-	RAW_SENSOR_TEMP_EST,
-	RAW_SENSOR_TEMP_ACT,
-	RAW_SENSOR_RAIN,
-	RAW_SENSOR_RAIN_HEATER,
-	RAW_SENSOR_RAIN_TEMPERATURE,
-	RAW_SENSOR_LDR,
-	RAW_SENSOR_LIGHT_FREQ,
-	RAW_SENSOR_READ_CYCLES,
-	RAW_SENSOR_WIND_SPEED,
-	RAW_SENSOR_RELATIVE_HUMIDITY,
-	RAW_SENSOR_PRESSURE,
-	RAW_SENSOR_TOTAL_READINGS
-    };
+        time_t pulseStartTime;
+        time_t wetStartTime;
 
-    enum
-    {
-	SENSOR_INFRARED_SKY, //skyTemperature
-	SENSOR_CORRECTED_INFRARED_SKY, //correctedTemperature
-	SENSOR_INFRARED_SENSOR,
-	SENSOR_RAIN_SENSOR, //data.sensor
-	SENSOR_RAIN_SENSOR_TEMPERATURE, //rainSensorTemperature
-	SENSOR_RAIN_SENSOR_HEATER, //rainSensorHeater
-	SENSOR_BRIGHTNESS_SENSOR, //ldr
-	SENSOR_BRIGHTNESS_SQM, //ambientLight
-	SENSOR_AMBIENT_TEMPERATURE_SENSOR, //ambientTemperature
-	SENSOR_WIND_SPEED, //data.windSpeed;
-	SENSOR_RELATIVE_HUMIDITY, //data.humidity;
-	SENSOR_PRESSURE, //data.abspress;
-	SENSOR_RELATIVE_PRESSURE //data.relpress;
-    };
+        float desiredSensorTemperature;
+        float globalRainSensorHeater;
+
+        double m_FirmwareVersion;
+        int m_AnemometerStatus;
+
+        bool usePIDforHeating;
+        HeaterPID *heaterPID {nullptr};
+
+        enum
+        {
+            RAW_SENSOR_SUPPLY,
+            RAW_SENSOR_SKY,
+            RAW_SENSOR_SENSOR,
+            RAW_SENSOR_TEMP_EST,
+            RAW_SENSOR_TEMP_ACT,
+            RAW_SENSOR_RAIN,
+            RAW_SENSOR_RAIN_HEATER,
+            RAW_SENSOR_RAIN_TEMPERATURE,
+            RAW_SENSOR_LDR,
+            RAW_SENSOR_LIGHT_FREQ,
+            RAW_SENSOR_READ_CYCLES,
+            RAW_SENSOR_WIND_SPEED,
+            RAW_SENSOR_RELATIVE_HUMIDITY,
+            RAW_SENSOR_PRESSURE,
+            RAW_SENSOR_TOTAL_READINGS
+        };
+
+        enum
+        {
+            SENSOR_INFRARED_SKY, //skyTemperature
+            SENSOR_CORRECTED_INFRARED_SKY, //correctedTemperature
+            SENSOR_INFRARED_SENSOR,
+            SENSOR_RAIN_SENSOR, //data.sensor
+            SENSOR_RAIN_SENSOR_TEMPERATURE, //rainSensorTemperature
+            SENSOR_RAIN_SENSOR_HEATER, //rainSensorHeater
+            SENSOR_BRIGHTNESS_SENSOR, //ldr
+            SENSOR_BRIGHTNESS_SQM, //ambientLight
+            SENSOR_AMBIENT_TEMPERATURE_SENSOR, //ambientTemperature
+            SENSOR_WIND_SPEED, //data.windSpeed;
+            SENSOR_RELATIVE_HUMIDITY, //data.humidity;
+            SENSOR_PRESSURE, //data.abspress;
+            SENSOR_RELATIVE_PRESSURE //data.relpress;
+        };
 
 };
