@@ -104,6 +104,7 @@ class ToupBase : public INDI::CCD
         // Capture
         //#############################################################################
         void allocateFrameBuffer();
+        void updatePixelSize(uint32_t resolutionIndex);
         timeval m_ExposureEnd;
         double m_ExposureRequest;
 

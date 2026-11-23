@@ -23,6 +23,7 @@
 #include "config.h"
 #include "indiapi.h"
 #include <stream/streammanager.h>
+#include <algorithm>
 #include <unordered_map>
 #include <unistd.h>
 #include <deque>
@@ -672,6 +673,7 @@ void ToupBase::setupParams()
 
         SetCCDParams(m_Instance->model->res[finalResolutionIndex].width, m_Instance->model->res[finalResolutionIndex].height,
                      m_BitsPerPixel, m_Instance->model->xpixsz, m_Instance->model->ypixsz);
+        updatePixelSize(finalResolutionIndex);
     }
 
     // Set trigger mode to software
@@ -858,6 +860,36 @@ void ToupBase::setupParams()
     if (FAILED(rc))
         LOGF_ERROR("Failed to start camera. %s", errorCodes(rc).c_str());
     SetTimer(getCurrentPollingPeriod());
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+/// The lower resolutions are binned readouts of the whole sensor: the field of view stays the same,
+/// so each one has a proportionally larger effective pixel size. Report it, or every image header
+/// (and the plate scale computed from it) is off by the resolution ratio.
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void ToupBase::updatePixelSize(uint32_t resolutionIndex)
+{
+    if (resolutionIndex >= m_Instance->model->preview)
+        return;
+
+    uint32_t fullWidth = 0, fullHeight = 0;
+    for (uint32_t i = 0; i < m_Instance->model->preview; i++)
+    {
+        fullWidth = std::max(fullWidth, static_cast<uint32_t>(m_Instance->model->res[i].width));
+        fullHeight = std::max(fullHeight, static_cast<uint32_t>(m_Instance->model->res[i].height));
+    }
+
+    const auto &res = m_Instance->model->res[resolutionIndex];
+    if (res.width == 0 || res.height == 0)
+        return;
+
+    const double pixelX = m_Instance->model->xpixsz * fullWidth / res.width;
+    const double pixelY = m_Instance->model->ypixsz * fullHeight / res.height;
+    PrimaryCCD.setPixelSize(pixelX, pixelY);
+
+    if (fullWidth != res.width)
+        LOGF_DEBUG("Resolution %ux%u of %ux%u: effective pixel size %.2fx%.2f um", res.width, res.height, fullWidth, fullHeight,
+                   pixelX, pixelY);
 }
 
 void ToupBase::allocateFrameBuffer()
@@ -1398,6 +1430,7 @@ bool ToupBase::ISNewSwitch(const char *dev, const char *name, ISState *states, c
                     m_ResolutionSP.setState(IPS_OK);
                     PrimaryCCD.setResolution(m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
                     PrimaryCCD.setFrame(0, 0, m_Instance->model->res[targetIndex].width, m_Instance->model->res[targetIndex].height);
+                    updatePixelSize(targetIndex);
                     LOGF_INFO("Resolution changed to %s", m_ResolutionSP[targetIndex].getLabel());
                     allocateFrameBuffer();
                     m_ConfigResolutionIndex = targetIndex;
