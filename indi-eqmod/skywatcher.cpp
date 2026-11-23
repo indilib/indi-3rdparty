@@ -24,6 +24,10 @@
 #include <termios.h>
 #include <cmath>
 #include <cstring>
+#include <algorithm>
+
+// Soft GoTo (see skywatcher.h); rate and approach are set via SetSoftGoto() (SOFTGOTO property)
+#define SOFTGOTO_TICK_MS 100 // encoder polling period during the fast phase
 
 Skywatcher::Skywatcher(EQMod *t)
 {
@@ -96,6 +100,8 @@ bool Skywatcher::Handshake()
 
 bool Skywatcher::Disconnect()
 {
+    CancelSoftGoto();
+
     if (PortFD < 0)
         return true;
 
@@ -792,15 +798,18 @@ void Skywatcher::InquireEncoderInfo(SkywatcherAxis axis, double *steppersvalues)
 bool Skywatcher::IsRARunning()
 {
     CheckMotorStatus(Axis1);
-    LOGF_DEBUG("%s() = %s", __FUNCTION__, (RARunning ? "true" : "false"));
-    return (RARunning);
+    // A soft GoTo is "running" even in the short moment between its fast and slow phase
+    bool running = RARunning || (softgoto[Axis1].phase != SG_IDLE);
+    LOGF_DEBUG("%s() = %s", __FUNCTION__, (running ? "true" : "false"));
+    return (running);
 }
 
 bool Skywatcher::IsDERunning()
 {
     CheckMotorStatus(Axis2);
-    LOGF_DEBUG("%s() = %s", __FUNCTION__, (DERunning ? "true" : "false"));
-    return (DERunning);
+    bool running = DERunning || (softgoto[Axis2].phase != SG_IDLE);
+    LOGF_DEBUG("%s() = %s", __FUNCTION__, (running ? "true" : "false"));
+    return (running);
 }
 
 void Skywatcher::ReadMotorStatus(SkywatcherAxis axis)
@@ -944,6 +953,32 @@ void Skywatcher::SlewTo(int32_t deltaraencoder, int32_t deltadeencoder)
 
     LOGF_DEBUG("%s() : deltaRA = %d deltaDE = %d", __FUNCTION__, deltaraencoder, deltadeencoder);
 
+    // Soft GoTo: long moves are done by the driver at a capped rate (see skywatcher.h).
+    // An axis handled this way is removed from the firmware GoTo below (delta = 0).
+    try
+    {
+        if (StartSoftGoto(Axis1, deltaraencoder))
+            deltaraencoder = 0;
+        if (StartSoftGoto(Axis2, deltadeencoder))
+            deltadeencoder = 0;
+    }
+    catch (EQModError &)
+    {
+        CancelSoftGoto();
+        try
+        {
+            StopMotor(Axis1);
+            StopMotor(Axis2);
+        }
+        catch (EQModError &)
+        {
+            // Ignore error
+        }
+        throw;
+    }
+    if (softgoto[Axis1].phase != SG_IDLE || softgoto[Axis2].phase != SG_IDLE)
+        ScheduleSoftGotoTimer();
+
     newstatus.slewmode = GOTO;
     if (deltaraencoder >= 0)
         newstatus.direction = FORWARD;
@@ -951,6 +986,7 @@ void Skywatcher::SlewTo(int32_t deltaraencoder, int32_t deltadeencoder)
         newstatus.direction = BACKWARD;
     if (deltaraencoder < 0)
         deltaraencoder = -deltaraencoder;
+    lowspeedmargin = GotoLowSpeedMargin(Axis1);
     if (deltaraencoder > static_cast<int32_t>(lowspeedmargin))
         useHighSpeed = true;
     else
@@ -981,6 +1017,7 @@ void Skywatcher::SlewTo(int32_t deltaraencoder, int32_t deltadeencoder)
         newstatus.direction = BACKWARD;
     if (deltadeencoder < 0)
         deltadeencoder = -deltadeencoder;
+    lowspeedmargin = GotoLowSpeedMargin(Axis2);
     if (deltadeencoder > static_cast<int32_t>(lowspeedmargin))
         useHighSpeed = true;
     else
@@ -1006,6 +1043,203 @@ void Skywatcher::SlewTo(int32_t deltaraencoder, int32_t deltadeencoder)
     }
 }
 
+/* ---------------------------------------------------------------------------------------------
+ * Soft GoTo: limited-speed GoTo/Park (see skywatcher.h)
+ * ------------------------------------------------------------------------------------------- */
+
+void Skywatcher::SetSoftGoto(double rate, double approachdeg)
+{
+    softgotorate     = (rate <= 0.0) ? 0.0 : std::min(std::max(rate, 2.0), MAX_RATE);
+    softgotoapproach = std::min(std::max(approachdeg, 0.5), 20.0);
+    softgotofailed   = false; // a new setting is a new chance
+}
+
+double Skywatcher::SoftGotoMaxRate()
+{
+    return softgotofailed ? 0.0 : softgotorate;
+}
+
+double Skywatcher::SoftGotoApproachDeg()
+{
+    return softgotoapproach;
+}
+
+// Moves up to this many microsteps use the firmware low-speed GoTo. Originally a fixed 20000;
+// with soft GoTo enabled the whole approach distance is done at low speed, so the firmware
+// high-speed GoTo (always maximum speed) is never used.
+uint32_t Skywatcher::GotoLowSpeedMargin(SkywatcherAxis axis)
+{
+    const uint32_t original = 20000;
+    if (SoftGotoMaxRate() <= 0.0)
+        return original;
+    uint32_t steps360 = (axis == Axis1) ? RASteps360 : DESteps360;
+    uint32_t approach = static_cast<uint32_t>(SoftGotoApproachDeg() * steps360 / 360.0);
+    return std::max(original, approach);
+}
+
+// Start the fast phase for one axis. Returns false if this axis should use the normal firmware GoTo.
+bool Skywatcher::StartSoftGoto(SkywatcherAxis axis, int32_t delta)
+{
+    double maxrate = SoftGotoMaxRate();
+    if (maxrate <= 0.0 || delta == 0)
+        return false;
+
+    uint32_t steps360 = (axis == Axis1) ? RASteps360 : DESteps360;
+    int64_t approach  = static_cast<int64_t>(SoftGotoApproachDeg() * steps360 / 360.0);
+    int64_t absdelta  = (delta < 0) ? -static_cast<int64_t>(delta) : static_cast<int64_t>(delta);
+    if (absdelta <= approach)
+        return false; // short move: firmware low-speed GoTo only
+
+    uint32_t pos = (axis == Axis1) ? GetRAEncoder() : GetDEEncoder();
+
+    SoftGotoAxis &sg = softgoto[axis];
+    sg.target         = static_cast<int64_t>(pos) + delta;
+    sg.direction      = (delta >= 0) ? 1 : -1;
+    sg.approach       = approach;
+    sg.startremaining = absdelta;
+    sg.ticks          = 0;
+
+    LOGF_INFO("Soft GoTo axis %c: %.1fx sidereal for %.1f deg, then slow approach (%.1f deg)",
+              AxisCmd[axis], maxrate, 360.0 * absdelta / steps360, SoftGotoApproachDeg());
+
+    if (axis == Axis1)
+        SlewRA(sg.direction * maxrate);
+    else
+        SlewDE(sg.direction * maxrate);
+
+    sg.phase = SG_SLEWING;
+    return true;
+}
+
+// Firmware low-speed GoTo of a relative distance (same as the low-speed branch of SlewTo)
+void Skywatcher::StartLowSpeedGoto(SkywatcherAxis axis, int32_t delta)
+{
+    const uint32_t lowperiod = 18;
+    if (delta == 0)
+        return;
+
+    SkywatcherAxisStatus newstatus;
+    newstatus.slewmode  = GOTO;
+    newstatus.speedmode = LOWSPEED;
+    newstatus.direction = (delta >= 0) ? FORWARD : BACKWARD;
+    uint32_t absdelta   = (delta < 0) ? static_cast<uint32_t>(-static_cast<int64_t>(delta)) : static_cast<uint32_t>(delta);
+
+    SetMotion(axis, newstatus);
+    SetSpeed(axis, lowperiod);
+    SetTarget(axis, absdelta);
+    SetTargetBreaks(axis, (absdelta > 200) ? 200 : absdelta / 10);
+    StartMotor(axis);
+}
+
+void Skywatcher::ScheduleSoftGotoTimer()
+{
+    if (softgototimerrunning)
+        return;
+    softgototimer        = IEAddTimer(SOFTGOTO_TICK_MS, (IE_TCF *)SoftGotoCallback, this);
+    softgototimerrunning = true;
+}
+
+void Skywatcher::CancelSoftGoto(int axis)
+{
+    for (int a = 0; a < NUMBER_OF_SKYWATCHERAXIS; a++)
+    {
+        if (axis < 0 || axis == a)
+            softgoto[a].phase = SG_IDLE;
+    }
+    if (softgototimerrunning && softgoto[Axis1].phase == SG_IDLE && softgoto[Axis2].phase == SG_IDLE)
+    {
+        IERmTimer(softgototimer);
+        softgototimerrunning = false;
+    }
+}
+
+void Skywatcher::SoftGotoCallback(void *userpointer)
+{
+    Skywatcher *self = static_cast<Skywatcher *>(userpointer);
+    self->softgototimerrunning = false; // INDI timers are one-shot; SoftGotoTick re-arms if needed
+    self->SoftGotoTick();
+}
+
+void Skywatcher::SoftGotoTick()
+{
+    try
+    {
+        for (int a = 0; a < NUMBER_OF_SKYWATCHERAXIS; a++)
+        {
+            SkywatcherAxis axis = static_cast<SkywatcherAxis>(a);
+            SoftGotoAxis &sg    = softgoto[a];
+            if (sg.phase == SG_IDLE)
+                continue;
+
+            if (sg.phase == SG_SLEWING)
+            {
+                uint32_t pos      = (axis == Axis1) ? GetRAEncoder() : GetDEEncoder();
+                int64_t remaining = (sg.target - static_cast<int64_t>(pos)) * sg.direction;
+                sg.ticks++;
+
+                bool stopnow = false;
+                if (remaining <= sg.approach)
+                {
+                    stopnow = true;
+                }
+                else if (sg.ticks >= 5 && remaining > sg.startremaining + sg.approach / 2)
+                {
+                    // Moving away from the target: direction convention differs. Fall back to the
+                    // firmware GoTo (known to be right) and don't use soft GoTo again until restart.
+                    LOGF_WARN("Soft GoTo axis %c moves away from target, disabling soft GoTo", AxisCmd[axis]);
+                    softgotofailed = true;
+                    stopnow        = true;
+                }
+                else if (sg.ticks % 10 == 0)
+                {
+                    // motor stopped by itself (limit, error)?
+                    ReadMotorStatus(axis);
+                    if (!((axis == Axis1) ? RARunning : DERunning))
+                        stopnow = true;
+                }
+
+                if (stopnow)
+                {
+                    StopMotor(axis);
+                    sg.phase = SG_STOPPING;
+                }
+            }
+            else if (sg.phase == SG_STOPPING)
+            {
+                ReadMotorStatus(axis);
+                if (!((axis == Axis1) ? RARunning : DERunning))
+                {
+                    uint32_t pos      = (axis == Axis1) ? GetRAEncoder() : GetDEEncoder();
+                    int64_t remaining = sg.target - static_cast<int64_t>(pos);
+                    sg.phase          = SG_IDLE;
+                    LOGF_INFO("Soft GoTo axis %c: slow approach, %lld microsteps to go", AxisCmd[axis],
+                              static_cast<long long>(remaining));
+                    StartLowSpeedGoto(axis, static_cast<int32_t>(remaining));
+                }
+            }
+        }
+    }
+    catch (EQModError &e)
+    {
+        LOGF_ERROR("Soft GoTo error, stopping motors: %s", e.message);
+        CancelSoftGoto();
+        try
+        {
+            StopMotor(Axis1);
+            StopMotor(Axis2);
+        }
+        catch (EQModError &)
+        {
+            // Ignore error
+        }
+        return;
+    }
+
+    if (softgoto[Axis1].phase != SG_IDLE || softgoto[Axis2].phase != SG_IDLE)
+        ScheduleSoftGotoTimer();
+}
+
+// Note: AbsSlewTo (AutoHome / AstroEQ index search) always uses the firmware GoTo, soft GoTo only applies to SlewTo.
 void Skywatcher::AbsSlewTo(uint32_t raencoder, uint32_t deencoder, bool raup, bool deup)
 {
     SkywatcherAxisStatus newstatus;
@@ -1617,12 +1851,14 @@ void Skywatcher::StartMotor(SkywatcherAxis axis)
 void Skywatcher::StopRA()
 {
     LOGF_DEBUG("%s() : calling RA StopWaitMotor", __FUNCTION__);
+    CancelSoftGoto(Axis1);
     StopWaitMotor(Axis1);
 }
 
 void Skywatcher::StopDE()
 {
     LOGF_DEBUG("%s() : calling DE StopWaitMotor", __FUNCTION__);
+    CancelSoftGoto(Axis2);
     StopWaitMotor(Axis2);
 }
 

@@ -289,6 +289,52 @@ class Skywatcher
         void SetAxisPosition(SkywatcherAxis axis, uint32_t step);
         void TurnSnapPort(SkywatcherAxis axis, bool on);
 
+        // ------------------------------------------------------------------
+        // "Soft GoTo": limited-speed GoTo/Park.
+        // The firmware GoTo always runs at maximum speed. For long moves the driver instead slews
+        // at a capped rate (slew mode, which obeys the requested rate), watches the encoder and stops
+        // SOFTGOTO_APPROACH_DEG before the target. The rest is done by a firmware low-speed GoTo.
+        // Configuration: SetSoftGoto(), driven by the SOFTGOTO property of the driver
+        //   rate         max rate in x sidereal for long moves, 0 = disable (original behaviour)
+        //   approachdeg  distance in degrees handled by the slow final approach
+        // ------------------------------------------------------------------
+        enum SoftGotoPhase
+        {
+            SG_IDLE = 0,
+            SG_SLEWING,
+            SG_STOPPING
+        };
+        struct SoftGotoAxis
+        {
+            SoftGotoPhase phase {SG_IDLE};
+            int64_t target {0};         // absolute target encoder value
+            int direction {1};          // +1 = encoder increasing, -1 = decreasing
+            int64_t approach {0};       // remaining microsteps at which the fast phase ends
+            int64_t startremaining {0}; // remaining microsteps when the fast phase started
+            int ticks {0};
+        };
+        SoftGotoAxis softgoto[NUMBER_OF_SKYWATCHERAXIS];
+        int softgototimer {0};
+        bool softgototimerrunning {false};
+        bool softgotofailed {false};    // set if the fast phase ever moved the wrong way: soft GoTo disabled until SetSoftGoto() is called again
+
+        double softgotorate {600.0};
+        double softgotoapproach {3.0};
+
+    public:
+        void SetSoftGoto(double rate, double approachdeg);
+
+    private:
+        double SoftGotoMaxRate();
+        double SoftGotoApproachDeg();
+        uint32_t GotoLowSpeedMargin(SkywatcherAxis axis);
+        bool StartSoftGoto(SkywatcherAxis axis, int32_t delta);
+        void StartLowSpeedGoto(SkywatcherAxis axis, int32_t delta);
+        void ScheduleSoftGotoTimer();
+        void CancelSoftGoto(int axis = -1);
+        void SoftGotoTick();
+        static void SoftGotoCallback(void *userpointer);
+
         bool read_eqmod();
         bool dispatch_command(SkywatcherCommand cmd, SkywatcherAxis axis, char *arg);
 
