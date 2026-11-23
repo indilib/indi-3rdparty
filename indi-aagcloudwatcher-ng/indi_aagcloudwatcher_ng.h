@@ -73,12 +73,16 @@ class AAGCloudWatcher : public INDI::Weather
             "skyCorrection",
             "sqmLimit",
             "anemometerType",
+            "ambientSource",
             "heaterParameters",
             "heatingAlgorithm",
             "heaterPIDParameters"
         };
 
         bool m_ConfigLoaded {false};
+        // The RH sensor is selected as the ambient source but gives no valid temperature:
+        // warn once, not on every reading.
+        bool m_AmbientFallbackWarned {false};
 
         float lastReadPeriod {0};
         CloudWatcherConstants constants;

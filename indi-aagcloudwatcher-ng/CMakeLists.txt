@@ -6,7 +6,7 @@ LIST(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/../cmake_modules/")
 include(GNUInstallDirs)
 
 set (AAG_VERSION_MAJOR 1)
-set (AAG_VERSION_MINOR 9)
+set (AAG_VERSION_MINOR 10)
 
 find_package(INDI REQUIRED)
 find_package(Threads REQUIRED)
@@ -45,6 +45,16 @@ ENDIF ()
 
 add_executable(aagcloudwatcher_test_ng ${test_SRCS})
 target_link_libraries(aagcloudwatcher_test_ng ${INDI_LIBRARIES})
+
+if (INDI_BUILD_UNITTESTS)
+    enable_testing()
+    find_package(GTest REQUIRED)
+    include_directories(${GTEST_INCLUDE_DIRS})
+
+    add_executable(test_aagcloudwatcher_ng_ambient test_ambient_source.cpp)
+    target_link_libraries(test_aagcloudwatcher_ng_ambient ${GTEST_BOTH_LIBRARIES} Threads::Threads)
+    add_test(NAME test_aagcloudwatcher_ng_ambient COMMAND test_aagcloudwatcher_ng_ambient)
+endif ()
 
 install(TARGETS indi_aagcloudwatcher_ng RUNTIME DESTINATION bin)
 install(TARGETS aagcloudwatcher_test_ng RUNTIME DESTINATION bin)
