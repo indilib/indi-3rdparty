@@ -326,6 +326,7 @@ void EQMod::ISGetProperties(const char *dev)
     {
         GI::updateProperties();
         defineProperty(SlewSpeedsNP);
+        defineProperty(SoftGotoNP);
         defineProperty(GuideRateNP);
         defineProperty(PulseLimitsNP);
         defineProperty(MountInformationTP);
@@ -417,6 +418,7 @@ bool EQMod::loadProperties()
     RAStatusLP         = getLight("RASTATUS");
     DEStatusLP         = getLight("DESTATUS");
     SlewSpeedsNP       = getNumber("SLEWSPEEDS");
+    SoftGotoNP         = getNumber("SOFTGOTO");
     HemisphereSP       = getSwitch("HEMISPHERE");
     TrackDefaultSP     = getSwitch("TELESCOPE_TRACK_DEFAULT");
     ReverseDECSP       = getSwitch("REVERSEDEC");
@@ -510,6 +512,8 @@ bool EQMod::updateProperties()
     if (isConnected())
     {
         defineProperty(SlewSpeedsNP);
+        defineProperty(SoftGotoNP);
+        ApplySoftGotoSettings();
         defineProperty(GuideRateNP);
         defineProperty(PulseLimitsNP);
         defineProperty(MountInformationTP);
@@ -631,6 +635,7 @@ bool EQMod::updateProperties()
         deleteProperty(RAStatusLP);
         deleteProperty(DEStatusLP);
         deleteProperty(SlewSpeedsNP);
+        deleteProperty(SoftGotoNP);
         deleteProperty(HemisphereSP);
         deleteProperty(HorizontalCoordNP);
         deleteProperty(ReverseDECSP);
@@ -2508,6 +2513,17 @@ bool EQMod::ISNewNumber(const char *dev, const char *name, double values[], char
             return true;
         }
 
+        if (SoftGotoNP.isNameMatch(name))
+        {
+            // Limited-speed GoTo/Park, see Skywatcher::SetSoftGoto. Only stored here; it takes
+            // effect with the next GoTo, so it is safe to run while loading the configuration.
+            SoftGotoNP.update(values, names, n);
+            SoftGotoNP.setState(IPS_OK);
+            SoftGotoNP.apply();
+            ApplySoftGotoSettings();
+            return true;
+        }
+
         // Guider interface
         if (GuideNSNP.isNameMatch(name) || GuideWENP.isNameMatch(name))
         {
@@ -3070,6 +3086,19 @@ bool EQMod::updateTime(ln_date *lndate_utc, double utc_offset)
     return true;
 }
 
+void EQMod::ApplySoftGotoSettings()
+{
+    if (!SoftGotoNP || mount == nullptr)
+        return;
+    double rate = SoftGotoNP.findWidgetByName("GOTORATE")->getValue();
+    double deg  = SoftGotoNP.findWidgetByName("APPROACHDEG")->getValue();
+    mount->SetSoftGoto(rate, deg);
+    if (rate > 0.0)
+        LOGF_INFO("Soft GoTo: %.1fx sidereal, final approach %.1f deg", rate, deg);
+    else
+        LOG_INFO("Soft GoTo disabled (firmware GoTo at maximum speed)");
+}
+
 double EQMod::GetRASlew()
 {
     ISwitch *sw;
@@ -3554,6 +3583,8 @@ bool EQMod::saveConfigItems(FILE *fp)
     CustomSteps360NP.save(fp);
     if (SlewSpeedsNP)
         SlewSpeedsNP.save(fp);
+    if (SoftGotoNP)
+        SoftGotoNP.save(fp);
     if (ReverseDECSP)
         ReverseDECSP.save(fp);
     if (LEDBrightnessNP)

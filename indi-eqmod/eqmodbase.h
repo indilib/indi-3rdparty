@@ -101,6 +101,7 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         INDI::PropertyLight    RAStatusLP          {INDI::Property()};
         INDI::PropertyLight    DEStatusLP          {INDI::Property()};
         INDI::PropertyNumber   SlewSpeedsNP        {INDI::Property()};
+        INDI::PropertyNumber   SoftGotoNP          {INDI::Property()};
         INDI::PropertySwitch   HemisphereSP        {INDI::Property()};
         INDI::PropertySwitch   TrackDefaultSP      {INDI::Property()};
         INDI::PropertyNumber   HorizontalCoordNP   {INDI::Property()};
@@ -183,6 +184,7 @@ class EQMod : public INDI::Telescope, public INDI::GuiderInterface
         double GetDefaultDETrackRate();
         static void timedguideNSCallback(void *userpointer);
         static void timedguideWECallback(void *userpointer);
+        void ApplySoftGotoSettings();
         double GetRASlew();
         double GetDESlew();
         bool gotoInProgress();
