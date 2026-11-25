@@ -1,0 +1,8 @@
+<driversList>
+ <devGroup group="Telescopes">
+  <device label="10Micron Native ReadOnly" manufacturer="10 Micron">
+   <driver name="10Micron Native ReadOnly">indi_10micron_native_ro</driver>
+   <version>0.4</version>
+  </device>
+ </devGroup>
+</driversList>
