@@ -15,8 +15,10 @@
 #include "scopelink_driver.h"
 
 #include <algorithm>
+#include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include <string>
 
 extern const char *PARAMETERS_TAB;
 
@@ -546,6 +548,8 @@ void ScopeLink::readFaults()
         LOGF_ERROR("The fault store could not be read: %s", error.what());
         FaultStoreTP.setState(IPS_ALERT);
         FaultStoreTP.apply();
+        FaultDetailsTP.setState(IPS_ALERT);
+        FaultDetailsTP.apply();
         return;
     }
 
@@ -555,9 +559,15 @@ void ScopeLink::readFaults()
     for (size_t index = 0; index < ScopeLink::MaxShownFaults; index++)
     {
         if (index < faults.size())
+        {
             FaultStoreTP[index].setText(faults[index].summary());
+            FaultDetailsTP[index].setText(faultDetails(faults[index]));
+        }
         else
+        {
             FaultStoreTP[index].setText("-");
+            FaultDetailsTP[index].setText("");
+        }
     }
 
     bool anyActive = false;
@@ -580,6 +590,130 @@ void ScopeLink::readFaults()
 
     FaultStoreTP.setState(anyActive ? IPS_ALERT : (faults.empty() ? IPS_OK : IPS_BUSY));
     FaultStoreTP.apply();
+
+    // After FAULT_STORE, so that a client which waits for the details has the summaries already.
+    FaultDetailsTP.setState(FaultStoreTP.getState());
+    FaultDetailsTP.apply();
+}
+
+/** @brief A string as a JSON string literal. */
+static std::string jsonString(const std::string &text)
+{
+    std::string out = "\"";
+
+    for (const char c : text)
+    {
+        switch (c)
+        {
+            case '"':
+                out += "\\\"";
+                break;
+
+            case '\\':
+                out += "\\\\";
+                break;
+
+            default:
+                if (static_cast<unsigned char>(c) < 0x20)
+                {
+                    char escaped[8];
+                    std::snprintf(escaped, sizeof(escaped), "\\u%04x", static_cast<unsigned>(c));
+                    out += escaped;
+                }
+                else
+                {
+                    out += c;
+                }
+        }
+    }
+
+    return out + "\"";
+}
+
+std::string ScopeLink::faultDetails(const scopelink::Fault &fault)
+{
+    // One object per fault, the members in a fixed order:
+    //   code         the number this controller sends for it, which FAULT_CLEAR takes back
+    //   name         what the driver calls it
+    //   active       present now, rather than recorded and gone since
+    //   occurrences  how often it has been seen
+    //   data         the controller's additional data for it
+    //   time         the freeze frame's own timestamp, or empty where it carries none
+    //   frame        the freeze frame, as [name, value] pairs in the order the controller sends them
+    std::string out = "{\"code\":" + std::to_string(fault.wireCode);
+
+    out += ",\"name\":" + jsonString(fault.codeName());
+    out += std::string(",\"active\":") + (fault.isActive ? "true" : "false");
+    out += ",\"occurrences\":" + std::to_string(fault.occurrenceCount);
+    out += ",\"data\":" + std::to_string(fault.additionalData);
+    out += ",\"time\":" + jsonString(fault.timestamp());
+    out += ",\"frame\":[";
+
+    for (size_t index = 0; index < fault.snapshot.size(); index++)
+    {
+        if (index > 0)
+            out += ",";
+
+        out += "[" + jsonString(fault.snapshot[index].name) + "," + std::to_string(fault.snapshot[index].value) + "]";
+    }
+
+    return out + "]}";
+}
+
+void ScopeLink::clearFault(int wireCode)
+{
+    std::vector<scopelink::Fault> faults;
+
+    try
+    {
+        faults = scopelink::Fault::readAll(*m_device);
+    }
+    catch (const std::exception &error)
+    {
+        LOGF_ERROR("The fault store could not be read before clearing a fault: %s", error.what());
+        FaultClearNP.setState(IPS_ALERT);
+        FaultClearNP.apply();
+        return;
+    }
+
+    // Looked up first, so that a number the store does not hold is refused with a reason rather than sent
+    // to a controller that answers it with an empty frame.
+    const auto numbered = [wireCode](const scopelink::Fault & fault)
+    {
+        return fault.wireCode == wireCode;
+    };
+    const auto found = std::find_if(faults.begin(), faults.end(), numbered);
+
+    FaultClearNP[0].setValue(wireCode);
+
+    if (found == faults.end())
+    {
+        LOGF_ERROR("The controller is not storing a fault numbered %d; it may have been cleared already.", wireCode);
+        FaultClearNP.setState(IPS_ALERT);
+        FaultClearNP.apply();
+        return;
+    }
+
+    try
+    {
+        found->clear(*m_device);
+    }
+    catch (const std::exception &error)
+    {
+        LOGF_ERROR("'%s' could not be cleared: %s", found->codeName().c_str(), error.what());
+        FaultClearNP.setState(IPS_ALERT);
+        FaultClearNP.apply();
+        return;
+    }
+
+    LOGF_INFO("Cleared '%s' (%d); %zu other fault(s) stay stored.", found->codeName().c_str(), wireCode,
+              faults.size() - 1);
+
+    FaultClearNP.setState(IPS_OK);
+    FaultClearNP.apply();
+
+    // As clearing the store does: a fault whose cause is still present is raised again at once.
+    readFaults();
 }
 
 void ScopeLink::clearFaults()

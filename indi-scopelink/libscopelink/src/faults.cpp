@@ -427,9 +427,14 @@ std::vector<Fault> Fault::readAll(Device &device)
     // a separate transaction, and a fault logged between the two would make it stale. So the frame is read
     // at whatever length the controller says and the record count derived from that - unless the fault
     // store has grown past what the length byte can describe, where there is nothing to derive it from.
+    //
+    // The request is the routine id, one byte, as the Windows driver sends it. Firmware from August 2026 on
+    // answers anything else with an empty payload, which made every non-empty fault store unreadable to a
+    // driver that sent none - found on a generation 4 unit with three faults stored.
+    const Frame request{ command::ReadDtc };
     const Frame response = (expectedLength > Protocol::MaxSelfDescribingFrameLength) ?
-                               device.transact(command::ReadDtc, {}, expectedLength) :
-                               device.transactVariable(command::ReadDtc, {}, ResponseHeaderLength + recordLength);
+                           device.transact(command::ReadDtc, request, expectedLength) :
+                           device.transactVariable(command::ReadDtc, request, ResponseHeaderLength + recordLength);
 
     const size_t recordBytes = response.size() - ResponseHeaderLength;
 

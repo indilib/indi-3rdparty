@@ -203,11 +203,15 @@ Frame SimulatedController::handle(const Frame &request)
             return frame(commandId, Frame{ 0, 12, 0, 5, 0, 3, 0, 2, 0, 1, 0, 1, 0, 0, 0x2f, 0x1a });
 
         case command::ReadDtc:
+            // As the firmware's DiagReq_GetFaultData: the request is the routine id and nothing else, and
+            // a request of any other length is answered with an empty payload.
+            if (payload.size() != 1)
+                return frame(commandId, Frame{});
+
             return frame(commandId, faultPayload());
 
         case command::ClearDtc:
-            m_faults.clear();
-            return frame(commandId, Frame{ 1, 0, 0 });
+            return clearFaults(payload);
 
         default:
             break;
@@ -973,6 +977,30 @@ Frame SimulatedController::faultPayload() const
     }
 
     return payload;
+}
+
+Frame SimulatedController::clearFaults(const Frame &payload)
+{
+    // As the firmware's SM_DiagClear: a routine id and the number of one fault, which clears that fault,
+    // or 0xFFFF, which clears them all. The request is echoed back when something was cleared; anything
+    // else - a request of the wrong length, a fault that is not stored - is answered with nothing.
+    if (payload.size() != 3)
+        return frame(command::ClearDtc, Frame{});
+
+    const unsigned code = (static_cast<unsigned>(payload[1]) << 8) | payload[2];
+    const size_t before = m_faults.size();
+
+    const auto matches = [code](const StoredFault & fault)
+    {
+        return (code == 0xFFFF) || (fault.code == code);
+    };
+
+    m_faults.erase(std::remove_if(m_faults.begin(), m_faults.end(), matches), m_faults.end());
+
+    if (m_faults.size() == before)
+        return frame(command::ClearDtc, Frame{});
+
+    return frame(command::ClearDtc, payload);
 }
 
 uint8_t SimulatedController::activeFaultCount() const

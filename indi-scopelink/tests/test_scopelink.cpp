@@ -1139,6 +1139,13 @@ void testFaultDecoding()
 
         CHECK(faults.size() == 1);
 
+        // The request carries the routine id, one byte: the firmware answers a request without it with
+        // nothing, which a reply scripted here would not notice.
+        const Frame &request = transport.writes.back();
+
+        CHECK((request.size() >= 2) && (request[request.size() - 2] == 1)
+              && (request.back() == scopelink::command::ReadDtc));
+
         if (faults.empty())
             continue;
 
@@ -1281,9 +1288,11 @@ void testSimulatedControllers()
         // And the fault store, which is where the freeze frame layout and the fault numbering both land.
         const std::vector<scopelink::Fault> faults = scopelink::Fault::readAll(device);
 
-        CHECK(faults.size() == 1);
+        CHECK(faults.size() == 2);
+        CHECK(status.storedFaultCount == 2);
+        CHECK(status.activeFaultCount == 1);
 
-        if (faults.empty())
+        if (faults.size() != 2)
             continue;
 
         // The sensor timeout, which the simulator holds as an identity and serves as this controller's own
@@ -1293,12 +1302,95 @@ void testSimulatedControllers()
         CHECK(faults[0].wireCode == scopelink::Fault::wireCodeOf(faults[0].code, generation));
         CHECK(faults[0].isActive);
 
+        // The over temperature warning, which is not the same number on generation 4.
+        CHECK(faults[1].code == scopelink::FaultCode::EcuOvertemperatureWarning);
+        CHECK(faults[1].wireCode == scopelink::Fault::wireCodeOf(faults[1].code, generation));
+        CHECK(!faults[1].isActive);
+        CHECK(faults[1].occurrenceCount == 1);
+
         // The freeze frame decoder checks its own total against the capability set, so a snapshot that
         // came back at all is one whose field list consumed exactly the bytes the simulator sent.
         CHECK(!faults[0].snapshot.empty());
         CHECK(snapshotByte(faults[0], "Motor 3 status", -1) == ((generation > 3) ? 0 : -1));
         CHECK(snapshotByte(faults[0], "USB DS6 power active", -1) == ((generation > 3) ? 0 : -1));
         CHECK(snapshotByte(faults[0], "Digital input 1 state", -1) == ((interfaceMinor >= 1) ? -1 : 0));
+    }
+}
+
+/**
+ * @brief Clearing one fault clears that fault, as the firmware's SM_DiagClear does.
+ *
+ * Until the simulator held two faults, it cleared its whole store whatever number it was sent, so nothing
+ * could tell clearing one fault from clearing all of them - which is the difference FAULT_CLEAR exists for.
+ */
+void testSimulatedFaultClearing()
+{
+    const int layouts[][2] = { { 2, 0 }, { 3, 1 }, { 4, 3 } };
+
+    for (const auto &layout : layouts)
+    {
+        const int generation = layout[0];
+
+        scopelink::SimulatedTransport transport(generation, layout[1]);
+        scopelink::Protocol protocol(transport);
+        scopelink::Device device(protocol);
+
+        device.open();
+
+        // A fault store read without the routine id is answered with an empty payload, as the firmware
+        // answers it, which is too short to hold a record.
+        bool empty = false;
+
+        try
+        {
+            device.transactVariable(scopelink::command::ReadDtc, Frame{}, 6);
+        }
+        catch (const std::exception &)
+        {
+            empty = true;
+        }
+
+        CHECK(empty);
+
+        std::vector<scopelink::Fault> faults = scopelink::Fault::readAll(device);
+
+        CHECK(faults.size() == 2);
+
+        if (faults.size() != 2)
+            continue;
+
+        // The warning goes, the sensor timeout stays.
+        const scopelink::Fault warning = faults[1];
+
+        warning.clear(device);
+        faults = scopelink::Fault::readAll(device);
+
+        CHECK(faults.size() == 1);
+        CHECK(!faults.empty() && (faults[0].code == scopelink::FaultCode::Mlx90614CommunicationTimeout));
+        CHECK(device.refreshStatus().storedFaultCount == 1);
+        CHECK(device.status().activeFaultCount == 1);
+
+        // A fault that is no longer stored is answered with nothing, as the firmware answers it, and the
+        // store is left as it was.
+        bool refused = false;
+
+        try
+        {
+            warning.clear(device);
+        }
+        catch (const scopelink::CommunicationError &)
+        {
+            refused = true;
+        }
+
+        CHECK(refused);
+        CHECK(scopelink::Fault::readAll(device).size() == 1);
+
+        // And 0xFFFF, the firmware's number for every fault.
+        device.transact(scopelink::command::ClearDtc, Frame{ 0x03, 0xff, 0xff }, 7);
+
+        CHECK(scopelink::Fault::readAll(device).empty());
+        CHECK(device.refreshStatus().storedFaultCount == 0);
     }
 }
 
@@ -3052,7 +3144,8 @@ struct Test
         void (*body)();
 };
 
-const Test tests[] = {
+const Test tests[] =
+{
     { "byte order", testByteOrder },
     { "capabilities", testCapabilities },
     { "status parsing", testStatusParsing },
@@ -3069,6 +3162,7 @@ const Test tests[] = {
     { "fault decoding", testFaultDecoding },
     { "fault numbering", testFaultNumbering },
     { "simulated controllers", testSimulatedControllers },
+    { "simulated fault clearing", testSimulatedFaultClearing },
     { "simulated dew heaters", testSimulatedDewHeaters },
     { "motor role rules", testMotorRoleRules },
     { "motor roles", testMotorRoles },

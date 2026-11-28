@@ -160,11 +160,6 @@ bool ScopeLink::initProperties()
     StepMultiplierNP.fill(getDeviceName(), "FOCUS_STEP_MULTIPLIER", "Step multiplier", OPTIONS_TAB, IP_RW, 60,
                           IPS_IDLE);
 
-    DeveloperSP[0].fill("ENABLED", "Shown", ISS_OFF);
-    DeveloperSP[1].fill("DISABLED", "Hidden", ISS_ON);
-    DeveloperSP.fill(getDeviceName(), "DEVELOPER_OPTIONS", "Controller diagnostics", OPTIONS_TAB, IP_RW, ISR_1OFMANY,
-                     60, IPS_IDLE);
-
     ParametersFileTP[0].fill("PATH", "File", "");
     ParametersFileTP.fill(getDeviceName(), "PARAMETERS_FILE", "Parameter file", PARAMETERS_TAB, IP_RW, 60, IPS_IDLE);
 
@@ -209,7 +204,6 @@ bool ScopeLink::initProperties()
                                ISR_1OFMANY, 60, IPS_IDLE);
 
     defineProperty(StepMultiplierNP);
-    defineProperty(DeveloperSP);
     defineProperty(SimulatedGenerationSP);
     defineProperty(ParametersFileTP);
     defineProperty(RotatorOffsetNP);
@@ -217,7 +211,6 @@ bool ScopeLink::initProperties()
     defineProperty(OutputNamesTP);
 
     loadConfig(true, StepMultiplierNP.getName());
-    loadConfig(true, DeveloperSP.getName());
     loadConfig(true, SimulatedGenerationSP.getName());
     loadConfig(true, ParametersFileTP.getName());
     loadConfig(true, OutputNamesTP.getName());
@@ -257,6 +250,10 @@ bool ScopeLink::initProperties()
     CapParkSP[0].fill("PARK", "Close", ISS_OFF);
     CapParkSP[1].fill("UNPARK", "Open", ISS_OFF);
     CapParkSP.fill(getDeviceName(), "CAP_PARK", "Front flap", MAIN_CONTROL_TAB, IP_RW, ISR_1OFMANY, 60, IPS_IDLE);
+
+    // INDI's dust cap interface has no stop of its own, so the flap's is the driver's.
+    CapAbortSP[0].fill("ABORT", "Stop", ISS_OFF);
+    CapAbortSP.fill(getDeviceName(), "FLAP_ABORT", "Front flap", MAIN_CONTROL_TAB, IP_RW, ISR_ATMOST1, 60, IPS_IDLE);
 
     CapPositionNP[0].fill("POSITION_STEPS", "Position (steps)", "%.0f", 0, 1000000, 1, 0);
     CapPositionNP[1].fill("POSITION_RATIO", "Travel (0-1)", "%.2f", 0, 1, 0.01, 0);
@@ -309,6 +306,8 @@ bool ScopeLink::initProperties()
     // The widgets are filled in at connect time by sizeHardwareProperties, because how many there are is
     // the controller's answer rather than this driver's. Only the group itself is named here.
     MotorLoadNP.fill(getDeviceName(), "MOTOR_LOAD", "Motor load", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
+    MotorPositionNP.fill(getDeviceName(), "MOTOR_POSITION", "Motor position", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
+    MotorMotionTP.fill(getDeviceName(), "MOTOR_MOTION", "Motor motion", TELEMETRY_TAB, IP_RO, 60, IPS_IDLE);
 
     ControllerNP[0].fill("SENSOR_SUPPLY", "Sensor supply (V)", "%.1f", 0, 30, 0.1, 0);
     ControllerNP[1].fill("CONTROLLER_SUPPLY", "Controller supply (V)", "%.1f", 0, 30, 0.1, 0);
@@ -386,6 +385,21 @@ bool ScopeLink::initProperties()
 
     FaultStoreTP.fill(getDeviceName(), "FAULT_STORE", "Fault store", DIAGNOSTICS_TAB, IP_RO, 60, IPS_IDLE);
 
+    // The same faults again, for a program rather than a person: each one a line of JSON with the number
+    // the controller sends for it and the whole freeze frame, which the log can only carry cut short.
+    for (size_t index = 0; index < MaxShownFaults; index++)
+    {
+        const std::string name  = "FAULT_" + std::to_string(index);
+        const std::string label = "Fault " + std::to_string(index + 1);
+
+        FaultDetailsTP[index].fill(name.c_str(), label.c_str(), "");
+    }
+
+    FaultDetailsTP.fill(getDeviceName(), "FAULT_DETAILS", "Fault details", DIAGNOSTICS_TAB, IP_RO, 60, IPS_IDLE);
+
+    FaultClearNP[0].fill("CODE", "Fault number", "%.0f", 0, 65535, 1, 0);
+    FaultClearNP.fill(getDeviceName(), "FAULT_CLEAR", "Clear one fault", DIAGNOSTICS_TAB, IP_RW, 60, IPS_IDLE);
+
     EepromNP[0].fill("PAGE_ERASE", "Page erases", "%.0f", 0, 1e9, 1, 0);
     EepromNP[1].fill("DATASET", "Dataset writes", "%.0f", 0, 65535, 1, 0);
     EepromNP[2].fill("LEARNT_DATA", "Learnt data writes", "%.0f", 0, 65535, 1, 0);
@@ -432,7 +446,10 @@ bool ScopeLink::initProperties()
     // between needs to be able to set it.
     m_serialConnection->setDefaultBaudRate(Connection::Serial::B_115200);
     m_serialConnection->setDefaultPort("/dev/ttyACM0");
-    m_serialConnection->registerHandshake([this]() { return handshake(); });
+    m_serialConnection->registerHandshake([this]()
+    {
+        return handshake();
+    });
 
     registerConnection(m_serialConnection);
 
@@ -484,9 +501,6 @@ bool ScopeLink::updateProperties()
 
         if (!m_bootloaderOnly)
         {
-            if (DeveloperSP[0].getState() == ISS_ON)
-                defineDeveloperProperties();
-
             // The travel just read from the controller is written back to the configuration file, so that
             // a client restoring an older one - after a recalibration, or after a session in simulation -
             // is not refused on the next start. It belongs here rather than beside the read because
@@ -502,7 +516,6 @@ bool ScopeLink::updateProperties()
         deleteProperty(IdentificationTP.getName());
         deleteProperty(RotatorOffsetNP);
         deleteHardwareProperties();
-        deleteDeveloperProperties();
     }
 
     return true;
@@ -517,13 +530,17 @@ void ScopeLink::sizeHardwareProperties()
     // and the status frame reports it by motor, so numbering them is what the wire actually says - the
     // Calibration tab is where the assignment turns a motor into a job it can be named after.
     MotorLoadNP.resize(static_cast<size_t>(capabilities.motorCount));
+    MotorPositionNP.resize(static_cast<size_t>(capabilities.motorCount));
+    MotorMotionTP.resize(static_cast<size_t>(capabilities.motorCount));
 
     for (int index = 0; index < capabilities.motorCount; index++)
     {
         const std::string name  = "MOTOR_" + std::to_string(index + 1);
-        const std::string label = "Motor " + std::to_string(index + 1) + " (%)";
+        const std::string motor = "Motor " + std::to_string(index + 1);
 
-        MotorLoadNP[index].fill(name.c_str(), label.c_str(), "%.0f", 0, 100, 1, 0);
+        MotorLoadNP[index].fill(name.c_str(), (motor + " (%)").c_str(), "%.0f", 0, 100, 1, 0);
+        MotorPositionNP[index].fill(name.c_str(), (motor + " (steps)").c_str(), "%.0f", INT32_MIN, INT32_MAX, 1, 0);
+        MotorMotionTP[index].fill(name.c_str(), motor.c_str(), motionName(scopelink::MotorDirection::Halted));
     }
 
     buildCalibrationChannels();
@@ -623,6 +640,7 @@ void ScopeLink::defineHardwareProperties()
     if (hasUsableFlap())
     {
         defineProperty(CapParkSP);
+        defineProperty(CapAbortSP);
         defineProperty(CapPositionNP);
     }
 
@@ -635,6 +653,9 @@ void ScopeLink::defineHardwareProperties()
     defineProperty(LightIntensityNP);
     defineProperty(RailsNP);
     defineProperty(MotorLoadNP);
+    defineProperty(MotorPositionNP);
+    defineProperty(MotorMotionTP);
+    defineProperty(ControllerNP);
     defineProperty(FanOverrideSP);
     defineProperty(FanStateSP);
 
@@ -670,6 +691,8 @@ void ScopeLink::defineHardwareProperties()
     defineProperty(FaultCountNP);
     defineProperty(DiagnosticActionSP);
     defineProperty(FaultStoreTP);
+    defineProperty(FaultDetailsTP);
+    defineProperty(FaultClearNP);
     defineProperty(EepromNP);
     defineProperty(LinkHealthTP);
 
@@ -695,12 +718,16 @@ void ScopeLink::deleteHardwareProperties()
     deleteProperty(OrientationReferenceNP.getName());
     deleteProperty(FanTargetNP.getName());
     deleteProperty(CapParkSP.getName());
+    deleteProperty(CapAbortSP.getName());
     deleteProperty(CapPositionNP.getName());
     deleteProperty(FlapStateTP.getName());
     deleteProperty(LightSP.getName());
     deleteProperty(LightIntensityNP.getName());
     deleteProperty(RailsNP.getName());
     deleteProperty(MotorLoadNP.getName());
+    deleteProperty(MotorPositionNP.getName());
+    deleteProperty(MotorMotionTP.getName());
+    deleteProperty(ControllerNP.getName());
     deleteProperty(FanOverrideSP.getName());
     deleteProperty(FanStateSP.getName());
     deleteProperty(AuxPowerSP.getName());
@@ -726,6 +753,8 @@ void ScopeLink::deleteHardwareProperties()
     deleteProperty(FaultCountNP.getName());
     deleteProperty(DiagnosticActionSP.getName());
     deleteProperty(FaultStoreTP.getName());
+    deleteProperty(FaultDetailsTP.getName());
+    deleteProperty(FaultClearNP.getName());
     deleteProperty(EepromNP.getName());
     deleteProperty(LinkHealthTP.getName());
 
@@ -733,17 +762,6 @@ void ScopeLink::deleteHardwareProperties()
     deleteProperty(CalibrationStatusNP.getName());
     deleteProperty(CalibrationStepNP.getName());
     deleteProperty(CalibrationActionSP.getName());
-}
-
-void ScopeLink::defineDeveloperProperties()
-{
-    if (isConnected())
-        defineProperty(ControllerNP);
-}
-
-void ScopeLink::deleteDeveloperProperties()
-{
-    deleteProperty(ControllerNP.getName());
 }
 
 // ---------------------------------------------------------------------------------------------------
@@ -1547,11 +1565,27 @@ void ScopeLink::publishTelemetry(const scopelink::Status &status)
     RailsNP.setState(IPS_OK);
     RailsNP.apply();
 
+    bool anyMoving = false;
+
     for (size_t index = 0; index < MotorLoadNP.size(); index++)
-        MotorLoadNP[index].setValue(status.motor(static_cast<int>(index)).load);
+    {
+        const scopelink::MotorReading motor = status.motor(static_cast<int>(index));
+
+        MotorLoadNP[index].setValue(motor.load);
+        MotorPositionNP[index].setValue(motor.position);
+        MotorMotionTP[index].setText(motionName(motor.direction));
+
+        anyMoving = anyMoving || motor.moving;
+    }
 
     MotorLoadNP.setState(IPS_OK);
     MotorLoadNP.apply();
+
+    // Busy while any of them turns, whoever started it: the focuser, the flap, or the Calibration tab.
+    MotorPositionNP.setState(anyMoving ? IPS_BUSY : IPS_OK);
+    MotorPositionNP.apply();
+    MotorMotionTP.setState(anyMoving ? IPS_BUSY : IPS_OK);
+    MotorMotionTP.apply();
 
     if (m_device->capabilities().hasMirrorTemperature)
     {
@@ -1573,11 +1607,8 @@ void ScopeLink::publishTelemetry(const scopelink::Status &status)
     FaultCountNP[0].setValue(status.storedFaultCount);
     FaultCountNP[1].setValue(status.activeFaultCount);
     FaultCountNP.setState((status.activeFaultCount > 0) ? IPS_ALERT :
-                                                          ((status.storedFaultCount > 0) ? IPS_BUSY : IPS_OK));
+                          ((status.storedFaultCount > 0) ? IPS_BUSY : IPS_OK));
     FaultCountNP.apply();
-
-    if (DeveloperSP[0].getState() != ISS_ON)
-        return;
 
     ControllerNP[0].setValue(status.sensorSupplyVoltage / 1000.0);
     ControllerNP[1].setValue(status.controllerSupplyVoltage / 1000.0);
@@ -2265,6 +2296,38 @@ IPState ScopeLink::moveCap(CapTarget target)
     return IPS_BUSY;
 }
 
+bool ScopeLink::abortCap()
+{
+    if (!isReady() || !hasUsableFlap())
+    {
+        LOG_ERROR("There is no front flap to stop.");
+        return false;
+    }
+
+    try
+    {
+        driveFlap(scopelink::function::Halt);
+        m_device->refreshStatus();
+    }
+    catch (const std::exception &error)
+    {
+        // Reported rather than swallowed, as the focuser's and the rotator's aborts are.
+        LOGF_ERROR("The controller did not accept the stop: %s", error.what());
+        return false;
+    }
+
+    // Nothing is being followed any more. Idle rather than a verdict: the next sample says whether the flap
+    // stopped at an end or part way, the way it does for a flap found where it is at connect.
+    m_capTarget = CapTarget::None;
+    CapParkSP.reset();
+    CapParkSP.setState(IPS_IDLE);
+    CapParkSP.apply();
+
+    LOG_INFO("Front flap stopped.");
+
+    return true;
+}
+
 void ScopeLink::driveFocuser(uint8_t subFunction, int position)
 {
     if (commandsFunctions())
@@ -2311,6 +2374,22 @@ void ScopeLink::driveFlap(uint8_t subFunction)
         m_device->haltMotor(motorId);
     else
         m_device->moveMotor(motorId, (subFunction == scopelink::function::Close) ? 0 : m_flapTravel);
+}
+
+const char *ScopeLink::motionName(scopelink::MotorDirection direction)
+{
+    // Fixed words rather than a sentence: a client reads them, and they are what the status frame says.
+    switch (direction)
+    {
+        case scopelink::MotorDirection::Clockwise:
+            return "Clockwise";
+
+        case scopelink::MotorDirection::CounterClockwise:
+            return "Counterclockwise";
+
+        default:
+            return "Halted";
+    }
 }
 
 const char *ScopeLink::flapStateName(scopelink::FlapState state)
@@ -2666,6 +2745,26 @@ bool ScopeLink::ISNewNumber(const char *dev, const char *name, double values[], 
     if (!isReady())
         return INDI::DefaultDevice::ISNewNumber(dev, name, values, names, n);
 
+    if (FaultClearNP.isNameMatch(name))
+    {
+        // Taken from the values rather than through update(): the number is an instruction, not a setting
+        // to keep, and the property goes back to showing what was last cleared either way.
+        const double code = (n > 0) ? values[0] : -1;
+
+        if (!std::isfinite(code) || (code < 0) || (code > 65535) || (code != std::floor(code)))
+        {
+            LOGF_ERROR("%g is not a fault number.", code);
+            FaultClearNP.setState(IPS_ALERT);
+            FaultClearNP.apply();
+
+            return true;
+        }
+
+        clearFault(static_cast<int>(code));
+
+        return true;
+    }
+
     if (LightIntensityNP.isNameMatch(name))
     {
         LightIntensityNP.update(values, names, n);
@@ -2763,22 +2862,6 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
         return true;
     }
 
-    if (DeveloperSP.isNameMatch(name))
-    {
-        DeveloperSP.update(states, names, n);
-        DeveloperSP.setState(IPS_OK);
-        DeveloperSP.apply();
-
-        if (DeveloperSP[0].getState() == ISS_ON)
-            defineDeveloperProperties();
-        else
-            deleteDeveloperProperties();
-
-        saveConfig(true, DeveloperSP.getName());
-
-        return true;
-    }
-
     // Deliberately ahead of the isReady() gate below: a controller sitting in its boot loader is never
     // ready, and installing firmware is the only thing that will make it so.
     if (FirmwareActionSP.isNameMatch(name))
@@ -2832,6 +2915,16 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
 
         CapParkSP.setState(result);
         CapParkSP.apply();
+
+        return true;
+    }
+
+    if (CapAbortSP.isNameMatch(name))
+    {
+        CapAbortSP.update(states, names, n);
+        CapAbortSP.reset();
+        CapAbortSP.setState(abortCap() ? IPS_OK : IPS_ALERT);
+        CapAbortSP.apply();
 
         return true;
     }
@@ -2952,7 +3045,7 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 // Taken off automatic control, a heater holds the duty it was running at - the same as
                 // the Windows driver, and what somebody switching automatic off means
                 const bool taken = on ? m_device->setPowerOutputAutomatic(output)
-                                      : m_device->setPowerOutputDuty(output, m_device->status().powerOutputDuty(output));
+                                   : m_device->setPowerOutputDuty(output, m_device->status().powerOutputDuty(output));
 
                 if (!taken)
                 {
@@ -3224,7 +3317,6 @@ bool ScopeLink::saveConfigItems(FILE *fp)
     RotatorOffsetNP.save(fp);
     OrientationReferenceNP.save(fp);
     StepMultiplierNP.save(fp);
-    DeveloperSP.save(fp);
     SimulatedGenerationSP.save(fp);
     ParametersFileTP.save(fp);
     FirmwareFileTP.save(fp);
