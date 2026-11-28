@@ -166,8 +166,6 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
 
         void defineHardwareProperties();
         void deleteHardwareProperties();
-        void defineDeveloperProperties();
-        void deleteDeveloperProperties();
 
         // Poll --------------------------------------------------------------------------------------
 
@@ -221,6 +219,15 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         // Cover ---------------------------------------------------------------------------------------
 
         IPState moveCap(CapTarget target);
+
+        /**
+         * @brief Stops the front flap where it is, abandoning whatever it was doing.
+         *
+         * INDI's dust cap interface opens and closes and has no stop, so this is a property of the driver's
+         * own. What the flap is afterwards is left to the next status sample to say.
+         */
+        bool abortCap();
+
         void adoptCapStateFromPosition(const scopelink::Status &status);
 
         // Motion ---------------------------------------------------------------------------------------
@@ -254,6 +261,9 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
 
         /** @brief What one flap state is called, for the property that shows it. */
         static const char *flapStateName(scopelink::FlapState state);
+
+        /** @brief What a motor is doing, for MOTOR_MOTION: Clockwise, Counterclockwise or Halted. */
+        static const char *motionName(scopelink::MotorDirection direction);
 
         // Rotator -------------------------------------------------------------------------------------
 
@@ -406,6 +416,21 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
 
         void readFaults();
         void clearFaults();
+
+        /**
+         * @brief Clears one stored fault, named by the number this controller sends for it.
+         *
+         * Refused, with the reason, for a number the store does not hold. Reads the store back afterwards, as
+         * clearing the whole store does, because a fault whose cause is still present is raised again at once.
+         */
+        void clearFault(int wireCode);
+
+        /**
+         * @brief One fault as a line of JSON, for FAULT_DETAILS: what a program reading the store needs,
+         *        the whole freeze frame included, where FAULT_STORE has a sentence for a person.
+         */
+        static std::string faultDetails(const scopelink::Fault &fault);
+
         void readEepromStatistics();
         void publishLinkHealth();
 
@@ -721,6 +746,10 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         INDI::PropertyNumber FocusTemperatureNP{ 1 };
 
         INDI::PropertySwitch CapParkSP{ 2 };
+
+        /** Stops the flap; published with CAP_PARK. */
+        INDI::PropertySwitch CapAbortSP{ 1 };
+
         INDI::PropertyNumber CapPositionNP{ 2 };
 
         /**
@@ -764,6 +793,21 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         INDI::PropertyNumber OrientationReferenceNP{ 3 };
         /** Sized at connect time from the motor count - two up to generation 3, three from generation 4. */
         INDI::PropertyNumber MotorLoadNP{ 2 };
+
+        /**
+         * Every motor's position in its own steps, and which way it is turning, sized as MotorLoadNP is.
+         * By motor rather than by job, as the status frame reports them: the focuser's position is also its
+         * property's, but the rotator's there is an angle and the flap's is its first part's alone, and a
+         * move made from the Calibration tab shows nowhere else at all.
+         */
+        INDI::PropertyNumber MotorPositionNP{ 2 };
+        INDI::PropertyText MotorMotionTP{ 2 };
+
+        /**
+         * The controller's own supplies, temperature, load and bus errors. Published whenever a controller
+         * is connected: it is read only and costs nothing, and a client that wants it should not have to
+         * change a setting the user sees to get it.
+         */
         INDI::PropertyNumber ControllerNP{ 7 };
 
         INDI::PropertySwitch FanOverrideSP{ 2 };
@@ -805,7 +849,6 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         INDI::PropertyLight UsbHubLP{ 4 };
 
         INDI::PropertyNumber StepMultiplierNP{ 1 };
-        INDI::PropertySwitch DeveloperSP{ 2 };
 
         /** Generation the simulated controller reports. Only consulted while simulation is on. */
         INDI::PropertySwitch SimulatedGenerationSP{ 4 };
@@ -820,6 +863,12 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         INDI::PropertyNumber FaultCountNP{ 2 };
         INDI::PropertySwitch DiagnosticActionSP{ 3 };
         INDI::PropertyText FaultStoreTP{ MaxShownFaults };
+
+        /** The same faults as FAULT_STORE, one line of JSON each, with the whole freeze frame. */
+        INDI::PropertyText FaultDetailsTP{ MaxShownFaults };
+
+        /** Clears the one stored fault whose number is written to it. */
+        INDI::PropertyNumber FaultClearNP{ 1 };
         INDI::PropertyNumber EepromNP{ 7 };
         INDI::PropertyText LinkHealthTP{ 1 };
 

@@ -94,6 +94,7 @@ class SimulatedController
         Frame statusPayload() const;
         uint8_t flapState() const;
         Frame faultPayload() const;
+        Frame clearFaults(const Frame &payload);
         Frame dataIdentifier(const Frame &payload);
         Frame motorCommand(const Frame &payload);
         Frame functionCommand(const Frame &payload);
@@ -201,16 +202,17 @@ class SimulatedController
         std::map<uint32_t, size_t> m_didLength;
 
         /**
-         * One stored fault: the infrared sensor communication timeout, still active. It is the fault a
-         * developer is most likely to meet on a unit whose sensor has failed, and it gives the fault store
-         * and its freeze frame something to show.
+         * Two stored faults: the infrared sensor communication timeout, still active, which is the fault a
+         * developer is most likely to meet on a unit whose sensor has failed; and an over temperature
+         * warning seen once and gone since, which is the commonest thing a real store holds besides. Two,
+         * so that clearing one of them can be told apart from clearing the store.
          *
-         * Written here as the FaultCode identity, which the constructor turns into the number this
-         * generation sends for it. The two agree on every controller before generation 4 and part company
-         * on that one, so a literal here would have been the wrong fault on exactly the controller this
-         * translation exists for.
+         * Written here as FaultCode identities (4 and 25), which the constructor turns into the numbers
+         * this generation sends for them. The two agree on every controller before generation 4 and part
+         * company on that one, so a literal wire number here would have been the wrong fault on exactly the
+         * controller this translation exists for.
          */
-        std::vector<StoredFault> m_faults{ StoredFault{ 4, 3, true } };
+        std::vector<StoredFault> m_faults{ StoredFault{ 4, 3, true }, StoredFault{ 25, 1, false } };
 };
 
 /**
