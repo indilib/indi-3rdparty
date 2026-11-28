@@ -1,3 +1,22 @@
+indi-scopelink (1.4) jammy; urgency=medium
+
+  * Every motor's position in its own steps, and whether it is turning clockwise, counterclockwise or
+    not at all, beside its load on the Telemetry tab (MOTOR_POSITION, MOTOR_MOTION). A move made from
+    the Calibration tab shows there too.
+  * The front flap can be stopped where it is (FLAP_ABORT), which INDI's dust cap interface has no
+    control for.
+  * Each stored fault as one line of JSON with its whole freeze frame (FAULT_DETAILS), which the log
+    cuts short, and one fault can be cleared without the rest (FAULT_CLEAR).
+  * The controller's own supplies, temperature, load and bus errors are always on the Telemetry tab;
+    the Controller diagnostics option that hid them is gone.
+  * Read fault store and Clear fault store work again on firmware from August 2026 on, which answers a
+    request without its routine id with nothing: any stored fault made both fail with "No valid
+    response to command 0x05".
+  * The simulator stores a second fault, and clears one fault or all of them as the firmware does. It
+    also answers a fault store read without the routine id with nothing, as the firmware does.
+
+ -- Bence Toth <bence.toth@astrolabs.hu>  Sat, 28 Nov 2026 12:00:00 +0100
+
 indi-scopelink (1.3) jammy; urgency=medium
 
   * Interface version 1.3 is supported: either auxiliary power output can run as a dew heater, set by
