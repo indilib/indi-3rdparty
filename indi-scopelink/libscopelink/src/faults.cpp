@@ -433,8 +433,8 @@ std::vector<Fault> Fault::readAll(Device &device)
     // driver that sent none - found on a generation 4 unit with three faults stored.
     const Frame request{ command::ReadDtc };
     const Frame response = (expectedLength > Protocol::MaxSelfDescribingFrameLength) ?
-                               device.transact(command::ReadDtc, request, expectedLength) :
-                               device.transactVariable(command::ReadDtc, request, ResponseHeaderLength + recordLength);
+                           device.transact(command::ReadDtc, request, expectedLength) :
+                           device.transactVariable(command::ReadDtc, request, ResponseHeaderLength + recordLength);
 
     const size_t recordBytes = response.size() - ResponseHeaderLength;
 

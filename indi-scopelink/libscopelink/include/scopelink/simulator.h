@@ -65,22 +65,22 @@ class SimulatedController
         /** @brief One simulated motor, moving towards its target at a fixed rate. */
         struct Motor
         {
-                int position{ 0 };
-                int target{ 0 };
-                unsigned load{ 0 };
+            int position{ 0 };
+            int target{ 0 };
+            unsigned load{ 0 };
 
-                /** @brief Advances towards the target and reports the status byte the wire format uses. */
-                uint8_t advance(long elapsedMs);
+            /** @brief Advances towards the target and reports the status byte the wire format uses. */
+            uint8_t advance(long elapsedMs);
         };
 
         /** @brief One entry of the fault store, as both the status frame and the fault read report it. */
         struct StoredFault
         {
-                uint16_t code{ 0 };
-                uint8_t occurrences{ 1 };
+            uint16_t code{ 0 };
+            uint8_t occurrences{ 1 };
 
-                /** Still present now, as opposed to recorded and since cleared up. */
-                bool active{ false };
+            /** Still present now, as opposed to recorded and since cleared up. */
+            bool active{ false };
         };
 
         static long now();
@@ -175,25 +175,25 @@ class SimulatedController
          */
         MotorRoles m_running;
 
-        bool m_fanOverride[2]{ false, false };
-        bool m_fanOn[2]{ false, false };
-        bool m_power[2]{ false, false };
+        bool m_fanOverride[2] { false, false };
+        bool m_fanOn[2] { false, false };
+        bool m_power[2] { false, false };
 
         /**
          * Which outputs run as dew heaters. Read from 0x0900 and 0x0902 at startup and on a reset and not
          * otherwise, as the firmware does: a mode written while it runs takes effect at the next restart.
          */
-        bool m_heater[2]{ false, false };
+        bool m_heater[2] { false, false };
 
         /** True while a heater is under automatic dew control. */
-        bool m_heaterAutomatic[2]{ false, false };
+        bool m_heaterAutomatic[2] { false, false };
 
         /** The duty a heater runs at when set by hand. */
-        int m_heaterDuty[2]{ 0, 0 };
+        int m_heaterDuty[2] { 0, 0 };
 
         /** What switching a heater on goes back to: its last control, and its last duty that was not zero. */
-        bool m_heaterResumeAutomatic[2]{ false, false };
-        int m_heaterResumeDuty[2]{ 100, 100 };
+        bool m_heaterResumeAutomatic[2] { false, false };
+        int m_heaterResumeDuty[2] { 100, 100 };
         int m_flatboxDuty{ 0 };
 
         std::map<uint32_t, int> m_dids;

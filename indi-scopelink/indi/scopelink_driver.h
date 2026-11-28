@@ -309,8 +309,8 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
          */
         struct ParameterSwitch
         {
-                uint32_t id{ 0 };
-                std::unique_ptr<INDI::PropertySwitch> property;
+            uint32_t id{ 0 };
+            std::unique_ptr<INDI::PropertySwitch> property;
         };
 
         /**
@@ -323,17 +323,17 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
          */
         struct ParameterGroup
         {
-                /** The group as the firmware describes it, which is what names and labels the property. */
-                const scopelink::DidGroupInfo *info{ nullptr };
+            /** The group as the firmware describes it, which is what names and labels the property. */
+            const scopelink::DidGroupInfo *info{ nullptr };
 
-                /** The group's numeric parameters, null when it has none of them. */
-                std::unique_ptr<INDI::PropertyNumber> property;
+            /** The group's numeric parameters, null when it has none of them. */
+            std::unique_ptr<INDI::PropertyNumber> property;
 
-                /** Identifier behind each element of that property, in element order. */
-                std::vector<uint32_t> identifiers;
+            /** Identifier behind each element of that property, in element order. */
+            std::vector<uint32_t> identifiers;
 
-                /** The group's enumerated parameters, one switch vector each. */
-                std::vector<ParameterSwitch> switches;
+            /** The group's enumerated parameters, one switch vector each. */
+            std::vector<ParameterSwitch> switches;
         };
 
         void buildParameterGroups();
@@ -503,10 +503,10 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
         /** @brief Everything that differs between the motors the calibration page can drive. */
         struct MotorChannel
         {
-                std::string name;
-                int motorId{ 0 };
-                uint32_t savedPositionDid{ 0 };
-                uint32_t maximumPositionDid{ 0 };
+            std::string name;
+            int motorId{ 0 };
+            uint32_t savedPositionDid{ 0 };
+            uint32_t maximumPositionDid{ 0 };
         };
 
         /**
@@ -548,7 +548,10 @@ class ScopeLink : public INDI::DefaultDevice, public INDI::FocuserInterface, pub
          * to, so the cover is neither published nor claimed as a dust cap. Every part has to have one - a
          * two part flap with one calibrated part cannot be opened any more than a flap with none can.
          */
-        bool hasUsableFlap() const { return m_flapTravel > 0; }
+        bool hasUsableFlap() const
+        {
+            return m_flapTravel > 0;
+        }
 
         /** @brief Reads the assignment again after something has written one of its identifiers. */
         void refreshMotorRoles();

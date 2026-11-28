@@ -990,9 +990,12 @@ Frame SimulatedController::clearFaults(const Frame &payload)
     const unsigned code = (static_cast<unsigned>(payload[1]) << 8) | payload[2];
     const size_t before = m_faults.size();
 
-    m_faults.erase(std::remove_if(m_faults.begin(), m_faults.end(), [code](const StoredFault &fault)
-                                  { return (code == 0xFFFF) || (fault.code == code); }),
-                   m_faults.end());
+    const auto matches = [code](const StoredFault & fault)
+    {
+        return (code == 0xFFFF) || (fault.code == code);
+    };
+
+    m_faults.erase(std::remove_if(m_faults.begin(), m_faults.end(), matches), m_faults.end());
 
     if (m_faults.size() == before)
         return frame(command::ClearDtc, Frame{});

@@ -678,8 +678,11 @@ void ScopeLink::clearFault(int wireCode)
 
     // Looked up first, so that a number the store does not hold is refused with a reason rather than sent
     // to a controller that answers it with an empty frame.
-    const auto found = std::find_if(faults.begin(), faults.end(),
-                                    [wireCode](const scopelink::Fault &fault) { return fault.wireCode == wireCode; });
+    const auto numbered = [wireCode](const scopelink::Fault & fault)
+    {
+        return fault.wireCode == wireCode;
+    };
+    const auto found = std::find_if(faults.begin(), faults.end(), numbered);
 
     FaultClearNP[0].setValue(wireCode);
 

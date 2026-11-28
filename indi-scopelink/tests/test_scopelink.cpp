@@ -3144,7 +3144,8 @@ struct Test
         void (*body)();
 };
 
-const Test tests[] = {
+const Test tests[] =
+{
     { "byte order", testByteOrder },
     { "capabilities", testCapabilities },
     { "status parsing", testStatusParsing },

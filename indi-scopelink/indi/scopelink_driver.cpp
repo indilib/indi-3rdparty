@@ -446,7 +446,10 @@ bool ScopeLink::initProperties()
     // between needs to be able to set it.
     m_serialConnection->setDefaultBaudRate(Connection::Serial::B_115200);
     m_serialConnection->setDefaultPort("/dev/ttyACM0");
-    m_serialConnection->registerHandshake([this]() { return handshake(); });
+    m_serialConnection->registerHandshake([this]()
+    {
+        return handshake();
+    });
 
     registerConnection(m_serialConnection);
 
@@ -1604,7 +1607,7 @@ void ScopeLink::publishTelemetry(const scopelink::Status &status)
     FaultCountNP[0].setValue(status.storedFaultCount);
     FaultCountNP[1].setValue(status.activeFaultCount);
     FaultCountNP.setState((status.activeFaultCount > 0) ? IPS_ALERT :
-                                                          ((status.storedFaultCount > 0) ? IPS_BUSY : IPS_OK));
+                          ((status.storedFaultCount > 0) ? IPS_BUSY : IPS_OK));
     FaultCountNP.apply();
 
     ControllerNP[0].setValue(status.sensorSupplyVoltage / 1000.0);
@@ -3042,7 +3045,7 @@ bool ScopeLink::ISNewSwitch(const char *dev, const char *name, ISState *states, 
                 // Taken off automatic control, a heater holds the duty it was running at - the same as
                 // the Windows driver, and what somebody switching automatic off means
                 const bool taken = on ? m_device->setPowerOutputAutomatic(output)
-                                      : m_device->setPowerOutputDuty(output, m_device->status().powerOutputDuty(output));
+                                   : m_device->setPowerOutputDuty(output, m_device->status().powerOutputDuty(output));
 
                 if (!taken)
                 {
